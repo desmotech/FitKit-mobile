@@ -1,0 +1,45 @@
+{
+  "cli": {
+    "version": ">= 14.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fitkitapi-preview.up.railway.app",
+        "EXPO_PUBLIC_WS_URL": "https://fitkitapi-preview.up.railway.app",
+        "EXPO_PUBLIC_WEB_URL": "https://fitkitapi-preview.up.railway.app",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://4a3e004c0fa2a2f8964d9f431e3efd3e@o4510894662090752.ingest.de.sentry.io/4511416743362640",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fitkitapi-preview.up.railway.app",
+        "EXPO_PUBLIC_WS_URL": "https://fitkitapi-preview.up.railway.app",
+        "EXPO_PUBLIC_WEB_URL": "https://app-staging.fitkit.fit",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://4a3e004c0fa2a2f8964d9f431e3efd3e@o4510894662090752.ingest.de.sentry.io/4511416743362640",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
+      }
+    },
+    "production": {
+      "channel": "production",
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.fitkit.fit",
+        "EXPO_PUBLIC_WS_URL": "https://api.fitkit.fit",
+        "EXPO_PUBLIC_WEB_URL": "https://app.fitkit.fit",
+        "EXPO_PUBLIC_SENTRY_DSN": "https://4a3e004c0fa2a2f8964d9f431e3efd3e@o4510894662090752.ingest.de.sentry.io/4511416743362640",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

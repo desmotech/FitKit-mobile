@@ -5,18 +5,26 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
 
 # Native
 .kotlin/
+/ios
+/android
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+
+# Builds
+*.apk
+*.aab
+*.ipa
 
 # Metro
 .metro-health-check*
@@ -30,14 +38,13 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Tests
+coverage/
+
+# Env
+.env
+.env.local
+.env.*.local
 
 # typescript
 *.tsbuildinfo
-
-app-example
-
-# generated native folders
-/ios
-/android

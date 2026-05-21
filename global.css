@@ -1,0 +1,106 @@
+/* ============================================================
+   FitKit Mobile — global.css
+   HSL channel-split tokens (shadcn pattern). NativeWind 4 +
+   Tailwind v3 only honour `/alpha` modifiers when the token is
+   in `H S% L%` channel form referenced via
+   `hsl(var(--token) / <alpha-value>)` in tailwind.config.js.
+   Hex equivalents listed in comments mirror apps/web/globals.css.
+   ============================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core — exact HSL of web's oklch tokens (Deep Ocean palette). */
+    --background: 210 17% 97%;          /* #F6F8FA — ocean light  */
+    --foreground: 212 53% 11%;          /* #0D1B2A — deep navy    */
+    --card: 0 0% 100%;                  /* #FFFFFF                */
+    --card-foreground: 212 53% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 212 53% 11%;
+
+    /* Primary — Teal */
+    --primary: 180 82% 30%;             /* #0E8C8C                */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary / Muted */
+    --secondary: 210 22% 95%;           /* #EEF2F6                */
+    --secondary-foreground: 180 82% 30%;
+    --muted: 210 22% 95%;
+    --muted-foreground: 212 16% 44%;    /* #5E7082 — steel        */
+
+    /* Accent — Sage (FK molecules); web uses teal-wash via --primary. */
+    --accent: 75 20% 45%;               /* #7A8A5C                */
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive — Rust */
+    --destructive: 5 49% 49%;           /* #B84A40                */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders / Inputs */
+    --border: 212 19% 89%;              /* #DDE3EA                */
+    --input: 212 19% 89%;
+    --ring: 180 82% 30%;
+
+    /* Charts */
+    --chart-1: 180 82% 30%;
+    --chart-2: 75 20% 45%;
+    --chart-3: 35 56% 55%;
+    --chart-4: 207 33% 43%;
+    --chart-5: 320 18% 47%;
+
+    /* Status */
+    --success: 75 20% 45%;
+    --success-foreground: 75 22% 22%;
+    --success-muted: 75 30% 92%;
+    --warning: 35 56% 55%;              /* #C9974D — amber        */
+    --warning-foreground: 35 50% 28%;
+    --warning-muted: 35 60% 94%;
+    --info: 207 33% 43%;                /* #4A7290 — slate        */
+    --info-foreground: 207 35% 25%;
+    --info-muted: 207 35% 92%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark:root,
+  .dark {
+    --background: 214 60% 10%;          /* #0A1628 — deep navy    */
+    --foreground: 210 53% 94%;          /* #E8F0F8 — pale ocean   */
+    --card: 218 58% 16%;                /* #112240 — lifted navy  */
+    --card-foreground: 210 53% 94%;
+    --popover: 218 58% 16%;
+    --popover-foreground: 210 53% 94%;
+
+    --primary: 180 63% 44%;             /* #2AB8B8 — lighter teal */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 216 51% 21%;           /* #1A3050 — navy muted   */
+    --secondary-foreground: 210 53% 94%;
+    --muted: 216 51% 21%;
+    --muted-foreground: 207 27% 54%;    /* #6B8FAA — steel muted  */
+
+    /* In dark mode FK keeps sage as accent for FK molecules. */
+    --accent: 85 27% 54%;               /* #8AA86A                */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 5 56% 57%;           /* #D05A50                */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 52% 25%;              /* #1E3A5F                */
+    --input: 216 51% 21%;
+    --ring: 180 63% 44%;
+
+    --success: 85 27% 54%;
+    --success-foreground: 75 30% 70%;
+    --success-muted: 75 28% 18%;
+    --warning: 35 56% 55%;
+    --warning-foreground: 35 60% 75%;
+    --warning-muted: 35 40% 18%;
+    --info: 207 33% 50%;
+    --info-foreground: 207 50% 70%;
+    --info-muted: 207 40% 18%;
+  }
+}

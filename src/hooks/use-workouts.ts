@@ -1,0 +1,356 @@
+import { useApiQuery, useApiSend } from './use-api-query';
+import type { ApiEnvelope } from './use-feed-data';
+
+// ── Types (mirror what /assignments/my-week returns) ─────────────────
+
+export interface WorkoutMovement {
+  id: string;
+  sortOrder: number;
+  exercise: {
+    id: string;
+    name: string;
+    category: string;
+    kind?: string | null;
+    description?: string | null;
+    videoUrl?: string | null;
+    thumbnailUrl?: string | null;
+    primaryMuscles?: string[];
+    secondaryMuscles?: string[];
+    equipment?: string[];
+    movementPattern?: string | null;
+    cues?: string[];
+    slug?: string | null;
+  };
+  prescribedSets: number | null;
+  prescribedReps: string | null;
+  prescribedWeight: string | null;
+  prescribedDistance: string | null;
+  prescribedDuration: string | null;
+  notes: string | null;
+  label?: string | null;
+  supersetGroup?: string | null;
+  prescription?: Record<string, unknown> | null;
+}
+
+export interface WorkoutSection {
+  id: string;
+  type: string;
+  title: string | null;
+  description: string | null;
+  sortOrder: number;
+  movements: WorkoutMovement[];
+  shape?: string | null;
+  config?: Record<string, unknown> | null;
+}
+
+export interface WorkoutLite {
+  id: string;
+  title: string | null;
+  displayName: string;
+  description: string | null;
+  scoring: string;
+  mode: string;
+  timeCap: number | null;
+  sortOrder: number;
+  sections?: WorkoutSection[];
+}
+
+export interface AssignmentProgramLite {
+  id: string;
+  name: string;
+  deliveryMode?: string | null;
+}
+
+export type AssignmentKind = 'workout' | 'rest' | 'note';
+
+export interface AssignmentDay {
+  id: string;
+  date: string; // YYYY-MM-DD
+  published: boolean;
+  status?: 'assigned' | 'completed' | 'skipped';
+  /**
+   * Per-cell kind. Defaults to `'workout'` for back-compat with older
+   * payloads. `'rest'` is a rest-day marker with no workout body.
+   * `'note'` carries a free-text coach note in `note` and has no workout.
+   */
+  kind?: AssignmentKind | null;
+  /** Free-text coach note; only set when `kind === 'note'`. */
+  note?: string | null;
+  /**
+   * Backing workout. Required when `kind === 'workout'`. Missing on
+   * `'rest'` and `'note'` cells — call sites must guard before reading
+   * `displayName`, `sections`, etc.
+   */
+  workout?: WorkoutLite | null;
+  coachPreNote?: string | null;
+  coachPostNote?: string | null;
+  // Server-side completion state if available; client also derives from result presence.
+  completedAt?: string | null;
+  /** Server returns this on /assignments/my-week (toFullResponse). Null = personal/direct assignment. */
+  program?: AssignmentProgramLite | null;
+}
+
+// ── Hook: my program enrollments ─────────────────────────────────────
+
+/**
+ * Active program enrollments for the current member, used to drive the
+ * dynamic Program tabs on the Whiteboard. Mirrors the web's
+ * `useMyDeliveryModes` (apps/web/src/hooks/use-org-programs.ts) — same
+ * endpoint, same cache shape.
+ *
+ * The server caches with `private, max-age=60, stale-while-revalidate=300`,
+ * so we lean on React Query defaults rather than aggressive refetching.
+ */
+export interface ProgramEnrollment {
+  id: string;
+  programId: string;
+  program: AssignmentProgramLite;
+}
+
+export function useMyProgramEnrollments(orgId: string | undefined | null) {
+  const path = orgId ? `/organizations/${orgId}/programs/my-enrollments` : '';
+  return useApiQuery<ApiEnvelope<ProgramEnrollment[]>>({
+    path,
+    queryKey: orgId
+      ? ['/organizations', orgId, 'programs', 'my-enrollments']
+      : ['/programs/my-enrollments', 'noop'],
+    queryOptions: { enabled: !!orgId },
+  });
+}
+
+// ── Hook: this week's assignments ────────────────────────────────────
+
+/**
+ * Returns assignments for the calendar week that contains `weekStart`
+ * (Monday in YYYY-MM-DD). Skips the request until orgId resolves.
+ */
+export function useMyWeekAssignments(
+  orgId: string | undefined | null,
+  weekStart: string | undefined,
+) {
+  const path =
+    orgId && weekStart
+      ? `/organizations/${orgId}/assignments/my-week?weekStart=${weekStart}`
+      : '';
+  return useApiQuery<ApiEnvelope<AssignmentDay[]>>({
+    path,
+    queryKey: orgId && weekStart
+      ? ['/organizations', orgId, 'assignments', 'my-week', weekStart]
+      : ['/assignments/my-week', 'noop'],
+    queryOptions: { enabled: !!orgId && !!weekStart },
+  });
+}
+
+// ── Hook: single assignment by id ────────────────────────────────────
+
+/**
+ * Direct fetch of one assignment by id with the full workout payload.
+ * Used by the workout detail screen so it isn't bound to the current
+ * week's data — necessary for cross-week, history, notification, and
+ * deep-link navigation.
+ *
+ * The shape matches a single AssignmentDay (same `toFullResponse` on
+ * the server) so the detail screen renders identically whether the
+ * row came from the week query cache or this direct fetch.
+ */
+export function useWorkoutAssignment(
+  orgId: string | undefined | null,
+  assignmentId: string | undefined | null,
+) {
+  const path =
+    orgId && assignmentId
+      ? `/organizations/${orgId}/assignments/${assignmentId}`
+      : '';
+  return useApiQuery<ApiEnvelope<AssignmentDay>>({
+    path,
+    queryKey:
+      orgId && assignmentId
+        ? ['/organizations', orgId, 'assignments', assignmentId]
+        : ['/assignments/:id', 'noop'],
+    queryOptions: { enabled: !!orgId && !!assignmentId },
+  });
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+/** Day keys in week order (Sun-anchored, used for Hebrew). */
+export const WEEK_ORDER_SUNDAY = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+] as const;
+
+/** Day keys in week order (Mon-anchored, used for EN/RU). */
+export const WEEK_ORDER_MONDAY = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+] as const;
+
+export type DayKey = (typeof WEEK_ORDER_SUNDAY)[number];
+
+/** Returns the locale-specific week-start day (0 = Sunday, 1 = Monday). */
+export function getWeekStartDay(lang: string): 0 | 1 {
+  return lang === 'he' ? 0 : 1;
+}
+
+/** Day-key order array starting from the locale's week-start day. */
+export function getWeekOrder(weekStartsOn: 0 | 1): readonly DayKey[] {
+  return weekStartsOn === 0 ? WEEK_ORDER_SUNDAY : WEEK_ORDER_MONDAY;
+}
+
+/** ISO YYYY-MM-DD for the start of `d`'s local week. */
+export function weekStartFor(d: Date, weekStartsOn: 0 | 1): string {
+  const date = new Date(d);
+  const day = date.getDay(); // 0=Sun, 1=Mon, …
+  const diff =
+    weekStartsOn === 0
+      ? -day // back to Sunday
+      : day === 0
+        ? -6
+        : 1 - day; // back to Monday
+  date.setDate(date.getDate() + diff);
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * @deprecated Use `weekStartFor(date, weekStartsOn)` instead.
+ * Kept as a Mon-anchored alias for back-compat with hooks that aren't
+ * yet locale-aware.
+ */
+export function mondayOfWeek(d: Date): string {
+  return weekStartFor(d, 1);
+}
+
+export function shiftWeek(weekStart: string, weeks: number): string {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + weeks * 7);
+  return d.toISOString().split('T')[0];
+}
+
+// ── Hook: latest result for a workout (for "Last:" hint) ────────────
+
+export interface SetResultLite {
+  exerciseId: string;
+  setNumber: number;
+  reps: number | null;
+  weight: string | null;
+  weightUnit: string | null;
+  rpe: number | null;
+}
+
+export interface LatestResult {
+  scoreValue?: string;
+  scoreUnit?: string;
+  rx?: boolean;
+  scaled?: boolean;
+  performedAt?: string;
+  setResults?: SetResultLite[];
+}
+
+export function useLatestResult(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+) {
+  const path =
+    orgId && workoutId
+      ? `/organizations/${orgId}/workouts/${workoutId}/results/me/latest`
+      : '';
+  return useApiQuery<ApiEnvelope<LatestResult | null>>({
+    path,
+    queryKey:
+      orgId && workoutId
+        ? ['/organizations', orgId, 'workouts', workoutId, 'results', 'me', 'latest']
+        : ['/results/me/latest', 'noop'],
+    queryOptions: { enabled: !!orgId && !!workoutId },
+  });
+}
+
+// ── Hook: my results for the workout (for History list + chart) ─────
+
+export interface WorkoutResult {
+  id: string;
+  workoutId: string;
+  scoreValue: string | null;
+  scoreUnit: string | null;
+  rx: boolean;
+  scaled: boolean;
+  performedAt: string;
+  notes: string | null;
+}
+
+export function useMyResults(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+) {
+  const path = orgId ? `/organizations/${orgId}/results/me` : '';
+  return useApiQuery<ApiEnvelope<WorkoutResult[]>>({
+    path,
+    queryKey: orgId
+      ? ['/organizations', orgId, 'results', 'me']
+      : ['/results/me', 'noop'],
+    queryOptions: { enabled: !!orgId && !!workoutId },
+  });
+}
+
+// ── Hook: log a result ───────────────────────────────────────────────
+
+export interface LogResultSetInput {
+  workoutMovementId: string;
+  exerciseId: string;
+  setNumber: number;
+  reps?: number;
+  weight?: string;
+  weightUnit?: string;
+  rpe?: number;
+}
+
+export interface LogResultInput {
+  scoreValue: string;
+  scoreUnit?: string;
+  rx?: boolean;
+  scaled?: boolean;
+  notes?: string;
+  performedAt: string; // ISO datetime
+  setResults?: LogResultSetInput[];
+}
+
+export interface LogResultResponse {
+  isPR?: boolean;
+  // …rest of the result envelope; we only need isPR for the celebration.
+}
+
+export function useLogResult(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+) {
+  return useApiSend<ApiEnvelope<LogResultResponse>, LogResultInput>({
+    path:
+      orgId && workoutId
+        ? `/organizations/${orgId}/workouts/${workoutId}/results`
+        : '',
+    method: 'POST',
+  });
+}
+
+/** Derives a coarse state label for a day card. */
+export type AssignmentState = 'today' | 'done' | 'missed' | 'upcoming';
+
+export function getAssignmentState(day: AssignmentDay, now = new Date()): AssignmentState {
+  const dayDate = new Date(day.date);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  dayDate.setHours(0, 0, 0, 0);
+  if (day.completedAt) return 'done';
+  if (dayDate.getTime() === today.getTime()) return 'today';
+  if (dayDate < today) return 'missed';
+  return 'upcoming';
+}

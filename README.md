@@ -1,56 +1,116 @@
-# Welcome to your Expo app 👋
+# fitkit-mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo (managed workflow) React Native app for FitKit members — extracted
+from the FitKit monorepo as a standalone repo. Mirrors the member
+surfaces of `apps/web` with native value-adds: QR / GPS check-in, push
+notifications, offline cache, haptics, and smooth gestures.
 
-## Get started
+## Prerequisites
 
-1. Install dependencies
+- Node 24 (`.nvmrc`-compatible)
+- pnpm 10
+- A GitHub Personal Access Token with `read:packages` scope, exported as
+  `GITHUB_TOKEN` so pnpm can install `@fitkit/shared` from GitHub
+  Packages (see "Shared code" below).
+- Xcode (iOS) and/or Android Studio (Android) for native builds.
 
-   ```bash
-   npm install
-   ```
+## Shared code: `@fitkit/shared`
 
-2. Start the app
+This app depends on Zod schemas, types, validation, and i18n
+dictionaries shipped from the source-of-truth FitKit monorepo as a
+versioned npm package.
 
-   ```bash
-   npx expo start
-   ```
+- **Source repo:** `desmotech/fitnx2` → `libs/shared/`
+- **Published as:** `@desmotech/fitkit-shared` on GitHub Packages
+- **Aliased here as:** `@fitkit/shared` (via the npm: protocol in
+  `package.json`) so imports stay identical to the source repo
 
-In the output, you'll find options to open the app in a
+A GitHub Actions workflow in the source repo
+(`.github/workflows/publish-shared.yml`) auto-publishes a patch release
+on every push to `main` that touches `libs/shared/**`. Manual minor /
+major bumps are available via the workflow's `workflow_dispatch` input.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Auth setup (one-time)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+GitHub Packages requires authentication even for read access to a
+private package. Create a PAT with `read:packages`, then export it:
 
 ```bash
-npm run reset-project
+# in your shell profile (~/.zshrc, ~/.bashrc)
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The repo's `.npmrc` reads `${GITHUB_TOKEN}` at install time.
 
-### Other setup steps
+### Bumping the shared dependency
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+pnpm up @fitkit/shared@latest
+```
 
-## Learn more
+Or pin to a specific version published by the workflow:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+pnpm up @fitkit/shared@npm:@desmotech/fitkit-shared@x.y.z
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Setup
 
-## Join the community
+```bash
+# install
+pnpm install
 
-Join our community of developers creating universal apps.
+# expo will warn if any expo-managed package is on a wrong SDK 55
+# version; run --fix to true it up:
+pnpm exec expo install --fix
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+cp .env.example .env
+# fill in EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY (the same publishable key used by web),
+# EXPO_PUBLIC_API_URL, EXPO_PUBLIC_WEB_URL, etc.
+
+# start the dev server
+pnpm start
+```
+
+Open the Expo Go app on a physical device and scan the QR code, or
+press `i` / `a` in the terminal for iOS / Android simulators.
+
+## Commands
+
+| Command                  | What it does                                  |
+| ------------------------ | --------------------------------------------- |
+| `pnpm start`             | `expo start` — Metro dev server               |
+| `pnpm ios`               | `expo run:ios`                                |
+| `pnpm android`           | `expo run:android`                            |
+| `pnpm typecheck`         | `tsc --noEmit`                                |
+| `pnpm lint`              | `eslint .`                                    |
+| `pnpm prebuild`          | `expo prebuild --non-interactive`             |
+| `pnpm build:preview`     | `eas build --profile preview` (internal dist) |
+| `pnpm build:production`  | `eas build --profile production`              |
+
+## Architecture notes
+
+- **Auth**: `ClerkProvider` from `@clerk/clerk-expo` in
+  `app/_layout.tsx`. Token cache via `expo-secure-store` — required so
+  sessions survive cold starts.
+- **API client**: `useApi` in `src/hooks/use-api.ts` (10s in-memory
+  token cache, single 401 retry). Reads base URL from `expo-constants`
+  `extra.apiUrl`.
+- **Theme**: NativeWind 4 `dark:` variants follow the system color
+  scheme. Tailwind tokens point to CSS variables (`var(--primary)`)
+  defined in `global.css`.
+- **Navigation**: Expo Router (SDK 55) with file-based routes under
+  `app/`. `(auth)` and `(tabs)` are route groups; deep links land on
+  `app/checkin.tsx`.
+- **i18n**: `I18nProvider` reads device locale via `expo-localization`,
+  falls back to Hebrew (matches web default). Dictionaries from
+  `@fitkit/shared`.
+- **Realtime**: `socket.io-client` with `transports: ['websocket']`,
+  AppState lifecycle awareness, JWT rotation.
+
+## Fonts and icons
+
+- Fonts: `assets/fonts/` — drop `.otf`/`.ttf` files and uncomment the
+  `useFonts` lines in `app/_layout.tsx`.
+- Icons: `assets/images/{icon,splash,adaptive-icon}.png` — required for
+  builds.

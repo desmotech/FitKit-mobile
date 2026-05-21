@@ -1,0 +1,8 @@
+onlyBuiltDependencies:
+  - '@clerk/shared'
+  - '@sentry/cli'
+  - browser-tabs-lock
+  - bufferutil
+  - core-js
+  - unrs-resolver
+  - utf-8-validate
