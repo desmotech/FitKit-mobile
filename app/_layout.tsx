@@ -88,6 +88,13 @@ function RootLayout() {
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="checkin" />
                     <Stack.Screen name="log" />
+                    <Stack.Screen name="onboarding" />
+                    {/* /sign-up is the Clerk invite-ticket landing route.
+                        Lives OUTSIDE (auth) on purpose — the (auth) group
+                        is GuestOnly, which would redirect a stale-session
+                        user away from the invite screen before it ever
+                        gets to process the ticket. */}
+                    <Stack.Screen name="sign-up" />
                     <Stack.Screen
                       name="announcements"
                       options={{ presentation: 'pageSheet' }}

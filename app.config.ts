@@ -67,6 +67,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             host: 'app.fitkit.fit',
             pathPrefix: '/ru/checkin',
           },
+          // Clerk invite ticket redirect target. Clerk's invitation
+          // emails point at clerk.fitkit.fit/v1/tickets/accept; after
+          // server-side validation Clerk redirects to
+          // https://app.fitkit.fit/sign-up?__clerk_ticket=...&__clerk_status=sign_up
+          // (per the JWT's rurl). This filter catches that redirect on
+          // Android so the app handles invite acceptance instead of
+          // the browser falling through to a web fallback. Requires
+          // assetlinks.json on /.well-known/ — see FIT-188.
+          {
+            scheme: 'https',
+            host: 'app.fitkit.fit',
+            pathPrefix: '/sign-up',
+          },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       },
