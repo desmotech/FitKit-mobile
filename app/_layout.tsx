@@ -89,6 +89,11 @@ function RootLayout() {
                     <Stack.Screen name="checkin" />
                     <Stack.Screen name="log" />
                     <Stack.Screen name="onboarding" />
+                    {/* /forms/sign/[token] — public, token-gated.
+                        See app/forms/_layout.tsx for the no-gate
+                        rationale. Reachable via Universal Link or
+                        custom-scheme deep link for local testing. */}
+                    <Stack.Screen name="forms" />
                     {/* /sign-up is the Clerk invite-ticket landing route.
                         Lives OUTSIDE (auth) on purpose — the (auth) group
                         is GuestOnly, which would redirect a stale-session

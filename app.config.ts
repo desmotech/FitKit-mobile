@@ -80,6 +80,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             host: 'app.fitkit.fit',
             pathPrefix: '/sign-up',
           },
+          // FIT-178 token-gated form signing. Email/SMS links from
+          // staff bulk-issuing compliance forms land here. Same
+          // assetlinks.json + AASA file from FIT-188 cover this path.
+          {
+            scheme: 'https',
+            host: 'app.fitkit.fit',
+            pathPrefix: '/forms/sign',
+          },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       },
