@@ -19,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Coffee,
-  PencilLine,
   Quote,
   StickyNote,
 } from 'lucide-react-native';
@@ -500,18 +499,10 @@ export default function WhiteboardScreen() {
             label: labels.dailyProgress,
             keepGoing: labels.keepGoing,
             completedAll: labels.completedAll,
-            log: labels.log,
           }}
           onLayout={(e) => {
             const h = e.nativeEvent.layout.height;
             if (h > 0 && Math.abs(h - dockHeight) > 1) setDockHeight(h);
-          }}
-          onLog={() => {
-            haptics.tap();
-            router.push({
-              pathname: '/(tabs)/workouts/[id]/log',
-              params: { id: assignment.id },
-            });
           }}
         />
       ) : null}
@@ -682,14 +673,12 @@ function DailyProgressDock({
   total,
   isRTL,
   labels,
-  onLog,
   onLayout,
 }: {
   done: number;
   total: number;
   isRTL: boolean;
-  labels: { label: string; keepGoing: string; completedAll: string; log: string };
-  onLog: () => void;
+  labels: { label: string; keepGoing: string; completedAll: string };
   onLayout?: (e: LayoutChangeEvent) => void;
 }) {
   const { colorScheme } = useColorScheme();
@@ -755,37 +744,6 @@ function DailyProgressDock({
             {status}
           </Text>
         </View>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={onLog}
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: 6,
-            paddingHorizontal: 18,
-            height: 40,
-            borderRadius: 14,
-            borderCurve: 'continuous',
-            backgroundColor: '#0E8C8C',
-            shadowColor: '#0E8C8C',
-            shadowOpacity: 0.35,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 5,
-          }}
-        >
-          <PencilLine size={13} color="#fff" strokeWidth={2.6} />
-          <Text
-            style={{
-              fontSize: 13.5,
-              fontWeight: '800',
-              color: '#fff',
-              letterSpacing: -0.1,
-            }}
-          >
-            {labels.log}
-          </Text>
-        </TouchableOpacity>
       </BlurView>
     </View>
   );

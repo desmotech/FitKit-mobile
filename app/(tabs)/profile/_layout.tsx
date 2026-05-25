@@ -4,13 +4,6 @@ export default function ProfileLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen
-        name="log-pr"
-        options={{
-          presentation: 'pageSheet',
-          headerShown: false,
-        }}
-      />
       <Stack.Screen name="personal" />
       <Stack.Screen name="payments" />
       <Stack.Screen name="goals" />

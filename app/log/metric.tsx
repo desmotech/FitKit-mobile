@@ -1,10 +1,13 @@
 /**
- * Log Body Metric — pageSheet form. Mirrors web's `MetricEntryDialog`
- * shape: one metric per save. Picks the type, the value, the unit
- * (auto-defaulted from type), date, optional notes. POSTs to the
- * existing `/organizations/:orgId/metrics/me` endpoint.
+ * Body-metric quick log.
+ *
+ * Visual: iOS grouped-list aesthetic. The type/unit select use the
+ * `FKSelectSheet` action-sheet primitive (iOS native menu/action-sheet).
+ *
+ * Optional `?type=weight` query param pre-selects the metric type — used
+ * by the metrics summary card tap-throughs.
  */
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -13,23 +16,28 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
 import type {
   BodyMetricType,
   BodyMetricUnit,
   CreateBodyMetricInput,
 } from '@fitkit/shared';
 import {
-  FKDateField,
-  FKGlassPanel,
   FKModalHeader,
   FKSelectSheet,
   useFKColors,
 } from '@/components/fk';
+import { DatePresetField, LogSectionCard } from '@/components/log';
 import { Text } from '@/components/ui/text';
 import { useLogMetric } from '@/hooks/use-body-metrics';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const TYPE_ORDER: BodyMetricType[] = [
@@ -43,7 +51,6 @@ const TYPE_ORDER: BodyMetricType[] = [
   'custom',
 ];
 
-/** Default unit per metric type — mirrors web's MetricEntryDialog. */
 const DEFAULT_UNIT_FOR: Record<BodyMetricType, BodyMetricUnit> = {
   weight: 'kg',
   body_fat: 'percent',
@@ -55,7 +62,6 @@ const DEFAULT_UNIT_FOR: Record<BodyMetricType, BodyMetricUnit> = {
   custom: 'kg',
 };
 
-/** Units allowed per type — keep value-domain coherent (no `cm` for weight). */
 const UNITS_FOR: Record<BodyMetricType, BodyMetricUnit[]> = {
   weight: ['kg', 'lbs'],
   body_fat: ['percent'],
@@ -67,43 +73,38 @@ const UNITS_FOR: Record<BodyMetricType, BodyMetricUnit[]> = {
   custom: ['kg', 'lbs', 'cm', 'in', 'percent'],
 };
 
+function isBodyMetricType(v: string | undefined): v is BodyMetricType {
+  return v != null && (TYPE_ORDER as readonly string[]).includes(v);
+}
+
 export default function LogMetricScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ type?: string }>();
   const haptics = useHaptics();
   const colors = useFKColors();
   const { dir, t } = useI18n();
+  const { colorScheme } = useColorScheme();
   const isRTL = dir === 'rtl';
-  const isDark = colors.background === '#0A1628';
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
   const dict = t as unknown as Record<string, Record<string, unknown>>;
   const bmT = (dict.bodyMetrics ?? {}) as Record<string, unknown>;
-  const types = (bmT.types ?? {}) as Record<string, string>;
-  const units = (bmT.units ?? {}) as Record<string, string>;
-  const formT = (bmT.form ?? {}) as Record<string, string>;
-  const commonT = (dict.common ?? {}) as Record<string, string>;
-  const labels = {
-    title: (bmT.addMetric as string) ?? 'Add Metric',
-    type: formT.type ?? 'Type',
-    value: formT.value ?? 'Value',
-    unit: formT.unit ?? 'Unit',
-    notes: formT.notes ?? 'Notes',
-    date: formT.date ?? 'Date',
-    notesPlaceholder: (bmT.metricAdded as string) ?? 'Optional notes',
-    cancel: commonT.cancel ?? 'Cancel',
-    save: commonT.save ?? 'Save',
-    saving: commonT.loading ?? 'Saving…',
-    selectType: types.weight ? 'Select metric' : 'Select metric',
-  };
+  const typesT = (bmT.types ?? {}) as Record<string, string>;
+  const unitsT = (bmT.units ?? {}) as Record<string, string>;
+  const L = useLogStrings();
 
-  const [type, setType] = useState<BodyMetricType>('weight');
-  const [unit, setUnit] = useState<BodyMetricUnit>(DEFAULT_UNIT_FOR.weight);
+  const initialType: BodyMetricType = isBodyMetricType(params.type)
+    ? params.type
+    : 'weight';
+  const [type, setType] = useState<BodyMetricType>(initialType);
+  const [unit, setUnit] = useState<BodyMetricUnit>(DEFAULT_UNIT_FOR[initialType]);
   const [valueText, setValueText] = useState('');
   const [recordedAt, setRecordedAt] = useState<string>(() => isoDate());
   const [notes, setNotes] = useState('');
 
-  // Re-pick unit when type changes (e.g. weight→cm doesn't make sense).
   const onChangeType = (next: BodyMetricType) => {
     setType(next);
     setUnit(DEFAULT_UNIT_FOR[next]);
@@ -137,33 +138,36 @@ export default function LogMetricScreen() {
     () =>
       TYPE_ORDER.map((v) => ({
         value: v,
-        label: types[v] ?? v,
+        label: typesT[v] ?? v,
       })),
-    [types],
+    [typesT],
   );
   const unitOptions = useMemo(
     () =>
       UNITS_FOR[type].map((u) => ({
         value: u,
-        label: units[u] ?? u,
+        label: unitsT[u] ?? u,
       })),
-    [type, units],
+    [type, unitsT],
   );
 
   return (
-    <View className="flex-1 bg-background">
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: colors.background }}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
+        style={{ flex: 1 }}
       >
         <FKModalHeader
-          title={labels.title}
+          title={L.metricTitle}
           leadingAction={{
-            label: labels.cancel,
+            label: L.hubCancel,
             onPress: () => router.back(),
           }}
           trailingAction={{
-            label: mutation.isPending ? labels.saving : labels.save,
+            label: mutation.isPending ? L.workoutSaving : L.workoutSave,
             style: 'primary',
             onPress: handleSubmit,
             disabled: !canSubmit || mutation.isPending,
@@ -171,163 +175,131 @@ export default function LogMetricScreen() {
         />
 
         <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: 60, gap: 14 }}
+          contentContainerStyle={{
+            padding: 20,
+            paddingBottom: insets.bottom + 24,
+            gap: 14,
+          }}
           keyboardShouldPersistTaps="handled"
         >
           <Animated.View entering={FadeInDown.delay(40).duration(260)}>
-            <Field label={labels.type} isRTL={isRTL} colors={colors}>
+            <LogSectionCard label={L.metricType}>
               <FKSelectSheet<BodyMetricType>
                 value={type}
-                placeholder={labels.selectType}
-                title={labels.type}
+                placeholder={L.metricSelectType}
+                title={L.metricType}
                 options={typeOptions}
                 onChange={onChangeType}
-                cancelLabel={labels.cancel}
+                cancelLabel={L.hubCancel}
               />
-            </Field>
+            </LogSectionCard>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(70).duration(260)}>
-            <FKGlassPanel
-              radius={16}
-              style={{ padding: 12, gap: 10 }}
-            >
-              <FieldLabel
-                isRTL={isRTL}
-                colors={colors}
-                text={labels.value}
-              />
+            <LogSectionCard label={L.metricValue}>
               <View
                 style={{
                   flexDirection: isRTL ? 'row-reverse' : 'row',
                   alignItems: 'center',
-                  gap: 8,
+                  gap: 12,
                 }}
               >
                 <TextInput
+                  accessibilityLabel={L.metricValue}
                   value={valueText}
                   onChangeText={setValueText}
                   placeholder="0.0"
-                  placeholderTextColor={isDark ? '#6B8FAA' : '#94A3B8'}
+                  placeholderTextColor={
+                    isDark
+                      ? 'rgba(235,235,245,0.3)'
+                      : 'rgba(60,60,67,0.3)'
+                  }
                   keyboardType="decimal-pad"
                   inputMode="decimal"
                   style={{
                     flex: 1,
-                    height: 44,
-                    paddingHorizontal: 12,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: 'rgba(94,112,130,0.20)',
-                    fontSize: 18,
-                    fontWeight: '700',
+                    fontSize: 28,
+                    fontWeight: '600',
                     fontFamily: 'DMMono',
                     color: colors.foreground,
-                    backgroundColor: colors.card,
                     textAlign: isRTL ? 'right' : 'left',
+                    padding: 0,
                   }}
                 />
-                <View style={{ minWidth: 96, flexShrink: 0 }}>
+                <View style={{ minWidth: 100, flexShrink: 0 }}>
                   <FKSelectSheet<BodyMetricUnit>
                     value={unit}
-                    placeholder={labels.unit}
-                    title={labels.unit}
+                    placeholder={L.metricUnit}
+                    title={L.metricUnit}
                     options={unitOptions}
                     onChange={setUnit}
-                    cancelLabel={labels.cancel}
+                    cancelLabel={L.hubCancel}
                   />
                 </View>
               </View>
-            </FKGlassPanel>
+            </LogSectionCard>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(100).duration(260)}>
-            <Field label={labels.date} isRTL={isRTL} colors={colors}>
-              <FKDateField
-                value={recordedAt}
-                onChange={setRecordedAt}
-                maximumDate={new Date()}
-              />
-            </Field>
+            <LogSectionCard label={L.metricDate}>
+              <DatePresetField value={recordedAt} onChange={setRecordedAt} />
+            </LogSectionCard>
           </Animated.View>
 
           <Animated.View entering={FadeInDown.delay(130).duration(260)}>
-            <Field label={labels.notes} isRTL={isRTL} colors={colors}>
+            <LogSectionCard label={L.metricNotes}>
               <TextInput
+                accessibilityLabel={L.metricNotes}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder={labels.notesPlaceholder}
-                placeholderTextColor={isDark ? '#6B8FAA' : '#94A3B8'}
+                placeholder={L.metricNotesPlaceholder}
+                placeholderTextColor={
+                  isDark
+                    ? 'rgba(235,235,245,0.3)'
+                    : 'rgba(60,60,67,0.3)'
+                }
                 multiline
                 style={{
-                  minHeight: 80,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: 'rgba(94,112,130,0.20)',
-                  fontSize: 14,
+                  minHeight: 72,
+                  fontSize: 15,
                   color: colors.foreground,
-                  backgroundColor: colors.card,
                   textAlign: isRTL ? 'right' : 'left',
                   textAlignVertical: 'top',
+                  padding: 0,
                 }}
               />
-            </Field>
+            </LogSectionCard>
           </Animated.View>
+
+          {mutation.error && (
+            <Animated.View
+              entering={FadeIn.duration(160)}
+              style={{
+                borderRadius: 12,
+                borderCurve: 'continuous',
+                padding: 12,
+                backgroundColor: isDark
+                  ? 'rgba(255,69,58,0.16)'
+                  : 'rgba(255,59,48,0.12)',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '500',
+                  color: isDark ? '#FF453A' : '#D70015',
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {L.metricFailed}
+              </Text>
+            </Animated.View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
-
-// ── Subcomponents ──────────────────────────────────────────────────
-
-function FieldLabel({
-  text,
-  isRTL,
-  colors,
-}: {
-  text: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-}) {
-  return (
-    <Text
-      style={{
-        fontSize: 11,
-        fontWeight: '800',
-        letterSpacing: 1.2,
-        textTransform: 'uppercase',
-        color: colors.mutedFg,
-        textAlign: isRTL ? 'right' : 'left',
-        fontFamily: 'DMMono',
-      }}
-    >
-      {text}
-    </Text>
-  );
-}
-
-function Field({
-  label,
-  isRTL,
-  colors,
-  children,
-}: {
-  label: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-  children: React.ReactNode;
-}) {
-  return (
-    <View style={{ gap: 8 }}>
-      <FieldLabel text={label} isRTL={isRTL} colors={colors} />
-      {children}
-    </View>
-  );
-}
-
-// ── Helpers ────────────────────────────────────────────────────────
 
 function isoDate(d = new Date()): string {
   const y = d.getFullYear();

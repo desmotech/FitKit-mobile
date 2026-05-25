@@ -63,26 +63,46 @@ export function FKModalHeader({
   const isRTL = dir === 'rtl';
   const isDark = colors.background === '#0A1628';
 
+  // JSX reorder: leading goes on the visual leading edge (left in LTR,
+  // right in RTL). We render LTR-ordered children then conditionally
+  // reverse the array — avoids `flexDirection: 'row-reverse'`, which
+  // has been unreliable in this repo's mixed-locale renders.
+  const leadingEl = (
+    <View key="lead" style={{ minWidth: 60, alignItems: 'flex-start' }}>
+      {leadingAction ? (
+        <ActionButton action={leadingAction} isRTL={isRTL} />
+      ) : null}
+    </View>
+  );
+  const spacerEl = <View key="sp" style={{ flex: 1 }} />;
+  const trailingEl = (
+    <View key="trail" style={{ minWidth: 60, alignItems: 'flex-end' }}>
+      {trailingAction ? (
+        <ActionButton action={trailingAction} isRTL={isRTL} />
+      ) : null}
+    </View>
+  );
+  const slots = [leadingEl, spacerEl, trailingEl];
+
   return (
     <View
       style={{
-        flexDirection: isRTL ? 'row-reverse' : 'row',
+        flexDirection: 'row',
         alignItems: 'center',
         height: 52,
         paddingHorizontal: 16,
+        // Opaque background so scrolled content can't bleed behind the
+        // header and block the Cancel/Save touch targets. Uses the same
+        // background as the page so the header reads as a continuation
+        // of the screen chrome, separated only by the hairline below.
+        backgroundColor: colors.background,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: isDark
-          ? 'rgba(255,255,255,0.06)'
+          ? 'rgba(84,84,88,0.6)'
           : 'rgba(60,60,67,0.18)',
       }}
     >
-      {/* Leading slot. Reserved min-width so the centered title can't
-          drift left/right when only one side is present. */}
-      <View style={{ minWidth: 60, alignItems: 'flex-start' }}>
-        {leadingAction ? (
-          <ActionButton action={leadingAction} isRTL={isRTL} />
-        ) : null}
-      </View>
+      {isRTL ? slots.slice().reverse() : slots}
 
       {/* Centered title — absolute-positioned so it ignores button
           widths and always sits on the screen's horizontal center,
@@ -101,36 +121,18 @@ export function FKModalHeader({
           }}
         >
           <Text
-            className="font-display"
             numberOfLines={1}
             style={{
               fontSize: 17,
-              fontWeight: '700',
+              fontWeight: '600',
               color: colors.foreground,
-              letterSpacing: -0.2,
+              letterSpacing: -0.4,
             }}
           >
             {title}
           </Text>
         </View>
       ) : null}
-
-      {/* Trailing slot. Conditional physical margin guarantees the
-          trailing action lands opposite the leading slot in both LTR
-          and RTL. `marginLeft: 'auto'` in row-reverse would push it
-          to the same visual side as leading — that's the bug we hit
-          before. */}
-      <View
-        style={{
-          ...(isRTL ? { marginRight: 'auto' } : { marginLeft: 'auto' }),
-          minWidth: 60,
-          alignItems: 'flex-end',
-        }}
-      >
-        {trailingAction ? (
-          <ActionButton action={trailingAction} isRTL={isRTL} />
-        ) : null}
-      </View>
     </View>
   );
 }
@@ -168,32 +170,44 @@ function ActionButton({
       accessibilityState={{ disabled: !!action.disabled }}
       accessibilityLabel={action.label}
     >
-      {({ pressed }) => (
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: isBack ? 2 : 0,
-            paddingVertical: 6,
-            paddingHorizontal: 4,
-            opacity: action.disabled ? 0.4 : pressed ? 0.5 : 1,
-          }}
-        >
-          {isBack ? (
-            <Chevron size={22} color={color} strokeWidth={2.6} />
-          ) : null}
+      {({ pressed }) => {
+        const chevronEl = isBack ? (
+          <Chevron
+            key="ch"
+            size={22}
+            color={color}
+            strokeWidth={2.6}
+          />
+        ) : null;
+        const labelEl = (
           <Text
+            key="lb"
             style={{
               fontSize: 17,
               fontWeight,
               color,
-              letterSpacing: -0.2,
+              letterSpacing: -0.4,
             }}
           >
             {action.label}
           </Text>
-        </View>
-      )}
+        );
+        const children = [chevronEl, labelEl].filter(Boolean) as React.ReactNode[];
+        return (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: isBack ? 2 : 0,
+              paddingVertical: 6,
+              paddingHorizontal: 4,
+              opacity: action.disabled ? 0.4 : pressed ? 0.5 : 1,
+            }}
+          >
+            {isRTL ? children.slice().reverse() : children}
+          </View>
+        );
+      }}
     </Pressable>
   );
 }

@@ -87,6 +87,7 @@ function RootLayout() {
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="checkin" />
+                    <Stack.Screen name="log" />
                     <Stack.Screen
                       name="announcements"
                       options={{ presentation: 'pageSheet' }}

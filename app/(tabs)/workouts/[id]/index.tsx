@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircle,
@@ -37,7 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding, useTabBarTop } from '@/hooks/use-tab-bar-padding';
+import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   type WorkoutResult,
@@ -73,7 +72,6 @@ export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const haptics = useHaptics();
   const scrollBottomPad = useTabBarPadding(100);
-  const dockBottom = useTabBarTop();
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();
@@ -538,6 +536,33 @@ export default function WorkoutDetailScreen() {
           </Tabs>
         </View>
 
+        {/* Inline "Log result" CTA — placed after the exercise content
+            and before MyHistory. The previous design used a sticky
+            BlurView dock at the bottom that overlapped the movement list
+            and forced extra bottom padding on the ScrollView. Inline is
+            simpler, doesn't occlude content, and matches the profile
+            sub-screens' inline-primary-action pattern. */}
+        <View
+          style={{
+            paddingHorizontal: 18,
+            paddingTop: 18,
+          }}
+        >
+          <Button
+            label={labels.logResult}
+            fullWidth
+            size="lg"
+            className="rounded-2xl"
+            onPress={() => {
+              haptics.tap();
+              router.push({
+                pathname: '/log/workout/[id]',
+                params: { id: assignment.id },
+              });
+            }}
+          />
+        </View>
+
         {/* My History — collapsible (visible across all section tabs) */}
         <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
           <MyHistory
@@ -547,51 +572,6 @@ export default function WorkoutDetailScreen() {
           />
         </View>
       </ScrollView>
-
-      {/* Sticky CTA — sits ABOVE the OS NativeTabs tab bar. The tab bar
-          is translucent material, so the dock can't be `bottom: 0` (it
-          would render behind the bar). Lift by the tab-bar visual
-          height (49pt UIKit standard) + safe-area inset for the home
-          indicator. */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: dockBottom,
-          left: 0,
-          right: 0,
-        }}
-      >
-        <BlurView
-          intensity={isDark ? 50 : 80}
-          tint={isDark ? 'systemMaterialDark' : 'systemMaterial'}
-          style={{
-            paddingHorizontal: 16,
-            paddingTop: 10,
-            paddingBottom: 10,
-            borderTopWidth: 0.5,
-            borderTopColor: 'rgba(94,112,130,0.18)',
-          }}
-        >
-          {/* Single primary action — Log Result. The previous "Start
-              workout" button was a non-functional placeholder that just
-              fired a success haptic; removed per HIG one-primary-action
-              guideline. Quick-start / timer flows can come back as a
-              secondary entry point inside the Log screen if needed. */}
-          <Button
-            label={labels.logResult}
-            fullWidth
-            size="lg"
-            className="rounded-2xl"
-            onPress={() => {
-              haptics.tap();
-              router.push({
-                pathname: '/(tabs)/workouts/[id]/log',
-                params: { id: assignment.id },
-              });
-            }}
-          />
-        </BlurView>
-      </View>
     </View>
   );
 }

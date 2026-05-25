@@ -30,6 +30,7 @@ import {
   Compass,
   Plus,
   Target,
+  Trophy,
 } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
@@ -59,6 +60,7 @@ import {
   useMyWeekAssignments,
   weekStartFor,
 } from '@/hooks/use-workouts';
+import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -73,6 +75,7 @@ export default function HomeScreen() {
   const { activeOrganization, user: currentUser } = useCurrentUser();
   const { dir, t, lang } = useI18n();
   const colors = useFKColors();
+  const L = useLogStrings();
   const bottomPad = useTabBarPadding(20);
   const isRTL = dir === 'rtl';
   const orgId = activeOrganization?.id;
@@ -524,50 +527,102 @@ export default function HomeScreen() {
                   </Animated.View>
                 ))}
 
-                {/* Add-goal pill — present even with goals so the user
-                    can add a new one without bouncing through View All. */}
-                <Pressable
-                  onPress={() => {
-                    haptics.tap();
-                    router.push('/(tabs)/profile/goals/new');
+                {/* Add-goal + Log-PR pills, side-by-side. PR logging
+                    is a first-tier home action now — same visual weight
+                    as Add goal. */}
+                <View
+                  style={{
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    gap: 10,
                   }}
-                  accessibilityRole="button"
-                  accessibilityLabel={labels.addGoal}
                 >
-                  {({ pressed }) => (
-                    <View
-                      style={{
-                        flexDirection: isRTL ? 'row-reverse' : 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 6,
-                        height: 44,
-                        borderRadius: 14,
-                        backgroundColor: 'rgba(14,140,140,0.08)',
-                        borderWidth: 1,
-                        borderColor: 'rgba(14,140,140,0.25)',
-                        borderStyle: 'dashed',
-                        opacity: pressed ? 0.82 : 1,
-                      }}
-                    >
-                      <Plus
-                        size={14}
-                        color={BRAND_TEAL}
-                        strokeWidth={2.6}
-                      />
-                      <Text
+                  <Pressable
+                    onPress={() => {
+                      haptics.tap();
+                      router.push('/(tabs)/profile/goals/new');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={labels.addGoal}
+                    style={{ flex: 1 }}
+                  >
+                    {({ pressed }) => (
+                      <View
                         style={{
-                          fontSize: 13,
-                          fontWeight: '800',
-                          color: BRAND_TEAL,
-                          letterSpacing: -0.1,
+                          flexDirection: isRTL ? 'row-reverse' : 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          height: 44,
+                          borderRadius: 14,
+                          backgroundColor: 'rgba(14,140,140,0.08)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(14,140,140,0.25)',
+                          borderStyle: 'dashed',
+                          opacity: pressed ? 0.82 : 1,
                         }}
                       >
-                        {labels.addGoal}
-                      </Text>
-                    </View>
-                  )}
-                </Pressable>
+                        <Plus
+                          size={14}
+                          color={BRAND_TEAL}
+                          strokeWidth={2.6}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '800',
+                            color: BRAND_TEAL,
+                            letterSpacing: -0.1,
+                          }}
+                        >
+                          {labels.addGoal}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      haptics.tap();
+                      router.push('/log/lift');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={L.homeLogPr}
+                    style={{ flex: 1 }}
+                  >
+                    {({ pressed }) => (
+                      <View
+                        style={{
+                          flexDirection: isRTL ? 'row-reverse' : 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          height: 44,
+                          borderRadius: 14,
+                          backgroundColor: 'rgba(201,151,77,0.08)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(201,151,77,0.30)',
+                          borderStyle: 'dashed',
+                          opacity: pressed ? 0.82 : 1,
+                        }}
+                      >
+                        <Trophy
+                          size={14}
+                          color="#C9974D"
+                          strokeWidth={2.6}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '800',
+                            color: '#C9974D',
+                            letterSpacing: -0.1,
+                          }}
+                        >
+                          {L.homeLogPr}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
               </View>
             )}
           </Animated.View>

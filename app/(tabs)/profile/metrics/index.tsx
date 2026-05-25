@@ -5,7 +5,7 @@
  *
  * Architecture:
  *   - Pull summary via `useMyMetricsSummary` (existing API)
- *   - Trailing "+" in the nav bar pushes `/profile/metrics/log` pageSheet
+ *   - Trailing "+" in the nav bar pushes `/log/metric` pageSheet
  *   - Tap a card → push `/profile/metrics/[type]` for chart + history
  *   - Empty state nudges to log the first metric
  */
@@ -83,7 +83,7 @@ export default function MetricsScreen() {
 
   const handleAdd = () => {
     haptics.tap();
-    router.push('/(tabs)/profile/metrics/log');
+    router.push('/log/metric');
   };
 
   return (

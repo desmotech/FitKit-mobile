@@ -11,13 +11,6 @@ export default function WorkoutsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="[id]/index" />
       <Stack.Screen
-        name="[id]/log"
-        options={{
-          presentation: 'pageSheet',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
         name="[id]/video"
         options={{
           presentation: 'fullScreenModal',

@@ -1,0 +1,81 @@
+name: EAS Build
+
+# Manual native builds. Use this when:
+#   - native code changes (plugin added, app.config.ts native fields edited)
+#   - bumping app version for store submission
+#   - producing internal-distribution preview builds
+#
+# JS-only changes don't need a fresh build — use eas-update.yml instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'EAS build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+      platform:
+        description: 'Platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - ios
+          - android
+          - all
+      auto_submit:
+        description: 'Submit to stores after build (production only)'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: eas-build-${{ github.event.inputs.profile }}-${{ github.event.inputs.platform }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@desmotech'
+
+      - name: Setup Expo + EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        env:
+          EAS_BUILD_AUTOSUBMIT: ${{ github.event.inputs.auto_submit == 'true' && github.event.inputs.profile == 'production' && '1' || '' }}
+        run: |
+          ARGS="--profile ${{ github.event.inputs.profile }} --platform ${{ github.event.inputs.platform }} --non-interactive --no-wait"
+          if [ -n "$EAS_BUILD_AUTOSUBMIT" ]; then
+            ARGS="$ARGS --auto-submit"
+          fi
+          eas build $ARGS

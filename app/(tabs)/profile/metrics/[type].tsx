@@ -105,7 +105,10 @@ export default function MetricDetailScreen() {
 
   const handleAdd = () => {
     haptics.tap();
-    router.push('/(tabs)/profile/metrics/log');
+    router.push({
+      pathname: '/log/metric',
+      params: type ? { type } : {},
+    });
   };
 
   const handleDelete = (entry: BodyMetricResponse) => {
