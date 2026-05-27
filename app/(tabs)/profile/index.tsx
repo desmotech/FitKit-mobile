@@ -21,6 +21,7 @@ import {
   ChevronRight,
   CircleHelp,
   CreditCard,
+  FileSignature,
   Globe,
   Goal,
   History,
@@ -128,6 +129,7 @@ export default function ProfileScreen() {
     settingGoals: settingsT.goals ?? 'Goals',
     settingMetrics: settingsT.bodyMetrics ?? 'Body Metrics',
     settingPhotos: settingsT.progressPhotos ?? 'Progress Photos',
+    settingForms: settingsT.forms ?? 'My Forms',
     settingNotifications: settingsT.notifications ?? 'Notifications',
     settingHelp: settingsT.help ?? 'Help & Support',
     settingDangerZone: settingsT.dangerZone ?? 'Account',
@@ -530,6 +532,15 @@ export default function ProfileScreen() {
               colors={colors}
               isDark={isDark}
               onPress={() => router.push('/(tabs)/profile/photos')}
+            />
+            <RowDivider isDark={isDark} />
+            <SettingsRow
+              Icon={FileSignature}
+              label={labels.settingForms}
+              isRTL={isRTL}
+              colors={colors}
+              isDark={isDark}
+              onPress={() => router.push('/(tabs)/profile/forms')}
             />
           </SettingsGroup>
 

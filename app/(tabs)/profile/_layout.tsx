@@ -10,6 +10,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="history" />
       <Stack.Screen name="metrics" />
       <Stack.Screen name="photos" />
+      <Stack.Screen name="forms" />
       <Stack.Screen name="notifications" />
       <Stack.Screen
         name="delete-account"
