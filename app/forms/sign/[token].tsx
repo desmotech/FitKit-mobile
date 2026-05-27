@@ -27,6 +27,7 @@ import { Text } from '@/components/ui/text';
 import {
   useFormByToken,
   useSubmitFormByToken,
+  useTokenSignatureUpload,
   type FormTokenStatus,
 } from '@/hooks/use-form-token';
 import { useI18n } from '@/providers/i18n-provider';
@@ -46,6 +47,7 @@ export default function SignFormScreen() {
   const tokenStr = typeof token === 'string' ? token : '';
   const query = useFormByToken(tokenStr);
   const submit = useSubmitFormByToken(tokenStr);
+  const uploadSignatureViaToken = useTokenSignatureUpload(tokenStr);
 
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -220,6 +222,7 @@ export default function SignFormScreen() {
           <FKGlassPanel radius={20} style={{ padding: 20 }}>
             <FormRenderer
               form={form}
+              uploadAttachment={uploadSignatureViaToken}
               onSubmit={handleSubmit}
               submitting={submit.isPending}
               serverError={submitError}

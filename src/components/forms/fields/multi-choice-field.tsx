@@ -10,8 +10,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useI18n } from '@/providers/i18n-provider';
 import type { FormField } from '@/types/forms';
+import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -30,8 +30,7 @@ export function MultiChoiceFieldRenderer({
   onChange,
   error,
 }: MultiChoiceFieldProps) {
-  const { dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const isRTL = useFormRTL();
   const haptics = useHaptics();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';

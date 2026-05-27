@@ -15,8 +15,8 @@ import { Pressable, View } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useI18n } from '@/providers/i18n-provider';
 import type { FormField } from '@/types/forms';
+import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -35,8 +35,7 @@ export function PhotoFieldRenderer({
   onChange,
   error,
 }: PhotoFieldProps) {
-  const { dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const isRTL = useFormRTL();
   const haptics = useHaptics();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';

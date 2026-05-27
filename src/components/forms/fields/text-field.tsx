@@ -7,8 +7,8 @@
 import { useColorScheme } from 'nativewind';
 import { TextInput } from 'react-native';
 import { useFKColors } from '@/components/fk';
-import { useI18n } from '@/providers/i18n-provider';
 import type { FormField } from '@/types/forms';
+import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
 
 export interface TextFieldProps {
@@ -24,8 +24,7 @@ export function TextFieldRenderer({
   onChange,
   error,
 }: TextFieldProps) {
-  const { dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const isRTL = useFormRTL();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();

@@ -15,7 +15,7 @@ import type { ReactNode } from 'react';
 import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
-import { useI18n } from '@/providers/i18n-provider';
+import { useFormRTL } from '../form-rtl-context';
 
 export interface FieldShellProps {
   label: string;
@@ -32,8 +32,7 @@ export function FieldShell({
   error,
   children,
 }: FieldShellProps) {
-  const { dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const isRTL = useFormRTL();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';

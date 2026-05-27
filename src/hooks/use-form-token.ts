@@ -22,6 +22,7 @@ import {
   useQuery,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+import * as FileSystem from 'expo-file-system/legacy';
 import { apiUrl } from '@/lib/api';
 import { useI18n } from '@/providers/i18n-provider';
 import type {
@@ -139,4 +140,62 @@ export function useSubmitFormByToken(token: string | undefined) {
       return { status, data: body.data };
     },
   });
+}
+
+/**
+ * Uploads a signature PNG via the public token-gated upload endpoint.
+ *
+ *   POST /forms/sign/:token/signature-upload
+ *   → { uploadUrl, r2Key, expiresInSeconds }
+ *
+ * The server pre-signs a PUT URL pinned to Content-Type: image/png
+ * under `signatures/{orgId}/{instanceId}/{ts}.png` in the default
+ * R2 bucket. 5-minute TTL on the URL. Mobile flow:
+ *
+ *   1. POST → get presigned URL + r2Key
+ *   2. PUT the PNG bytes with Content-Type: image/png
+ *   3. Submit form answer carrying { r2Key, mime: 'image/png' }
+ *
+ * Photos via the token route are not yet supported server-side.
+ */
+export function useTokenSignatureUpload(token: string | undefined) {
+  return async (
+    fileUri: string,
+    mime: string,
+  ): Promise<{ r2Key: string; mime: string }> => {
+    if (!token) throw new Error('Missing token');
+    if (mime !== 'image/png') {
+      // Server pins Content-Type to image/png. Token-route photo upload
+      // doesn't exist; keep this guard tight so any photo field on a
+      // token-gated form fails loudly rather than silently uploading
+      // wrong bytes.
+      throw new Error('Token signature upload only supports image/png');
+    }
+    const presignRes = await fetch(
+      `${apiUrl}/forms/sign/${token}/signature-upload`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!presignRes.ok) {
+      const status = classify(presignRes.status);
+      throw new Error(
+        status === 'expired'
+          ? 'This signing link has expired.'
+          : 'Could not prepare signature upload.',
+      );
+    }
+    const body = (await presignRes.json()) as {
+      data: { uploadUrl: string; r2Key: string; expiresInSeconds: number };
+    };
+    const { uploadUrl, r2Key } = body.data;
+
+    const put = await FileSystem.uploadAsync(uploadUrl, fileUri, {
+      httpMethod: 'PUT',
+      headers: { 'Content-Type': mime },
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    });
+    if (put.status < 200 || put.status >= 300) {
+      throw new Error(`Signature upload failed (HTTP ${put.status})`);
+    }
+    return { r2Key, mime };
+  };
 }

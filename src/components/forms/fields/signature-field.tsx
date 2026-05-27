@@ -2,17 +2,16 @@
  * `signature` form field — finger-drawn signature canvas.
  *
  * Implementation: SVG `<Path>` per stroke, captured via PanResponder.
- * No new dep needed; react-native-svg 15.x is already in the bundle.
- *
- * The captured strokes are rendered into a PNG-ish data URL on commit
- * (currently we emit a serialised SVG string as the local value). The
- * R2 upload + r2Key swap is deferred to FIT-189 (API gap).
+ * On commit we use react-native-svg's `Svg.toDataURL` to rasterise the
+ * canvas to a PNG, write it to a local temp file, and store the file
+ * URI as the field value. <FormRenderer> then uploads the file via
+ * useFormUpload before submit and swaps the URI for `{ r2Key, mime }`.
  *
  * UX:
  *   - Tap "Sign" to expand into a dedicated 200pt canvas
  *   - "Clear" wipes the strokes
- *   - The committed signature shows as a 96pt preview tile with a
- *     "Re-sign" affordance underneath
+ *   - The committed signature shows as a 96pt preview tile rendered
+ *     from the same local PNG, with a "Re-sign" affordance underneath
  */
 import { useRef, useState } from 'react';
 import {
@@ -23,13 +22,15 @@ import {
   type GestureResponderEvent,
   type PanResponderInstance,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import Svg, { Path } from 'react-native-svg';
 import { Eraser, PenLine } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
+import { Image as ExpoImage } from 'expo-image';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useI18n } from '@/providers/i18n-provider';
 import type { FormField } from '@/types/forms';
+import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -51,21 +52,11 @@ function strokeToPath(stroke: Stroke): string {
   return d;
 }
 
-function serialiseSvg(strokes: Stroke[], width: number, height: number): string {
-  const paths = strokes
-    .map(
-      (s) =>
-        `<path d="${strokeToPath(s)}" stroke="#0D1B2A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`,
-    )
-    .join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${paths}</svg>`;
-}
-
 export interface SignatureFieldProps {
   field: Extract<FormField, { type: 'signature' }>;
   /**
-   * Local serialised SVG markup (set on commit). The real r2Key
-   * substitution happens at submit time once FIT-189 lands.
+   * Local file URI of the rendered PNG. <FormRenderer> swaps this for
+   * a `{ r2Key, mime: 'image/png' }` value before POSTing the form.
    */
   value: string;
   onChange: (next: string) => void;
@@ -79,8 +70,7 @@ export function SignatureFieldRenderer({
   error,
 }: SignatureFieldProps) {
   const haptics = useHaptics();
-  const { dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const isRTL = useFormRTL();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
@@ -89,6 +79,7 @@ export function SignatureFieldRenderer({
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [current, setCurrent] = useState<Stroke>([]);
   const canvasSize = useRef({ width: 0, height: 200 });
+  const svgRef = useRef<Svg | null>(null);
 
   // PanResponder lives across renders to avoid re-creation on every
   // stroke update; it reads/writes the live stroke buffer via refs.
@@ -137,15 +128,31 @@ export function SignatureFieldRenderer({
     liveStroke.current = [];
   };
 
-  const onCommit = () => {
-    if (strokes.length === 0) return;
+  const onCommit = async () => {
+    if (strokes.length === 0 || !svgRef.current) return;
     haptics.success();
-    const svg = serialiseSvg(
-      strokes,
-      canvasSize.current.width,
-      canvasSize.current.height,
-    );
-    onChange(svg);
+    // Rasterise the on-screen SVG to PNG via react-native-svg's
+    // toDataURL bridge, then write to a local cache file. The cache
+    // file URI is what FormRenderer uploads at submit time.
+    const b64: string = await new Promise((resolve, reject) => {
+      const svg = svgRef.current;
+      if (!svg) return reject(new Error('No svg ref'));
+      try {
+        svg.toDataURL((data: string) => resolve(data), {
+          format: 'png',
+          width: Math.round(canvasSize.current.width),
+          height: Math.round(canvasSize.current.height),
+        });
+      } catch (e) {
+        reject(e);
+      }
+    });
+
+    const fileUri = `${FileSystem.cacheDirectory}signature-${Date.now()}.png`;
+    await FileSystem.writeAsStringAsync(fileUri, b64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    onChange(fileUri);
     setEditing(false);
   };
 
@@ -195,6 +202,7 @@ export function SignatureFieldRenderer({
             {...pan.current.panHandlers}
           >
             <Svg
+              ref={svgRef}
               width="100%"
               height="100%"
               style={StyleSheet.absoluteFill}
@@ -306,7 +314,9 @@ export function SignatureFieldRenderer({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Save signature"
-                onPress={onCommit}
+                onPress={() => {
+                  void onCommit();
+                }}
                 disabled={strokes.length === 0}
                 style={{
                   flex: 1,
@@ -349,7 +359,11 @@ export function SignatureFieldRenderer({
               justifyContent: 'center',
             }}
           >
-            <SignaturePreview svg={value} />
+            <ExpoImage
+              source={{ uri: value }}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="contain"
+            />
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <Text
@@ -381,41 +395,5 @@ export function SignatureFieldRenderer({
         </View>
       )}
     </FieldShell>
-  );
-}
-
-/**
- * Renders a tiny preview of the captured strokes inside the committed
- * tile. Re-parses the SVG path data we serialised at commit time.
- */
-function SignaturePreview({ svg }: { svg: string }) {
-  // Cheap regex-based extraction — we control the format on the way in,
-  // so a strict parser is overkill.
-  const widthMatch = svg.match(/width="(\d+(?:\.\d+)?)"/);
-  const heightMatch = svg.match(/height="(\d+(?:\.\d+)?)"/);
-  const width = widthMatch ? parseFloat(widthMatch[1]) : 100;
-  const height = heightMatch ? parseFloat(heightMatch[1]) : 200;
-  const paths = Array.from(svg.matchAll(/<path d="([^"]+)"/g)).map(
-    (m) => m[1],
-  );
-  return (
-    <Svg
-      width="100%"
-      height="100%"
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="xMidYMid meet"
-    >
-      {paths.map((d, idx) => (
-        <Path
-          key={idx}
-          d={d}
-          stroke="#0D1B2A"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      ))}
-    </Svg>
   );
 }

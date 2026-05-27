@@ -23,6 +23,7 @@ import {
   useFormInstance,
   useSubmitFormInstance,
 } from '@/hooks/use-forms';
+import { useFormUpload } from '@/hooks/use-form-upload';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 import type { FormAnswers } from '@/types/forms';
@@ -42,6 +43,7 @@ export default function SignFormInstanceScreen() {
   const id = typeof instanceId === 'string' ? instanceId : '';
   const query = useFormInstance(orgId, id);
   const submit = useSubmitFormInstance(orgId, id);
+  const { upload: uploadFormAttachment } = useFormUpload(orgId);
 
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -165,6 +167,7 @@ export default function SignFormInstanceScreen() {
           <FKGlassPanel radius={20} style={{ padding: 20 }}>
             <FormRenderer
               form={entry.form}
+              uploadAttachment={uploadFormAttachment}
               onSubmit={handleSubmit}
               submitting={submit.isPending}
               serverError={submitError}

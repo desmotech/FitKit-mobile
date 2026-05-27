@@ -8,7 +8,7 @@ import { Pressable, View } from 'react-native';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useI18n } from '@/providers/i18n-provider';
+import { useFormRTL } from '../form-rtl-context';
 import type { FormField } from '@/types/forms';
 import { FieldShell } from './field-shell';
 
@@ -27,8 +27,7 @@ export function CheckboxFieldRenderer({
   onChange,
   error,
 }: CheckboxFieldProps) {
-  const { dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const isRTL = useFormRTL();
   const haptics = useHaptics();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
