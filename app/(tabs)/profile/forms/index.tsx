@@ -35,6 +35,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMyForms, type MyFormEntry } from '@/hooks/use-forms';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -55,8 +56,9 @@ function isActionable(status: string): boolean {
 
 export default function MyFormsScreen() {
   const router = useRouter();
-  const { dir, t } = useI18n();
+  const { dir } = useI18n();
   const isRTL = dir === 'rtl';
+  const s = useFormStrings();
   const colors = useFKColors();
   const haptics = useHaptics();
   const bottomPad = useTabBarPadding();
@@ -93,40 +95,21 @@ export default function MyFormsScreen() {
     return { actionable, done, archived };
   }, [entries]);
 
-  const dict = t as unknown as Record<string, Record<string, string>>;
-  const formsT = dict.forms ?? {};
-  const labels = {
-    title: formsT.myTitle ?? 'My Forms',
-    pendingHeader: formsT.pendingHeader ?? 'Pending',
-    completedHeader: formsT.completedHeader ?? 'Completed',
-    archivedHeader: formsT.archivedHeader ?? 'Archived',
-    emptyTitle: formsT.emptyTitle ?? 'No forms to sign',
-    emptySubtitle:
-      formsT.emptySubtitle ??
-      "When your gym sends you a form, it'll show up here.",
-    statusPending: formsT.statusPending ?? 'Needs signature',
-    statusScheduled: formsT.statusScheduled ?? 'Scheduled',
-    statusSigned: formsT.statusSigned ?? 'Signed',
-    statusAnswered: formsT.statusAnswered ?? 'Submitted',
-    statusReviewed: formsT.statusReviewed ?? 'Reviewed',
-    statusArchived: formsT.statusArchived ?? 'Archived',
-  };
-
   const statusLabel = (status: string) => {
     switch (status) {
       case 'pending':
       case 'sent':
-        return labels.statusPending;
+        return s.statusPending;
       case 'scheduled':
-        return labels.statusScheduled;
+        return s.statusScheduled;
       case 'signed':
-        return labels.statusSigned;
+        return s.statusSigned;
       case 'answered':
-        return labels.statusAnswered;
+        return s.statusAnswered;
       case 'reviewed':
-        return labels.statusReviewed;
+        return s.statusReviewed;
       case 'archived':
-        return labels.statusArchived;
+        return s.statusArchived;
       default:
         return status;
     }
@@ -142,7 +125,7 @@ export default function MyFormsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader title={labels.title} />
+      <FKScreenHeader title={s.listTitle} />
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 16,
@@ -158,15 +141,15 @@ export default function MyFormsScreen() {
           </View>
         ) : entries.length === 0 ? (
           <EmptyState
-            title={labels.emptyTitle}
-            subtitle={labels.emptySubtitle}
+            title={s.emptyTitle}
+            subtitle={s.emptySubtitle}
             isRTL={isRTL}
           />
         ) : (
           <>
             {groups.actionable.length > 0 ? (
               <SectionGroup
-                header={labels.pendingHeader}
+                header={s.pendingHeader}
                 isRTL={isRTL}
                 isDark={isDark}
               >
@@ -189,7 +172,7 @@ export default function MyFormsScreen() {
 
             {groups.done.length > 0 ? (
               <SectionGroup
-                header={labels.completedHeader}
+                header={s.completedHeader}
                 isRTL={isRTL}
                 isDark={isDark}
               >
@@ -208,7 +191,7 @@ export default function MyFormsScreen() {
 
             {groups.archived.length > 0 ? (
               <SectionGroup
-                header={labels.archivedHeader}
+                header={s.archivedHeader}
                 isRTL={isRTL}
                 isDark={isDark}
               >
@@ -277,6 +260,7 @@ function FormRow({
   onPress: () => void;
 }) {
   const colors = useFKColors();
+  const s = useFormStrings();
   const status = entry.instance.status;
   const actionable = isActionable(status);
   const pillColor = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
@@ -301,7 +285,7 @@ function FormRow({
       ),
     );
     if (days <= 30) {
-      expiresIn = days <= 1 ? 'Expires today' : `Expires in ${days} days`;
+      expiresIn = days <= 1 ? s.expiresToday : s.expiresInDays(days);
     }
   }
 

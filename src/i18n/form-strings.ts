@@ -1,0 +1,289 @@
+/**
+ * Forms-flow localization.
+ *
+ * Covers the user-facing chrome of the My Forms list, the
+ * authenticated sign screen, the public token sign screen, the form
+ * renderer (submit button + validation messages), and the signature /
+ * photo field controls.
+ *
+ * Form labels and body text are NOT localized here — those come from
+ * the API server-side, pre-rendered into the form's own `locale`
+ * (he / en / ru). Only the surrounding mobile chrome is translated to
+ * the member's UI language.
+ *
+ * Add a string: extend `FormStrings`, then provide all three locales
+ * below. TypeScript will require it.
+ */
+import { type Locale } from '@/i18n/config';
+
+export interface FormStrings {
+  // ── My Forms list ─────────────────────────────────────────────────
+  listTitle: string;
+  pendingHeader: string;
+  completedHeader: string;
+  archivedHeader: string;
+  emptyTitle: string;
+  emptySubtitle: string;
+  statusPending: string;
+  statusScheduled: string;
+  statusSigned: string;
+  statusAnswered: string;
+  statusReviewed: string;
+  statusArchived: string;
+  expiresToday: string;
+  expiresInDays: (n: number) => string;
+
+  // ── Sign screen chrome (shared by auth + token) ───────────────────
+  loadingTitle: string;
+  loadingSubtitle: string;
+  notFoundTitle: string;
+  notFoundSubtitle: string;
+  errorTitle: string;
+  errorSubtitle: string;
+  expiredTitle: string;
+  expiredSubtitle: string;
+  invalidTitle: string;
+  invalidSubtitle: string;
+  readyTitle: string;
+  readySubtitle: string;
+  validationFailed: string;
+  signedTitle: string;
+  signedSubtitle: string;
+  signedAction: string;
+  alreadySignedTitle: string;
+  alreadySignedSubtitle: string;
+
+  // ── FormRenderer (submit + validation) ────────────────────────────
+  submit: string;
+  submitting: string;
+  uploading: string;
+  requiredField: string;
+  requiredRemaining: (n: number) => string;
+  mustBeAtLeast: (n: number) => string;
+  mustBeAtMost: (n: number) => string;
+  uploadFailed: string;
+  signatureUploadUnavailable: string;
+  photoUploadUnavailable: string;
+
+  // ── Signature field ───────────────────────────────────────────────
+  sigHint: string;
+  sigPlaceholder: string;
+  sigClear: string;
+  sigSave: string;
+  sigSigned: string;
+  sigResign: string;
+
+  // ── Photo field ───────────────────────────────────────────────────
+  photoAdd: string;
+  photoAddAnother: string;
+  photoRemove: string;
+}
+
+const HE: FormStrings = {
+  listTitle: 'הטפסים שלי',
+  pendingHeader: 'ממתינים',
+  completedHeader: 'הושלמו',
+  archivedHeader: 'בארכיון',
+  emptyTitle: 'אין טפסים לחתימה',
+  emptySubtitle: 'כשהמועדון ישלח לך טופס, הוא יופיע כאן.',
+  statusPending: 'דורש חתימה',
+  statusScheduled: 'מתוזמן',
+  statusSigned: 'חתום',
+  statusAnswered: 'נשלח',
+  statusReviewed: 'נסקר',
+  statusArchived: 'בארכיון',
+  expiresToday: 'פג היום',
+  expiresInDays: (n) => `פג בעוד ${n} ימים`,
+
+  loadingTitle: 'פותח את הטופס…',
+  loadingSubtitle: 'רגע — מאמתים את הקישור.',
+  notFoundTitle: 'הטופס לא נמצא',
+  notFoundSubtitle: 'לא הצלחנו למצוא את הטופס. חזור ונסה שוב.',
+  errorTitle: 'משהו השתבש',
+  errorSubtitle: 'לא הצלחנו לפתוח את הטופס. בדוק חיבור ונסה שוב.',
+  expiredTitle: 'הקישור פג תוקף',
+  expiredSubtitle: 'הקישור לחתימה אינו תקף יותר. בקש מהמועדון לשלוח חדש.',
+  invalidTitle: 'קישור לא תקין',
+  invalidSubtitle: 'הקישור לחתימה אינו תקף. פתח את הקישור העדכני שנשלח ממך.',
+  readyTitle: 'מוכן לחתימה',
+  readySubtitle: 'מלא את הטופס למטה. התשובות נשלחות באופן מאובטח למועדון.',
+  validationFailed: 'חלק מהתשובות אינן עוברות אימות. אנא בדוק את הטופס.',
+  signedTitle: 'נחתם — תודה',
+  signedSubtitle: 'המועדון קיבל את הטופס החתום שלך.',
+  signedAction: 'חזרה לטפסים שלי',
+  alreadySignedTitle: 'כבר חתום',
+  alreadySignedSubtitle: 'כבר חתמת על הטופס. אין צורך בפעולה נוספת.',
+
+  submit: 'שלח וחתום',
+  submitting: 'שולח…',
+  uploading: 'מעלה…',
+  requiredField: 'שדה חובה.',
+  requiredRemaining: (n) =>
+    n === 1 ? 'נשאר שדה חובה אחד' : `נשארו ${n} שדות חובה`,
+  mustBeAtLeast: (n) => `הערך חייב להיות לפחות ${n}.`,
+  mustBeAtMost: (n) => `הערך חייב להיות לכל היותר ${n}.`,
+  uploadFailed: 'ההעלאה נכשלה. נסה שוב.',
+  signatureUploadUnavailable:
+    'העלאת חתימה אינה זמינה כעת בקישור זה. נסה מאוחר יותר.',
+  photoUploadUnavailable:
+    'העלאת תמונה אינה זמינה כעת בקישור זה. נסה מאוחר יותר.',
+
+  sigHint: 'חתום באצבע בתוך הריבוע.',
+  sigPlaceholder: 'חתום כאן',
+  sigClear: 'נקה',
+  sigSave: 'שמור חתימה',
+  sigSigned: 'חתום',
+  sigResign: 'חתום מחדש',
+
+  photoAdd: 'הוסף תמונה',
+  photoAddAnother: 'הוסף עוד',
+  photoRemove: 'הסר תמונה',
+};
+
+const EN: FormStrings = {
+  listTitle: 'My Forms',
+  pendingHeader: 'Pending',
+  completedHeader: 'Completed',
+  archivedHeader: 'Archived',
+  emptyTitle: 'No forms to sign',
+  emptySubtitle: "When your gym sends you a form, it'll show up here.",
+  statusPending: 'Needs signature',
+  statusScheduled: 'Scheduled',
+  statusSigned: 'Signed',
+  statusAnswered: 'Submitted',
+  statusReviewed: 'Reviewed',
+  statusArchived: 'Archived',
+  expiresToday: 'Expires today',
+  expiresInDays: (n) => `Expires in ${n} days`,
+
+  loadingTitle: 'Opening your form…',
+  loadingSubtitle: 'Just a moment — verifying your link.',
+  notFoundTitle: 'Form not found',
+  notFoundSubtitle: "We couldn't find this form. Pull back and try again.",
+  errorTitle: 'Something went wrong',
+  errorSubtitle:
+    "We couldn't open this form. Check your connection and try again.",
+  expiredTitle: 'Link expired',
+  expiredSubtitle:
+    'This signing link is no longer valid. Ask your gym for a new one.',
+  invalidTitle: 'Invalid link',
+  invalidSubtitle:
+    'The signing link is malformed. Open the latest link sent by your gym.',
+  readyTitle: 'Ready to sign',
+  readySubtitle:
+    'Review and complete the form below. Your answers are sent securely to your gym.',
+  validationFailed: "Some answers didn't pass validation. Please review.",
+  signedTitle: 'Signed — thank you',
+  signedSubtitle: 'Your gym has received your signed form.',
+  signedAction: 'Back to My Forms',
+  alreadySignedTitle: 'Already signed',
+  alreadySignedSubtitle:
+    'You already signed this form. No action needed.',
+
+  submit: 'Submit & sign',
+  submitting: 'Submitting…',
+  uploading: 'Uploading…',
+  requiredField: 'This field is required.',
+  requiredRemaining: (n) =>
+    n === 1 ? '1 required field remaining' : `${n} required fields remaining`,
+  mustBeAtLeast: (n) => `Must be at least ${n}.`,
+  mustBeAtMost: (n) => `Must be at most ${n}.`,
+  uploadFailed: 'Upload failed. Please try again.',
+  signatureUploadUnavailable:
+    'Signature upload is not yet available on this link. Please try again later.',
+  photoUploadUnavailable:
+    'Photo upload is not yet available on this link. Please try again later.',
+
+  sigHint: 'Sign using your finger inside the box.',
+  sigPlaceholder: 'Sign here',
+  sigClear: 'Clear',
+  sigSave: 'Save signature',
+  sigSigned: 'Signed',
+  sigResign: 'Re-sign',
+
+  photoAdd: 'Add photo',
+  photoAddAnother: 'Add another',
+  photoRemove: 'Remove photo',
+};
+
+const RU: FormStrings = {
+  listTitle: 'Мои формы',
+  pendingHeader: 'Ожидают',
+  completedHeader: 'Завершены',
+  archivedHeader: 'В архиве',
+  emptyTitle: 'Нет форм для подписи',
+  emptySubtitle:
+    'Когда ваш зал отправит вам форму, она появится здесь.',
+  statusPending: 'Требуется подпись',
+  statusScheduled: 'Запланировано',
+  statusSigned: 'Подписано',
+  statusAnswered: 'Отправлено',
+  statusReviewed: 'Проверено',
+  statusArchived: 'В архиве',
+  expiresToday: 'Истекает сегодня',
+  expiresInDays: (n) => `Истекает через ${n} дн.`,
+
+  loadingTitle: 'Открываем вашу форму…',
+  loadingSubtitle: 'Минутку — проверяем ссылку.',
+  notFoundTitle: 'Форма не найдена',
+  notFoundSubtitle:
+    'Не удалось найти эту форму. Вернитесь назад и попробуйте снова.',
+  errorTitle: 'Что-то пошло не так',
+  errorSubtitle:
+    'Не удалось открыть форму. Проверьте подключение и попробуйте снова.',
+  expiredTitle: 'Срок ссылки истёк',
+  expiredSubtitle:
+    'Эта ссылка для подписи больше недействительна. Попросите зал прислать новую.',
+  invalidTitle: 'Неверная ссылка',
+  invalidSubtitle:
+    'Ссылка для подписи неверна. Откройте последнюю ссылку от вашего зала.',
+  readyTitle: 'Готово к подписи',
+  readySubtitle:
+    'Просмотрите и заполните форму ниже. Ваши ответы безопасно отправляются в зал.',
+  validationFailed:
+    'Некоторые ответы не прошли проверку. Проверьте форму.',
+  signedTitle: 'Подписано — спасибо',
+  signedSubtitle: 'Ваш зал получил подписанную форму.',
+  signedAction: 'Назад к моим формам',
+  alreadySignedTitle: 'Уже подписано',
+  alreadySignedSubtitle:
+    'Вы уже подписали эту форму. Никаких действий не требуется.',
+
+  submit: 'Отправить и подписать',
+  submitting: 'Отправляется…',
+  uploading: 'Загружается…',
+  requiredField: 'Обязательное поле.',
+  requiredRemaining: (n) =>
+    n === 1
+      ? 'Осталось 1 обязательное поле'
+      : `Осталось ${n} обязательных полей`,
+  mustBeAtLeast: (n) => `Не менее ${n}.`,
+  mustBeAtMost: (n) => `Не более ${n}.`,
+  uploadFailed: 'Загрузка не удалась. Попробуйте снова.',
+  signatureUploadUnavailable:
+    'Загрузка подписи пока недоступна по этой ссылке. Попробуйте позже.',
+  photoUploadUnavailable:
+    'Загрузка фото пока недоступна по этой ссылке. Попробуйте позже.',
+
+  sigHint: 'Подпишите пальцем внутри рамки.',
+  sigPlaceholder: 'Подпишите здесь',
+  sigClear: 'Очистить',
+  sigSave: 'Сохранить подпись',
+  sigSigned: 'Подписано',
+  sigResign: 'Подписать заново',
+
+  photoAdd: 'Добавить фото',
+  photoAddAnother: 'Добавить ещё',
+  photoRemove: 'Удалить фото',
+};
+
+export function formStringsFor(lang: Locale): FormStrings {
+  switch (lang) {
+    case 'he':
+      return HE;
+    case 'ru':
+      return RU;
+    default:
+      return EN;
+  }
+}

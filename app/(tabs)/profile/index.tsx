@@ -59,6 +59,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { i18n, type Locale } from '@/i18n/config';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -75,6 +76,7 @@ export default function ProfileScreen() {
   const { colorScheme, setColorScheme } = useColorScheme();
   const colors = useFKColors();
   const bottomPad = useTabBarPadding(32);
+  const formS = useFormStrings();
 
   const orgId = activeOrganization?.id;
   const stats = useMyStats(orgId);
@@ -129,7 +131,7 @@ export default function ProfileScreen() {
     settingGoals: settingsT.goals ?? 'Goals',
     settingMetrics: settingsT.bodyMetrics ?? 'Body Metrics',
     settingPhotos: settingsT.progressPhotos ?? 'Progress Photos',
-    settingForms: settingsT.forms ?? 'My Forms',
+    settingForms: settingsT.forms ?? formS.listTitle,
     settingNotifications: settingsT.notifications ?? 'Notifications',
     settingHelp: settingsT.help ?? 'Help & Support',
     settingDangerZone: settingsT.dangerZone ?? 'Account',

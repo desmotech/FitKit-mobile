@@ -29,6 +29,7 @@ import { useColorScheme } from 'nativewind';
 import { Image as ExpoImage } from 'expo-image';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import type { FormField } from '@/types/forms';
 import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
@@ -71,6 +72,7 @@ export function SignatureFieldRenderer({
 }: SignatureFieldProps) {
   const haptics = useHaptics();
   const isRTL = useFormRTL();
+  const s = useFormStrings();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
@@ -173,10 +175,7 @@ export function SignatureFieldRenderer({
     <FieldShell
       label={field.label}
       required={field.required}
-      helpText={
-        field.helpText ??
-        (editing ? 'Sign using your finger inside the box.' : undefined)
-      }
+      helpText={field.helpText ?? (editing ? s.sigHint : undefined)}
       error={error}
     >
       {editing ? (
@@ -247,7 +246,7 @@ export function SignatureFieldRenderer({
                     color: mutedFg,
                   }}
                 >
-                  Sign here
+                  {s.sigPlaceholder}
                 </Text>
               </View>
             ) : null}
@@ -273,7 +272,7 @@ export function SignatureFieldRenderer({
             >
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Clear signature"
+                accessibilityLabel={s.sigClear}
                 onPress={onClear}
                 disabled={strokes.length === 0 && current.length === 0}
                 style={{
@@ -294,7 +293,7 @@ export function SignatureFieldRenderer({
                     color: mutedFg,
                   }}
                 >
-                  Clear
+                  {s.sigClear}
                 </Text>
               </Pressable>
             </View>
@@ -313,7 +312,7 @@ export function SignatureFieldRenderer({
             >
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Save signature"
+                accessibilityLabel={s.sigSave}
                 onPress={() => {
                   void onCommit();
                 }}
@@ -331,7 +330,7 @@ export function SignatureFieldRenderer({
                     color: '#fff',
                   }}
                 >
-                  Save signature
+                  {s.sigSave}
                 </Text>
               </Pressable>
             </View>
@@ -373,11 +372,11 @@ export function SignatureFieldRenderer({
                 color: isDark ? '#fff' : '#0D1B2A',
               }}
             >
-              Signed
+              {s.sigSigned}
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Re-sign"
+              accessibilityLabel={s.sigResign}
               onPress={onResign}
               hitSlop={6}
             >
@@ -388,7 +387,7 @@ export function SignatureFieldRenderer({
                   color: BRAND_TEAL,
                 }}
               >
-                Re-sign
+                {s.sigResign}
               </Text>
             </Pressable>
           </View>

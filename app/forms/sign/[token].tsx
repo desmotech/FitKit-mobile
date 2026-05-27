@@ -30,6 +30,7 @@ import {
   useTokenSignatureUpload,
   type FormTokenStatus,
 } from '@/hooks/use-form-token';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { FormAnswers } from '@/types/forms';
 
@@ -39,10 +40,11 @@ type Phase = FormTokenStatus | 'loading' | 'signed';
 
 export default function SignFormScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
-  const { dir, t } = useI18n();
+  const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const colors = useFKColors();
   const insets = useSafeAreaInsets();
+  const s = useFormStrings();
 
   const tokenStr = typeof token === 'string' ? token : '';
   const query = useFormByToken(tokenStr);
@@ -51,39 +53,6 @@ export default function SignFormScreen() {
 
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-
-  const formsT = (t as Record<string, unknown>).forms as
-    | Record<string, string>
-    | undefined;
-
-  const labels = {
-    loadingTitle: formsT?.loadingTitle ?? 'Opening your form…',
-    loadingSubtitle:
-      formsT?.loadingSubtitle ?? 'Just a moment — verifying your link.',
-    expiredTitle: formsT?.expiredTitle ?? 'Link expired',
-    expiredSubtitle:
-      formsT?.expiredSubtitle ??
-      'This signing link is no longer valid. Ask your gym for a new one.',
-    notFoundTitle: formsT?.notFoundTitle ?? 'Form not found',
-    notFoundSubtitle:
-      formsT?.notFoundSubtitle ??
-      "We couldn't find this signing link. Double-check the URL or ask your gym to resend.",
-    invalidTitle: formsT?.invalidTitle ?? 'Invalid link',
-    invalidSubtitle:
-      formsT?.invalidSubtitle ??
-      'The signing link is malformed. Open the latest link sent by your gym.',
-    errorTitle: formsT?.errorTitle ?? 'Something went wrong',
-    errorSubtitle:
-      formsT?.errorSubtitle ??
-      "We couldn't open this form. Check your connection and try again.",
-    readySubtitle:
-      formsT?.readySubtitle ??
-      'Review and complete the form below. Your answers are sent securely to your gym.',
-    signedTitle: formsT?.signedTitle ?? 'Signed — thank you',
-    signedSubtitle:
-      formsT?.signedSubtitle ??
-      'Your gym has received your signed form. You can close this screen.',
-  };
 
   // Status branching. `query.isLoading` covers initial fetch; the
   // `result.status` field covers HTTP-level branching once we have a
@@ -106,37 +75,35 @@ export default function SignFormScreen() {
       return;
     }
     if (result.status === 'expired') {
-      setSubmitError(labels.expiredSubtitle);
+      setSubmitError(s.expiredSubtitle);
     } else if (result.status === 'invalid') {
-      setSubmitError(
-        result.message ?? 'Some answers didn’t pass validation. Please review.',
-      );
+      setSubmitError(result.message ?? s.validationFailed);
     } else {
-      setSubmitError(labels.errorSubtitle);
+      setSubmitError(s.errorSubtitle);
     }
   };
 
   const hero = ((): { title: string; subtitle: string } => {
     switch (phase) {
       case 'loading':
-        return { title: labels.loadingTitle, subtitle: labels.loadingSubtitle };
+        return { title: s.loadingTitle, subtitle: s.loadingSubtitle };
       case 'expired':
-        return { title: labels.expiredTitle, subtitle: labels.expiredSubtitle };
+        return { title: s.expiredTitle, subtitle: s.expiredSubtitle };
       case 'not-found':
         return {
-          title: labels.notFoundTitle,
-          subtitle: labels.notFoundSubtitle,
+          title: s.notFoundTitle,
+          subtitle: s.notFoundSubtitle,
         };
       case 'invalid':
-        return { title: labels.invalidTitle, subtitle: labels.invalidSubtitle };
+        return { title: s.invalidTitle, subtitle: s.invalidSubtitle };
       case 'error':
-        return { title: labels.errorTitle, subtitle: labels.errorSubtitle };
+        return { title: s.errorTitle, subtitle: s.errorSubtitle };
       case 'signed':
-        return { title: labels.signedTitle, subtitle: labels.signedSubtitle };
+        return { title: s.signedTitle, subtitle: s.signedSubtitle };
       case 'ok':
         return {
-          title: query.data?.data?.form.name ?? 'Ready to sign',
-          subtitle: labels.readySubtitle,
+          title: query.data?.data?.form.name ?? s.readyTitle,
+          subtitle: s.readySubtitle,
         };
     }
   })();

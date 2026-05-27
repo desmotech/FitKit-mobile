@@ -28,6 +28,7 @@ import { ScrollView, View } from 'react-native';
 import { FKButton, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import type {
   FormAnswerValue,
   FormAnswers,
@@ -124,6 +125,7 @@ export function FormRenderer({
   const isRTL = form.locale === 'he';
   const colors = useFKColors();
   const haptics = useHaptics();
+  const s = useFormStrings();
 
   const [answers, setAnswers] = useState<FormAnswers>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -145,31 +147,29 @@ export function FormRenderer({
     for (const field of form.fields) {
       const v = answers[field.id];
       if (field.required && !isAnswerPresent(field, v)) {
-        next[field.id] = 'This field is required.';
+        next[field.id] = s.requiredField;
         continue;
       }
       // Binary fields that still hold a local URI when no uploader is
       // wired (e.g. token screen without the signature-upload endpoint).
       if (!uploadAttachment) {
         if (field.type === 'signature' && isLocalUri(v)) {
-          next[field.id] =
-            'Signature upload is not yet available on this link. Please try again later.';
+          next[field.id] = s.signatureUploadUnavailable;
         }
         if (
           field.type === 'photo' &&
           Array.isArray(v) &&
           v.some(isLocalUri)
         ) {
-          next[field.id] =
-            'Photo upload is not yet available on this link. Please try again later.';
+          next[field.id] = s.photoUploadUnavailable;
         }
       }
       // Range checks for number / scale.
       if (field.type === 'number' && typeof v === 'number') {
         if (field.min != null && v < field.min) {
-          next[field.id] = `Must be at least ${field.min}.`;
+          next[field.id] = s.mustBeAtLeast(field.min);
         } else if (field.max != null && v > field.max) {
-          next[field.id] = `Must be at most ${field.max}.`;
+          next[field.id] = s.mustBeAtMost(field.max);
         }
       }
     }
@@ -231,8 +231,7 @@ export function FormRenderer({
       // mutation never ran. The user can retry; failed uploads don't
       // leave a partial-submit on the server side.
       haptics.error();
-      const message =
-        err instanceof Error ? err.message : 'Upload failed. Please try again.';
+      const message = err instanceof Error ? err.message : s.uploadFailed;
       setErrors((prev) => ({ ...prev, __submit__: message }));
     } finally {
       setUploading(false);
@@ -304,13 +303,7 @@ export function FormRenderer({
       ) : null}
 
       <FKButton
-        label={
-          uploading
-            ? 'Uploading…'
-            : submitting
-              ? 'Submitting…'
-              : 'Submit & sign'
-        }
+        label={uploading ? s.uploading : submitting ? s.submitting : s.submit}
         variant="primary"
         size="lg"
         fullWidth
@@ -326,7 +319,7 @@ export function FormRenderer({
             writingDirection: isRTL ? 'rtl' : 'ltr',
           }}
         >
-          {`${requiredRemaining} required ${requiredRemaining === 1 ? 'field' : 'fields'} remaining`}
+          {s.requiredRemaining(requiredRemaining)}
         </Text>
       ) : null}
     </ScrollView>

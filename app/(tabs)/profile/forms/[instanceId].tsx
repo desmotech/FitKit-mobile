@@ -25,6 +25,7 @@ import {
 } from '@/hooks/use-forms';
 import { useFormUpload } from '@/hooks/use-form-upload';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { FormAnswers } from '@/types/forms';
 
@@ -33,8 +34,9 @@ const BRAND_TEAL = '#0E8C8C';
 export default function SignFormInstanceScreen() {
   const router = useRouter();
   const { instanceId } = useLocalSearchParams<{ instanceId: string }>();
-  const { dir, t } = useI18n();
+  const { dir } = useI18n();
   const isRTL = dir === 'rtl';
+  const s = useFormStrings();
   const colors = useFKColors();
   const bottomPad = useTabBarPadding();
   const { activeOrganization } = useCurrentUser();
@@ -48,28 +50,6 @@ export default function SignFormInstanceScreen() {
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const dict = t as unknown as Record<string, Record<string, string>>;
-  const formsT = dict.forms ?? {};
-  const labels = {
-    loadingTitle: formsT.loadingTitle ?? 'Opening your form…',
-    notFoundTitle: formsT.notFoundTitle ?? 'Form not found',
-    notFoundSubtitle:
-      formsT.notFoundSubtitle ??
-      "We couldn't find this form. Pull back and try again.",
-    errorSubtitle:
-      formsT.errorSubtitle ??
-      "We couldn't open this form. Check your connection and try again.",
-    signedTitle: formsT.signedTitle ?? 'Signed — thank you',
-    signedSubtitle:
-      formsT.signedSubtitle ??
-      'Your gym has received your signed form.',
-    signedAction: formsT.signedAction ?? 'Back to My Forms',
-    alreadySignedTitle: formsT.alreadySignedTitle ?? 'Already signed',
-    alreadySignedSubtitle:
-      formsT.alreadySignedSubtitle ??
-      'You already signed this form. No action needed.',
-  };
-
   const handleSubmit = async (answers: FormAnswers) => {
     setSubmitError(null);
     try {
@@ -77,7 +57,7 @@ export default function SignFormInstanceScreen() {
       setSignedAt(new Date().toISOString());
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : labels.errorSubtitle,
+        err instanceof Error ? err.message : s.errorSubtitle,
       );
     }
   };
@@ -96,7 +76,7 @@ export default function SignFormInstanceScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader title={entry?.form.name ?? labels.loadingTitle} />
+      <FKScreenHeader title={entry?.form.name ?? s.loadingTitle} />
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 16,
@@ -128,7 +108,7 @@ export default function SignFormInstanceScreen() {
                 writingDirection: isRTL ? 'rtl' : 'ltr',
               }}
             >
-              {labels.notFoundTitle}
+              {s.notFoundTitle}
             </Text>
             <Text
               style={{
@@ -138,16 +118,16 @@ export default function SignFormInstanceScreen() {
                 writingDirection: isRTL ? 'rtl' : 'ltr',
               }}
             >
-              {labels.notFoundSubtitle}
+              {s.notFoundSubtitle}
             </Text>
           </FKGlassPanel>
         ) : null}
 
         {!isLoading && entry && signedAt ? (
           <SignedSuccess
-            title={labels.signedTitle}
-            subtitle={labels.signedSubtitle}
-            actionLabel={labels.signedAction}
+            title={s.signedTitle}
+            subtitle={s.signedSubtitle}
+            actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
           />
@@ -155,9 +135,9 @@ export default function SignFormInstanceScreen() {
 
         {!isLoading && entry && !signedAt && isTerminal ? (
           <SignedSuccess
-            title={labels.alreadySignedTitle}
-            subtitle={labels.alreadySignedSubtitle}
-            actionLabel={labels.signedAction}
+            title={s.alreadySignedTitle}
+            subtitle={s.alreadySignedSubtitle}
+            actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
           />

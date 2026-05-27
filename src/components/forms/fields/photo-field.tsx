@@ -15,6 +15,7 @@ import { Pressable, View } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import type { FormField } from '@/types/forms';
 import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
@@ -37,6 +38,7 @@ export function PhotoFieldRenderer({
 }: PhotoFieldProps) {
   const isRTL = useFormRTL();
   const haptics = useHaptics();
+  const s = useFormStrings();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -99,7 +101,7 @@ export function PhotoFieldRenderer({
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Remove photo"
+                  accessibilityLabel={s.photoRemove}
                   hitSlop={6}
                   onPress={() => remove(uri)}
                   style={{
@@ -135,7 +137,9 @@ export function PhotoFieldRenderer({
           >
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Add ${field.label}`}
+              accessibilityLabel={
+                value.length === 0 ? s.photoAdd : s.photoAddAnother
+              }
               onPress={pick}
               style={{
                 flex: 1,
@@ -157,7 +161,7 @@ export function PhotoFieldRenderer({
                   color: BRAND_TEAL,
                 }}
               >
-                {value.length === 0 ? 'Add photo' : 'Add another'}
+                {value.length === 0 ? s.photoAdd : s.photoAddAnother}
               </Text>
             </Pressable>
           </View>
