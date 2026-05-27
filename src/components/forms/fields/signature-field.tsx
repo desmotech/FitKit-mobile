@@ -80,6 +80,8 @@ export function SignatureFieldRenderer({
   const [editing, setEditing] = useState(!value);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [current, setCurrent] = useState<Stroke>([]);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
   const canvasSize = useRef({ width: 0, height: 200 });
   const svgRef = useRef<Svg | null>(null);
 
@@ -127,41 +129,96 @@ export function SignatureFieldRenderer({
     haptics.select();
     setStrokes([]);
     setCurrent([]);
+    setCommitError(null);
     liveStroke.current = [];
   };
 
   const onCommit = async () => {
     if (strokes.length === 0 || !svgRef.current) return;
-    haptics.success();
-    // Rasterise the on-screen SVG to PNG via react-native-svg's
-    // toDataURL bridge, then write to a local cache file. The cache
-    // file URI is what FormRenderer uploads at submit time.
-    const b64: string = await new Promise((resolve, reject) => {
-      const svg = svgRef.current;
-      if (!svg) return reject(new Error('No svg ref'));
-      try {
-        svg.toDataURL((data: string) => resolve(data), {
-          format: 'png',
-          width: Math.round(canvasSize.current.width),
-          height: Math.round(canvasSize.current.height),
-        });
-      } catch (e) {
-        reject(e);
-      }
-    });
+    if (committing) return;
+    setCommitError(null);
+    setCommitting(true);
+    try {
+      // Rasterise the on-screen SVG to PNG via react-native-svg's
+      // toDataURL bridge. The native callback occasionally silently
+      // drops on iOS Simulator (new architecture); we race it against
+      // a 3s timeout so we never leave the user hanging on "Save".
+      const width = Math.max(1, Math.round(canvasSize.current.width));
+      const height = Math.max(1, Math.round(canvasSize.current.height));
 
-    const fileUri = `${FileSystem.cacheDirectory}signature-${Date.now()}.png`;
-    await FileSystem.writeAsStringAsync(fileUri, b64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    onChange(fileUri);
-    setEditing(false);
+      if (width < 10 || height < 10) {
+        throw new Error('Canvas not laid out yet — try again.');
+      }
+
+      const b64: string = await Promise.race([
+        new Promise<string>((resolve, reject) => {
+          const svg = svgRef.current;
+          if (!svg) return reject(new Error('Signature canvas unavailable.'));
+          try {
+            svg.toDataURL(
+              (data: string) => {
+                if (!data || data.length === 0) {
+                  reject(new Error('Empty PNG returned from canvas.'));
+                  return;
+                }
+                resolve(data);
+              },
+              { format: 'png', width, height },
+            );
+          } catch (e) {
+            reject(e instanceof Error ? e : new Error(String(e)));
+          }
+        }),
+        new Promise<string>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Signature capture timed out.')),
+            3000,
+          ),
+        ),
+      ]);
+
+      // react-native-svg returns RAW base64 (no `data:image/png;base64,`
+      // prefix). Defensive trim if a future version starts returning one.
+      const cleanB64 = b64.startsWith('data:')
+        ? b64.replace(/^data:[^;]+;base64,/, '')
+        : b64;
+
+      const fileUri = `${FileSystem.cacheDirectory}signature-${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(fileUri, cleanB64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const info = await FileSystem.getInfoAsync(fileUri);
+      if (!info.exists || !info.size || info.size < 100) {
+        throw new Error('Signature file was not saved correctly.');
+      }
+
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.log('[signature] saved', { fileUri, size: info.size });
+      }
+
+      haptics.success();
+      onChange(fileUri);
+      setEditing(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Save failed.';
+      if (__DEV__) {
+        // eslint-disable-next-line no-console
+        console.error('[signature] commit failed:', message, err);
+      }
+      haptics.error();
+      setCommitError(message);
+    } finally {
+      setCommitting(false);
+    }
   };
 
   const onResign = () => {
     haptics.tap();
     setStrokes([]);
     setCurrent([]);
+    setCommitError(null);
     liveStroke.current = [];
     setEditing(true);
   };
@@ -176,7 +233,7 @@ export function SignatureFieldRenderer({
       label={field.label}
       required={field.required}
       helpText={field.helpText ?? (editing ? s.sigHint : undefined)}
-      error={error}
+      error={commitError ?? error}
     >
       {editing ? (
         <View style={{ gap: 8 }}>
@@ -316,7 +373,7 @@ export function SignatureFieldRenderer({
                 onPress={() => {
                   void onCommit();
                 }}
-                disabled={strokes.length === 0}
+                disabled={strokes.length === 0 || committing}
                 style={{
                   flex: 1,
                   alignItems: 'center',
@@ -330,7 +387,7 @@ export function SignatureFieldRenderer({
                     color: '#fff',
                   }}
                 >
-                  {s.sigSave}
+                  {committing ? '…' : s.sigSave}
                 </Text>
               </Pressable>
             </View>

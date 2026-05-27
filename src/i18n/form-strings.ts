@@ -57,10 +57,25 @@ export interface FormStrings {
   submit: string;
   submitting: string;
   uploading: string;
+  /** Generic required error — fallback when no per-type message fits. */
   requiredField: string;
+  /** Required check, per field type. Specific, actionable copy. */
+  requiredText: string;
+  requiredFreeText: string;
+  requiredCheckboxYesNo: string;
+  requiredCheckboxAck: string;
+  requiredDate: string;
+  requiredNumber: string;
+  requiredScale: string;
+  requiredMultiChoice: string;
+  requiredPhoto: string;
+  requiredSignature: string;
   requiredRemaining: (n: number) => string;
   mustBeAtLeast: (n: number) => string;
   mustBeAtMost: (n: number) => string;
+  maxLengthExceeded: (n: number) => string;
+  /** Banner shown at the top of the form when there are multiple errors. */
+  fixErrorsAbove: (n: number) => string;
   uploadFailed: string;
   signatureUploadUnavailable: string;
   photoUploadUnavailable: string;
@@ -118,10 +133,23 @@ const HE: FormStrings = {
   submitting: 'שולח…',
   uploading: 'מעלה…',
   requiredField: 'שדה חובה.',
+  requiredText: 'נא למלא את השדה.',
+  requiredFreeText: 'נא לכתוב תשובה.',
+  requiredCheckboxYesNo: 'נא להשיב כן או לא.',
+  requiredCheckboxAck: 'יש לאשר כדי להמשיך.',
+  requiredDate: 'נא לבחור תאריך.',
+  requiredNumber: 'נא להזין מספר.',
+  requiredScale: 'נא לסמן ערך בסולם.',
+  requiredMultiChoice: 'נא לבחור אפשרות.',
+  requiredPhoto: 'נא לצרף תמונה.',
+  requiredSignature: 'נא לחתום לפני שליחה.',
   requiredRemaining: (n) =>
     n === 1 ? 'נשאר שדה חובה אחד' : `נשארו ${n} שדות חובה`,
   mustBeAtLeast: (n) => `הערך חייב להיות לפחות ${n}.`,
   mustBeAtMost: (n) => `הערך חייב להיות לכל היותר ${n}.`,
+  maxLengthExceeded: (n) => `מותר עד ${n} תווים.`,
+  fixErrorsAbove: (n) =>
+    n === 1 ? 'יש לתקן שגיאה אחת בטופס' : `יש לתקן ${n} שגיאות בטופס`,
   uploadFailed: 'ההעלאה נכשלה. נסה שוב.',
   signatureUploadUnavailable:
     'העלאת חתימה אינה זמינה כעת בקישור זה. נסה מאוחר יותר.',
@@ -184,10 +212,23 @@ const EN: FormStrings = {
   submitting: 'Submitting…',
   uploading: 'Uploading…',
   requiredField: 'This field is required.',
+  requiredText: 'Please fill in this field.',
+  requiredFreeText: 'Please write a response.',
+  requiredCheckboxYesNo: 'Please answer yes or no.',
+  requiredCheckboxAck: 'You must agree to continue.',
+  requiredDate: 'Please pick a date.',
+  requiredNumber: 'Please enter a number.',
+  requiredScale: 'Please pick a value on the scale.',
+  requiredMultiChoice: 'Please pick an option.',
+  requiredPhoto: 'Please attach a photo.',
+  requiredSignature: 'Please sign before submitting.',
   requiredRemaining: (n) =>
     n === 1 ? '1 required field remaining' : `${n} required fields remaining`,
   mustBeAtLeast: (n) => `Must be at least ${n}.`,
   mustBeAtMost: (n) => `Must be at most ${n}.`,
+  maxLengthExceeded: (n) => `Up to ${n} characters allowed.`,
+  fixErrorsAbove: (n) =>
+    n === 1 ? 'Please fix 1 error in the form' : `Please fix ${n} errors in the form`,
   uploadFailed: 'Upload failed. Please try again.',
   signatureUploadUnavailable:
     'Signature upload is not yet available on this link. Please try again later.',
@@ -253,12 +294,27 @@ const RU: FormStrings = {
   submitting: 'Отправляется…',
   uploading: 'Загружается…',
   requiredField: 'Обязательное поле.',
+  requiredText: 'Пожалуйста, заполните поле.',
+  requiredFreeText: 'Пожалуйста, напишите ответ.',
+  requiredCheckboxYesNo: 'Пожалуйста, ответьте да или нет.',
+  requiredCheckboxAck: 'Подтвердите, чтобы продолжить.',
+  requiredDate: 'Пожалуйста, выберите дату.',
+  requiredNumber: 'Пожалуйста, введите число.',
+  requiredScale: 'Выберите значение на шкале.',
+  requiredMultiChoice: 'Выберите вариант.',
+  requiredPhoto: 'Прикрепите фото.',
+  requiredSignature: 'Подпишите перед отправкой.',
   requiredRemaining: (n) =>
     n === 1
       ? 'Осталось 1 обязательное поле'
       : `Осталось ${n} обязательных полей`,
   mustBeAtLeast: (n) => `Не менее ${n}.`,
   mustBeAtMost: (n) => `Не более ${n}.`,
+  maxLengthExceeded: (n) => `Допускается до ${n} символов.`,
+  fixErrorsAbove: (n) =>
+    n === 1
+      ? 'Исправьте 1 ошибку в форме'
+      : `Исправьте ${n} ошибок в форме`,
   uploadFailed: 'Загрузка не удалась. Попробуйте снова.',
   signatureUploadUnavailable:
     'Загрузка подписи пока недоступна по этой ссылке. Попробуйте позже.',

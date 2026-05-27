@@ -1,15 +1,28 @@
 /**
- * `checkbox` form field — single boolean acknowledgement (e.g. "I confirm…").
- * View-wrapped Pressable per the project's RN-style-function workaround.
+ * `checkbox` form field — iOS-style Switch toggle row.
+ *
+ * The API's `checkbox` field type covers both yes/no questions (e.g.
+ * "Have you ever been diagnosed with a heart condition?") and required
+ * acknowledgements (e.g. "I confirm the information I provided is
+ * accurate"). On iOS, both cases read more naturally as a Switch
+ * toggle than as a checkbox tile — Settings.app uses switches for
+ * every boolean. Required-asterisk is shown next to the label.
+ *
+ * Layout:
+ *   ┌─────────────────────────────────────────────────────┐
+ *   │  Question / acknowledgement label *      [○━━━]    │
+ *   └─────────────────────────────────────────────────────┘
+ *
+ * Whole row is tappable. RTL flips the row order (label trailing, switch
+ * leading) the way iOS Hebrew Settings does.
  */
-import { Check } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { Pressable, View } from 'react-native';
+import { Pressable, Switch, View } from 'react-native';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useFormRTL } from '../form-rtl-context';
 import type { FormField } from '@/types/forms';
+import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -32,69 +45,70 @@ export function CheckboxFieldRenderer({
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();
+  const trackInactive = isDark
+    ? 'rgba(118,118,128,0.32)'
+    : 'rgba(120,120,128,0.20)';
 
-  const tile = (
-    <View
-      key="box"
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: 6,
-        borderCurve: 'continuous',
-        borderWidth: 2,
-        borderColor: value ? BRAND_TEAL : 'rgba(94,112,130,0.40)',
-        backgroundColor: value ? BRAND_TEAL : 'transparent',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 1,
-      }}
-    >
-      {value ? <Check size={16} color="#fff" strokeWidth={3} /> : null}
-    </View>
-  );
-  const labelEl = (
-    <Text
-      key="lbl"
-      style={{
-        flex: 1,
-        fontSize: 14.5,
-        lineHeight: 22,
-        color: colors.foreground,
-        textAlign: isRTL ? 'right' : 'left',
-        writingDirection: isRTL ? 'rtl' : 'ltr',
-      }}
-    >
-      {field.label}
-      {field.required ? (
-        <Text style={{ color: isDark ? '#FF453A' : '#D70015' }}> *</Text>
-      ) : null}
-    </Text>
-  );
-  const rowChildren = isRTL ? [labelEl, tile] : [tile, labelEl];
+  const onToggle = () => {
+    haptics.select();
+    onChange(!value);
+  };
 
+  // Use FieldShell with an empty label so the standard 11pt uppercase
+  // header is skipped. The question/acknowledgement IS the label and it
+  // belongs next to the switch, not above. helpText + error still
+  // render through the shell so styling stays consistent.
   return (
     <FieldShell label="" helpText={field.helpText} error={error}>
-      {/* Empty FieldShell label intentional — checkbox renders its label
-          beside the tile, not above it (iOS pattern for boolean fields). */}
-      <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: value }}
-        accessibilityLabel={field.label}
-        hitSlop={6}
-        onPress={() => {
-          haptics.select();
-          onChange(!value);
-        }}
+      <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-          gap: 12,
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 14,
+          paddingVertical: 6,
           minHeight: 44,
-          paddingTop: 4,
         }}
       >
-        {rowChildren}
-      </Pressable>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: value }}
+          accessibilityLabel={field.label}
+          onPress={onToggle}
+          hitSlop={6}
+          style={{
+            flex: 1,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+          }}
+        >
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 15,
+              lineHeight: 21,
+              color: colors.foreground,
+              textAlign: isRTL ? 'right' : 'left',
+              writingDirection: isRTL ? 'rtl' : 'ltr',
+            }}
+          >
+            {field.label}
+            {field.required ? (
+              <Text style={{ color: isDark ? '#FF453A' : '#D70015' }}> *</Text>
+            ) : null}
+          </Text>
+        </Pressable>
+        <Switch
+          value={value}
+          onValueChange={(next) => {
+            haptics.select();
+            onChange(next);
+          }}
+          trackColor={{ false: trackInactive, true: BRAND_TEAL }}
+          thumbColor="#fff"
+          // iOS-only refinements; Android falls back to the platform Switch.
+          ios_backgroundColor={trackInactive}
+        />
+      </View>
     </FieldShell>
   );
 }
