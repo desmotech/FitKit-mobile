@@ -25,6 +25,7 @@
  */
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import { AlertCircle } from 'lucide-react-native';
 import { FKButton, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -142,12 +143,41 @@ export function FormRenderer({
     }
   };
 
+  const requiredMessageFor = (field: FormField): string => {
+    switch (field.type) {
+      case 'text':
+        return s.requiredText;
+      case 'free_text':
+        return s.requiredFreeText;
+      case 'checkbox':
+        // The compliance presets only mark checkbox `required: true`
+        // for acknowledgements ("I agree…"); yes/no health questions
+        // are `required: false`. So a required-and-empty checkbox is
+        // always an acknowledgement that wasn't toggled on.
+        return s.requiredCheckboxAck;
+      case 'date':
+        return s.requiredDate;
+      case 'number':
+        return s.requiredNumber;
+      case 'scale':
+        return s.requiredScale;
+      case 'multi_choice':
+        return s.requiredMultiChoice;
+      case 'photo':
+        return s.requiredPhoto;
+      case 'signature':
+        return s.requiredSignature;
+      default:
+        return s.requiredField;
+    }
+  };
+
   const validate = (): { ok: boolean; errors: Record<string, string> } => {
     const next: Record<string, string> = {};
     for (const field of form.fields) {
       const v = answers[field.id];
       if (field.required && !isAnswerPresent(field, v)) {
-        next[field.id] = s.requiredField;
+        next[field.id] = requiredMessageFor(field);
         continue;
       }
       // Binary fields that still hold a local URI when no uploader is
@@ -171,6 +201,17 @@ export function FormRenderer({
         } else if (field.max != null && v > field.max) {
           next[field.id] = s.mustBeAtMost(field.max);
         }
+      }
+      // Length cap for text / free_text. The TextInput already enforces
+      // maxLength on input, but paste handlers + future input-prop
+      // changes can bypass that; validate defensively before we POST.
+      if (
+        (field.type === 'text' || field.type === 'free_text') &&
+        typeof v === 'string' &&
+        field.maxLength != null &&
+        v.length > field.maxLength
+      ) {
+        next[field.id] = s.maxLengthExceeded(field.maxLength);
       }
     }
     return { ok: Object.keys(next).length === 0, errors: next };
@@ -246,6 +287,17 @@ export function FormRenderer({
     [form.fields, answers],
   );
 
+  // Count of inline field errors currently rendered — drives the
+  // top-of-form summary banner. Excludes the `__submit__` slot which
+  // already has its own banner below the fields.
+  const inlineErrorCount = useMemo(
+    () =>
+      Object.keys(errors).filter(
+        (k) => k !== '__submit__' && !!errors[k],
+      ).length,
+    [errors],
+  );
+
   return (
     <FormRTLProvider isRTL={isRTL}>
     <ScrollView
@@ -265,6 +317,38 @@ export function FormRenderer({
         >
           {form.bodyRichtext}
         </Text>
+      ) : null}
+
+      {inlineErrorCount > 0 ? (
+        <View
+          accessibilityRole="alert"
+          style={{
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+            borderCurve: 'continuous',
+            borderWidth: 1,
+            borderColor: 'rgba(184,74,64,0.30)',
+            backgroundColor: 'rgba(184,74,64,0.10)',
+          }}
+        >
+          <AlertCircle size={18} color="#B84A40" strokeWidth={2.4} />
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 13,
+              fontWeight: '700',
+              color: '#B84A40',
+              textAlign: isRTL ? 'right' : 'left',
+              writingDirection: isRTL ? 'rtl' : 'ltr',
+            }}
+          >
+            {s.fixErrors(inlineErrorCount)}
+          </Text>
+        </View>
       ) : null}
 
       {form.fields.map((field) => (

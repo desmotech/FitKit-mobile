@@ -14,6 +14,7 @@
 import type { ReactNode } from 'react';
 import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
+import { AlertCircle } from 'lucide-react-native';
 import { Text } from '@/components/ui/text';
 import { useFormRTL } from '../form-rtl-context';
 
@@ -89,17 +90,46 @@ export function FieldShell({
       ) : null}
       {children}
       {error ? (
-        <Text
+        <View
+          accessibilityRole="alert"
           style={{
-            fontSize: 12,
-            fontWeight: '500',
-            color: destructive,
-            textAlign: isRTL ? 'right' : 'left',
-            writingDirection: isRTL ? 'rtl' : 'ltr',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'flex-start',
+            gap: 8,
+            marginTop: 4,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 10,
+            borderCurve: 'continuous',
+            borderWidth: 1,
+            borderColor: isDark
+              ? 'rgba(255,69,58,0.40)'
+              : 'rgba(215,0,21,0.30)',
+            backgroundColor: isDark
+              ? 'rgba(255,69,58,0.12)'
+              : 'rgba(215,0,21,0.08)',
           }}
         >
-          {error}
-        </Text>
+          <AlertCircle
+            size={16}
+            color={destructive}
+            strokeWidth={2.4}
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 13,
+              fontWeight: '600',
+              lineHeight: 18,
+              color: destructive,
+              textAlign: isRTL ? 'right' : 'left',
+              writingDirection: isRTL ? 'rtl' : 'ltr',
+            }}
+          >
+            {error}
+          </Text>
+        </View>
       ) : null}
     </View>
   );

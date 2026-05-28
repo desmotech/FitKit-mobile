@@ -75,7 +75,7 @@ export interface FormStrings {
   mustBeAtMost: (n: number) => string;
   maxLengthExceeded: (n: number) => string;
   /** Banner shown at the top of the form when there are multiple errors. */
-  fixErrorsAbove: (n: number) => string;
+  fixErrors: (n: number) => string;
   uploadFailed: string;
   signatureUploadUnavailable: string;
   photoUploadUnavailable: string;
@@ -148,7 +148,7 @@ const HE: FormStrings = {
   mustBeAtLeast: (n) => `הערך חייב להיות לפחות ${n}.`,
   mustBeAtMost: (n) => `הערך חייב להיות לכל היותר ${n}.`,
   maxLengthExceeded: (n) => `מותר עד ${n} תווים.`,
-  fixErrorsAbove: (n) =>
+  fixErrors: (n) =>
     n === 1 ? 'יש לתקן שגיאה אחת בטופס' : `יש לתקן ${n} שגיאות בטופס`,
   uploadFailed: 'ההעלאה נכשלה. נסה שוב.',
   signatureUploadUnavailable:
@@ -227,7 +227,7 @@ const EN: FormStrings = {
   mustBeAtLeast: (n) => `Must be at least ${n}.`,
   mustBeAtMost: (n) => `Must be at most ${n}.`,
   maxLengthExceeded: (n) => `Up to ${n} characters allowed.`,
-  fixErrorsAbove: (n) =>
+  fixErrors: (n) =>
     n === 1 ? 'Please fix 1 error in the form' : `Please fix ${n} errors in the form`,
   uploadFailed: 'Upload failed. Please try again.',
   signatureUploadUnavailable:
@@ -311,7 +311,7 @@ const RU: FormStrings = {
   mustBeAtLeast: (n) => `Не менее ${n}.`,
   mustBeAtMost: (n) => `Не более ${n}.`,
   maxLengthExceeded: (n) => `Допускается до ${n} символов.`,
-  fixErrorsAbove: (n) =>
+  fixErrors: (n) =>
     n === 1
       ? 'Исправьте 1 ошибку в форме'
       : `Исправьте ${n} ошибок в форме`,
