@@ -8,6 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
+      "environment": "development",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://fitkitapi-preview.up.railway.app",
         "EXPO_PUBLIC_WS_URL": "https://fitkitapi-preview.up.railway.app",
@@ -16,9 +17,18 @@
         "EXPO_PUBLIC_POSTHOG_HOST": "https://eu.i.posthog.com"
       }
     },
+    "simulator": {
+      "extends": "production",
+      "distribution": "internal",
+      "ios": { "simulator": true },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "environment": "preview",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://fitkitapi-preview.up.railway.app",
         "EXPO_PUBLIC_WS_URL": "https://fitkitapi-preview.up.railway.app",
@@ -30,6 +40,7 @@
     "production": {
       "channel": "production",
       "autoIncrement": true,
+      "environment": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://api.fitkit.fit",
         "EXPO_PUBLIC_WS_URL": "https://api.fitkit.fit",

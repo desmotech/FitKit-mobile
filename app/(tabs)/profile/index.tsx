@@ -11,9 +11,10 @@
  *   7. Sign-out button
  *   8. Footer legal links + version
  */
-import { useAuth, useClerk } from '@clerk/clerk-expo';
+import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
   Bell,
@@ -36,8 +37,9 @@ import {
   Trash2,
   User as UserIcon,
 } from 'lucide-react-native';
+import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -56,6 +58,7 @@ import {
   useRenewSubscription,
 } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { i18n, type Locale } from '@/i18n/config';
@@ -72,6 +75,9 @@ export default function ProfileScreen() {
   const { user, activeOrganization, isLoading: userLoading } = useCurrentUser();
   const { signOut } = useClerk();
   const { getToken } = useAuth();
+  const { user: clerkUser } = useUser();
+  const { requestCamera, requestLibrary } = useMediaPermissions();
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const haptics = useHaptics();
   const { colorScheme, setColorScheme } = useColorScheme();
   const colors = useFKColors();
@@ -190,6 +196,86 @@ export default function ProfileScreen() {
       : `${labels.memberPrefix} ${createdYear}`
     : (activeOrganization?.name ?? 'FitKit');
 
+  const progressPhotosT = (dict.progressPhotos ?? {}) as Record<string, string>;
+  const avatarLabels = {
+    cancel: commonT.cancel ?? 'Cancel',
+    camera: progressPhotosT.fromCamera ?? 'Take photo',
+    library: progressPhotosT.fromLibrary ?? 'Choose from library',
+    remove: (commonT.remove as string | undefined) ?? 'Remove photo',
+    error: (commonT.error as string | undefined) ?? 'Something went wrong',
+  };
+
+  // Run a Clerk avatar mutation with a shared busy/haptics/error envelope.
+  const applyAvatar = async (run: () => Promise<unknown>) => {
+    try {
+      setAvatarBusy(true);
+      await run();
+      await clerkUser?.reload();
+      haptics.success();
+    } catch (err) {
+      haptics.error();
+      Alert.alert('', err instanceof Error ? err.message : avatarLabels.error);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const setAvatarFromSource = async (source: 'camera' | 'library') => {
+    const ok =
+      source === 'camera' ? await requestCamera() : await requestLibrary();
+    if (!ok) return;
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.85,
+            base64: true,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.85,
+            base64: true,
+          });
+    if (result.canceled || !result.assets?.[0]?.base64) return;
+    const a = result.assets[0];
+    await applyAvatar(() =>
+      clerkUser!.setProfileImage({
+        file: `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}`,
+      }),
+    );
+  };
+
+  const onEditAvatar = () => {
+    haptics.tap();
+    if (avatarBusy || !clerkUser) return;
+    const hasImage = clerkUser.hasImage ?? false;
+    const options = hasImage
+      ? [avatarLabels.cancel, avatarLabels.camera, avatarLabels.library, avatarLabels.remove]
+      : [avatarLabels.cancel, avatarLabels.camera, avatarLabels.library];
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex: 0,
+          destructiveButtonIndex: hasImage ? 3 : undefined,
+        },
+        (i) => {
+          if (i === 1) setAvatarFromSource('camera');
+          else if (i === 2) setAvatarFromSource('library');
+          else if (i === 3 && hasImage) {
+            applyAvatar(() => clerkUser.setProfileImage({ file: null }));
+          }
+        },
+      );
+    } else {
+      setAvatarFromSource('library');
+    }
+  };
+
   const handleSignOut = () =>
     Alert.alert(labels.signOutTitle, undefined, [
       { text: labels.signOutCancel, style: 'cancel' },
@@ -268,9 +354,9 @@ export default function ProfileScreen() {
                       backgroundColor: 'rgba(255,255,255,0.10)',
                     }}
                   >
-                    {user?.imageUrl ? (
+                    {(clerkUser?.imageUrl ?? user?.imageUrl) ? (
                       <Image
-                        source={{ uri: user.imageUrl }}
+                        source={{ uri: clerkUser?.imageUrl ?? user?.imageUrl ?? undefined }}
                         style={{ width: 80, height: 80 }}
                         contentFit="cover"
                         transition={200}
@@ -288,10 +374,25 @@ export default function ProfileScreen() {
                         {initials.toUpperCase()}
                       </Text>
                     )}
+                    {avatarBusy ? (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(0,0,0,0.35)',
+                        }}
+                      >
+                        <ActivityIndicator color="#fff" />
+                      </View>
+                    ) : null}
                   </View>
                   <TouchableOpacity
                     activeOpacity={0.7}
+                    onPress={onEditAvatar}
                     onPressIn={haptics.tap}
+                    disabled={avatarBusy}
                     style={{
                       position: 'absolute',
                       bottom: -2,

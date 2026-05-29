@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
+import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -62,11 +63,13 @@ function RootLayout() {
   }
 
   if (!clerkPublishableKey) {
-    // Surface misconfiguration loudly during dev; production builds set
-    // EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY via EAS.
-    throw new Error(
-      'Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. Set it in .env.',
-    );
+    // A missing key is a build-time misconfiguration (env var not baked
+    // into the bundle). Previously we `throw`, but an unhandled throw at
+    // the root renders as an indefinite blank splash — which is exactly
+    // what got build 1.0.0(2) rejected by App Review (Guideline 2.1a:
+    // "loads for an indefinite amount of time"). Render a visible, static
+    // error screen instead so the failure is diagnosable, never a hang.
+    return <ConfigErrorScreen />;
   }
 
   return (
@@ -116,6 +119,54 @@ function RootLayout() {
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ClerkProvider>
+  );
+}
+
+/**
+ * Static, dependency-free fallback shown when the app is built without a
+ * Clerk publishable key. Deliberately uses only core RN primitives (no
+ * providers, no theme, no fonts) so it renders even when the rest of the
+ * tree can't initialize. Hides the splash on mount so the user never sees
+ * an indefinite load.
+ */
+function ConfigErrorScreen() {
+  useEffect(() => {
+    SplashScreen.hideAsync().catch(() => undefined);
+  }, []);
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 32,
+        backgroundColor: '#0A1628',
+      }}
+    >
+      <Text
+        style={{
+          color: '#fff',
+          fontSize: 18,
+          fontWeight: '700',
+          textAlign: 'center',
+          marginBottom: 8,
+        }}
+      >
+        Configuration error
+      </Text>
+      <Text
+        style={{
+          color: 'rgba(255,255,255,0.7)',
+          fontSize: 14,
+          textAlign: 'center',
+          lineHeight: 20,
+        }}
+      >
+        This build is missing required configuration and can’t start. Please
+        reinstall the latest version from the App Store, or contact support if
+        the problem persists.
+      </Text>
+    </View>
   );
 }
 
