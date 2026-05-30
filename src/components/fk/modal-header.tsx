@@ -13,12 +13,8 @@
  * - **title** — centered, single line, 17pt semibold. Optional —
  *   omit on detail screens where the body already provides context.
  *
- * Wrapped in SafeAreaView(edges=['top']): on a genuine iOS pageSheet the
- * top inset resolves to 0 (the sheet sits below the status bar), so this
- * is a no-op there. But when the same screen renders full-bleed — e.g. a
- * sheet nested deep enough in the navigator that the presentation falls
- * back to a full-screen card — the inset drops the Cancel/Save row below
- * the status bar / Dynamic Island instead of letting it collide.
+ * SafeAreaView(edges=['top']): 0 inset on a real sheet, drops below the
+ * status bar when the screen renders full-bleed.
  *
  * RTL-aware: leading lands on the visual leading edge regardless of
  * locale, trailing on the trailing. The parent row uses `row-reverse`

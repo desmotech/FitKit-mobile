@@ -12,19 +12,7 @@ import { useI18n } from '@/providers/i18n-provider';
 const PRIMARY_LIGHT = '#0E8C8C';
 const PRIMARY_DARK = '#2AB8B8';
 
-/**
- * Native tab bar — UITabBarController on iOS (translucent material, SF
- * Symbols, native haptics, automatic safe-area inset). Tint = FK primary.
- *
- * Tabs: Home / Schedule / Program* / Profile. The `messages` route file is
- * kept on disk but not registered here (deep-linkable from elsewhere).
- *
- * *Program is conditional: it only appears for members enrolled in at least
- * one coaching program (/programs/my-enrollments). Members on a class-only
- * membership never see an empty Program tab. The fetch overlaps AuthGate's
- * loading window, so for enrolled members it's usually resolved before the
- * bar paints; on a cold start it may pop in within a frame or two.
- */
+// Program tab only shows for members enrolled in a coaching program.
 export default function TabsLayout() {
   const { t } = useI18n();
   const { colorScheme } = useColorScheme();

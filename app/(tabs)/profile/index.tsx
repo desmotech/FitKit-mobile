@@ -192,13 +192,9 @@ export default function ProfileScreen() {
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
 
-  // Real installed version (e.g. "1.0.0") — not a hardcoded string.
   const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
-  // Platform-level (FitKit) support channels — distinct from the gym's own
-  // contact details below. Canonical address used across fitkit.fit.
   const FITKIT_SUPPORT_EMAIL = 'support@fitkit.fit';
   const FITKIT_WEBSITE = 'https://fitkit.fit';
-  // Whether the member's gym exposes any contact channel.
   const hasOrgContact = Boolean(
     activeOrganization?.contactEmail ||
       activeOrganization?.contactPhone ||
@@ -757,7 +753,6 @@ export default function ProfileScreen() {
             />
           </FKGlassPanel>
 
-          {/* App settings: Notifications */}
           <SettingsGroup colors={colors} isRTL={isRTL}>
             <SettingsRow
               Icon={Bell}
@@ -769,9 +764,7 @@ export default function ProfileScreen() {
             />
           </SettingsGroup>
 
-          {/* ── Org support: the member's own gym. Every action reaches the
-              gym directly (its email / phone / website). Only shown when the
-              org exposes a contact channel. ──────────────────────────── */}
+          {/* Org support — the member's gym */}
           {activeOrganization && (
             <View style={{ gap: 10 }}>
               <SettingsSectionHeader
@@ -781,9 +774,6 @@ export default function ProfileScreen() {
                 colors={colors}
               />
               <SettingsGroup colors={colors} isRTL={isRTL}>
-                {/* Gym identity — logo + name. Non-actionable; always shown
-                    so the member sees which gym they belong to even when no
-                    contact channels are configured. */}
                 <View
                   style={{
                     flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -884,9 +874,7 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* ── FitKit support: the platform/app itself. Distinct from the
-              gym above — these reach FitKit (the app maker), not the gym.
-              Always shown. ──────────────────────────────────────────── */}
+          {/* FitKit support — the platform */}
           <View style={{ gap: 10 }}>
             <SettingsSectionHeader
               title={labels.fitkitSupportTitle}
@@ -1204,9 +1192,6 @@ function SettingsGroup({
   );
 }
 
-/** Grouped-settings section header (iOS-style): a bold title with an
- *  optional muted subtitle, used to attribute a card to a source — e.g.
- *  the member's gym vs. FitKit the platform. RTL-aware alignment. */
 function SettingsSectionHeader({
   title,
   subtitle,

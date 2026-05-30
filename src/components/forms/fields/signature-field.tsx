@@ -1,27 +1,6 @@
-/**
- * `signature` form field — finger-drawn signature canvas.
- *
- * Implementation: SVG `<Path>` per stroke, captured via PanResponder.
- * On commit we rasterise the strokes to PNG with react-native-view-shot's
- * `captureRef` (snapshots the live view), write it to a temp file, and
- * store the file URI as the field value. <FormRenderer> then uploads the
- * file via useFormUpload before submit and swaps the URI for `{ r2Key, mime }`.
- *
- * Why view-shot and not `Svg.toDataURL`: under the New Architecture
- * (newArchEnabled, Fabric) react-native-svg's toDataURL callback silently
- * never fires on iOS — including the Simulator — so the old path left the
- * field empty and blocked form submission. view-shot is Fabric-safe.
- *
- * We snapshot a transparent inner layer that holds only the strokes (no
- * canvas tint / border), so the PNG is dark-on-transparent and embeds
- * cleanly into the server-rendered compliance PDF.
- *
- * UX:
- *   - Tap "Sign" to expand into a dedicated 200pt canvas
- *   - "Clear" wipes the strokes
- *   - The committed signature shows as a 96pt preview tile rendered
- *     from the same local PNG, with a "Re-sign" affordance underneath
- */
+// Finger-drawn signature canvas. Captured to PNG via view-shot (captureRef),
+// not Svg.toDataURL (which never fires on Fabric). Value is a local file URI;
+// FormRenderer uploads it and swaps in { r2Key, mime } before submit.
 import { useRef, useState } from 'react';
 import {
   Pressable,
@@ -93,8 +72,6 @@ export function SignatureFieldRenderer({
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
   const canvasSize = useRef({ width: 0, height: 200 });
-  // Capture target — wraps only the <Svg> strokes on a transparent
-  // background, so the PNG snapshot excludes the canvas tint/border.
   const shotRef = useRef<View | null>(null);
 
   // PanResponder lives across renders to avoid re-creation on every
@@ -158,9 +135,7 @@ export function SignatureFieldRenderer({
         throw new Error('Canvas not laid out yet — try again.');
       }
 
-      // Snapshot the strokes layer to a temp PNG via view-shot. Fabric-safe
-      // (unlike Svg.toDataURL). result:'tmpfile' returns a local file URI;
-      // we keep a timeout guard so a wedged native call never hangs "Save".
+      // Timeout guard so a wedged native call never hangs "Save".
       const fileUri: string = await Promise.race([
         captureRef(shotRef, {
           format: 'png',
