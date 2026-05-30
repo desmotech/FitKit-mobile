@@ -94,6 +94,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   plugins: [
+    './plugins/withDisableScriptSandbox',
     'expo-router',
     'expo-font',
     'expo-secure-store',
