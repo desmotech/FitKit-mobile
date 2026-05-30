@@ -27,7 +27,10 @@ export interface ProfileSupportStrings {
 }
 
 const HE: ProfileSupportStrings = {
-  orgSupportTitle: 'חדר הכושר שלי',
+  // "סטודיו" is the most discipline-neutral Hebrew term for the venue —
+  // covers CrossFit boxes, yoga/pilates, spinning, dance, etc. (vs. the
+  // weights-specific "חדר כושר", or the upstream dict's wrong "הגוף שלי").
+  orgSupportTitle: 'הסטודיו שלי',
   orgSupportSubtitle: 'שאלות על המנוי שלך',
   fitkitSupportTitle: 'תמיכת FitKit',
   fitkitSupportSubtitle: 'עזרה ומשוב לאפליקציה',
