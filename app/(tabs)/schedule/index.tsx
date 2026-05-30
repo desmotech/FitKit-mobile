@@ -1,14 +1,16 @@
 /**
- * Schedule — class booking surface. Step 1: list visual.
+ * Schedule — class booking surface.
  *
  * Layout:
  *   1. MemberHeader (shared chrome)
  *   2. Week navigator + 7-day strip (FKDayCell)
- *   3. Filter chips row (stubbed)
- *   4. Class list grouped by time-of-day (Morning / Afternoon / Evening)
+ *   3. Class list grouped by time-of-day (Morning / Afternoon / Evening)
  *      with inline status badges (Booked / Waitlisted / Spots left / Full)
  *
- * Booking actions stub to a toast in Step 1; Step 2 wires the mutations.
+ * Booking actions are wired via useBookSession / useCancelBooking, which
+ * resolve current booking state into book / waitlist / cancel / leave.
+ *
+ * Not yet built: a filter chips row (class type / coach). Tracked separately.
  */
 import { useRouter } from 'expo-router';
 import {
