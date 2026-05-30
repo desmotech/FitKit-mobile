@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
   Bell,
+  Building2,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -65,6 +66,7 @@ import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { i18n, type Locale } from '@/i18n/config';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import { useProfileStrings } from '@/i18n/use-profile-strings';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -85,6 +87,7 @@ export default function ProfileScreen() {
   const colors = useFKColors();
   const bottomPad = useTabBarPadding(32);
   const formS = useFormStrings();
+  const ps = useProfileStrings();
 
   const orgId = activeOrganization?.id;
   const stats = useMyStats(orgId);
@@ -150,13 +153,13 @@ export default function ProfileScreen() {
     contactEmail: contactT.email ?? 'Email',
     contactPhone: contactT.phone ?? 'Phone',
     contactWebsite: contactT.website ?? 'Website',
-    orgSupportTitle: (contactT.title as string) ?? 'Your Gym',
-    orgSupportSubtitle: (contactT.subtitle as string) ?? 'Questions about your membership',
-    fitkitSupportTitle: (settingsT.fitkitSupport as string) ?? 'FitKit Support',
-    fitkitSupportSubtitle: (settingsT.fitkitSupportSubtitle as string) ?? 'App help & feedback',
-    fitkitFeedback: (settingsT.sendFeedback as string) ?? 'Send Feedback',
-    fitkitContact: (settingsT.contactSupport as string) ?? 'Contact Support',
-    fitkitWebsite: (settingsT.visitFitkit as string) ?? 'Visit FitKit',
+    orgSupportTitle: ps.orgSupportTitle,
+    orgSupportSubtitle: ps.orgSupportSubtitle,
+    fitkitSupportTitle: ps.fitkitSupportTitle,
+    fitkitSupportSubtitle: ps.fitkitSupportSubtitle,
+    fitkitFeedback: ps.fitkitFeedback,
+    fitkitContact: ps.fitkitContact,
+    fitkitWebsite: ps.fitkitWebsite,
     themeLabel: typeof settingsAppT.theme === 'string'
       ? (settingsAppT.theme as string) : 'Theme',
     themeSystem: themesT.system ?? 'System',
@@ -769,15 +772,66 @@ export default function ProfileScreen() {
           {/* ── Org support: the member's own gym. Every action reaches the
               gym directly (its email / phone / website). Only shown when the
               org exposes a contact channel. ──────────────────────────── */}
-          {hasOrgContact && (
+          {activeOrganization && (
             <View style={{ gap: 10 }}>
               <SettingsSectionHeader
-                title={activeOrganization?.name ?? labels.orgSupportTitle}
+                title={labels.orgSupportTitle}
                 subtitle={labels.orgSupportSubtitle}
                 isRTL={isRTL}
                 colors={colors}
               />
               <SettingsGroup colors={colors} isRTL={isRTL}>
+                {/* Gym identity — logo + name. Non-actionable; always shown
+                    so the member sees which gym they belong to even when no
+                    contact channels are configured. */}
+                <View
+                  style={{
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    minHeight: 56,
+                    paddingVertical: 10,
+                    paddingHorizontal: 14,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      borderCurve: 'continuous',
+                      overflow: 'hidden',
+                      backgroundColor: isDark ? '#1A2A4A' : '#E2E8F0',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {activeOrganization.logoUrl ? (
+                      <Image
+                        source={{ uri: activeOrganization.logoUrl }}
+                        style={{ width: '100%', height: '100%' }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Building2 size={16} color={colors.mutedFg} strokeWidth={2} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1, marginHorizontal: 12 }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 15,
+                        fontWeight: '700',
+                        color: colors.foreground,
+                        textAlign: isRTL ? 'right' : 'left',
+                      }}
+                    >
+                      {activeOrganization.name}
+                    </Text>
+                  </View>
+                </View>
+
+                {hasOrgContact && <RowDivider isDark={isDark} />}
+
                 {activeOrganization?.contactEmail && (
                   <SettingsRow
                     Icon={Mail}
