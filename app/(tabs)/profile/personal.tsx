@@ -34,6 +34,11 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { continuousCorners } from '@/lib/utils';
+import {
+  extractFieldErrors,
+  formErrorSummary,
+  validateProfileField,
+} from '@/lib/validation-i18n';
 import { useI18n } from '@/providers/i18n-provider';
 
 type FieldErrors = Partial<Record<string, string>>;
@@ -45,9 +50,10 @@ export default function PersonalDetailsScreen() {
   const queryClient = useQueryClient();
   const haptics = useHaptics();
   const bottomPad = useTabBarPadding();
-  const { dir, t } = useI18n();
+  const { dir, lang, t } = useI18n();
   const isRTL = dir === 'rtl';
 
+  const validationT = (t as unknown as Record<string, Record<string, string>>).validation ?? {};
   const profileT = (t as unknown as Record<string, Record<string, unknown>>).profile ?? {};
   const cpT = (t as unknown as Record<string, Record<string, unknown>>).completeProfile ?? {};
   const commonT = (t as unknown as Record<string, Record<string, string>>).common ?? {};
@@ -119,6 +125,17 @@ export default function PersonalDetailsScreen() {
         return next;
       });
     }
+    if (submitError) setSubmitError(null);
+  };
+
+  const handleBlur = (k: keyof typeof form) => {
+    const err = validateProfileField(k, String(form[k] ?? ''), validationT);
+    setErrors((p) => {
+      const next = { ...p };
+      if (err) next[k] = err;
+      else delete next[k];
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -133,12 +150,8 @@ export default function PersonalDetailsScreen() {
 
     const result = updateUserProfileSchema.safeParse(data);
     if (!result.success) {
-      const next: FieldErrors = {};
-      for (const issue of result.error.issues) {
-        const key = issue.path[0] as string;
-        if (key && !next[key]) next[key] = issue.message;
-      }
-      setErrors(next);
+      setErrors(extractFieldErrors(result.error, validationT));
+      setSubmitError(formErrorSummary(lang));
       haptics.error();
       return;
     }
@@ -219,6 +232,7 @@ export default function PersonalDetailsScreen() {
                   <Input
                     value={form.phone}
                     onChangeText={(v) => update('phone', v)}
+                    onBlur={() => handleBlur('phone')}
                     keyboardType="phone-pad"
                     placeholder={labels.phonePlaceholder}
                     style={{ textAlign: isRTL ? 'right' : 'left' }}
@@ -235,6 +249,7 @@ export default function PersonalDetailsScreen() {
                     onChangeText={(v) =>
                       update('nationalId', v.replace(/\D/g, '').slice(0, 9))
                     }
+                    onBlur={() => handleBlur('nationalId')}
                     keyboardType="number-pad"
                     placeholder={
                       user?.nationalIdMasked ?? labels.nationalIdPlaceholder
@@ -317,6 +332,7 @@ export default function PersonalDetailsScreen() {
                       onChangeText={(v) =>
                         update('emergencyContactPhone', v)
                       }
+                      onBlur={() => handleBlur('emergencyContactPhone')}
                       keyboardType="phone-pad"
                       placeholder={labels.phonePlaceholder}
                       style={{ textAlign: isRTL ? 'right' : 'left' }}

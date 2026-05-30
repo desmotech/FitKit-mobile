@@ -44,6 +44,11 @@ import { useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { continuousCorners } from '@/lib/utils';
+import {
+  extractFieldErrors,
+  formErrorSummary,
+  validateProfileField,
+} from '@/lib/validation-i18n';
 import { useI18n } from '@/providers/i18n-provider';
 
 type FieldErrors = Partial<Record<string, string>>;
@@ -55,11 +60,12 @@ export default function CompleteProfileScreen() {
   const { fetchWithAuth } = useApi();
   const queryClient = useQueryClient();
   const colors = useFKColors();
-  const { dir, t } = useI18n();
+  const { dir, lang, t } = useI18n();
   const isRTL = dir === 'rtl';
   const { user } = useCurrentUser();
 
   const dict = t as unknown as Record<string, Record<string, unknown>>;
+  const validationT = (dict.validation ?? {}) as Record<string, string>;
   const cpT = (dict.completeProfile ?? {}) as Record<string, unknown>;
   const commonT = (dict.common ?? {}) as Record<string, string>;
   const genderT =
@@ -155,6 +161,17 @@ export default function CompleteProfileScreen() {
         return next;
       });
     }
+    if (submitError) setSubmitError(null);
+  };
+
+  const handleBlur = (k: keyof typeof form) => {
+    const err = validateProfileField(k, String(form[k] ?? ''), validationT);
+    setErrors((p) => {
+      const next = { ...p };
+      if (err) next[k] = err;
+      else delete next[k];
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -170,12 +187,8 @@ export default function CompleteProfileScreen() {
 
     const result = completeProfileSchema.safeParse(data);
     if (!result.success) {
-      const next: FieldErrors = {};
-      for (const issue of result.error.issues) {
-        const key = issue.path[0] as string;
-        if (key && !next[key]) next[key] = issue.message;
-      }
-      setErrors(next);
+      setErrors(extractFieldErrors(result.error, validationT));
+      setSubmitError(formErrorSummary(lang));
       haptics.error();
       return;
     }
@@ -303,6 +316,7 @@ export default function CompleteProfileScreen() {
               <Input
                 value={form.phone}
                 onChangeText={(v) => update('phone', v)}
+                onBlur={() => handleBlur('phone')}
                 keyboardType="phone-pad"
                 placeholder={labels.phonePlaceholder}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
@@ -319,6 +333,7 @@ export default function CompleteProfileScreen() {
                 onChangeText={(v) =>
                   update('nationalId', v.replace(/\D/g, '').slice(0, 9))
                 }
+                onBlur={() => handleBlur('nationalId')}
                 keyboardType="number-pad"
                 placeholder={labels.nationalIdPlaceholder}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
@@ -400,6 +415,7 @@ export default function CompleteProfileScreen() {
                 <Input
                   value={form.emergencyContactPhone}
                   onChangeText={(v) => update('emergencyContactPhone', v)}
+                  onBlur={() => handleBlur('emergencyContactPhone')}
                   keyboardType="phone-pad"
                   placeholder={labels.phonePlaceholder}
                   style={{ textAlign: isRTL ? 'right' : 'left' }}
