@@ -13,6 +13,7 @@
  */
 import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Application from 'expo-application';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -20,7 +21,6 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   CreditCard,
   FileSignature,
   Globe,
@@ -28,8 +28,10 @@ import {
   History,
   Camera,
   Scale,
+  LifeBuoy,
   LogOut,
   Mail,
+  MessageSquare,
   Moon,
   Pencil,
   Phone,
@@ -148,6 +150,13 @@ export default function ProfileScreen() {
     contactEmail: contactT.email ?? 'Email',
     contactPhone: contactT.phone ?? 'Phone',
     contactWebsite: contactT.website ?? 'Website',
+    orgSupportTitle: (contactT.title as string) ?? 'Your Gym',
+    orgSupportSubtitle: (contactT.subtitle as string) ?? 'Questions about your membership',
+    fitkitSupportTitle: (settingsT.fitkitSupport as string) ?? 'FitKit Support',
+    fitkitSupportSubtitle: (settingsT.fitkitSupportSubtitle as string) ?? 'App help & feedback',
+    fitkitFeedback: (settingsT.sendFeedback as string) ?? 'Send Feedback',
+    fitkitContact: (settingsT.contactSupport as string) ?? 'Contact Support',
+    fitkitWebsite: (settingsT.visitFitkit as string) ?? 'Visit FitKit',
     themeLabel: typeof settingsAppT.theme === 'string'
       ? (settingsAppT.theme as string) : 'Theme',
     themeSystem: themesT.system ?? 'System',
@@ -179,6 +188,19 @@ export default function ProfileScreen() {
   const prCount = (prs.data?.data ?? []).length;
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
+
+  // Real installed version (e.g. "1.0.0") — not a hardcoded string.
+  const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
+  // Platform-level (FitKit) support channels — distinct from the gym's own
+  // contact details below. Canonical address used across fitkit.fit.
+  const FITKIT_SUPPORT_EMAIL = 'support@fitkit.fit';
+  const FITKIT_WEBSITE = 'https://fitkit.fit';
+  // Whether the member's gym exposes any contact channel.
+  const hasOrgContact = Boolean(
+    activeOrganization?.contactEmail ||
+      activeOrganization?.contactPhone ||
+      activeOrganization?.website,
+  );
 
   // "Member since YYYY" — derive from user.createdAt if present, else fall
   // back to the org name. `memberSince` template carries `{year}` for
@@ -732,6 +754,7 @@ export default function ProfileScreen() {
             />
           </FKGlassPanel>
 
+          {/* App settings: Notifications */}
           <SettingsGroup colors={colors} isRTL={isRTL}>
             <SettingsRow
               Icon={Bell}
@@ -741,72 +764,119 @@ export default function ProfileScreen() {
               isDark={isDark}
               onPress={() => router.push('/(tabs)/profile/notifications')}
             />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={CircleHelp}
-              label={labels.settingHelp}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/feedback')}
-            />
           </SettingsGroup>
 
-          {/* Gym contact — only shown when org has any contact */}
-          {(activeOrganization?.contactEmail ||
-            activeOrganization?.contactPhone ||
-            activeOrganization?.website) && (
-            <SettingsGroup colors={colors} isRTL={isRTL}>
-              {activeOrganization?.contactEmail && (
-                <SettingsRow
-                  Icon={Mail}
-                  label={labels.contactEmail}
-                  sublabel={activeOrganization.contactEmail}
-                  isRTL={isRTL}
-                  colors={colors}
-                  isDark={isDark}
-                  onPress={() =>
-                    Linking.openURL(`mailto:${activeOrganization.contactEmail}`)
-                  }
-                />
-              )}
-              {activeOrganization?.contactPhone && (
-                <>
-                  {activeOrganization?.contactEmail && <RowDivider isDark={isDark} />}
+          {/* ── Org support: the member's own gym. Every action reaches the
+              gym directly (its email / phone / website). Only shown when the
+              org exposes a contact channel. ──────────────────────────── */}
+          {hasOrgContact && (
+            <View style={{ gap: 10 }}>
+              <SettingsSectionHeader
+                title={activeOrganization?.name ?? labels.orgSupportTitle}
+                subtitle={labels.orgSupportSubtitle}
+                isRTL={isRTL}
+                colors={colors}
+              />
+              <SettingsGroup colors={colors} isRTL={isRTL}>
+                {activeOrganization?.contactEmail && (
                   <SettingsRow
-                    Icon={Phone}
-                    label={labels.contactPhone}
-                    sublabel={activeOrganization.contactPhone}
+                    Icon={Mail}
+                    label={labels.contactEmail}
+                    sublabel={activeOrganization.contactEmail}
                     isRTL={isRTL}
                     colors={colors}
                     isDark={isDark}
                     onPress={() =>
-                      Linking.openURL(`tel:${activeOrganization.contactPhone}`)
+                      Linking.openURL(`mailto:${activeOrganization.contactEmail}`)
                     }
                   />
-                </>
-              )}
-              {activeOrganization?.website && (
-                <>
-                  {(activeOrganization?.contactEmail ||
-                    activeOrganization?.contactPhone) && (
-                    <RowDivider isDark={isDark} />
-                  )}
-                  <SettingsRow
-                    Icon={Globe}
-                    label={labels.contactWebsite}
-                    sublabel={activeOrganization.website}
-                    isRTL={isRTL}
-                    colors={colors}
-                    isDark={isDark}
-                    onPress={() =>
-                      Linking.openURL(activeOrganization.website ?? '')
-                    }
-                  />
-                </>
-              )}
-            </SettingsGroup>
+                )}
+                {activeOrganization?.contactPhone && (
+                  <>
+                    {activeOrganization?.contactEmail && <RowDivider isDark={isDark} />}
+                    <SettingsRow
+                      Icon={Phone}
+                      label={labels.contactPhone}
+                      sublabel={activeOrganization.contactPhone}
+                      isRTL={isRTL}
+                      colors={colors}
+                      isDark={isDark}
+                      onPress={() =>
+                        Linking.openURL(`tel:${activeOrganization.contactPhone}`)
+                      }
+                    />
+                  </>
+                )}
+                {activeOrganization?.website && (
+                  <>
+                    {(activeOrganization?.contactEmail ||
+                      activeOrganization?.contactPhone) && (
+                      <RowDivider isDark={isDark} />
+                    )}
+                    <SettingsRow
+                      Icon={Globe}
+                      label={labels.contactWebsite}
+                      sublabel={activeOrganization.website}
+                      isRTL={isRTL}
+                      colors={colors}
+                      isDark={isDark}
+                      onPress={() =>
+                        Linking.openURL(activeOrganization.website ?? '')
+                      }
+                    />
+                  </>
+                )}
+              </SettingsGroup>
+            </View>
           )}
+
+          {/* ── FitKit support: the platform/app itself. Distinct from the
+              gym above — these reach FitKit (the app maker), not the gym.
+              Always shown. ──────────────────────────────────────────── */}
+          <View style={{ gap: 10 }}>
+            <SettingsSectionHeader
+              title={labels.fitkitSupportTitle}
+              subtitle={labels.fitkitSupportSubtitle}
+              isRTL={isRTL}
+              colors={colors}
+            />
+            <SettingsGroup colors={colors} isRTL={isRTL}>
+              <SettingsRow
+                Icon={MessageSquare}
+                label={labels.fitkitFeedback}
+                isRTL={isRTL}
+                colors={colors}
+                isDark={isDark}
+                onPress={() => router.push('/(tabs)/profile/feedback')}
+              />
+              <RowDivider isDark={isDark} />
+              <SettingsRow
+                Icon={LifeBuoy}
+                label={labels.fitkitContact}
+                sublabel={FITKIT_SUPPORT_EMAIL}
+                isRTL={isRTL}
+                colors={colors}
+                isDark={isDark}
+                onPress={() =>
+                  Linking.openURL(
+                    `mailto:${FITKIT_SUPPORT_EMAIL}?subject=${encodeURIComponent(
+                      `FitKit support — v${appVersion}`,
+                    )}`,
+                  )
+                }
+              />
+              <RowDivider isDark={isDark} />
+              <SettingsRow
+                Icon={Globe}
+                label={labels.fitkitWebsite}
+                sublabel="fitkit.fit"
+                isRTL={isRTL}
+                colors={colors}
+                isDark={isDark}
+                onPress={() => Linking.openURL(FITKIT_WEBSITE)}
+              />
+            </SettingsGroup>
+          </View>
 
           {/* Danger zone — Delete Account */}
           <SettingsGroup colors={colors} isRTL={isRTL}>
@@ -895,7 +965,7 @@ export default function ProfileScreen() {
                 fontFamily: 'DMMono',
               }}
             >
-              FitKit v2.4.1
+              FitKit v{appVersion}
             </Text>
           </View>
         </View>
@@ -1077,6 +1147,49 @@ function SettingsGroup({
     <FKGlassPanel radius={20} style={{ padding: 6 }}>
       {children}
     </FKGlassPanel>
+  );
+}
+
+/** Grouped-settings section header (iOS-style): a bold title with an
+ *  optional muted subtitle, used to attribute a card to a source — e.g.
+ *  the member's gym vs. FitKit the platform. RTL-aware alignment. */
+function SettingsSectionHeader({
+  title,
+  subtitle,
+  isRTL,
+  colors,
+}: {
+  title: string;
+  subtitle?: string;
+  isRTL: boolean;
+  colors: ColorTokens;
+}) {
+  return (
+    <View style={{ paddingHorizontal: 8, gap: 2 }}>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: 13,
+          fontWeight: '800',
+          color: colors.foreground,
+          textAlign: isRTL ? 'right' : 'left',
+        }}
+      >
+        {title}
+      </Text>
+      {subtitle ? (
+        <Text
+          numberOfLines={1}
+          style={{
+            fontSize: 11,
+            color: colors.mutedFg,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
