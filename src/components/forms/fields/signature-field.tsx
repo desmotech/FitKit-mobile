@@ -136,7 +136,7 @@ export function SignatureFieldRenderer({
       }
 
       // Timeout guard so a wedged native call never hangs "Save".
-      const fileUri: string = await Promise.race([
+      const captured: string = await Promise.race([
         captureRef(shotRef, {
           format: 'png',
           quality: 1,
@@ -151,6 +151,12 @@ export function SignatureFieldRenderer({
           ),
         ),
       ]);
+
+      // captureRef returns a bare path on iOS; FormRenderer's upload only
+      // fires for file:// URIs, so normalise the scheme.
+      const fileUri = captured.includes('://')
+        ? captured
+        : `file://${captured}`;
 
       const info = await FileSystem.getInfoAsync(fileUri);
       if (!info.exists || !info.size || info.size < 100) {
