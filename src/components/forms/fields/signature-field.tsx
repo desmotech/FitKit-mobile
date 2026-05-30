@@ -2,10 +2,19 @@
  * `signature` form field — finger-drawn signature canvas.
  *
  * Implementation: SVG `<Path>` per stroke, captured via PanResponder.
- * On commit we use react-native-svg's `Svg.toDataURL` to rasterise the
- * canvas to a PNG, write it to a local temp file, and store the file
- * URI as the field value. <FormRenderer> then uploads the file via
- * useFormUpload before submit and swaps the URI for `{ r2Key, mime }`.
+ * On commit we rasterise the strokes to PNG with react-native-view-shot's
+ * `captureRef` (snapshots the live view), write it to a temp file, and
+ * store the file URI as the field value. <FormRenderer> then uploads the
+ * file via useFormUpload before submit and swaps the URI for `{ r2Key, mime }`.
+ *
+ * Why view-shot and not `Svg.toDataURL`: under the New Architecture
+ * (newArchEnabled, Fabric) react-native-svg's toDataURL callback silently
+ * never fires on iOS — including the Simulator — so the old path left the
+ * field empty and blocked form submission. view-shot is Fabric-safe.
+ *
+ * We snapshot a transparent inner layer that holds only the strokes (no
+ * canvas tint / border), so the PNG is dark-on-transparent and embeds
+ * cleanly into the server-rendered compliance PDF.
  *
  * UX:
  *   - Tap "Sign" to expand into a dedicated 200pt canvas
@@ -24,6 +33,7 @@ import {
 } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import Svg, { Path } from 'react-native-svg';
+import { captureRef } from 'react-native-view-shot';
 import { Eraser, PenLine } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { Image as ExpoImage } from 'expo-image';
@@ -83,7 +93,9 @@ export function SignatureFieldRenderer({
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
   const canvasSize = useRef({ width: 0, height: 200 });
-  const svgRef = useRef<Svg | null>(null);
+  // Capture target — wraps only the <Svg> strokes on a transparent
+  // background, so the PNG snapshot excludes the canvas tint/border.
+  const shotRef = useRef<View | null>(null);
 
   // PanResponder lives across renders to avoid re-creation on every
   // stroke update; it reads/writes the live stroke buffer via refs.
@@ -134,15 +146,11 @@ export function SignatureFieldRenderer({
   };
 
   const onCommit = async () => {
-    if (strokes.length === 0 || !svgRef.current) return;
+    if (strokes.length === 0 || !shotRef.current) return;
     if (committing) return;
     setCommitError(null);
     setCommitting(true);
     try {
-      // Rasterise the on-screen SVG to PNG via react-native-svg's
-      // toDataURL bridge. The native callback occasionally silently
-      // drops on iOS Simulator (new architecture); we race it against
-      // a 3s timeout so we never leave the user hanging on "Save".
       const width = Math.max(1, Math.round(canvasSize.current.width));
       const height = Math.max(1, Math.round(canvasSize.current.height));
 
@@ -150,43 +158,24 @@ export function SignatureFieldRenderer({
         throw new Error('Canvas not laid out yet — try again.');
       }
 
-      const b64: string = await Promise.race([
-        new Promise<string>((resolve, reject) => {
-          const svg = svgRef.current;
-          if (!svg) return reject(new Error('Signature canvas unavailable.'));
-          try {
-            svg.toDataURL(
-              (data: string) => {
-                if (!data || data.length === 0) {
-                  reject(new Error('Empty PNG returned from canvas.'));
-                  return;
-                }
-                resolve(data);
-              },
-              { format: 'png', width, height },
-            );
-          } catch (e) {
-            reject(e instanceof Error ? e : new Error(String(e)));
-          }
+      // Snapshot the strokes layer to a temp PNG via view-shot. Fabric-safe
+      // (unlike Svg.toDataURL). result:'tmpfile' returns a local file URI;
+      // we keep a timeout guard so a wedged native call never hangs "Save".
+      const fileUri: string = await Promise.race([
+        captureRef(shotRef, {
+          format: 'png',
+          quality: 1,
+          result: 'tmpfile',
+          width,
+          height,
         }),
         new Promise<string>((_, reject) =>
           setTimeout(
             () => reject(new Error('Signature capture timed out.')),
-            3000,
+            5000,
           ),
         ),
       ]);
-
-      // react-native-svg returns RAW base64 (no `data:image/png;base64,`
-      // prefix). Defensive trim if a future version starts returning one.
-      const cleanB64 = b64.startsWith('data:')
-        ? b64.replace(/^data:[^;]+;base64,/, '')
-        : b64;
-
-      const fileUri = `${FileSystem.cacheDirectory}signature-${Date.now()}.png`;
-      await FileSystem.writeAsStringAsync(fileUri, cleanB64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
 
       const info = await FileSystem.getInfoAsync(fileUri);
       if (!info.exists || !info.size || info.size < 100) {
@@ -257,35 +246,40 @@ export function SignatureFieldRenderer({
             }}
             {...pan.current.panHandlers}
           >
-            <Svg
-              ref={svgRef}
-              width="100%"
-              height="100%"
-              style={StyleSheet.absoluteFill}
+            <View
+              ref={shotRef}
+              collapsable={false}
               pointerEvents="none"
+              style={StyleSheet.absoluteFill}
             >
-              {strokes.map((s, idx) => (
-                <Path
-                  key={idx}
-                  d={strokeToPath(s)}
-                  stroke="#0D1B2A"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              ))}
-              {current.length > 0 ? (
-                <Path
-                  d={strokeToPath(current)}
-                  stroke="#0D1B2A"
-                  strokeWidth={2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              ) : null}
-            </Svg>
+              <Svg
+                width="100%"
+                height="100%"
+                style={StyleSheet.absoluteFill}
+              >
+                {strokes.map((s, idx) => (
+                  <Path
+                    key={idx}
+                    d={strokeToPath(s)}
+                    stroke="#0D1B2A"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                ))}
+                {current.length > 0 ? (
+                  <Path
+                    d={strokeToPath(current)}
+                    stroke="#0D1B2A"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                ) : null}
+              </Svg>
+            </View>
             {strokes.length === 0 && current.length === 0 ? (
               <View
                 pointerEvents="none"
