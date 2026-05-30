@@ -13,9 +13,12 @@
  * - **title** — centered, single line, 17pt semibold. Optional —
  *   omit on detail screens where the body already provides context.
  *
- * Don't include a SafeAreaView — pageSheets sit above the parent's
- * safe area on iOS; this header is meant to flow into the existing
- * pageSheet layout the way iOS sheets do.
+ * Wrapped in SafeAreaView(edges=['top']): on a genuine iOS pageSheet the
+ * top inset resolves to 0 (the sheet sits below the status bar), so this
+ * is a no-op there. But when the same screen renders full-bleed — e.g. a
+ * sheet nested deep enough in the navigator that the presentation falls
+ * back to a full-screen card — the inset drops the Cancel/Save row below
+ * the status bar / Dynamic Island instead of letting it collide.
  *
  * RTL-aware: leading lands on the visual leading edge regardless of
  * locale, trailing on the trailing. The parent row uses `row-reverse`
@@ -24,6 +27,7 @@
  */
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
@@ -85,55 +89,57 @@ export function FKModalHeader({
   const slots = [leadingEl, spacerEl, trailingEl];
 
   return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: 52,
-        paddingHorizontal: 16,
-        // Opaque background so scrolled content can't bleed behind the
-        // header and block the Cancel/Save touch targets. Uses the same
-        // background as the page so the header reads as a continuation
-        // of the screen chrome, separated only by the hairline below.
-        backgroundColor: colors.background,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: isDark
-          ? 'rgba(84,84,88,0.6)'
-          : 'rgba(60,60,67,0.18)',
-      }}
-    >
-      {isRTL ? slots.slice().reverse() : slots}
+    <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          height: 52,
+          paddingHorizontal: 16,
+          // Opaque background so scrolled content can't bleed behind the
+          // header and block the Cancel/Save touch targets. Uses the same
+          // background as the page so the header reads as a continuation
+          // of the screen chrome, separated only by the hairline below.
+          backgroundColor: colors.background,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: isDark
+            ? 'rgba(84,84,88,0.6)'
+            : 'rgba(60,60,67,0.18)',
+        }}
+      >
+        {isRTL ? slots.slice().reverse() : slots}
 
-      {/* Centered title — absolute-positioned so it ignores button
-          widths and always sits on the screen's horizontal center,
-          exactly like UINavigationBar. */}
-      {title ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: 80,
-            right: 80,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text
-            numberOfLines={1}
+        {/* Centered title — absolute-positioned so it ignores button
+            widths and always sits on the screen's horizontal center,
+            exactly like UINavigationBar. */}
+        {title ? (
+          <View
+            pointerEvents="none"
             style={{
-              fontSize: 17,
-              fontWeight: '600',
-              color: colors.foreground,
-              letterSpacing: -0.4,
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: 80,
+              right: 80,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            {title}
-          </Text>
-        </View>
-      ) : null}
-    </View>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontSize: 17,
+                fontWeight: '600',
+                color: colors.foreground,
+                letterSpacing: -0.4,
+              }}
+            >
+              {title}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </SafeAreaView>
   );
 }
 
