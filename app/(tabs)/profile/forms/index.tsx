@@ -98,8 +98,11 @@ export default function MyFormsScreen() {
   const statusLabel = (status: string) => {
     switch (status) {
       case 'pending':
-      case 'sent':
         return s.statusPending;
+      // `sent` only ever belongs to check-ins (compliance statuses are
+      // draft/pending/signed/archived), so it reads "time to check in".
+      case 'sent':
+        return s.statusCheckInDue;
       case 'scheduled':
         return s.statusScheduled;
       case 'signed':
@@ -262,6 +265,7 @@ function FormRow({
   const colors = useFKColors();
   const s = useFormStrings();
   const status = entry.instance.status;
+  const isCheckIn = entry.instance.kind === 'check_in';
   const actionable = isActionable(status);
   const pillColor = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
 
@@ -272,6 +276,10 @@ function FormRow({
       : status === 'reviewed'
         ? ClipboardCheck
         : CheckCircle2;
+
+  // Actionable rows lead with the kind's idiom: a pen for "sign this"
+  // compliance, a clipboard for "fill this out" check-ins.
+  const ActionableIcon = isCheckIn ? ClipboardCheck : FileSignature;
 
   const iconColor = actionable ? '#B84A40' : pillColor;
 
@@ -330,7 +338,7 @@ function FormRow({
           }}
         >
           {actionable ? (
-            <FileSignature size={20} color={iconColor} strokeWidth={2.2} />
+            <ActionableIcon size={20} color={iconColor} strokeWidth={2.2} />
           ) : (
             <StatusIcon size={20} color={iconColor} strokeWidth={2.2} />
           )}

@@ -130,3 +130,55 @@ export function useSubmitFormInstance(
     },
   });
 }
+
+/**
+ * Submits answers for a check-in instance (kind === 'check_in').
+ *
+ * Check-ins do NOT go through the compliance submit endpoint — that one
+ * runs the signature/PDF/audit pipeline and rejects non-compliance
+ * instances with "Compliance submission only". Member-answered check-ins
+ * live on their own controller (FIT-183):
+ *
+ *   POST /organizations/:orgId/check-ins/instances/:instanceId/answers
+ *     → { data: FormInstanceResponse }
+ *     submitAnswers on CheckInsService — validates against the pinned
+ *     template, flips `sent → answered`, and rolls the next occurrence
+ *     forward from the recurrence. No signature, no PDF.
+ *
+ * Same `{ answers }` body and `{ data: instance }` envelope as the
+ * compliance submit, so <FormRenderer> drives both unchanged; only the
+ * endpoint differs.
+ */
+export function useSubmitCheckIn(
+  orgId: string | undefined | null,
+  instanceId: string | undefined | null,
+) {
+  const { fetchWithAuth } = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation<FormInstanceResponse, Error, SubmitFormAnswersDto>({
+    mutationFn: async (dto) => {
+      if (!orgId || !instanceId) throw new Error('Missing orgId or instanceId');
+      const path = `/organizations/${orgId}/check-ins/instances/${instanceId}/answers`;
+      const res = (await fetchWithAuth(path, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      })) as ApiEnvelope<FormInstanceResponse>;
+      return res.data;
+    },
+    onSuccess: async () => {
+      // Refresh the "My Forms" list so the answered occurrence flips into
+      // the completed group and the next scheduled occurrence appears.
+      if (orgId) {
+        await queryClient.invalidateQueries({
+          queryKey: ['/organizations', orgId, 'forms', 'mine'],
+        });
+        if (instanceId) {
+          await queryClient.invalidateQueries({
+            queryKey: ['/organizations', orgId, 'forms', 'instances', instanceId],
+          });
+        }
+      }
+    },
+  });
+}

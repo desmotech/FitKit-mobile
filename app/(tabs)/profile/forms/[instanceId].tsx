@@ -21,6 +21,7 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useFormInstance,
+  useSubmitCheckIn,
   useSubmitFormInstance,
 } from '@/hooks/use-forms';
 import { useFormUpload } from '@/hooks/use-form-upload';
@@ -44,16 +45,26 @@ export default function SignFormInstanceScreen() {
 
   const id = typeof instanceId === 'string' ? instanceId : '';
   const query = useFormInstance(orgId, id);
-  const submit = useSubmitFormInstance(orgId, id);
+  // Compliance and check-ins submit to different endpoints — the
+  // compliance one runs the signature/PDF pipeline and rejects check-ins.
+  // Instantiate both (hooks must be unconditional) and pick by kind.
+  const submitCompliance = useSubmitFormInstance(orgId, id);
+  const submitCheckIn = useSubmitCheckIn(orgId, id);
   const { upload: uploadFormAttachment } = useFormUpload(orgId);
 
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const isLoading = query.isLoading;
+  const isError = query.isError;
+  const entry = query.data;
+  const isCheckIn = entry?.instance.kind === 'check_in';
+  const activeSubmit = isCheckIn ? submitCheckIn : submitCompliance;
+
   const handleSubmit = async (answers: FormAnswers) => {
     setSubmitError(null);
     try {
-      await submit.mutateAsync({ answers });
+      await activeSubmit.mutateAsync({ answers });
       setSignedAt(new Date().toISOString());
     } catch (err) {
       setSubmitError(
@@ -62,11 +73,9 @@ export default function SignFormInstanceScreen() {
     }
   };
 
-  const isLoading = query.isLoading;
-  const isError = query.isError;
-  const entry = query.data;
   // If the instance is already terminal, render the read-only confirmation
-  // rather than the editable form.
+  // rather than the editable form. Compliance terminals: signed/archived.
+  // Check-in terminals: answered/reviewed.
   const status = entry?.instance.status;
   const isTerminal =
     status === 'signed' ||
@@ -125,8 +134,8 @@ export default function SignFormInstanceScreen() {
 
         {!isLoading && entry && signedAt ? (
           <SignedSuccess
-            title={s.signedTitle}
-            subtitle={s.signedSubtitle}
+            title={isCheckIn ? s.checkInSubmittedTitle : s.signedTitle}
+            subtitle={isCheckIn ? s.checkInSubmittedSubtitle : s.signedSubtitle}
             actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
@@ -135,8 +144,10 @@ export default function SignFormInstanceScreen() {
 
         {!isLoading && entry && !signedAt && isTerminal ? (
           <SignedSuccess
-            title={s.alreadySignedTitle}
-            subtitle={s.alreadySignedSubtitle}
+            title={isCheckIn ? s.alreadyAnsweredTitle : s.alreadySignedTitle}
+            subtitle={
+              isCheckIn ? s.alreadyAnsweredSubtitle : s.alreadySignedSubtitle
+            }
             actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
@@ -149,7 +160,7 @@ export default function SignFormInstanceScreen() {
               form={entry.form}
               uploadAttachment={uploadFormAttachment}
               onSubmit={handleSubmit}
-              submitting={submit.isPending}
+              submitting={activeSubmit.isPending}
               serverError={submitError}
             />
           </FKGlassPanel>

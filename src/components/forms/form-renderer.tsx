@@ -387,7 +387,15 @@ export function FormRenderer({
       ) : null}
 
       <FKButton
-        label={uploading ? s.uploading : submitting ? s.submitting : s.submit}
+        label={
+          uploading
+            ? s.uploading
+            : submitting
+              ? s.submitting
+              : form.kind === 'check_in'
+                ? s.submitCheckIn
+                : s.submit
+        }
         variant="primary"
         size="lg"
         fullWidth

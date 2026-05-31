@@ -25,6 +25,8 @@ export interface FormStrings {
   emptyTitle: string;
   emptySubtitle: string;
   statusPending: string;
+  /** Actionable check-in (scheduled/sent) — "it's time to check in". */
+  statusCheckInDue: string;
   statusScheduled: string;
   statusSigned: string;
   statusAnswered: string;
@@ -52,6 +54,14 @@ export interface FormStrings {
   signedAction: string;
   alreadySignedTitle: string;
   alreadySignedSubtitle: string;
+
+  // ── Check-in screen chrome (kind === 'check_in') ──────────────────
+  /** Submit label for check-ins — no signature, so plain "Submit". */
+  submitCheckIn: string;
+  checkInSubmittedTitle: string;
+  checkInSubmittedSubtitle: string;
+  alreadyAnsweredTitle: string;
+  alreadyAnsweredSubtitle: string;
 
   // ── FormRenderer (submit + validation) ────────────────────────────
   submit: string;
@@ -102,6 +112,7 @@ const HE: FormStrings = {
   emptyTitle: 'אין טפסים לחתימה',
   emptySubtitle: 'כשהמועדון ישלח לך טופס, הוא יופיע כאן.',
   statusPending: 'דורש חתימה',
+  statusCheckInDue: 'למילוי',
   statusScheduled: 'מתוזמן',
   statusSigned: 'חתום',
   statusAnswered: 'נשלח',
@@ -128,6 +139,12 @@ const HE: FormStrings = {
   signedAction: 'חזרה לטפסים שלי',
   alreadySignedTitle: 'כבר חתום',
   alreadySignedSubtitle: 'כבר חתמת על הטופס. אין צורך בפעולה נוספת.',
+
+  submitCheckIn: 'שליחה',
+  checkInSubmittedTitle: 'נשלח — תודה',
+  checkInSubmittedSubtitle: 'המאמן שלך קיבל את המעקב שלך.',
+  alreadyAnsweredTitle: 'כבר נשלח',
+  alreadyAnsweredSubtitle: 'כבר מילאת את המעקב הזה. אין צורך בפעולה נוספת.',
 
   submit: 'שלח וחתום',
   submitting: 'שולח…',
@@ -176,6 +193,7 @@ const EN: FormStrings = {
   emptyTitle: 'No forms to sign',
   emptySubtitle: "When your gym sends you a form, it'll show up here.",
   statusPending: 'Needs signature',
+  statusCheckInDue: 'Time to check in',
   statusScheduled: 'Scheduled',
   statusSigned: 'Signed',
   statusAnswered: 'Submitted',
@@ -207,6 +225,13 @@ const EN: FormStrings = {
   alreadySignedTitle: 'Already signed',
   alreadySignedSubtitle:
     'You already signed this form. No action needed.',
+
+  submitCheckIn: 'Submit',
+  checkInSubmittedTitle: 'Submitted — thank you',
+  checkInSubmittedSubtitle: 'Your coach has received your check-in.',
+  alreadyAnsweredTitle: 'Already submitted',
+  alreadyAnsweredSubtitle:
+    'You already completed this check-in. No action needed.',
 
   submit: 'Submit & sign',
   submitting: 'Submitting…',
@@ -256,6 +281,7 @@ const RU: FormStrings = {
   emptySubtitle:
     'Когда ваш зал отправит вам форму, она появится здесь.',
   statusPending: 'Требуется подпись',
+  statusCheckInDue: 'Пора на чек-ин',
   statusScheduled: 'Запланировано',
   statusSigned: 'Подписано',
   statusAnswered: 'Отправлено',
@@ -289,6 +315,13 @@ const RU: FormStrings = {
   alreadySignedTitle: 'Уже подписано',
   alreadySignedSubtitle:
     'Вы уже подписали эту форму. Никаких действий не требуется.',
+
+  submitCheckIn: 'Отправить',
+  checkInSubmittedTitle: 'Отправлено — спасибо',
+  checkInSubmittedSubtitle: 'Ваш тренер получил ваш чек-ин.',
+  alreadyAnsweredTitle: 'Уже отправлено',
+  alreadyAnsweredSubtitle:
+    'Вы уже заполнили этот чек-ин. Никаких действий не требуется.',
 
   submit: 'Отправить и подписать',
   submitting: 'Отправляется…',
