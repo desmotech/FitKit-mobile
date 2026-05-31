@@ -5,7 +5,7 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query';
 import { useAuth } from '@clerk/clerk-expo';
-import { useApi } from './use-api';
+import { ApiError, useApi } from './use-api';
 
 type MutationOpts<TData, TVars> = Omit<
   UseMutationOptions<TData, Error, TVars>,
@@ -31,6 +31,11 @@ export function useApiQuery<T = unknown>(options: {
     queryKey: options.queryKey ?? [options.path],
     queryFn: () => fetchWithAuth(options.path) as Promise<T>,
     enabled: queryEnabled,
+    // A 401 won't recover (fetchWithAuth already refreshed the token once),
+    // so don't retry it — fail fast to the AuthGate error screen instead of
+    // hammering the API with backoff. Other errors keep the default retries.
+    retry: (failureCount, error) =>
+      !(error instanceof ApiError && error.status === 401) && failureCount < 3,
     ...options.queryOptions,
   });
 }

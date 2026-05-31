@@ -19,10 +19,12 @@
  * that's a category-C buyer / pending-invite case and we let the tab
  * shell render its own empty state.
  */
-import { useAuth } from '@clerk/clerk-expo';
+import { useAuth, useClerk } from '@clerk/clerk-expo';
 import { Redirect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { ActivityIndicator, View } from 'react-native';
 import type { ReactNode } from 'react';
+import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useNeedsLegalConsent } from '@/hooks/use-needs-legal-consent';
 
@@ -36,11 +38,38 @@ function LoadingScreen() {
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn } = useAuth();
-  const { isProfileIncomplete, isLoading } = useCurrentUser();
-  const { needs: needsLegalConsent } = useNeedsLegalConsent();
+  const { signOut } = useClerk();
+  const queryClient = useQueryClient();
+  const {
+    isProfileIncomplete,
+    isLoading,
+    isError: userError,
+  } = useCurrentUser();
+  const { needs: needsLegalConsent, isError: consentError } =
+    useNeedsLegalConsent();
 
   if (!isLoaded) return <LoadingScreen />;
   if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+
+  // A hard failure loading the account or consent status — e.g. a 401 that
+  // didn't recover after a token refresh, or a Clerk user with no app
+  // account. Show an explicit retry/sign-out screen instead of spinning
+  // forever or bouncing through a redirect loop.
+  if (userError || consentError) {
+    return (
+      <AuthErrorScreen
+        onRetry={() => {
+          void queryClient.invalidateQueries({ queryKey: ['/users/me'] });
+          void queryClient.invalidateQueries({
+            queryKey: ['/legal/consents/status'],
+          });
+        }}
+        onSignOut={() => {
+          void signOut();
+        }}
+      />
+    );
+  }
 
   // Wait until BOTH the user payload and the consent-status payload
   // resolve. Without this the tab shell briefly mounts on slow

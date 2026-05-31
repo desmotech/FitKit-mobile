@@ -29,17 +29,27 @@ const REQUIRED_TYPES: ConsentStatusItem['documentType'][] = [
 ];
 
 export interface NeedsLegalConsentResult {
-  /** True when the gate should redirect to /onboarding/accept-terms. Null while loading. */
+  /** True when the gate should redirect to /onboarding/accept-terms.
+   *  Null while loading OR on error (don't force the consent screen when
+   *  we couldn't actually read the status). */
   needs: boolean | null;
   /** Per-doc breakdown so the consent screen can hint at what's missing. */
   missing: ConsentStatusItem['documentType'][];
+  /** True when /legal/consents/status failed to load — AuthGate shows the
+   *  account-error screen instead of bouncing into the consent flow. */
+  isError: boolean;
 }
 
 export function useNeedsLegalConsent(): NeedsLegalConsentResult {
   const status = useConsentStatus();
 
   return useMemo<NeedsLegalConsentResult>(() => {
-    if (status.isLoading) return { needs: null, missing: [] };
+    if (status.isLoading) return { needs: null, missing: [], isError: false };
+    // On error return needs=null, NOT true. Previously an errored/empty
+    // status list made every required doc look "missing" → needs=true →
+    // the gate redirected to /onboarding/accept-terms, which re-hit
+    // /status, errored again → loop. AuthGate now surfaces the error.
+    if (status.isError) return { needs: null, missing: [], isError: true };
 
     const items = status.data?.data ?? [];
     const missing: ConsentStatusItem['documentType'][] = [];
@@ -54,6 +64,6 @@ export function useNeedsLegalConsent(): NeedsLegalConsentResult {
         missing.push(type);
       }
     }
-    return { needs: missing.length > 0, missing };
-  }, [status.isLoading, status.data]);
+    return { needs: missing.length > 0, missing, isError: false };
+  }, [status.isLoading, status.isError, status.data]);
 }

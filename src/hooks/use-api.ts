@@ -1,15 +1,25 @@
-import { useAuth, useClerk } from '@clerk/clerk-expo';
+import { useAuth } from '@clerk/clerk-expo';
 import { useCallback, useRef } from 'react';
-import { router } from 'expo-router';
 import { apiUrl } from '@/lib/api';
 import { useI18n } from '@/providers/i18n-provider';
 
 /** How long to reuse a cached Clerk JWT (ms). Clerk JWTs are valid for 60s. */
 const TOKEN_CACHE_TTL = 10_000;
 
+/** Error thrown when the API responds with a non-2xx status. `status`
+ *  lets callers (react-query retry logic, AuthGate) branch on 401. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export function useApi() {
   const { getToken } = useAuth();
-  const { signOut } = useClerk();
   const { lang } = useI18n();
   const tokenRef = useRef<{ value: string | null; expiresAt: number }>({
     value: null,
@@ -54,16 +64,11 @@ export function useApi() {
         res = await doFetch(token);
       }
 
-      if (res.status === 401) {
-        try {
-          await signOut();
-        } finally {
-          router.replace('/(auth)/sign-in');
-        }
-        throw new Error('Unauthorized');
-      }
-
       if (!res.ok) {
+        // Surface a typed error (incl. a hard 401 that survived the token
+        // refresh above) rather than signing out / navigating from here —
+        // that races react-query retries and bypasses the AuthGate error
+        // screen, which now owns the retry/sign-out UX.
         let message = `API error: ${res.status}`;
         try {
           const body = await res.json();
@@ -75,12 +80,12 @@ export function useApi() {
         } catch {
           // keep generic message
         }
-        throw new Error(message);
+        throw new ApiError(message, res.status);
       }
 
       return res.json();
     },
-    [getCachedToken, signOut, lang],
+    [getCachedToken, lang],
   );
 
   return { fetchWithAuth };
