@@ -17,20 +17,25 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { apiUrl } from '@/lib/api';
 
 const PROJECT_ID =
   (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
     ?.eas?.projectId;
 
-// Foreground notification behaviour — banner + sound, no list badge.
+// Foreground notification behaviour — banner + sound, and let the OS apply
+// the badge count from the payload. `shouldSetBadge: false` was the reason
+// the app icon never showed a count: it told the OS to drop the badge for
+// any notification delivered while the app was open, and nothing ever set
+// one otherwise. We now honour the badge and clear it when the app opens
+// (see the AppState effect below).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
     shouldPlaySound: true,
-    shouldSetBadge: false,
+    shouldSetBadge: true,
   }),
 });
 
@@ -46,6 +51,20 @@ export function usePushNotifications() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const respSubRef = useRef<Notifications.Subscription | null>(null);
   const registeredFor = useRef<string | null>(null);
+
+  // Clear the app-icon badge whenever the app is opened / foregrounded —
+  // the member is now looking at the app, so a lingering count is noise.
+  // Runs independent of auth state: a signed-out app should show no badge.
+  useEffect(() => {
+    const clear = () => {
+      Notifications.setBadgeCountAsync(0).catch(() => undefined);
+    };
+    clear();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') clear();
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
@@ -75,9 +94,12 @@ export function usePushNotifications() {
         if (status !== 'granted') return;
 
         if (Platform.OS === 'android') {
+          // HIGH so notifications surface as a heads-up banner (DEFAULT
+          // only drops them silently into the tray). Must match the
+          // `defaultChannel: 'default'` declared in app.config.ts.
           await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
-            importance: Notifications.AndroidImportance.DEFAULT,
+            name: 'Default',
+            importance: Notifications.AndroidImportance.HIGH,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#0E8C8C',
           });

@@ -8,23 +8,35 @@ import {
   type ReactNode,
 } from 'react';
 import { Alert, I18nManager, Platform } from 'react-native';
-import * as Localization from 'expo-localization';
+import { useLocales } from 'expo-localization';
 import * as Updates from 'expo-updates';
 import { dictionaries, type Dictionary } from '@fitkit/shared';
 import { i18n, isLocale, localeConfig, type Locale } from '@/i18n/config';
+import { clearLocaleOverride, saveLocaleOverride } from '@/lib/settings-store';
 
 type I18nValue = {
   lang: Locale;
   dir: 'ltr' | 'rtl';
   t: Dictionary;
+  /** Whether the active locale is an explicit in-app choice (vs. the OS). */
+  isOverridden: boolean;
   setLang: (next: Locale) => void;
+  /** Drop the in-app override and fall back to the device locale. */
+  useDeviceLocale: () => void;
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
 
-function detectInitialLocale(): Locale {
-  const device = Localization.getLocales()[0]?.languageCode;
-  if (isLocale(device)) return device;
+/**
+ * Map the device's preferred languages (most-preferred first) onto a locale
+ * we actually ship. Falls back to the app default when none match.
+ */
+function deviceLocale(
+  locales: { languageCode: string | null }[] | undefined,
+): Locale {
+  for (const l of locales ?? []) {
+    if (isLocale(l.languageCode)) return l.languageCode;
+  }
   return i18n.defaultLocale;
 }
 
@@ -58,8 +70,25 @@ async function ensureManualRTL() {
   }
 }
 
-export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Locale>(detectInitialLocale);
+/**
+ * @param initialOverride The persisted in-app language choice, or `null` to
+ *   follow the device locale. Preloaded in `app/_layout.tsx` so the first
+ *   frame already renders in the right language (no en→he flash).
+ */
+export function I18nProvider({
+  initialOverride,
+  children,
+}: {
+  initialOverride: Locale | null;
+  children: ReactNode;
+}) {
+  // `useLocales()` re-renders when the OS / per-app language setting changes,
+  // so a member can switch language from the device Settings app and the UI
+  // follows live — provided they haven't pinned a language in-app.
+  const locales = useLocales();
+  const [override, setOverride] = useState<Locale | null>(initialOverride);
+
+  const lang = override ?? deviceLocale(locales);
 
   // Disable RN's automatic RTL flip so toggling locale doesn't require a
   // reload. Layout direction is handled per-component via `useI18n().dir`.
@@ -68,7 +97,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setLang = useCallback((next: Locale) => {
-    setLangState(next);
+    setOverride(next);
+    void saveLocaleOverride(next);
+  }, []);
+
+  const useDeviceLocale = useCallback(() => {
+    setOverride(null);
+    void clearLocaleOverride();
   }, []);
 
   const value = useMemo<I18nValue>(
@@ -76,9 +111,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       lang,
       dir: localeConfig[lang].dir,
       t: dictionaries[lang],
+      isOverridden: override !== null,
       setLang,
+      useDeviceLocale,
     }),
-    [lang, setLang],
+    [lang, override, setLang, useDeviceLocale],
   );
 
   return (
