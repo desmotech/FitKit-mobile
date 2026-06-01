@@ -155,8 +155,6 @@ export default function WorkoutDetailScreen() {
     deleteComment: messagesT.delete ?? 'Delete',
     cancel: dict.common?.cancel ?? 'Cancel',
     back: dict.common?.back ?? 'Back',
-    attachmentsComingSoon:
-      messagesT.attachmentsComingSoon ?? 'Attachments coming soon',
     walkthrough: 'WORKOUT WALK-THROUGH',
     superset: 'SUPERSET',
     rounds: 'ROUNDS',
@@ -537,7 +535,6 @@ export default function WorkoutDetailScreen() {
                     loadEarlier: labels.loadEarlier,
                     deleteComment: labels.deleteComment,
                     cancel: labels.cancel,
-                    attachmentsComingSoon: labels.attachmentsComingSoon,
                   }}
                   currentMembershipId={primaryMembership?.id ?? null}
                   comments={comments.allComments}
@@ -1189,7 +1186,6 @@ function CommentsView({
     loadEarlier: string;
     deleteComment: string;
     cancel: string;
-    attachmentsComingSoon: string;
   };
   currentMembershipId: string | null;
   comments: MessageResponse[];
