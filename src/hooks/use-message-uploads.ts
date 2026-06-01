@@ -20,6 +20,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 // legacy subpath. Import the legacy module explicitly so the existing
 // upload flow keeps working without rewiring to the modern File class.
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Sentry from '@sentry/react-native';
 import { useCallback, useState } from 'react';
 import { useApi } from './use-api';
 import type { UploadUrlResponse } from '@fitkit/shared';
@@ -201,6 +202,15 @@ export function useMessageUploads(orgId: string | undefined | null) {
         return data.uploadId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Upload failed';
+        Sentry.captureException(err, {
+          tags: { feature: 'message-upload' },
+          extra: {
+            message,
+            mimeType: prepared.mimeType,
+            size: prepared.size,
+            fileName: prepared.fileName,
+          },
+        });
         updateItem(localId, { error: message });
         return null;
       }
