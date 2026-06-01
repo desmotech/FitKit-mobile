@@ -35,10 +35,16 @@ function formatCanonical(p: Record<string, unknown>, opts: FormatOptions): strin
   const parts: string[] = [];
   const sets = num(p.sets);
   const reps = formatReps(p.reps);
-  if (sets != null && reps && !opts.hideSets && !opts.hideReps) {
-    parts.push(`${sets} × ${reps}`);
-  } else if (reps && !opts.hideReps) {
-    parts.push(reps);
+  const distance = formatDistance(p.distance);
+  // A movement is measured by reps OR distance (run/row/erg). Reps win if
+  // both are somehow present; hideReps only governs reps, so a distance line
+  // still prints.
+  const measure = reps ?? distance;
+  const hideMeasure = reps ? opts.hideReps : false;
+  if (sets != null && measure && !opts.hideSets && !hideMeasure) {
+    parts.push(`${sets} × ${measure}`);
+  } else if (measure && !hideMeasure) {
+    parts.push(measure);
   } else if (sets != null && !opts.hideSets) {
     parts.push(`${sets} sets`);
   }
@@ -73,6 +79,15 @@ function formatReps(r: unknown): string | null {
     default:
       return null;
   }
+}
+
+function formatDistance(d: unknown): string | null {
+  if (!d || typeof d !== 'object') return null;
+  const dist = d as Record<string, unknown>;
+  const v = num(dist.value);
+  if (v === null) return null;
+  const unit = strOrNull(dist.unit) ?? 'm';
+  return `${v}${unit}`;
 }
 
 function formatLoad(l: unknown): string | null {
