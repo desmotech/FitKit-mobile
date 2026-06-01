@@ -21,7 +21,7 @@ import {
 } from '@/lib/settings-store';
 import type { Locale } from '@/i18n/config';
 import { secureTokenCache } from '@/lib/secure-token-cache';
-import { clerkPublishableKey, sentryDsn } from '@/lib/api';
+import { apiUrl, clerkPublishableKey, sentryDsn } from '@/lib/api';
 import { useAnalyticsIdentify } from '@/hooks/use-analytics-identify';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 
@@ -36,14 +36,21 @@ Sentry.init({
   // Privacy posture: keep PII off by default; align with our shipping
   // PrivacyInfo.xcprivacy manifest (NSPrivacyTracking=false).
   sendDefaultPii: false,
-  // Performance traces stay off until we have a specific bottleneck to
-  // profile — they balloon event volume otherwise.
-  tracesSampleRate: 0,
+  // Performance tracing: sample 30% in release, 100% in dev. Mirrors the
+  // web + API rates so a mobile-initiated trace chains through to the API.
+  tracesSampleRate: __DEV__ ? 1.0 : 0.3,
+  // Attach sentry-trace/baggage to API requests so spans link mobile → API.
+  // RN has no same-origin default, so this must be set explicitly. `apiUrl`
+  // adapts per build (localhost / preview / api.fitkit.fit).
+  tracePropagationTargets: [apiUrl],
   // Session Replay: capture 100% of error sessions + 10% of normal
   // sessions so we can see what the alpha tester was doing when it broke.
   replaysOnErrorSampleRate: 1.0,
   replaysSessionSampleRate: 0.1,
-  integrations: [Sentry.mobileReplayIntegration()],
+  integrations: [
+    Sentry.mobileReplayIntegration(),
+    Sentry.reactNativeTracingIntegration(),
+  ],
 });
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
