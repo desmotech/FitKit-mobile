@@ -30,6 +30,8 @@ import { FKButton, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import type { FormStrings } from '@/i18n/form-strings';
+import { isValidIsraeliId, isValidIsraeliPhone } from '@/lib/validation-i18n';
 import type {
   FormAnswerValue,
   FormAnswers,
@@ -38,6 +40,27 @@ import type {
 } from '@/types/forms';
 import { FormFieldRenderer } from './form-field-renderer';
 import { FormRTLProvider } from './form-rtl-context';
+
+// Compliance presets use plain `text` fields with semantic ids
+// (national_id / *_phone) — detect them by id (or Hebrew/English label)
+// and apply the IL format checks. Returns a localized error or null.
+function formatErrorFor(
+  field: FormField,
+  value: FormAnswerValue | undefined,
+  s: FormStrings,
+): string | null {
+  if (field.type !== 'text' || typeof value !== 'string') return null;
+  const v = value.trim();
+  if (!v) return null;
+  const id = field.id.toLowerCase();
+  const label = field.label;
+  const isId = id.includes('national_id') || /תעודת זהות/.test(label);
+  const isPhone =
+    /phone/.test(id) || /טלפון/.test(label);
+  if (isId) return isValidIsraeliId(v) ? null : s.idInvalid;
+  if (isPhone) return isValidIsraeliPhone(v) ? null : s.phoneInvalid;
+  return null;
+}
 
 export type FormAttachment = { r2Key: string; mime?: string };
 export type UploadAttachmentFn = (
@@ -134,13 +157,14 @@ export function FormRenderer({
 
   const handleChange = (fieldId: string, next: FormAnswerValue) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: next }));
-    if (errors[fieldId]) {
-      setErrors((prev) => {
-        const { [fieldId]: _drop, ...rest } = prev;
-        void _drop;
-        return rest;
-      });
-    }
+    const field = form.fields.find((f) => f.id === fieldId);
+    const liveErr = field ? formatErrorFor(field, next, s) : null;
+    setErrors((prev) => {
+      const rest = { ...prev };
+      delete rest[fieldId];
+      if (liveErr) rest[fieldId] = liveErr;
+      return rest;
+    });
   };
 
   const requiredMessageFor = (field: FormField): string => {
@@ -212,6 +236,11 @@ export function FormRenderer({
         v.length > field.maxLength
       ) {
         next[field.id] = s.maxLengthExceeded(field.maxLength);
+      }
+      // IL id / phone format.
+      if (!next[field.id]) {
+        const fmt = formatErrorFor(field, v, s);
+        if (fmt) next[field.id] = fmt;
       }
     }
     return { ok: Object.keys(next).length === 0, errors: next };
@@ -391,7 +420,7 @@ export function FormRenderer({
         variant="primary"
         size="lg"
         fullWidth
-        disabled={uploading || submitting || requiredRemaining > 0}
+        disabled={uploading || submitting}
         onPress={onPressSubmit}
       />
       {requiredRemaining > 0 ? (

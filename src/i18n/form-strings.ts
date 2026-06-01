@@ -74,6 +74,8 @@ export interface FormStrings {
   mustBeAtLeast: (n: number) => string;
   mustBeAtMost: (n: number) => string;
   maxLengthExceeded: (n: number) => string;
+  idInvalid: string;
+  phoneInvalid: string;
   /** Banner shown at the top of the form when there are multiple errors. */
   fixErrors: (n: number) => string;
   uploadFailed: string;
@@ -145,6 +147,8 @@ const HE: FormStrings = {
   requiredSignature: 'נא לחתום לפני שליחה.',
   requiredRemaining: (n) =>
     n === 1 ? 'נשאר שדה חובה אחד' : `נשארו ${n} שדות חובה`,
+  idInvalid: 'תעודת זהות אינה תקינה',
+  phoneInvalid: 'מספר טלפון ישראלי אינו תקין (לדוגמה 050-123-4567)',
   mustBeAtLeast: (n) => `הערך חייב להיות לפחות ${n}.`,
   mustBeAtMost: (n) => `הערך חייב להיות לכל היותר ${n}.`,
   maxLengthExceeded: (n) => `מותר עד ${n} תווים.`,
@@ -224,6 +228,8 @@ const EN: FormStrings = {
   requiredSignature: 'Please sign before submitting.',
   requiredRemaining: (n) =>
     n === 1 ? '1 required field remaining' : `${n} required fields remaining`,
+  idInvalid: 'Invalid ID number',
+  phoneInvalid: 'Invalid Israeli phone number (e.g. 050-123-4567)',
   mustBeAtLeast: (n) => `Must be at least ${n}.`,
   mustBeAtMost: (n) => `Must be at most ${n}.`,
   maxLengthExceeded: (n) => `Up to ${n} characters allowed.`,
@@ -308,6 +314,8 @@ const RU: FormStrings = {
     n === 1
       ? 'Осталось 1 обязательное поле'
       : `Осталось ${n} обязательных полей`,
+  idInvalid: 'Неверный номер удостоверения личности',
+  phoneInvalid: 'Неверный израильский номер телефона (напр. 050-123-4567)',
   mustBeAtLeast: (n) => `Не менее ${n}.`,
   mustBeAtMost: (n) => `Не более ${n}.`,
   maxLengthExceeded: (n) => `Допускается до ${n} символов.`,

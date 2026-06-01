@@ -49,7 +49,7 @@ export function formErrorSummary(lang: Locale): string {
 // IL validators ported from @fitkit/shared validation/{israeli-id,phone} —
 // inlined so the on-blur/on-change check doesn't depend on a re-exported
 // zod schema object, which can resolve to undefined in the RN bundle.
-function isValidIsraeliId(raw: string): boolean {
+export function isValidIsraeliId(raw: string): boolean {
   const digits = raw.replace(/\D/g, '');
   if (digits.length < 1 || digits.length > 9) return false;
   const padded = digits.padStart(9, '0');
@@ -64,7 +64,7 @@ function isValidIsraeliId(raw: string): boolean {
 const IL_MOBILE_PREFIXES = ['50', '51', '52', '53', '54', '55', '56', '57', '58', '59'];
 const IL_LANDLINE_PREFIXES = ['2', '3', '4', '6', '7', '8', '9', '72', '73', '74', '76', '77', '78', '79'];
 
-function isValidIsraeliPhone(raw: string): boolean {
+export function isValidIsraeliPhone(raw: string): boolean {
   const digits = raw.replace(/[^\d+]/g, '');
   let national: string;
   if (digits.startsWith('+972')) national = digits.slice(4);
