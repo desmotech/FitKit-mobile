@@ -60,6 +60,7 @@ export interface FormStrings {
 
   // ── FormRenderer (submit + validation) ────────────────────────────
   submit: string;
+  submitCheckIn: string;
   submitting: string;
   uploading: string;
   /** Generic required error — fallback when no per-type message fits. */
@@ -142,6 +143,7 @@ const HE: FormStrings = {
   checkinAlreadySubtitle: 'כבר השלמת את ההענות הזו.',
 
   submit: 'שלח וחתום',
+  submitCheckIn: 'שליחה',
   submitting: 'שולח…',
   uploading: 'מעלה…',
   requiredField: 'שדה חובה.',
@@ -228,6 +230,7 @@ const EN: FormStrings = {
   checkinAlreadySubtitle: "You've already completed this check-in.",
 
   submit: 'Submit & sign',
+  submitCheckIn: 'Submit',
   submitting: 'Submitting…',
   uploading: 'Uploading…',
   requiredField: 'This field is required.',
@@ -317,6 +320,7 @@ const RU: FormStrings = {
   checkinAlreadySubtitle: 'Вы уже прошли этот чек-ин.',
 
   submit: 'Отправить и подписать',
+  submitCheckIn: 'Отправить',
   submitting: 'Отправляется…',
   uploading: 'Загружается…',
   requiredField: 'Обязательное поле.',
