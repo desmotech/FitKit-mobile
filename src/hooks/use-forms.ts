@@ -143,3 +143,40 @@ export function useSubmitFormInstance(
     },
   });
 }
+
+/**
+ * Submit a check-in (FIT-183) instance's answers. Distinct endpoint from
+ * compliance submit — no signature, no PDF; the server flips status to
+ * `answered` and emits the next scheduled occurrence.
+ */
+export function useSubmitCheckInAnswers(
+  orgId: string | undefined | null,
+  instanceId: string | undefined | null,
+) {
+  const { fetchWithAuth } = useApi();
+  const queryClient = useQueryClient();
+
+  return useMutation<FormInstanceResponse, Error, SubmitFormAnswersDto>({
+    mutationFn: async (dto) => {
+      if (!orgId || !instanceId) throw new Error('Missing orgId or instanceId');
+      const path = `/organizations/${orgId}/check-ins/instances/${instanceId}/answers`;
+      const res = (await fetchWithAuth(path, {
+        method: 'POST',
+        body: JSON.stringify(dto),
+      })) as ApiEnvelope<FormInstanceResponse>;
+      return res.data;
+    },
+    onSuccess: async () => {
+      if (orgId) {
+        await queryClient.invalidateQueries({
+          queryKey: ['/organizations', orgId, 'forms', 'mine'],
+        });
+        if (instanceId) {
+          await queryClient.invalidateQueries({
+            queryKey: ['/organizations', orgId, 'forms', 'instances', instanceId],
+          });
+        }
+      }
+    },
+  });
+}

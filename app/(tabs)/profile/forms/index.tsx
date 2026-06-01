@@ -366,6 +366,30 @@ function FormRow({
             >
               {statusLabel}
             </Text>
+            {entry.instance.kind === 'check_in' ? (
+              <>
+                <View
+                  style={{
+                    width: 3,
+                    height: 3,
+                    borderRadius: 1.5,
+                    backgroundColor: isDark
+                      ? 'rgba(235,235,245,0.4)'
+                      : 'rgba(60,60,67,0.4)',
+                  }}
+                />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: 'rgb(14,140,140)',
+                    writingDirection: isRTL ? 'rtl' : 'ltr',
+                  }}
+                >
+                  {s.kindCheckIn}
+                </Text>
+              </>
+            ) : null}
             {expiresIn ? (
               <>
                 <View

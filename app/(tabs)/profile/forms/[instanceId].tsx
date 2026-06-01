@@ -21,6 +21,7 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useFormInstance,
+  useSubmitCheckInAnswers,
   useSubmitFormInstance,
 } from '@/hooks/use-forms';
 import { useFormUpload } from '@/hooks/use-form-upload';
@@ -45,15 +46,20 @@ export default function SignFormInstanceScreen() {
   const id = typeof instanceId === 'string' ? instanceId : '';
   const query = useFormInstance(orgId, id);
   const submit = useSubmitFormInstance(orgId, id);
+  const checkInSubmit = useSubmitCheckInAnswers(orgId, id);
   const { upload: uploadFormAttachment } = useFormUpload(orgId);
 
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Check-in (FIT-183) posts to a different endpoint — no signature, no PDF.
+  const isCheckIn = query.data?.instance.kind === 'check_in';
+  const submitMutation = isCheckIn ? checkInSubmit : submit;
+
   const handleSubmit = async (answers: FormAnswers) => {
     setSubmitError(null);
     try {
-      await submit.mutateAsync({ answers });
+      await submitMutation.mutateAsync({ answers });
       setSignedAt(new Date().toISOString());
     } catch (err) {
       setSubmitError(
@@ -125,8 +131,8 @@ export default function SignFormInstanceScreen() {
 
         {!isLoading && entry && signedAt ? (
           <SignedSuccess
-            title={s.signedTitle}
-            subtitle={s.signedSubtitle}
+            title={isCheckIn ? s.checkinDoneTitle : s.signedTitle}
+            subtitle={isCheckIn ? s.checkinDoneSubtitle : s.signedSubtitle}
             actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
@@ -135,8 +141,10 @@ export default function SignFormInstanceScreen() {
 
         {!isLoading && entry && !signedAt && isTerminal ? (
           <SignedSuccess
-            title={s.alreadySignedTitle}
-            subtitle={s.alreadySignedSubtitle}
+            title={isCheckIn ? s.checkinAlreadyTitle : s.alreadySignedTitle}
+            subtitle={
+              isCheckIn ? s.checkinAlreadySubtitle : s.alreadySignedSubtitle
+            }
             actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
@@ -149,7 +157,7 @@ export default function SignFormInstanceScreen() {
               form={entry.form}
               uploadAttachment={uploadFormAttachment}
               onSubmit={handleSubmit}
-              submitting={submit.isPending}
+              submitting={submitMutation.isPending}
               serverError={submitError}
             />
           </FKGlassPanel>

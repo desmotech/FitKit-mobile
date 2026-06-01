@@ -1,13 +1,6 @@
-/**
- * `photo` form field — image picker via expo-image-picker. UI only:
- * captures the local file URI, shows a thumbnail, lets the user retake
- * or remove. R2 upload is BLOCKED until the API exposes a public token-
- * gated presign endpoint — see FIT-189 (filed alongside this work).
- *
- * For now the value is the local URI; on submit, FormRenderer detects
- * a missing r2Key and surfaces a clear error to the user. Once the API
- * gap is closed, swap the placeholder for the real upload + r2Key.
- */
+// `photo` form field — picks images and holds local URIs; FormRenderer
+// uploads them to R2 on submit (in-app via useFormUpload). The token-gated
+// path can't upload photos yet (FIT-189) and blocks submit with an error.
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, ImagePlus, X } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';

@@ -30,6 +30,7 @@ export interface FormStrings {
   statusAnswered: string;
   statusReviewed: string;
   statusArchived: string;
+  kindCheckIn: string;
   expiresToday: string;
   expiresInDays: (n: number) => string;
 
@@ -52,6 +53,10 @@ export interface FormStrings {
   signedAction: string;
   alreadySignedTitle: string;
   alreadySignedSubtitle: string;
+  checkinDoneTitle: string;
+  checkinDoneSubtitle: string;
+  checkinAlreadyTitle: string;
+  checkinAlreadySubtitle: string;
 
   // ── FormRenderer (submit + validation) ────────────────────────────
   submit: string;
@@ -109,6 +114,7 @@ const HE: FormStrings = {
   statusAnswered: 'נשלח',
   statusReviewed: 'נסקר',
   statusArchived: 'בארכיון',
+  kindCheckIn: 'הענות תקופתית',
   expiresToday: 'פג היום',
   expiresInDays: (n) => `פג בעוד ${n} ימים`,
 
@@ -130,6 +136,10 @@ const HE: FormStrings = {
   signedAction: 'חזרה לטפסים שלי',
   alreadySignedTitle: 'כבר חתום',
   alreadySignedSubtitle: 'כבר חתמת על הטופס. אין צורך בפעולה נוספת.',
+  checkinDoneTitle: 'נשלח — תודה',
+  checkinDoneSubtitle: 'המאמן שלך יראה את ההענות שלך.',
+  checkinAlreadyTitle: 'כבר נענית',
+  checkinAlreadySubtitle: 'כבר השלמת את ההענות הזו.',
 
   submit: 'שלח וחתום',
   submitting: 'שולח…',
@@ -185,6 +195,7 @@ const EN: FormStrings = {
   statusAnswered: 'Submitted',
   statusReviewed: 'Reviewed',
   statusArchived: 'Archived',
+  kindCheckIn: 'Check-in',
   expiresToday: 'Expires today',
   expiresInDays: (n) => `Expires in ${n} days`,
 
@@ -211,6 +222,10 @@ const EN: FormStrings = {
   alreadySignedTitle: 'Already signed',
   alreadySignedSubtitle:
     'You already signed this form. No action needed.',
+  checkinDoneTitle: 'Submitted — thank you',
+  checkinDoneSubtitle: 'Your coach will see your check-in.',
+  checkinAlreadyTitle: 'Already submitted',
+  checkinAlreadySubtitle: "You've already completed this check-in.",
 
   submit: 'Submit & sign',
   submitting: 'Submitting…',
@@ -267,6 +282,7 @@ const RU: FormStrings = {
   statusAnswered: 'Отправлено',
   statusReviewed: 'Проверено',
   statusArchived: 'В архиве',
+  kindCheckIn: 'Чек-ин',
   expiresToday: 'Истекает сегодня',
   expiresInDays: (n) => `Истекает через ${n} дн.`,
 
@@ -295,6 +311,10 @@ const RU: FormStrings = {
   alreadySignedTitle: 'Уже подписано',
   alreadySignedSubtitle:
     'Вы уже подписали эту форму. Никаких действий не требуется.',
+  checkinDoneTitle: 'Отправлено — спасибо',
+  checkinDoneSubtitle: 'Ваш тренер увидит ваш чек-ин.',
+  checkinAlreadyTitle: 'Уже отправлено',
+  checkinAlreadySubtitle: 'Вы уже прошли этот чек-ин.',
 
   submit: 'Отправить и подписать',
   submitting: 'Отправляется…',
