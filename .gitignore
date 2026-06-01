@@ -50,3 +50,4 @@ coverage/
 *.tsbuildinfo
 
 CHECKIN_HANDOFF.md
+LOGGING_SPEC.md
