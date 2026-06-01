@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -14,6 +14,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nProvider } from '@/providers/i18n-provider';
 import { QueryProvider } from '@/providers/query-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
+import {
+  loadLocaleOverride,
+  loadThemePreference,
+  type ThemePreference,
+} from '@/lib/settings-store';
+import type { Locale } from '@/i18n/config';
 import { secureTokenCache } from '@/lib/secure-token-cache';
 import { clerkPublishableKey, sentryDsn } from '@/lib/api';
 import { useAnalyticsIdentify } from '@/hooks/use-analytics-identify';
@@ -52,13 +58,35 @@ function RootLayout() {
     // DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
   });
 
+  // Preload persisted theme + locale before first paint so the app renders
+  // in the right scheme/language immediately (no light→dark or en→he flash).
+  // `null` = still loading; we hold the splash until it resolves.
+  const [settings, setSettings] = useState<{
+    theme: ThemePreference;
+    locale: Locale | null;
+  } | null>(null);
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    let cancelled = false;
+    Promise.all([loadThemePreference(), loadLocaleOverride()]).then(
+      ([theme, locale]) => {
+        if (!cancelled) setSettings({ theme, locale });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const ready = (fontsLoaded || fontError) && settings != null;
+
+  useEffect(() => {
+    if (ready) {
       SplashScreen.hideAsync().catch(() => undefined);
     }
-  }, [fontsLoaded, fontError]);
+  }, [ready]);
 
-  if (!fontsLoaded && !fontError) {
+  if (!ready || !settings) {
     return null;
   }
 
@@ -80,8 +108,8 @@ function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <KeyboardProvider>
-            <I18nProvider>
-              <ThemeProvider>
+            <I18nProvider initialOverride={settings.locale}>
+              <ThemeProvider initialPreference={settings.theme}>
                 <QueryProvider>
                   <PushBootstrap />
                   <StatusBar style="auto" />

@@ -98,7 +98,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-font',
     'expo-secure-store',
-    'expo-localization',
+    [
+      // `supportedLocales` writes CFBundleLocalizations (iOS) and a
+      // locales_config.xml + android:localeConfig (Android 13+). Without
+      // it, neither OS shows FitKit in its per-app Language setting, so a
+      // member can't pick the app's language from device Settings — they
+      // could only ever inherit the system language. Keep this list in
+      // sync with `i18n.locales` in src/i18n/config.ts.
+      'expo-localization',
+      { supportedLocales: ['en', 'he', 'ru'] },
+    ],
     'expo-updates',
     'expo-image',
     '@react-native-community/datetimepicker',

@@ -34,6 +34,7 @@ import {
   Mail,
   MessageSquare,
   Moon,
+  Smartphone,
   Pencil,
   Phone,
   Sun,
@@ -69,6 +70,7 @@ import { useFormStrings } from '@/i18n/use-form-strings';
 import { useProfileStrings } from '@/i18n/use-profile-strings';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
+import { useThemePreference } from '@/providers/theme-provider';
 
 const ROW_DIVIDER_COLOR = 'rgba(255,255,255,0.05)';
 const ROW_DIVIDER_COLOR_LIGHT = 'rgba(15,23,42,0.06)';
@@ -83,7 +85,12 @@ export default function ProfileScreen() {
   const { requestCamera, requestLibrary } = useMediaPermissions();
   const [avatarBusy, setAvatarBusy] = useState(false);
   const haptics = useHaptics();
-  const { colorScheme, setColorScheme } = useColorScheme();
+  // `colorScheme` is the *resolved* scheme (used for `isDark` styling);
+  // `preference` is the user's persisted choice (light/dark/system) that
+  // drives the Theme control.
+  const { colorScheme } = useColorScheme();
+  const { preference: themePreference, setPreference: setThemePreference } =
+    useThemePreference();
   const colors = useFKColors();
   const bottomPad = useTabBarPadding(32);
   const formS = useFormStrings();
@@ -696,10 +703,10 @@ export default function ProfileScreen() {
               isRTL={isRTL}
               colors={colors}
               isDark={isDark}
-              value={colorScheme ?? 'system'}
+              value={themePreference}
               onChange={(v) => {
                 haptics.select();
-                setColorScheme(v);
+                setThemePreference(v);
               }}
               options={[
                 {
@@ -716,6 +723,16 @@ export default function ProfileScreen() {
                   value: 'dark',
                   render: (active) => (
                     <Moon
+                      size={16}
+                      color={active ? (isDark ? '#0A1628' : '#0E8C8C') : colors.mutedFg}
+                      strokeWidth={2.4}
+                    />
+                  ),
+                },
+                {
+                  value: 'system',
+                  render: (active) => (
+                    <Smartphone
                       size={16}
                       color={active ? (isDark ? '#0A1628' : '#0E8C8C') : colors.mutedFg}
                       strokeWidth={2.4}
