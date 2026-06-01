@@ -1634,22 +1634,23 @@ function UploadPreviewChip({
           </View>
         ) : null}
         {failed ? (
-          <View
+          <Pressable
+            onPress={() =>
+              Alert.alert('Upload failed', upload.error ?? 'Unknown error')
+            }
             style={{
               position: 'absolute',
               top: 0,
               right: 0,
               bottom: 0,
               left: 0,
-              backgroundColor: 'rgba(184,74,64,0.35)',
+              backgroundColor: 'rgba(184,74,64,0.45)',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text style={{ fontSize: 10, color: '#fff', fontWeight: '800' }}>
-              !
-            </Text>
-          </View>
+            <AlertCircle size={20} color="#fff" strokeWidth={2.4} />
+          </Pressable>
         ) : null}
       </View>
       <Pressable
