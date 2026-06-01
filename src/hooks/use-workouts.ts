@@ -1,4 +1,4 @@
-import { useApiQuery, useApiSend } from './use-api-query';
+import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
 
 // ── Types (mirror what /assignments/my-week returns) ─────────────────
@@ -336,6 +336,28 @@ export function useLogResult(
     path:
       orgId && workoutId
         ? `/organizations/${orgId}/workouts/${workoutId}/results`
+        : '',
+    method: 'POST',
+  });
+}
+
+// ── Hook: mark an assignment completed ───────────────────────────────
+
+/**
+ * Marks a workout assignment as completed. One-way, matching the web
+ * (`apps/web/.../program-content.tsx`) and the backend — there's no
+ * uncomplete endpoint; `POST .../complete` sets status='completed' and
+ * stamps completedAt. Logging a result auto-completes too (server-side),
+ * so the detail screen drives button state off `status`/`completedAt`.
+ */
+export function useCompleteAssignment(
+  orgId: string | undefined | null,
+  assignmentId: string | undefined | null,
+) {
+  return useApiAction<ApiEnvelope<AssignmentDay>>({
+    path:
+      orgId && assignmentId
+        ? `/organizations/${orgId}/assignments/${assignmentId}/complete`
         : '',
     method: 'POST',
   });

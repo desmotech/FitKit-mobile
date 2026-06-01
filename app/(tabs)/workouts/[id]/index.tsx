@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircle,
   ArrowUp,
+  Check,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
@@ -41,9 +42,11 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import {
   type WorkoutResult,
   type WorkoutSection,
+  useCompleteAssignment,
   useMyResults,
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
+import { useQueryClient } from '@tanstack/react-query';
 import { FKScreenHeader } from '@/components/fk';
 import { useMessageUploads } from '@/hooks/use-message-uploads';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
@@ -96,6 +99,12 @@ export default function WorkoutDetailScreen() {
   // screen level so the chosen images persist across tab switches.
   const uploads = useMessageUploads(activeOrganization?.id);
 
+  // Mark-completed action. One-way (no uncomplete endpoint); on success we
+  // invalidate the assignment + week caches so the day cell and this screen
+  // both reflect the new status.
+  const queryClient = useQueryClient();
+  const completeAssignment = useCompleteAssignment(activeOrganization?.id, id);
+
   // Mark thread as read whenever the Comments tab is active and there's
   // pending unread. `markRead.mutate` is fresh per-render so we gate on
   // unreadCount + isPending to avoid a loop.
@@ -132,6 +141,9 @@ export default function WorkoutDetailScreen() {
     yourCoach: 'Your coach',
     startWorkout: dict.feed?.startWorkout ?? 'Start workout',
     logResult: dict.workouts?.logResult ?? 'Log result',
+    markComplete: dict.program?.markComplete ?? 'Mark Complete',
+    completed: dict.program?.completed ?? 'Completed',
+    completeFailed: dict.program?.completeFailed ?? 'Failed to update',
     sets: 'Sets',
     load: 'Load',
     rest: 'Rest',
@@ -247,6 +259,33 @@ export default function WorkoutDetailScreen() {
     day: 'numeric',
   });
   const dateKicker = kickerFmt.format(dayDate).toUpperCase();
+
+  // Completion is one-way: server sets status='completed' (also auto-set when
+  // a result is logged). Either signal flips the CTA to the done state.
+  const isCompleted =
+    assignment.status === 'completed' || !!assignment.completedAt;
+
+  const handleMarkComplete = () => {
+    if (completeAssignment.isPending || isCompleted) return;
+    haptics.tap();
+    completeAssignment.mutate(undefined, {
+      onSuccess: () => {
+        haptics.success();
+        queryClient.invalidateQueries({
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey
+              .filter((k) => typeof k === 'string')
+              .join('/')
+              .includes('assignments'),
+        });
+      },
+      onError: () => {
+        haptics.error();
+        Alert.alert(labels.completeFailed);
+      },
+    });
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -546,6 +585,7 @@ export default function WorkoutDetailScreen() {
           style={{
             paddingHorizontal: 18,
             paddingTop: 18,
+            gap: 12,
           }}
         >
           <Button
@@ -561,6 +601,38 @@ export default function WorkoutDetailScreen() {
               });
             }}
           />
+
+          {/* Mark completed — one-way. Once done (here or via a logged
+              result) it collapses to a static "Completed" confirmation. */}
+          {isCompleted ? (
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                paddingVertical: 12,
+                borderRadius: 16,
+                borderCurve: 'continuous',
+                backgroundColor: 'rgba(122,138,92,0.16)',
+              }}
+            >
+              <Check size={18} color="#7A8A5C" strokeWidth={2.6} />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#7A8A5C' }}>
+                {labels.completed}
+              </Text>
+            </View>
+          ) : (
+            <Button
+              label={labels.markComplete}
+              variant="outline"
+              fullWidth
+              size="lg"
+              className="rounded-2xl"
+              disabled={completeAssignment.isPending}
+              onPress={handleMarkComplete}
+            />
+          )}
         </View>
 
         {/* My History — collapsible (visible across all section tabs) */}
