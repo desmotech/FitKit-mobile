@@ -2,11 +2,13 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
 const Label = NativeTabs.Trigger.Label;
 const Icon = NativeTabs.Trigger.Icon;
+const Badge = NativeTabs.Trigger.Badge;
 import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
 import { AuthGate } from '@/providers/auth-gate';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFormsBadge } from '@/hooks/use-forms-badge';
+import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useMyProgramEnrollments } from '@/hooks/use-workouts';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -21,6 +23,7 @@ export default function TabsLayout() {
   const { activeOrganization } = useCurrentUser();
   const enrollments = useMyProgramEnrollments(activeOrganization?.id);
   const isEnrolledInProgram = (enrollments.data?.data?.length ?? 0) > 0;
+  const incompleteForms = useIncompleteFormsCount(activeOrganization?.id);
   useFormsBadge(activeOrganization?.id);
   const labels =
     (t as unknown as Record<string, Record<string, string>>).mobileTabs ?? {};
@@ -66,6 +69,7 @@ export default function TabsLayout() {
               sf={{ default: 'person', selected: 'person.fill' }}
               drawable="ic_menu_myplaces"
             />
+            {incompleteForms > 0 ? <Badge>{String(incompleteForms)}</Badge> : null}
           </NativeTabs.Trigger>
         </NativeTabs>
       </View>
