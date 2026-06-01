@@ -1,7 +1,7 @@
-import baseConfig from '../../eslint.config.mjs';
+import expoConfig from 'eslint-config-expo/flat.js';
 
 export default [
-  ...baseConfig,
+  ...expoConfig,
   {
     ignores: [
       '.expo/**',
