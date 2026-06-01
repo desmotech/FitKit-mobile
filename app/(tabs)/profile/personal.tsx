@@ -118,13 +118,13 @@ export default function PersonalDetailsScreen() {
 
   const update = (k: keyof typeof form, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
-    const liveErr = validateProfileField(k, v, validationT);
-    setErrors((p) => {
-      const next = { ...p };
-      if (liveErr) next[k] = liveErr;
-      else delete next[k];
-      return next;
-    });
+    if (errors[k]) {
+      setErrors((p) => {
+        const next = { ...p };
+        delete next[k];
+        return next;
+      });
+    }
     if (submitError) setSubmitError(null);
   };
 

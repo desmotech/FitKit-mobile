@@ -157,12 +157,23 @@ export function FormRenderer({
 
   const handleChange = (fieldId: string, next: FormAnswerValue) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: next }));
+    if (errors[fieldId]) {
+      setErrors((prev) => {
+        const { [fieldId]: _drop, ...rest } = prev;
+        void _drop;
+        return rest;
+      });
+    }
+  };
+
+  const handleBlur = (fieldId: string) => {
     const field = form.fields.find((f) => f.id === fieldId);
-    const liveErr = field ? formatErrorFor(field, next, s) : null;
+    if (!field) return;
+    const err = formatErrorFor(field, answers[fieldId], s);
     setErrors((prev) => {
       const rest = { ...prev };
       delete rest[fieldId];
-      if (liveErr) rest[fieldId] = liveErr;
+      if (err) rest[fieldId] = err;
       return rest;
     });
   };
@@ -386,6 +397,7 @@ export function FormRenderer({
           field={field}
           value={answers[field.id]}
           onChange={(next) => handleChange(field.id, next)}
+          onBlur={() => handleBlur(field.id)}
           error={errors[field.id] ?? null}
         />
       ))}

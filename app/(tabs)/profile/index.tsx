@@ -61,6 +61,7 @@ import {
   useMySubscription,
   useRenewSubscription,
 } from '@/hooks/use-feed-data';
+import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
@@ -97,6 +98,7 @@ export default function ProfileScreen() {
   const ps = useProfileStrings();
 
   const orgId = activeOrganization?.id;
+  const incompleteForms = useIncompleteFormsCount(orgId);
   const stats = useMyStats(orgId);
   const prs = useMyPersonalRecords(orgId);
   const subs = useMySubscription(orgId);
@@ -671,6 +673,7 @@ export default function ProfileScreen() {
               isRTL={isRTL}
               colors={colors}
               isDark={isDark}
+              badgeCount={incompleteForms}
               onPress={() => router.push('/(tabs)/profile/forms')}
             />
           </SettingsGroup>
@@ -1258,6 +1261,7 @@ function SettingsRow({
   isDark,
   onPress,
   tone,
+  badgeCount,
 }: {
   Icon: typeof UserIcon;
   label: string;
@@ -1267,6 +1271,7 @@ function SettingsRow({
   isDark: boolean;
   onPress?: () => void;
   tone?: 'default' | 'destructive';
+  badgeCount?: number;
 }) {
   const haptics = useHaptics();
   const isDestructive = tone === 'destructive';
@@ -1331,6 +1336,25 @@ function SettingsRow({
           </Text>
         ) : null}
       </View>
+
+      {badgeCount && badgeCount > 0 ? (
+        <View
+          style={{
+            minWidth: 22,
+            height: 22,
+            borderRadius: 11,
+            paddingHorizontal: 7,
+            backgroundColor: '#B84A40',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginHorizontal: 6,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '800', color: '#fff' }}>
+            {badgeCount}
+          </Text>
+        </View>
+      ) : null}
 
       <Chevron size={18} color="rgba(94,112,130,0.55)" strokeWidth={2.2} />
     </TouchableOpacity>

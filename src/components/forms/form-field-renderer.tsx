@@ -21,6 +21,7 @@ export interface FormFieldRendererProps {
   field: FormField;
   value: FormAnswerValue | undefined;
   onChange: (next: FormAnswerValue) => void;
+  onBlur?: () => void;
   error?: string | null;
 }
 
@@ -28,6 +29,7 @@ export function FormFieldRenderer({
   field,
   value,
   onChange,
+  onBlur,
   error,
 }: FormFieldRendererProps) {
   switch (field.type) {
@@ -38,6 +40,7 @@ export function FormFieldRenderer({
           field={field}
           value={typeof value === 'string' ? value : ''}
           onChange={onChange}
+          onBlur={onBlur}
           error={error}
         />
       );

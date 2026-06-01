@@ -15,6 +15,7 @@ export interface TextFieldProps {
   field: Extract<FormField, { type: 'text' | 'free_text' }>;
   value: string;
   onChange: (next: string) => void;
+  onBlur?: () => void;
   error?: string | null;
 }
 
@@ -22,6 +23,7 @@ export function TextFieldRenderer({
   field,
   value,
   onChange,
+  onBlur,
   error,
 }: TextFieldProps) {
   const isRTL = useFormRTL();
@@ -40,6 +42,7 @@ export function TextFieldRenderer({
       <TextInput
         value={value}
         onChangeText={onChange}
+        onBlur={onBlur}
         accessibilityLabel={field.label}
         autoCapitalize="sentences"
         autoCorrect
