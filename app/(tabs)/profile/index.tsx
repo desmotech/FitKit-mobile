@@ -717,7 +717,7 @@ export default function ProfileScreen() {
                   render: (active) => (
                     <Sun
                       size={16}
-                      color={active ? (isDark ? '#0A1628' : '#0E8C8C') : colors.mutedFg}
+                      color={active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg}
                       strokeWidth={2.4}
                     />
                   ),
@@ -727,7 +727,7 @@ export default function ProfileScreen() {
                   render: (active) => (
                     <Moon
                       size={16}
-                      color={active ? (isDark ? '#0A1628' : '#0E8C8C') : colors.mutedFg}
+                      color={active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg}
                       strokeWidth={2.4}
                     />
                   ),
@@ -737,7 +737,7 @@ export default function ProfileScreen() {
                   render: (active) => (
                     <Smartphone
                       size={16}
-                      color={active ? (isDark ? '#0A1628' : '#0E8C8C') : colors.mutedFg}
+                      color={active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg}
                       strokeWidth={2.4}
                     />
                   ),
@@ -762,7 +762,7 @@ export default function ProfileScreen() {
                     style={{
                       fontSize: 13,
                       fontWeight: '700',
-                      color: active ? (isDark ? '#0A1628' : '#0E8C8C') : colors.mutedFg,
+                      color: active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg,
                       letterSpacing: 0.5,
                     }}
                   >

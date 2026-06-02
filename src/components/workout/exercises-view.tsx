@@ -75,7 +75,7 @@ export function ExercisesView({
   initialOpenSectionIds,
 }: ExercisesViewProps) {
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   const haptics = useHaptics();
 
   const [openSections, setOpenSections] = useState<Set<string>>(

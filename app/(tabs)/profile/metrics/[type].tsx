@@ -49,7 +49,7 @@ export default function MetricDetailScreen() {
   const colors = useFKColors();
   const { dir, t, lang } = useI18n();
   const isRTL = dir === 'rtl';
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   const { activeOrganization, primaryMembership } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const membershipId = primaryMembership?.id;

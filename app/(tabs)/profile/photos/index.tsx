@@ -39,7 +39,7 @@ function get(dict: any, path: string): string | null {
 
 export default function PhotosScreen() {
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   const haptics = useHaptics();
   const bottomPad = useTabBarPadding();
   const { dir, t, lang } = useI18n();

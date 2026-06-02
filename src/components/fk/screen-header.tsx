@@ -43,7 +43,7 @@ export function FKScreenHeader({
   const { dir } = useI18n();
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>

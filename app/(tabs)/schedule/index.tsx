@@ -497,7 +497,7 @@ function NavButton({
 }) {
   const haptics = useHaptics();
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   return (
     <Pressable
       onPressIn={haptics.tap}

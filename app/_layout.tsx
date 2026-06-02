@@ -57,12 +57,42 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    // FitKit display + body fonts. Bundle .otf/.ttf files in assets/fonts/.
-    // See assets/fonts/README.md for sourcing instructions.
-    // ClashGrotesk: require('../assets/fonts/ClashGrotesk-Variable.ttf'),
-    // Manrope: require('../assets/fonts/Manrope-Variable.ttf'),
-    // Heebo: require('../assets/fonts/Heebo-Variable.ttf'),
-    // DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
+    // ── FitKit "Whiteboard" type system ──────────────────────────────
+    // Static per-weight faces. RN/Android weight-matching within a single
+    // family is unreliable, so each weight is registered under its own
+    // family name and referenced explicitly (see src/lib/type.ts). The
+    // bare aliases (ClashGrotesk / Manrope / DMMono) keep NativeWind's
+    // `font-display` / `font-sans` / `font-mono` utilities working on
+    // screens not yet migrated to the typed `font` map.
+    //
+    // Licensing (all free for commercial use):
+    //   Clash Grotesk — Fontshare ITF Free Font License
+    //   Manrope / DM Mono / Alef / Rubik — SIL Open Font License 1.1
+
+    // Display — Clash Grotesk (Latin). Base alias = Bold (workhorse).
+    ClashGrotesk: require('../assets/fonts/ClashGrotesk-Bold.ttf'),
+    'ClashGrotesk-Regular': require('../assets/fonts/ClashGrotesk-Regular.ttf'),
+    'ClashGrotesk-Medium': require('../assets/fonts/ClashGrotesk-Medium.ttf'),
+    'ClashGrotesk-Semibold': require('../assets/fonts/ClashGrotesk-Semibold.ttf'),
+    'ClashGrotesk-Bold': require('../assets/fonts/ClashGrotesk-Bold.ttf'),
+
+    // Body / UI — Manrope (Latin). Base alias = Regular.
+    Manrope: require('../assets/fonts/Manrope-Regular.ttf'),
+    'Manrope-Medium': require('../assets/fonts/Manrope-Medium.ttf'),
+    'Manrope-SemiBold': require('../assets/fonts/Manrope-SemiBold.ttf'),
+    'Manrope-Bold': require('../assets/fonts/Manrope-Bold.ttf'),
+    'Manrope-ExtraBold': require('../assets/fonts/Manrope-ExtraBold.ttf'),
+
+    // Numerals / labels — DM Mono (the scoreboard face).
+    DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
+    'DMMono-Medium': require('../assets/fonts/DMMono-Medium.ttf'),
+
+    // Hebrew — Alef (body) + Rubik (display). Replaces Heebo.
+    Alef: require('../assets/fonts/Alef-Regular.ttf'),
+    'Alef-Bold': require('../assets/fonts/Alef-Bold.ttf'),
+    'Rubik-Medium': require('../assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-Bold': require('../assets/fonts/Rubik-Bold.ttf'),
+    'Rubik-Black': require('../assets/fonts/Rubik-Black.ttf'),
   });
 
   // Preload persisted theme + locale before first paint so the app renders
@@ -175,7 +205,7 @@ function ConfigErrorScreen() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 32,
-        backgroundColor: '#0A1628',
+        backgroundColor: '#0B0B0D',
       }}
     >
       <Text

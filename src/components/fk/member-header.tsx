@@ -42,7 +42,7 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
 
   const unread = useAnnouncementUnreadCount(orgId);
   const unreadCount = unread.data?.data?.count ?? 0;
@@ -207,7 +207,7 @@ function HeaderIconButton({
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1.5,
-            borderColor: isDark ? '#0A1628' : '#fff',
+            borderColor: isDark ? '#0B0B0D' : '#fff',
           }}
         >
           <Text

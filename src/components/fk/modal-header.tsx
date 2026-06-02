@@ -61,7 +61,7 @@ export function FKModalHeader({
   const { dir } = useI18n();
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
 
   // JSX reorder: leading goes on the visual leading edge (left in LTR,
   // right in RTL). We render LTR-ordered children then conditionally

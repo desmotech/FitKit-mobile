@@ -44,6 +44,10 @@ module.exports = {
           DEFAULT: c('accent'),
           foreground: c('accent-foreground'),
         },
+        energy: {
+          DEFAULT: c('energy'),
+          foreground: c('energy-foreground'),
+        },
         destructive: {
           DEFAULT: c('destructive'),
           foreground: c('destructive-foreground'),
@@ -85,10 +89,28 @@ module.exports = {
         '4xl': 'calc(var(--radius) + 16px)',
       },
       fontFamily: {
+        // Body / UI — Manrope. Weight-specific families for reliable
+        // rendering (Android ignores fontWeight on custom single-weight
+        // families, so we map weight → family explicitly).
         sans: ['Manrope', 'sans-serif'],
+        'sans-medium': ['Manrope-Medium', 'sans-serif'],
+        'sans-semibold': ['Manrope-SemiBold', 'sans-serif'],
+        'sans-bold': ['Manrope-Bold', 'sans-serif'],
+        'sans-extrabold': ['Manrope-ExtraBold', 'sans-serif'],
+        // Display — Clash Grotesk (base alias = Bold).
         display: ['ClashGrotesk', 'sans-serif'],
+        'display-medium': ['ClashGrotesk-Medium', 'sans-serif'],
+        'display-semibold': ['ClashGrotesk-Semibold', 'sans-serif'],
+        'display-bold': ['ClashGrotesk-Bold', 'sans-serif'],
+        // Numerals / labels — DM Mono.
         mono: ['DMMono', 'monospace'],
-        heebo: ['Heebo', 'sans-serif'],
+        'mono-medium': ['DMMono-Medium', 'monospace'],
+        // Hebrew — Alef body + Rubik display (replaces Heebo).
+        heebo: ['Alef', 'sans-serif'],
+        hebrew: ['Alef', 'sans-serif'],
+        'hebrew-bold': ['Alef-Bold', 'sans-serif'],
+        'hebrew-display': ['Rubik-Bold', 'sans-serif'],
+        'hebrew-display-black': ['Rubik-Black', 'sans-serif'],
       },
       letterSpacing: {
         tightest: '-0.05em',
