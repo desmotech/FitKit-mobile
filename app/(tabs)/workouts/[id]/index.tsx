@@ -55,6 +55,7 @@ import { ExercisesView } from '@/components/workout/exercises-view';
 import { useFKColors } from '@/components/fk';
 import { analytics } from '@/lib/analytics';
 import { continuousCorners } from '@/lib/utils';
+import { displayFamily } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 
 // Static fallback for the static rest/note helper. Detail screen builds
@@ -287,11 +288,9 @@ export default function WorkoutDetailScreen() {
 
   return (
     <View className="flex-1 bg-background">
-      {/* Shared nav-bar chrome — matches every profile sub-screen
-          (FKBackButton + centered inline title). The workout name lives
-          IN the nav row, not in a duplicate large-title block below,
-          which is what produced the visual gap. */}
-      <FKScreenHeader title={workout.displayName} />
+      {/* Nav title intentionally blank — the workout name lives in the
+          poster hero below (no duplication, program-sheet large-title). */}
+      <FKScreenHeader title="" />
 
       <ScrollView
         // `never` because FKScreenHeader is the sole owner of the top
@@ -305,61 +304,97 @@ export default function WorkoutDetailScreen() {
           paddingBottom: scrollBottomPad,
         }}
       >
-        {/* Compact context strip — date kicker + scoring subtitle +
-            stat tiles. Lives at the top of the scroll content, just
-            below the fixed nav bar. */}
+        {/* Program-sheet hero — mono date kicker, the workout name as a
+            display poster, scoring/cap as stamped badges, then a
+            scoreboard of stats on hairline columns. */}
         <View
           style={{
             paddingHorizontal: 20,
-            paddingTop: 14,
-            paddingBottom: 16,
+            paddingTop: 10,
+            paddingBottom: 18,
             borderBottomWidth: StyleSheet.hairlineWidth,
-            borderBottomColor: 'rgba(60,60,67,0.18)',
+            borderBottomColor: isDark
+              ? 'rgba(255,255,255,0.07)'
+              : 'rgba(60,60,67,0.16)',
           }}
         >
           <Text
             style={{
               fontSize: 11,
-              fontWeight: '700',
               color: colors.mutedFg,
-              letterSpacing: 1.4,
+              letterSpacing: 1.6,
+              textTransform: 'uppercase',
               textAlign: isRTL ? 'right' : 'left',
               fontFamily: 'DMMono',
             }}
           >
             {dateKicker}
           </Text>
+
+          <Text
+            numberOfLines={3}
+            style={{
+              fontSize: 32,
+              lineHeight: 36,
+              color: colors.foreground,
+              letterSpacing: -1,
+              marginTop: 6,
+              textAlign: isRTL ? 'right' : 'left',
+              fontFamily: displayFamily(lang, 'bold'),
+            }}
+          >
+            {workout.displayName}
+          </Text>
+
           {(() => {
-            const parts: string[] = [];
+            const stamps: string[] = [];
             if (workout.scoring && workout.scoring !== 'none')
-              parts.push(scoringDisplay(workout.scoring));
+              stamps.push(scoringDisplay(workout.scoring));
             if (workout.timeCap)
-              parts.push(`${workout.timeCap} ${labels.minutes}`);
-            return parts.length > 0 ? (
-              <Text
+              stamps.push(`${workout.timeCap} ${labels.minutes}`);
+            if (stamps.length === 0) return null;
+            return (
+              <View
                 style={{
-                  fontSize: 14,
-                  fontWeight: '500',
-                  color: colors.mutedFg,
-                  marginTop: 4,
-                  textAlign: isRTL ? 'right' : 'left',
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  flexWrap: 'wrap',
+                  gap: 8,
+                  marginTop: 12,
                 }}
               >
-                {parts.join(' · ')}
-              </Text>
-            ) : null;
+                {stamps.map((txt, i) => (
+                  <View
+                    key={i}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                      borderCurve: 'continuous',
+                      borderWidth: 1,
+                      borderColor: i === 0 ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        letterSpacing: 1,
+                        textTransform: 'uppercase',
+                        fontFamily: 'DMMono-Medium',
+                        color: i === 0 ? colors.primary : colors.mutedFg,
+                      }}
+                    >
+                      {txt}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            );
           })()}
 
           <View
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
-              marginTop: 14,
-              borderRadius: 14,
-              borderCurve: 'continuous',
-              backgroundColor: isDark
-                ? 'rgba(255,255,255,0.04)'
-                : 'rgba(15,23,42,0.04)',
-              paddingVertical: 12,
+              marginTop: 18,
             }}
           >
             {[
@@ -382,28 +417,28 @@ export default function WorkoutDetailScreen() {
                   flex: 1,
                   alignItems: 'center',
                   borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                  borderColor: 'rgba(60,60,67,0.18)',
+                  borderColor: colors.border,
                 }}
               >
                 <Text
                   style={{
-                    fontSize: 17,
-                    fontWeight: '700',
+                    fontSize: 24,
                     color: colors.foreground,
                     fontVariant: ['tabular-nums'],
-                    letterSpacing: -0.2,
+                    letterSpacing: -0.5,
+                    fontFamily: 'DMMono-Medium',
                   }}
                 >
                   {value}
                 </Text>
                 <Text
                   style={{
-                    fontSize: 10,
-                    fontWeight: '600',
+                    fontSize: 9.5,
                     color: colors.mutedFg,
-                    letterSpacing: 0.5,
+                    letterSpacing: 1,
                     textTransform: 'uppercase',
-                    marginTop: 3,
+                    marginTop: 4,
+                    fontFamily: 'DMMono',
                   }}
                 >
                   {label}
