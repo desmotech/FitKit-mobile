@@ -7,7 +7,7 @@ import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
 import { AuthGate } from '@/providers/auth-gate';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useFormsBadge } from '@/hooks/use-forms-badge';
+import { useAppIconBadge } from '@/hooks/use-badge';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useMyProgramEnrollments } from '@/hooks/use-workouts';
 import { useI18n } from '@/providers/i18n-provider';
@@ -24,7 +24,8 @@ export default function TabsLayout() {
   const enrollments = useMyProgramEnrollments(activeOrganization?.id);
   const isEnrolledInProgram = (enrollments.data?.data?.length ?? 0) > 0;
   const incompleteForms = useIncompleteFormsCount(activeOrganization?.id);
-  useFormsBadge(activeOrganization?.id);
+  // Single owner of the native app-icon badge: server unread total + forms.
+  useAppIconBadge(activeOrganization?.id);
   const labels =
     (t as unknown as Record<string, Record<string, string>>).mobileTabs ?? {};
   const tint = isDark ? PRIMARY_DARK : PRIMARY_LIGHT;

@@ -17,7 +17,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
-import { AppState, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { apiUrl } from '@/lib/api';
 
 const PROJECT_ID =
@@ -28,8 +28,9 @@ const PROJECT_ID =
 // the badge count from the payload. `shouldSetBadge: false` was the reason
 // the app icon never showed a count: it told the OS to drop the badge for
 // any notification delivered while the app was open, and nothing ever set
-// one otherwise. We now honour the badge and clear it when the app opens
-// (see the AppState effect below).
+// one otherwise. We now honour the badge; while signed in the in-app badge
+// owner (`useAppIconBadge`) keeps the icon synced to the member's true unread
+// total, and the signed-out effect below clears it to 0.
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
@@ -52,19 +53,15 @@ export function usePushNotifications() {
   const respSubRef = useRef<Notifications.Subscription | null>(null);
   const registeredFor = useRef<string | null>(null);
 
-  // Clear the app-icon badge whenever the app is opened / foregrounded —
-  // the member is now looking at the app, so a lingering count is noise.
-  // Runs independent of auth state: a signed-out app should show no badge.
+  // A signed-out app should show no badge. We deliberately do NOT clear the
+  // badge on every foreground anymore — that wiped a legitimate unread count
+  // the member hadn't read yet (FIT-198). While signed in, `useAppIconBadge`
+  // (mounted in the tabs tree) owns the icon and keeps it on the true total.
   useEffect(() => {
-    const clear = () => {
+    if (isLoaded && !isSignedIn) {
       Notifications.setBadgeCountAsync(0).catch(() => undefined);
-    };
-    clear();
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') clear();
-    });
-    return () => sub.remove();
-  }, []);
+    }
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
