@@ -3,6 +3,10 @@ name: EAS Update (OTA)
 # JS-only OTA updates. Native code or plugin changes still require a
 # fresh EAS Build (see eas-build.yml) — runtimeVersion in app.config.ts
 # is set to `appVersion` so updates only target matching binaries.
+#
+# Push to main auto-publishes to the `preview` branch (internal/TestFlight
+# only). Shipping to production is a deliberate workflow_dispatch run so a
+# merge never reaches App Store users without a conscious promotion.
 
 on:
   push:
@@ -10,10 +14,21 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'EAS branch to publish to (preview, production, etc.)'
+        description: 'EAS branch to publish to'
         required: true
-        default: 'preview'
-        type: string
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
+      environment:
+        description: 'EAS environment (loads EXPO_PUBLIC_* from eas.json)'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
       message:
         description: 'Update message (defaults to commit subject)'
         required: false
@@ -57,14 +72,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
         run: pnpm install --frozen-lockfile
 
-      - name: Publish update (push to main → auto branch)
+      - name: Publish update (push to main → preview)
         if: github.event_name == 'push'
-        run: eas update --auto --non-interactive
-
-      - name: Publish update (manual dispatch)
-        if: github.event_name == 'workflow_dispatch'
+        env:
+          UPDATE_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           eas update \
-            --branch "${{ github.event.inputs.branch }}" \
-            --message "${{ github.event.inputs.message || github.event.head_commit.message }}" \
+            --branch preview \
+            --environment preview \
+            --message "$UPDATE_MESSAGE" \
+            --non-interactive
+
+      - name: Publish update (manual dispatch → promote to chosen branch)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_BRANCH: ${{ github.event.inputs.branch }}
+          INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
+          INPUT_MESSAGE: ${{ github.event.inputs.message || github.event.head_commit.message }}
+        run: |
+          eas update \
+            --branch "$INPUT_BRANCH" \
+            --environment "$INPUT_ENVIRONMENT" \
+            --message "$INPUT_MESSAGE" \
             --non-interactive
