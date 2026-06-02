@@ -54,6 +54,7 @@ import {
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useMyPersonalRecords,
@@ -84,6 +85,7 @@ export default function ProfileScreen() {
   const { getToken } = useAuth();
   const { user: clerkUser } = useUser();
   const { requestCamera, requestLibrary } = useMediaPermissions();
+  const { fetchWithAuth } = useApi();
   const [avatarBusy, setAvatarBusy] = useState(false);
   const haptics = useHaptics();
   // `colorScheme` is the *resolved* scheme (used for `isDark` styling);
@@ -241,6 +243,19 @@ export default function ProfileScreen() {
       setAvatarBusy(true);
       await run();
       await clerkUser?.reload();
+      // Clerk's setProfileImage only updates the Clerk-side identity. Surfaces
+      // that read the avatar from the FitKit DB — most notably the owner
+      // dashboard's member list (users.imageUrl) — won't reflect the change
+      // until it's persisted server-side. Mirror the web profile flow and
+      // PATCH the resolved URL back so it propagates immediately rather than
+      // waiting on the (best-effort, possibly-undelivered) user.updated webhook.
+      if (clerkUser?.imageUrl) {
+        await fetchWithAuth('/users/me', {
+          method: 'PATCH',
+          body: JSON.stringify({ imageUrl: clerkUser.imageUrl }),
+        });
+        await queryClient.invalidateQueries({ queryKey: ['/users/me'] });
+      }
       haptics.success();
     } catch (err) {
       haptics.error();
