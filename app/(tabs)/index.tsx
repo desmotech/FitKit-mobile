@@ -50,6 +50,7 @@ import {
 import { TodayClassCard } from '@/components/schedule/today-class-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { displayFamily } from '@/lib/type';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTodayClassSessions } from '@/hooks/use-feed-data';
@@ -219,16 +220,15 @@ export default function HomeScreen() {
             {dateKicker}
           </Text>
           <Text
-            className="font-display"
             numberOfLines={2}
             style={{
-              fontSize: 28,
-              fontWeight: '800',
+              fontSize: 30,
               color: colors.foreground,
-              letterSpacing: -0.6,
-              lineHeight: 32,
+              letterSpacing: -0.8,
+              lineHeight: 34,
               marginTop: 4,
               textAlign: isRTL ? 'right' : 'left',
+              fontFamily: displayFamily(lang, 'bold'),
             }}
           >
             {greeting}

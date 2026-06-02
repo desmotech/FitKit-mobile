@@ -433,6 +433,7 @@ export default function ScheduleScreen() {
                   dom={d.getDate()}
                   state={cellState}
                   active={iso === selectedDate}
+                  isToday={iso === todayStr}
                   onPress={() => setSelectedDate(iso)}
                 />
               );
