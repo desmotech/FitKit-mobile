@@ -54,6 +54,7 @@ import {
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { displayFamily } from '@/lib/type';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useMyPersonalRecords,
@@ -446,14 +447,13 @@ export default function ProfileScreen() {
                     <Skeleton style={{ width: 140, height: 24, borderRadius: 6 }} />
                   ) : (
                     <Text
-                      className="font-display"
                       numberOfLines={1}
                       style={{
-                        fontSize: 22,
-                        fontWeight: '800',
+                        fontSize: 24,
                         color: '#fff',
-                        letterSpacing: -0.4,
+                        letterSpacing: -0.6,
                         textAlign: isRTL ? 'right' : 'left',
+                        fontFamily: displayFamily(lang, 'bold'),
                       }}
                     >
                       {displayName}
@@ -531,14 +531,13 @@ export default function ProfileScreen() {
                     }}
                   >
                     <Text
-                      className="font-display"
                       style={{
                         fontSize: 26,
                         lineHeight: 32,
-                        fontWeight: '800',
                         color: '#fff',
                         letterSpacing: -0.5,
                         fontVariant: ['tabular-nums'],
+                        fontFamily: 'DMMono-Medium',
                         includeFontPadding: false,
                         textAlignVertical: 'center',
                       }}
@@ -549,11 +548,11 @@ export default function ProfileScreen() {
                       numberOfLines={1}
                       style={{
                         fontSize: 9,
-                        fontWeight: '700',
-                        color: 'rgba(255,255,255,0.78)',
+                        color: 'rgba(255,255,255,0.82)',
                         letterSpacing: 1.2,
                         textTransform: 'uppercase',
                         marginTop: 4,
+                        fontFamily: 'DMMono',
                       }}
                     >
                       {s.label}
