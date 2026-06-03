@@ -14,14 +14,11 @@
  * Binary attachments (signature, photo):
  *   - During edit, the field value is a LOCAL file URI (capture path
  *     for photos; PNG rendered from the SVG canvas for signatures).
- *   - At submit, we walk the answers, upload any local URIs via
- *     useFormUpload, and replace each URI with `{ r2Key, mime }` (or
- *     an array of them for `photo.multiple`). The transformed answers
- *     map is what we POST.
- *   - If `orgId` is not provided (token-gated screen with no
- *     authenticated org context), we skip the upload step and block
- *     submit with a friendly error. Path B (token presign) lives in
- *     FIT-189.
+ *   - At submit, we walk the answers and upload any local URIs via the
+ *     `uploadAttachment` prop (the in-app screen wraps `useFormUpload`,
+ *     the token screen wraps `useTokenUpload`), replacing each URI with
+ *     `{ r2Key, mime }` (or an array for `photo.multiple`). The
+ *     transformed answers map is what we POST.
  */
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
