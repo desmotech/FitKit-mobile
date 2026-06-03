@@ -85,8 +85,6 @@ export interface FormStrings {
   /** Banner shown at the top of the form when there are multiple errors. */
   fixErrors: (n: number) => string;
   uploadFailed: string;
-  signatureUploadUnavailable: string;
-  photoUploadUnavailable: string;
 
   // ── Signature field ───────────────────────────────────────────────
   sigHint: string;
@@ -167,10 +165,6 @@ const HE: FormStrings = {
   fixErrors: (n) =>
     n === 1 ? 'יש לתקן שגיאה אחת בטופס' : `יש לתקן ${n} שגיאות בטופס`,
   uploadFailed: 'ההעלאה נכשלה. נסה שוב.',
-  signatureUploadUnavailable:
-    'העלאת חתימה אינה זמינה כעת בקישור זה. נסה מאוחר יותר.',
-  photoUploadUnavailable:
-    'העלאת תמונה אינה זמינה כעת בקישור זה. נסה מאוחר יותר.',
 
   sigHint: 'חתום באצבע בתוך הריבוע.',
   sigPlaceholder: 'חתום כאן',
@@ -254,10 +248,6 @@ const EN: FormStrings = {
   fixErrors: (n) =>
     n === 1 ? 'Please fix 1 error in the form' : `Please fix ${n} errors in the form`,
   uploadFailed: 'Upload failed. Please try again.',
-  signatureUploadUnavailable:
-    'Signature upload is not yet available on this link. Please try again later.',
-  photoUploadUnavailable:
-    'Photo upload is not yet available on this link. Please try again later.',
 
   sigHint: 'Sign using your finger inside the box.',
   sigPlaceholder: 'Sign here',
@@ -348,10 +338,6 @@ const RU: FormStrings = {
       ? 'Исправьте 1 ошибку в форме'
       : `Исправьте ${n} ошибок в форме`,
   uploadFailed: 'Загрузка не удалась. Попробуйте снова.',
-  signatureUploadUnavailable:
-    'Загрузка подписи пока недоступна по этой ссылке. Попробуйте позже.',
-  photoUploadUnavailable:
-    'Загрузка фото пока недоступна по этой ссылке. Попробуйте позже.',
 
   sigHint: 'Подпишите пальцем внутри рамки.',
   sigPlaceholder: 'Подпишите здесь',

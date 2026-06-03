@@ -14,14 +14,11 @@
  * Binary attachments (signature, photo):
  *   - During edit, the field value is a LOCAL file URI (capture path
  *     for photos; PNG rendered from the SVG canvas for signatures).
- *   - At submit, we walk the answers, upload any local URIs via
- *     useFormUpload, and replace each URI with `{ r2Key, mime }` (or
- *     an array of them for `photo.multiple`). The transformed answers
- *     map is what we POST.
- *   - If `orgId` is not provided (token-gated screen with no
- *     authenticated org context), we skip the upload step and block
- *     submit with a friendly error. Path B (token presign) lives in
- *     FIT-189.
+ *   - At submit, we walk the answers and upload any local URIs via the
+ *     `uploadAttachment` prop (the in-app screen wraps `useFormUpload`,
+ *     the token screen wraps `useTokenUpload`), replacing each URI with
+ *     `{ r2Key, mime }` (or an array for `photo.multiple`). The
+ *     transformed answers map is what we POST.
  */
 import { useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -81,12 +78,9 @@ export interface FormRendererProps {
   /**
    * Uploads a local file URI to R2 and returns the answer-shaped
    * `{ r2Key, mime }`. The in-app screen passes a wrapper around
-   * `useFormUpload`; the token screen passes one around the token
-   * signature-upload endpoint. If omitted, binary fields (signature,
-   * photo) carrying local URIs will block submit with a friendly
-   * error.
+   * `useFormUpload`; the token screen passes one around `useTokenUpload`.
    */
-  uploadAttachment?: UploadAttachmentFn;
+  uploadAttachment: UploadAttachmentFn;
 }
 
 function isAnswerPresent(field: FormField, v: FormAnswerValue | undefined): boolean {
@@ -217,20 +211,6 @@ export function FormRenderer({
         next[field.id] = requiredMessageFor(field);
         continue;
       }
-      // Binary fields that still hold a local URI when no uploader is
-      // wired (e.g. token screen without the signature-upload endpoint).
-      if (!uploadAttachment) {
-        if (field.type === 'signature' && isLocalUri(v)) {
-          next[field.id] = s.signatureUploadUnavailable;
-        }
-        if (
-          field.type === 'photo' &&
-          Array.isArray(v) &&
-          v.some(isLocalUri)
-        ) {
-          next[field.id] = s.photoUploadUnavailable;
-        }
-      }
       // Range checks for number / scale.
       if (field.type === 'number' && typeof v === 'number') {
         if (field.min != null && v < field.min) {
@@ -268,7 +248,6 @@ export function FormRenderer({
   const uploadBinaries = async (
     src: FormAnswers,
   ): Promise<FormAnswers> => {
-    if (!uploadAttachment) return src;
     const out: FormAnswers = { ...src };
     for (const field of form.fields) {
       const v = src[field.id];
