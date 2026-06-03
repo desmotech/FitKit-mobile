@@ -174,6 +174,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     posthogKey: process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '',
     posthogHost:
       process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://eu.i.posthog.com',
+    // Local/preview feature-flag seed ("flag-a:true,flag-b:false"). Empty
+    // in prod, where PostHog is the source of truth.
+    featureFlags: process.env.EXPO_PUBLIC_FEATURE_FLAGS ?? '',
     eas: {
       projectId:
         process.env.EAS_PROJECT_ID ?? '1f6bb22c-0649-417b-af9e-9154dd4efda0',
