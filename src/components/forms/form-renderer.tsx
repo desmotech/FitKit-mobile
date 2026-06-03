@@ -63,9 +63,11 @@ function formatErrorFor(
 }
 
 export type FormAttachment = { r2Key: string; mime?: string };
+export type FormUploadKind = 'signature' | 'photo';
 export type UploadAttachmentFn = (
   uri: string,
   mime: string,
+  kind: FormUploadKind,
 ) => Promise<FormAttachment>;
 
 export interface FormRendererProps {
@@ -271,13 +273,17 @@ export function FormRenderer({
     for (const field of form.fields) {
       const v = src[field.id];
       if (field.type === 'signature' && isLocalUri(v)) {
-        const result = await uploadAttachment(v, 'image/png');
+        const result = await uploadAttachment(v, 'image/png', 'signature');
         out[field.id] = result;
       } else if (field.type === 'photo' && Array.isArray(v)) {
         const uploaded: { r2Key: string; mime?: string }[] = [];
         for (const entry of v) {
           if (isLocalUri(entry)) {
-            const result = await uploadAttachment(entry, mimeForUri(entry));
+            const result = await uploadAttachment(
+              entry,
+              mimeForUri(entry),
+              'photo',
+            );
             uploaded.push(result);
           } else if (
             typeof entry === 'object' &&

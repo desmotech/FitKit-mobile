@@ -47,7 +47,7 @@ export default function SignFormInstanceScreen() {
   const query = useFormInstance(orgId, id);
   const submit = useSubmitFormInstance(orgId, id);
   const checkInSubmit = useSubmitCheckInAnswers(orgId, id);
-  const { upload: uploadFormAttachment } = useFormUpload(orgId);
+  const { upload: uploadFormAttachment } = useFormUpload(orgId, id);
 
   const [signedAt, setSignedAt] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);

@@ -1,53 +1,28 @@
 /**
- * Forms-specific upload helper (Path A from FORMS_HANDOVER.md).
+ * Forms-specific upload helper for the authenticated in-app signing flow.
  *
- * Forms need to embed signature/photo binaries by `r2Key` in the
- * answers payload (`formAnswerValueSchema`). The existing
- * `useUpload` hook handles presign + PUT but returns an `uploadId`,
- * not an `r2Key` — its consumers (progress photos, comments) reference
- * uploads via the row id, so r2Key was never exposed.
+ * Forms embed signature/photo binaries by `r2Key` in the answers payload
+ * (`formAnswerValueSchema`). This hook presigns + PUTs a local file and
+ * returns the server-generated `{ r2Key, mime }` for the answer.
  *
- * Mobile reconstructs the r2Key client-side using the formula from
- * `apps/api/src/uploads/uploads.service.ts` on the `forms` branch:
+ *   POST /organizations/:orgId/forms/instances/:instanceId/uploads/presign
+ *     body:   { kind: 'signature' | 'photo', mime }
+ *     return: { uploadUrl, r2Key, expiresInSeconds }
  *
- *     `${PREFIX[ownerType]}/${userId}/${uploadId}.${ext}`
- *
- * For Path A we reuse the `progress_photo` ownerType so the binary
- * lands in the existing user-content bucket (the server-side forms
- * pipeline reads bytes from the default bucket — confirmed in
- * `FormsService.submitInstanceAuthenticated`). When the API later
- * adds a dedicated `compliance_signature` ownerType + immutable
- * bucket routing, swap the constants below.
- *
- * Fragility note: if the API's r2Key formula ever changes, this
- * helper silently produces wrong keys. Best mitigation is to extend
- * `PresignedUploadResponseSchema` server-side to include `r2Key`
- * directly. Tracked as FIT-189 follow-up.
+ * The r2Key comes straight from the response — we no longer reconstruct it
+ * client-side. The server scopes every key under `<orgId>/forms/<instanceId>/`
+ * and validates it again on submit (FIT-189).
  */
 import * as FileSystem from 'expo-file-system/legacy';
 import { useCallback } from 'react';
 import { useApi } from './use-api';
-import { useCurrentUser } from './use-current-user';
-import type { PresignedUploadResponseDto } from '@fitkit/shared';
 
-const FORM_OWNER_TYPE = 'progress_photo' as const;
-const FORM_PREFIX = 'progress-photos';
+export type FormUploadKind = 'signature' | 'photo';
 
-function extFromMime(mime: string): string {
-  switch (mime) {
-    case 'image/png':
-      return 'png';
-    case 'image/jpeg':
-      return 'jpg';
-    case 'image/webp':
-      return 'webp';
-    case 'image/heic':
-      return 'heic';
-    case 'image/heif':
-      return 'heif';
-    default:
-      return 'bin';
-  }
+interface FormUploadPresignResponse {
+  uploadUrl: string;
+  r2Key: string;
+  expiresInSeconds: number;
 }
 
 export interface UploadedFormAttachment {
@@ -55,39 +30,32 @@ export interface UploadedFormAttachment {
   mime: string;
 }
 
-export function useFormUpload(orgId: string | undefined | null) {
+export function useFormUpload(
+  orgId: string | undefined | null,
+  instanceId: string | undefined | null,
+) {
   const { fetchWithAuth } = useApi();
-  const { user } = useCurrentUser();
 
   const upload = useCallback(
     async (
       fileUri: string,
       mime: string,
-      filename?: string,
+      kind: FormUploadKind,
     ): Promise<UploadedFormAttachment> => {
       if (!orgId) throw new Error('Missing orgId');
-      if (!user?.id) throw new Error('Not authenticated');
+      if (!instanceId) throw new Error('Missing instanceId');
 
       const info = await FileSystem.getInfoAsync(fileUri);
       if (!info.exists) throw new Error('File not found');
-      const size = info.size ?? 0;
-      if (size <= 0) throw new Error('Empty file');
-
-      const inferredName =
-        filename ?? `form-${Date.now()}.${extFromMime(mime)}`;
+      if ((info.size ?? 0) <= 0) throw new Error('Empty file');
 
       const { data } = (await fetchWithAuth(
-        `/organizations/${orgId}/uploads/presign`,
+        `/organizations/${orgId}/forms/instances/${instanceId}/uploads/presign`,
         {
           method: 'POST',
-          body: JSON.stringify({
-            ownerType: FORM_OWNER_TYPE,
-            mimeType: mime,
-            fileSize: size,
-            filename: inferredName,
-          }),
+          body: JSON.stringify({ kind, mime }),
         },
-      )) as { data: PresignedUploadResponseDto };
+      )) as { data: FormUploadPresignResponse };
 
       const put = await FileSystem.uploadAsync(data.uploadUrl, fileUri, {
         httpMethod: 'PUT',
@@ -98,10 +66,9 @@ export function useFormUpload(orgId: string | undefined | null) {
         throw new Error(`Upload failed (HTTP ${put.status})`);
       }
 
-      const r2Key = `${FORM_PREFIX}/${user.id}/${data.uploadId}.${extFromMime(mime)}`;
-      return { r2Key, mime };
+      return { r2Key: data.r2Key, mime };
     },
-    [fetchWithAuth, orgId, user?.id],
+    [fetchWithAuth, orgId, instanceId],
   );
 
   return { upload };

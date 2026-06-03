@@ -143,44 +143,44 @@ export function useSubmitFormByToken(token: string | undefined) {
 }
 
 /**
- * Uploads a signature PNG via the public token-gated upload endpoint.
+ * Uploads a signature or photo binary via the public token-gated upload
+ * endpoint.
  *
- *   POST /forms/sign/:token/signature-upload
- *   → { uploadUrl, r2Key, expiresInSeconds }
+ *   POST /forms/sign/:token/uploads/presign
+ *     body: { kind: 'signature' | 'photo', mime }
+ *     → { uploadUrl, r2Key, expiresInSeconds }
  *
- * The server pre-signs a PUT URL pinned to Content-Type: image/png
- * under `signatures/{orgId}/{instanceId}/{ts}.png` in the default
- * R2 bucket. 5-minute TTL on the URL. Mobile flow:
+ * The server pre-signs a PUT URL pinned to the requested Content-Type
+ * under the per-instance prefix `<orgId>/forms/<instanceId>/<kind>/…`
+ * in the default R2 bucket (5-minute TTL). Mobile flow:
  *
- *   1. POST → get presigned URL + r2Key
- *   2. PUT the PNG bytes with Content-Type: image/png
- *   3. Submit form answer carrying { r2Key, mime: 'image/png' }
- *
- * Photos via the token route are not yet supported server-side.
+ *   1. POST → get presigned URL + server-generated r2Key
+ *   2. PUT the bytes with the matching Content-Type
+ *   3. Submit form answer carrying { r2Key, mime }
  */
-export function useTokenSignatureUpload(token: string | undefined) {
+export type FormUploadKind = 'signature' | 'photo';
+
+export function useTokenUpload(token: string | undefined) {
   return async (
     fileUri: string,
     mime: string,
+    kind: FormUploadKind,
   ): Promise<{ r2Key: string; mime: string }> => {
     if (!token) throw new Error('Missing token');
-    if (mime !== 'image/png') {
-      // Server pins Content-Type to image/png. Token-route photo upload
-      // doesn't exist; keep this guard tight so any photo field on a
-      // token-gated form fails loudly rather than silently uploading
-      // wrong bytes.
-      throw new Error('Token signature upload only supports image/png');
-    }
     const presignRes = await fetch(
-      `${apiUrl}/forms/sign/${token}/signature-upload`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' } },
+      `${apiUrl}/forms/sign/${token}/uploads/presign`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, mime }),
+      },
     );
     if (!presignRes.ok) {
       const status = classify(presignRes.status);
       throw new Error(
         status === 'expired'
           ? 'This signing link has expired.'
-          : 'Could not prepare signature upload.',
+          : 'Could not prepare upload.',
       );
     }
     const body = (await presignRes.json()) as {
@@ -194,7 +194,7 @@ export function useTokenSignatureUpload(token: string | undefined) {
       uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
     });
     if (put.status < 200 || put.status >= 300) {
-      throw new Error(`Signature upload failed (HTTP ${put.status})`);
+      throw new Error(`Upload failed (HTTP ${put.status})`);
     }
     return { r2Key, mime };
   };
