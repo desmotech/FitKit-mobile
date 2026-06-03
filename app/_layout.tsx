@@ -23,6 +23,7 @@ import type { Locale } from '@/i18n/config';
 import { secureTokenCache } from '@/lib/secure-token-cache';
 import { apiUrl, clerkPublishableKey, sentryDsn } from '@/lib/api';
 import { useAnalyticsIdentify } from '@/hooks/use-analytics-identify';
+import { useScreenTracking } from '@/hooks/use-screen-tracking';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 // Sentry — initialized once at module load, per the Expo manual-setup
@@ -213,6 +214,7 @@ function ConfigErrorScreen() {
 function PushBootstrap() {
   usePushNotifications();
   useAnalyticsIdentify();
+  useScreenTracking();
   return null;
 }
 
