@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertCircle,
-  ArrowUp,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -10,30 +9,18 @@ import {
   Clock,
   Dumbbell,
   MessageSquare,
-  Paperclip,
   PencilLine,
-  X,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useMemo, useState } from 'react';
-import * as ImagePicker from 'expo-image-picker';
-import { Image as ExpoImage } from 'expo-image';
 import {
-  ActionSheetIOS,
-  ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeOut,
-} from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -54,13 +41,13 @@ import {
   FKScreenHeader,
   useFKColors,
 } from '@/components/fk';
-import { useMessageUploads } from '@/hooks/use-message-uploads';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
-import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
+import { CoachNote } from '@/components/workout/coach-note';
 import { analytics } from '@/lib/analytics';
 import { displayFamily } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
+import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -84,6 +71,7 @@ export default function WorkoutDetailScreen() {
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();
+  const ink = programSheetInk(isDark);
 
   // Direct fetch by id — week-independent. Previously this screen looked
   // up the assignment from the current week's data, which silently failed
@@ -98,37 +86,23 @@ export default function WorkoutDetailScreen() {
   const [checkedSections, setCheckedSections] = useState<
     Record<string, boolean>
   >({});
-  // Collapsible entries kept off-tab (History list + Comments thread).
+  // History list expands inline under its CTA.
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
 
-  // Workout-anchored comment thread. Hook is enabled-gated so it skips
-  // until we have orgId + assignmentId + membershipId.
+  // Workout-anchored comment thread — read here only for the header chat
+  // button's unread badge. The thread + composer live in the chat pageSheet
+  // (`[id]/chat`), which owns send / mark-read / uploads.
   const comments = useWorkoutComments(
     activeOrganization?.id,
     id,
     primaryMembership?.id,
   );
 
-  // Attachment upload state for the comments composer. Stays at the
-  // screen level so the chosen images persist across tab switches.
-  const uploads = useMessageUploads(activeOrganization?.id);
-
   // Mark-completed action. One-way (no uncomplete endpoint); on success we
   // invalidate the assignment + week caches so the day cell and this screen
   // both reflect the new status.
   const queryClient = useQueryClient();
   const completeAssignment = useCompleteAssignment(activeOrganization?.id, id);
-
-  // Mark thread as read whenever the Comments entry is open and there's
-  // pending unread. `markRead.mutate` is fresh per-render so we gate on
-  // unreadCount + isPending to avoid a loop.
-  useEffect(() => {
-    if (!commentsOpen) return;
-    if (!comments.unreadCount) return;
-    if (comments.markRead.isPending) return;
-    comments.markRead.mutate();
-  }, [commentsOpen, comments.unreadCount, comments.markRead]);
 
   // PostHog: capture workout open once the assignment resolves. Gated on
   // workout id so navigating between workouts re-fires.
@@ -330,7 +304,78 @@ export default function WorkoutDetailScreen() {
       <FKAmbientBackdrop />
       {/* Nav title intentionally blank — the workout name lives in the
           poster hero below (no duplication, program-sheet large-title). */}
-      <FKScreenHeader title="" />
+      <FKScreenHeader
+        title=""
+        backLabel={null}
+        trailing={
+          <Pressable
+            onPress={() => {
+              haptics.tap();
+              router.push({
+                pathname: '/(tabs)/workouts/[id]/chat',
+                params: { id: assignment.id, name: workout.displayName },
+              });
+            }}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={ps.chat}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 12,
+                  borderCurve: 'continuous',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isDark
+                    ? 'rgba(255,255,255,0.08)'
+                    : 'rgba(15,23,42,0.06)',
+                  borderWidth: StyleSheet.hairlineWidth,
+                  borderColor: ink.line,
+                  opacity: pressed ? 0.6 : 1,
+                }}
+              >
+                <MessageSquare
+                  size={18}
+                  color={colors.foreground}
+                  strokeWidth={2.2}
+                />
+                {comments.unreadCount > 0 ? (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      minWidth: 16,
+                      height: 16,
+                      paddingHorizontal: 4,
+                      borderRadius: 8,
+                      backgroundColor: '#0E8C8C',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1.5,
+                      borderColor: colors.background,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 9.5,
+                        fontWeight: '800',
+                        color: '#fff',
+                        fontVariant: ['tabular-nums'],
+                      }}
+                    >
+                      {comments.unreadCount > 9 ? '9+' : comments.unreadCount}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </Pressable>
+        }
+      />
 
       <ScrollView
         // `never` because FKScreenHeader is the sole owner of the top
@@ -371,7 +416,7 @@ export default function WorkoutDetailScreen() {
               style={{
                 flex: 1,
                 fontSize: 11,
-                color: colors.mutedFg,
+                color: ink.muted,
                 letterSpacing: 1.6,
                 textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
@@ -449,7 +494,7 @@ export default function WorkoutDetailScreen() {
                       borderRadius: 8,
                       borderCurve: 'continuous',
                       borderWidth: 1,
-                      borderColor: i === 0 ? colors.primary : colors.border,
+                      borderColor: i === 0 ? colors.primary : ink.line,
                     }}
                   >
                     <Text
@@ -458,7 +503,7 @@ export default function WorkoutDetailScreen() {
                         letterSpacing: 1,
                         textTransform: 'uppercase',
                         fontFamily: 'DMMono-Medium',
-                        color: i === 0 ? colors.primary : colors.mutedFg,
+                        color: i === 0 ? colors.primaryText : ink.muted,
                       }}
                     >
                       {txt}
@@ -494,11 +539,14 @@ export default function WorkoutDetailScreen() {
                 style={{
                   flex: 1,
                   alignItems: 'center',
+                  paddingHorizontal: 6,
                   borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                  borderColor: colors.border,
+                  borderColor: ink.line,
                 }}
               >
                 <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                   style={{
                     fontSize: 24,
                     color: colors.foreground,
@@ -510,9 +558,10 @@ export default function WorkoutDetailScreen() {
                   {value}
                 </Text>
                 <Text
+                  numberOfLines={1}
                   style={{
                     fontSize: 9.5,
-                    color: colors.mutedFg,
+                    color: ink.muted,
                     letterSpacing: 1,
                     textTransform: 'uppercase',
                     marginTop: 4,
@@ -526,15 +575,19 @@ export default function WorkoutDetailScreen() {
           </View>
         </View>
 
-        {/* Coach pre-note — folded inline (Notes are kept accessible
-            without a tab bar in the new editorial layout). */}
+        {/* Coach pre-note — static, coach-authored callout (one-directional;
+            the two-way chat lives behind the header button). */}
         {assignment.coachPreNote ? (
-          <CoachNoteCallout
-            label={ps.coachNote}
-            body={assignment.coachPreNote}
-            isRTL={isRTL}
-            colors={colors}
-          />
+          <View style={{ paddingHorizontal: 18, paddingTop: 6 }}>
+            <CoachNote
+              text={assignment.coachPreNote}
+              label={ps.coachNote}
+              isRTL={isRTL}
+              lang={lang}
+              colors={colors}
+              ink={ink}
+            />
+          </View>
         ) : null}
 
         {/* Body — the structured "program sheet": a session progress meter
@@ -560,10 +613,11 @@ export default function WorkoutDetailScreen() {
                   locked={isCompleted}
                   onToggleSection={handleToggleSection}
                   isRTL={isRTL}
+                  lang={lang}
                   labels={{
                     watchDemo: ps.watchDemo,
                     formCues: ps.formCues,
-                    comments: ps.comments,
+                    coachNote: ps.coachNote,
                     markComplete: ps.a11yMarkSectionComplete,
                     markIncomplete: ps.a11yMarkSectionIncomplete,
                   }}
@@ -575,18 +629,6 @@ export default function WorkoutDetailScreen() {
                         id: assignment.id,
                         url: mv.exercise.videoUrl,
                         title: mv.exercise.name,
-                      },
-                    });
-                  }}
-                  onPressComments={(mv) => {
-                    const wid = assignment.workout?.id;
-                    if (!wid) return;
-                    router.push({
-                      pathname: '/(tabs)/workouts/[id]/exercise/[movementId]',
-                      params: {
-                        id: wid,
-                        movementId: mv.id,
-                        name: mv.exercise.name,
                       },
                     });
                   }}
@@ -713,156 +755,21 @@ export default function WorkoutDetailScreen() {
           />
         </View>
 
-        {/* Coach post-note — folded inline. */}
+        {/* Coach post-note — static, coach-authored callout. */}
         {assignment.coachPostNote ? (
-          <CoachNoteCallout
-            label={ps.postWorkout}
-            body={assignment.coachPostNote}
-            isRTL={isRTL}
-            colors={colors}
-            tone="post"
-          />
+          <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
+            <CoachNote
+              text={assignment.coachPostNote}
+              label={ps.postWorkout}
+              isRTL={isRTL}
+              lang={lang}
+              colors={colors}
+              ink={ink}
+            />
+          </View>
         ) : null}
 
-        {/* Comments — kept accessible as a collapsible entry. */}
-        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-          <CommentsToggle
-            label={ps.comments}
-            count={comments.unreadCount}
-            open={commentsOpen}
-            onToggle={() => {
-              haptics.tap();
-              setCommentsOpen((v) => !v);
-            }}
-            isRTL={isRTL}
-            colors={colors}
-          />
-          {commentsOpen ? (
-            <View style={{ marginTop: 12 }}>
-              <CommentsView
-                isRTL={isRTL}
-                colors={colors}
-                isDark={isDark}
-                lang={lang}
-                labels={{
-                  noComments: labels.noComments,
-                  writeComment: labels.writeComment,
-                  loadEarlier: labels.loadEarlier,
-                  deleteComment: labels.deleteComment,
-                  cancel: labels.cancel,
-                }}
-                currentMembershipId={primaryMembership?.id ?? null}
-                comments={comments.allComments}
-                isLoading={comments.query.isLoading}
-                hasMore={!!comments.query.hasNextPage}
-                isLoadingMore={comments.query.isFetchingNextPage}
-                isSending={comments.sendComment.isPending}
-                onLoadMore={() => comments.query.fetchNextPage()}
-                uploads={uploads.uploads}
-                hasPendingUploads={uploads.hasPendingUploads}
-                onAddPicked={uploads.addPicked}
-                onRemoveUpload={uploads.removeUpload}
-                onSend={async (content) => {
-                  const trimmed = content.trim();
-                  const attachmentIds = uploads.getReadyUploadIds();
-                  if (!trimmed && attachmentIds.length === 0) return false;
-                  try {
-                    await comments.sendComment.mutateAsync({
-                      content: trimmed || undefined,
-                      attachmentIds:
-                        attachmentIds.length > 0 ? attachmentIds : undefined,
-                    });
-                    uploads.clearAll();
-                    haptics.success();
-                    return true;
-                  } catch {
-                    haptics.error();
-                    return false;
-                  }
-                }}
-                onDelete={(messageId) => comments.deleteComment.mutate(messageId)}
-              />
-            </View>
-          ) : null}
-        </View>
       </ScrollView>
-    </View>
-  );
-}
-
-// ── Coach note callout ───────────────────────────────────────────────
-// Inline replacement for the old Notes tab — a brand-striped card carrying
-// the coach's pre- or post-workout note.
-
-function CoachNoteCallout({
-  label,
-  body,
-  isRTL,
-  colors,
-  tone = 'pre',
-}: {
-  label: string;
-  body: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-  tone?: 'pre' | 'post';
-}) {
-  const accent = tone === 'post' ? '#C9974D' : colors.primaryText;
-  const accentText = tone === 'post' ? '#8B6A35' : colors.primaryText;
-  return (
-    <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-      <View
-        style={{
-          padding: 16,
-          borderRadius: 18,
-          borderCurve: 'continuous',
-          borderWidth: 1,
-          borderColor:
-            tone === 'post'
-              ? 'rgba(201,151,77,0.30)'
-              : colors.isDark
-                ? 'rgba(39,200,186,0.24)'
-                : 'rgba(14,140,140,0.22)',
-          backgroundColor:
-            tone === 'post' ? 'rgba(201,151,77,0.06)' : 'transparent',
-          overflow: 'hidden',
-        }}
-      >
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            [isRTL ? 'right' : 'left']: 0,
-            width: 3,
-            backgroundColor: accent,
-          }}
-        />
-        <Text
-          style={{
-            fontFamily: 'DMMono',
-            fontSize: 10,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            color: accentText,
-            marginBottom: 6,
-            textAlign: isRTL ? 'right' : 'left',
-          }}
-        >
-          {label}
-        </Text>
-        <Text
-          style={{
-            fontSize: 13.5,
-            lineHeight: 20,
-            color: colors.foreground,
-            textAlign: isRTL ? 'right' : 'left',
-          }}
-        >
-          {body}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -886,7 +793,7 @@ function SessionMeter({
   isRTL: boolean;
   colors: ReturnType<typeof useFKColors>;
 }) {
-  const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
+  const ink = programSheetInk(colors.isDark);
   return (
     <View
       style={{
@@ -901,7 +808,7 @@ function SessionMeter({
           fontSize: 11,
           letterSpacing: 1.4,
           textTransform: 'uppercase',
-          color: colors.mutedFg,
+          color: ink.muted,
         }}
       >
         {label}
@@ -920,7 +827,7 @@ function SessionMeter({
               flex: 1,
               height: 4,
               borderRadius: 2,
-              backgroundColor: on ? sage : colors.border,
+              backgroundColor: on ? ink.sage : ink.line,
             }}
           />
         ))}
@@ -929,7 +836,7 @@ function SessionMeter({
         style={{
           fontFamily: 'DMMono',
           fontSize: 12,
-          color: done ? sage : colors.mutedFg,
+          color: done ? ink.sage : ink.muted,
           fontVariant: ['tabular-nums'],
         }}
       >
@@ -971,90 +878,12 @@ function LastResultFooter({
         fontFamily: 'DMMono',
         fontSize: 11,
         letterSpacing: 0.6,
-        color: colors.mutedFg,
+        color: programSheetInk(colors.isDark).muted,
         marginTop: 1,
       }}
     >
       {parts.join(' · ')}
     </Text>
-  );
-}
-
-// ── Comments collapsible header ──────────────────────────────────────
-
-function CommentsToggle({
-  label,
-  count,
-  open,
-  onToggle,
-  isRTL,
-  colors,
-}: {
-  label: string;
-  count: number;
-  open: boolean;
-  onToggle: () => void;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-}) {
-  const Chevron = open ? ChevronUp : ChevronDown;
-  return (
-    <Pressable
-      onPress={onToggle}
-      accessibilityRole="button"
-      accessibilityState={{ expanded: open }}
-      style={({ pressed }) => [
-        {
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          gap: 10,
-        },
-        pressed && { opacity: 0.6 },
-      ]}
-    >
-      <MessageSquare size={16} color={colors.mutedFg} strokeWidth={2.2} />
-      <Text
-        style={{
-          fontSize: 15,
-          fontWeight: '600',
-          color: colors.foreground,
-        }}
-      >
-        {label}
-      </Text>
-      {count > 0 ? (
-        <View
-          style={{
-            minWidth: 18,
-            height: 18,
-            borderRadius: 999,
-            paddingHorizontal: 5,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: '#0E8C8C',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 10,
-              fontWeight: '800',
-              color: '#fff',
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {count > 9 ? '9+' : count}
-          </Text>
-        </View>
-      ) : null}
-      <View
-        style={{
-          marginLeft: isRTL ? 0 : 'auto',
-          marginRight: isRTL ? 'auto' : 0,
-        }}
-      >
-        <Chevron size={18} color={colors.mutedFg} strokeWidth={2.2} />
-      </View>
-    </Pressable>
   );
 }
 
@@ -1354,747 +1183,6 @@ function parseScore(s: string | null | undefined): number | null {
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
-
-// ── Comments view ────────────────────────────────────────────────────
-// Workout-anchored chat thread. Renders a column of message bubbles
-// (own vs other), a "Load earlier" header when more history is available,
-// date separators, and a composer pinned below. Mirrors the web's
-// `WorkoutCommentsPanel` minus realtime + file attachments.
-
-function isSameDay(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-type CommentItem =
-  | { type: 'date'; date: Date }
-  | { type: 'message'; message: MessageResponse };
-
-function CommentsView({
-  isRTL,
-  colors,
-  isDark,
-  lang,
-  labels,
-  currentMembershipId,
-  comments,
-  isLoading,
-  hasMore,
-  isLoadingMore,
-  isSending,
-  onLoadMore,
-  uploads,
-  hasPendingUploads,
-  onAddPicked,
-  onRemoveUpload,
-  onSend,
-  onDelete,
-}: {
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-  isDark: boolean;
-  lang: string;
-  labels: {
-    noComments: string;
-    writeComment: string;
-    loadEarlier: string;
-    deleteComment: string;
-    cancel: string;
-  };
-  currentMembershipId: string | null;
-  comments: MessageResponse[];
-  isLoading: boolean;
-  hasMore: boolean;
-  isLoadingMore: boolean;
-  isSending: boolean;
-  onLoadMore: () => void;
-  uploads: import('@/hooks/use-message-uploads').UploadItem[];
-  hasPendingUploads: boolean;
-  onAddPicked: (asset: {
-    uri: string;
-    width: number;
-    height: number;
-    fileName?: string | null;
-    mimeType?: string | null;
-    fileSize?: number | null;
-  }) => Promise<string | null>;
-  onRemoveUpload: (localId: string) => void;
-  onSend: (content: string) => Promise<boolean>;
-  onDelete: (messageId: string) => void;
-}) {
-  const haptics = useHaptics();
-  const [draft, setDraft] = useState('');
-
-  // Build chronological list (oldest → newest) with date separators
-  // injected at day boundaries. Stored newest-first in the cache.
-  const items = useMemo<CommentItem[]>(() => {
-    const chronological = [...comments].reverse();
-    const out: CommentItem[] = [];
-    let lastDate: Date | null = null;
-    for (const msg of chronological) {
-      const msgDate = new Date(msg.createdAt);
-      if (!lastDate || !isSameDay(lastDate, msgDate)) {
-        out.push({ type: 'date', date: msgDate });
-        lastDate = msgDate;
-      }
-      out.push({ type: 'message', message: msg });
-    }
-    return out;
-  }, [comments]);
-
-  const handleSend = async () => {
-    const trimmed = draft.trim();
-    if (!trimmed && uploads.length === 0) return;
-    if (isSending || hasPendingUploads) return;
-    haptics.tap();
-    const ok = await onSend(trimmed);
-    if (ok) setDraft('');
-  };
-
-  // Pick from library or take a new photo via ActionSheetIOS. Each
-  // option lazily requests its permission; expo-image-picker prompts
-  // automatically if not granted.
-  const handlePickAttachment = () => {
-    haptics.tap();
-    const opts = ['Take Photo', 'Choose from Library', labels.cancel];
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        options: opts,
-        cancelButtonIndex: 2,
-        userInterfaceStyle: isDark ? 'dark' : 'light',
-      },
-      async (idx) => {
-        let result: ImagePicker.ImagePickerResult | null = null;
-        if (idx === 0) {
-          const perm = await ImagePicker.requestCameraPermissionsAsync();
-          if (!perm.granted) return;
-          result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.9,
-            exif: false,
-          });
-        } else if (idx === 1) {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) return;
-          result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            quality: 0.9,
-            exif: false,
-            allowsMultipleSelection: false,
-          });
-        }
-        if (!result || result.canceled || !result.assets?.[0]) return;
-        const a = result.assets[0];
-        await onAddPicked({
-          uri: a.uri,
-          width: a.width ?? 0,
-          height: a.height ?? 0,
-          fileName: a.fileName,
-          mimeType: a.mimeType,
-          fileSize: a.fileSize,
-        });
-      },
-    );
-  };
-
-  const handleLongPress = (msg: MessageResponse) => {
-    if (msg.senderMembershipId !== currentMembershipId) return;
-    haptics.tap();
-    Alert.alert(labels.deleteComment, undefined, [
-      { text: labels.cancel, style: 'cancel' },
-      {
-        text: labels.deleteComment,
-        style: 'destructive',
-        onPress: () => onDelete(msg.id),
-      },
-    ]);
-  };
-
-  return (
-    <Animated.View entering={FadeIn.duration(220)} exiting={FadeOut.duration(140)}>
-      <View
-        style={{
-          backgroundColor: colors.card,
-          borderRadius: 18,
-          borderCurve: 'continuous',
-          borderWidth: 1,
-          borderColor: 'rgba(94,112,130,0.18)',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Thread body — non-virtualized View since the parent screen
-            owns the only ScrollView (nesting a VirtualizedList breaks
-            its windowing). Comments load 50 per page and the typical
-            workout has well under that count, so the perf hit is nil.
-            Older messages live above newer ones, top → bottom. */}
-        <View style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 4 }}>
-          {/* Load-earlier pill — sits at the top of the thread because
-              it loads OLDER messages backward in time. */}
-          {!isLoading && hasMore ? (
-            <View style={{ alignItems: 'center', paddingBottom: 6 }}>
-              <Pressable
-                onPress={onLoadMore}
-                disabled={isLoadingMore}
-                style={({ pressed }) => [
-                  {
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
-                    borderRadius: 999,
-                    backgroundColor: isDark
-                      ? 'rgba(255,255,255,0.06)'
-                      : 'rgba(15,23,42,0.06)',
-                  },
-                  pressed && { opacity: 0.6 },
-                ]}
-              >
-                {isLoadingMore ? (
-                  <ActivityIndicator size="small" color={colors.mutedFg} />
-                ) : (
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: '600',
-                      color: colors.foreground,
-                    }}
-                  >
-                    {labels.loadEarlier}
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          ) : null}
-
-          {isLoading ? (
-            <View style={{ padding: 4, gap: 10 }}>
-              <Skeleton style={{ height: 28, width: '60%', borderRadius: 14, alignSelf: 'flex-start' }} />
-              <Skeleton style={{ height: 28, width: '50%', borderRadius: 14, alignSelf: 'flex-end' }} />
-              <Skeleton style={{ height: 28, width: '40%', borderRadius: 14, alignSelf: 'flex-start' }} />
-            </View>
-          ) : items.length === 0 ? (
-            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: colors.mutedFg,
-                  textAlign: 'center',
-                }}
-              >
-                {labels.noComments}
-              </Text>
-            </View>
-          ) : (
-            items.map((item, idx) => {
-              if (item.type === 'date') {
-                return (
-                  <View
-                    key={`date-${item.date.toISOString()}-${idx}`}
-                    style={{ alignItems: 'center', paddingVertical: 8 }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: '700',
-                        color: colors.mutedFg,
-                        letterSpacing: 0.5,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {item.date.toLocaleDateString(lang, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Text>
-                  </View>
-                );
-              }
-              const isOwn =
-                item.message.senderMembershipId === currentMembershipId;
-              return (
-                <MessageBubble
-                  key={item.message.id}
-                  message={item.message}
-                  isOwn={isOwn}
-                  isRTL={isRTL}
-                  colors={colors}
-                  isDark={isDark}
-                  lang={lang}
-                  onLongPress={() => handleLongPress(item.message)}
-                />
-              );
-            })
-          )}
-        </View>
-
-        {/* Composer — iOS Messages pattern:
-            [+] leading attachment button (placeholder until upload API
-              lands) + pill-shaped input that holds the send button
-              inside its trailing edge. Send is a filled brand-teal
-              circle with an up-arrow glyph, only active when the draft
-              has non-whitespace content.
-
-            Pressable owns press handling only; all visual styling lives
-            on child Views so backgroundColor is guaranteed to render. */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-        >
-          {/* Upload preview chips — shown above the composer once the
-              user picks files. Tap the x to drop one before sending. */}
-          {uploads.length > 0 ? (
-            <View
-              style={{
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                flexWrap: 'wrap',
-                gap: 8,
-                paddingHorizontal: 12,
-                paddingTop: 10,
-                paddingBottom: 4,
-                borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: 'rgba(60,60,67,0.18)',
-                backgroundColor: isDark
-                  ? 'rgba(255,255,255,0.02)'
-                  : 'rgba(15,23,42,0.02)',
-              }}
-            >
-              {uploads.map((u) => (
-                <UploadPreviewChip
-                  key={u.localId}
-                  upload={u}
-                  onRemove={() => onRemoveUpload(u.localId)}
-                />
-              ))}
-            </View>
-          ) : null}
-
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'flex-end',
-              gap: 8,
-              paddingHorizontal: 10,
-              paddingTop: 10,
-              paddingBottom: 10,
-              borderTopWidth:
-                uploads.length > 0 ? 0 : StyleSheet.hairlineWidth,
-              borderTopColor: 'rgba(60,60,67,0.18)',
-              backgroundColor: isDark
-                ? 'rgba(255,255,255,0.02)'
-                : 'rgba(15,23,42,0.02)',
-            }}
-          >
-            {/* Leading attachment button — opens an ActionSheet to pick
-                Camera vs Photo Library. */}
-            <Pressable
-              onPress={handlePickAttachment}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel="Add attachment"
-            >
-              {({ pressed }) => (
-                <View
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 17,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isDark
-                      ? 'rgba(255,255,255,0.08)'
-                      : 'rgba(15,23,42,0.06)',
-                    opacity: pressed ? 0.6 : 1,
-                  }}
-                >
-                  <Paperclip
-                    size={16}
-                    color={colors.mutedFg}
-                    strokeWidth={2.2}
-                  />
-                </View>
-              )}
-            </Pressable>
-
-            {/* Pill input — text field on the leading side, send button
-                tucked into the trailing corner. Min height matches the
-                attachment button so they sit on the same baseline. */}
-            <View
-              style={{
-                flex: 1,
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                alignItems: 'flex-end',
-                minHeight: 34,
-                maxHeight: 120,
-                paddingHorizontal: 4,
-                paddingVertical: 3,
-                borderRadius: 18,
-                borderCurve: 'continuous',
-                backgroundColor: colors.card,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: 'rgba(60,60,67,0.24)',
-              }}
-            >
-              <TextInput
-                value={draft}
-                onChangeText={setDraft}
-                placeholder={labels.writeComment}
-                placeholderTextColor={colors.mutedFg}
-                multiline
-                editable={!isSending}
-                style={{
-                  flex: 1,
-                  fontSize: 15,
-                  lineHeight: 20,
-                  color: colors.foreground,
-                  textAlign: isRTL ? 'right' : 'left',
-                  paddingHorizontal: 10,
-                  paddingTop: Platform.OS === 'ios' ? 6 : 4,
-                  paddingBottom: Platform.OS === 'ios' ? 6 : 4,
-                }}
-              />
-              {/* Send — 28pt circle, brand teal, arrow-up glyph. Hides
-                  to a translucent disc when draft is empty so the
-                  affordance stays present without competing with text. */}
-              <Pressable
-                onPress={handleSend}
-                disabled={
-                  (!draft.trim() && uploads.length === 0) ||
-                  isSending ||
-                  hasPendingUploads
-                }
-                hitSlop={6}
-                accessibilityRole="button"
-                accessibilityLabel="Send"
-              >
-                {({ pressed }) => {
-                  const canSend =
-                    (draft.trim().length > 0 || uploads.length > 0) &&
-                    !isSending &&
-                    !hasPendingUploads;
-                  return (
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: canSend
-                        ? '#0E8C8C'
-                        : 'rgba(60,60,67,0.25)',
-                      opacity: pressed ? 0.8 : 1,
-                    }}
-                  >
-                    {isSending ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <ArrowUp size={16} color="#fff" strokeWidth={2.8} />
-                    )}
-                  </View>
-                  );
-                }}
-              </Pressable>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Animated.View>
-  );
-}
-
-// Composer preview chip — 56pt rounded square thumbnail with a small
-// "x" pill in the corner and a translucent progress overlay while
-// uploading. Tap x to drop the file before sending.
-function UploadPreviewChip({
-  upload,
-  onRemove,
-}: {
-  upload: import('@/hooks/use-message-uploads').UploadItem;
-  onRemove: () => void;
-}) {
-  const haptics = useHaptics();
-  const done = upload.progress === 100 && !!upload.uploadId && !upload.error;
-  const failed = !!upload.error;
-
-  return (
-    <View style={{ width: 64, height: 64, position: 'relative' }}>
-      <View
-        style={{
-          flex: 1,
-          borderRadius: 12,
-          borderCurve: 'continuous',
-          overflow: 'hidden',
-          backgroundColor: 'rgba(120,120,128,0.10)',
-        }}
-      >
-        <ExpoImage
-          source={{ uri: upload.uri }}
-          style={{ width: '100%', height: '100%' }}
-          contentFit="cover"
-        />
-        {!done && !failed ? (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              backgroundColor: 'rgba(0,0,0,0.35)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ActivityIndicator size="small" color="#fff" />
-          </View>
-        ) : null}
-        {failed ? (
-          <Pressable
-            onPress={() =>
-              Alert.alert('Upload failed', upload.error ?? 'Unknown error')
-            }
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              backgroundColor: 'rgba(184,74,64,0.45)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AlertCircle size={20} color="#fff" strokeWidth={2.4} />
-          </Pressable>
-        ) : null}
-      </View>
-      <Pressable
-        onPress={() => {
-          haptics.tap();
-          onRemove();
-        }}
-        hitSlop={6}
-        style={{
-          position: 'absolute',
-          top: -6,
-          right: -6,
-        }}
-      >
-        <View
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            backgroundColor: '#0F172A',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <X size={12} color="#fff" strokeWidth={2.8} />
-        </View>
-      </Pressable>
-    </View>
-  );
-}
-
-// Attachment grid for inside a message bubble. 1 image → 200×200 single
-// tile, multiple images → 100×100 grid, max 4 visible with "+N" overflow.
-function BubbleAttachments({
-  attachments,
-}: {
-  attachments: AttachmentResponse[];
-}) {
-  const visible = attachments.slice(0, 4);
-  const overflow = attachments.length - visible.length;
-  const single = visible.length === 1;
-
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 4,
-        borderRadius: 12,
-        overflow: 'hidden',
-      }}
-    >
-      {visible.map((a, idx) => (
-        <View
-          key={a.id}
-          style={{
-            width: single ? 220 : 104,
-            height: single ? 220 : 104,
-            borderRadius: 10,
-            overflow: 'hidden',
-            backgroundColor: 'rgba(0,0,0,0.05)',
-            position: 'relative',
-          }}
-        >
-          <ExpoImage
-            source={{ uri: a.thumbnailUrl ?? a.url }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            transition={120}
-          />
-          {idx === visible.length - 1 && overflow > 0 ? (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                bottom: 0,
-                left: 0,
-                backgroundColor: 'rgba(0,0,0,0.45)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 20,
-                  fontWeight: '800',
-                  color: '#fff',
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                +{overflow}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MessageBubble({
-  message,
-  isOwn,
-  isRTL,
-  colors,
-  isDark,
-  lang,
-  onLongPress,
-}: {
-  message: MessageResponse;
-  isOwn: boolean;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-  isDark: boolean;
-  lang: string;
-  onLongPress: () => void;
-}) {
-  // Own messages flush to the trailing edge of the row (right in LTR,
-  // left in RTL). Other-side messages flush to the leading edge.
-  const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
-  const bubbleBg = isOwn
-    ? '#0E8C8C'
-    : isDark
-      ? 'rgba(255,255,255,0.08)'
-      : 'rgba(15,23,42,0.06)';
-  const bubbleFg = isOwn ? '#fff' : colors.foreground;
-  const metaFg = isOwn ? 'rgba(255,255,255,0.72)' : colors.mutedFg;
-  const timeStr = new Date(message.createdAt).toLocaleTimeString(lang, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  return (
-    <View
-      style={{
-        alignItems: align,
-        marginVertical: 2,
-      }}
-    >
-      {!isOwn && (
-        <Text
-          style={{
-            fontSize: 10,
-            fontWeight: '700',
-            color: colors.mutedFg,
-            letterSpacing: 0.4,
-            marginBottom: 2,
-            marginHorizontal: 8,
-            textTransform: 'uppercase',
-          }}
-        >
-          {message.senderName}
-        </Text>
-      )}
-      <Pressable onLongPress={onLongPress} delayLongPress={400}>
-        {({ pressed }) => (
-          <View
-            style={{
-              maxWidth: '82%',
-              paddingHorizontal:
-                message.attachments && message.attachments.length > 0 && !message.content
-                  ? 6
-                  : 12,
-              paddingVertical:
-                message.attachments && message.attachments.length > 0 && !message.content
-                  ? 6
-                  : 8,
-              borderRadius: 16,
-              borderCurve: 'continuous',
-              backgroundColor: bubbleBg,
-              opacity: pressed && isOwn ? 0.85 : 1,
-              gap: message.attachments && message.attachments.length > 0 ? 6 : 0,
-            }}
-          >
-            {message.attachments && message.attachments.length > 0 ? (
-              <BubbleAttachments attachments={message.attachments} />
-            ) : null}
-            {message.content ? (
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: bubbleFg,
-                  textAlign: isRTL ? 'right' : 'left',
-                  lineHeight: 19,
-                }}
-              >
-                {message.content}
-              </Text>
-            ) : null}
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginTop: 2,
-                gap: 4,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: metaFg,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {timeStr}
-              </Text>
-              {isOwn && message.readAt ? (
-              <Text
-                style={{
-                  fontSize: 10,
-                  color: metaFg,
-                  fontWeight: '700',
-                }}
-              >
-                ✓✓
-              </Text>
-            ) : null}
-            </View>
-          </View>
-        )}
-      </Pressable>
-    </View>
-  );
-}
-
 
 // ── Rest / Note detail ───────────────────────────────────────────────
 // Renders a minimal screen when the assignment carries no workout body.
