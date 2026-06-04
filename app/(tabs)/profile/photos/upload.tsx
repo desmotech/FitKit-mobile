@@ -46,7 +46,7 @@ function todayString() {
 
 export default function UploadPhotoScreen() {
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   const haptics = useHaptics();
   const { dir, t } = useI18n();
   const isRTL = dir === 'rtl';

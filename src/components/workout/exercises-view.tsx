@@ -75,7 +75,7 @@ export function ExercisesView({
   initialOpenSectionIds,
 }: ExercisesViewProps) {
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   const haptics = useHaptics();
 
   const [openSections, setOpenSections] = useState<Set<string>>(
@@ -117,120 +117,169 @@ export function ExercisesView({
         return (
           <Animated.View
             key={s.id}
-            layout={LinearTransition.duration(180)}
-            style={{ marginBottom: 16 }}
+            layout={LinearTransition.springify().damping(18).stiffness(200).mass(0.7)}
+            style={{ marginBottom: 18 }}
           >
-            <Pressable
-              onPress={() => toggleSection(s.id)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: isOpen }}
-              accessibilityLabel={s.title ?? sectionTypeLabel(s.type)}
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                gap: 12,
+              }}
             >
-              {({ pressed }) => (
+              {/* Number marker + timeline spine — reads as a program sheet
+                  (01 → 02 → 03), not a stack of cards. */}
+              <View style={{ width: 26, alignItems: 'center' }}>
                 <View
                   style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    width: 26,
+                    height: 26,
+                    borderRadius: 8,
+                    borderCurve: 'continuous',
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: isOpen ? colors.primary : colors.border,
+                    backgroundColor: isOpen
+                      ? isDark
+                        ? 'rgba(39,200,186,0.12)'
+                        : 'rgba(14,140,140,0.08)'
+                      : 'transparent',
                     alignItems: 'center',
-                    gap: 12,
-                    paddingVertical: 10,
-                    paddingHorizontal: 4,
-                    opacity: pressed ? 0.6 : 1,
+                    justifyContent: 'center',
                   }}
                 >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: '700',
-                        color: colors.mutedFg,
-                        letterSpacing: 1.4,
-                        textTransform: 'uppercase',
-                        textAlign: isRTL ? 'right' : 'left',
-                        fontFamily: 'DMMono',
-                      }}
-                    >
-                      {s.title ?? sectionTypeLabel(s.type)}
-                      {hasSuperset && shape === 'linear'
-                        ? ` · ${labels.superset} ${String.fromCharCode(65 + sIdx)}`
-                        : ''}
-                      {` · ${movementCount}`}
-                    </Text>
-                    {headerLine ? (
-                      <Text
-                        className="font-display"
-                        numberOfLines={1}
-                        style={{
-                          fontSize: 22,
-                          fontWeight: '800',
-                          color: colors.foreground,
-                          letterSpacing: -0.5,
-                          lineHeight: 26,
-                          marginTop: 4,
-                          textAlign: isRTL ? 'right' : 'left',
-                        }}
-                      >
-                        {headerLine}
-                      </Text>
-                    ) : null}
-                    {s.description && isOpen ? (
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          color: colors.mutedFg,
-                          lineHeight: 20,
-                          marginTop: 6,
-                          textAlign: isRTL ? 'right' : 'left',
-                        }}
-                      >
-                        {s.description}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View
+                  <Text
                     style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 10,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: isDark
-                        ? 'rgba(255,255,255,0.06)'
-                        : 'rgba(15,23,42,0.05)',
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      color: isOpen ? colors.primary : colors.mutedFg,
+                      letterSpacing: 0.2,
                     }}
                   >
-                    <SectionChevron
-                      size={18}
-                      color={colors.mutedFg}
-                      strokeWidth={2.4}
-                    />
-                  </View>
+                    {String(sIdx + 1).padStart(2, '0')}
+                  </Text>
                 </View>
-              )}
-            </Pressable>
-
-            {isOpen ? (
-              <View style={{ gap: 10, marginTop: 4 }}>
-                {groups.flat().map((mv, idx) => (
-                  <ExerciseCard
-                    key={mv.id}
-                    movement={mv}
-                    index={idx}
-                    letter={letterFor(mv, idx, groups)}
-                    hasSuperset={hasSuperset}
-                    isRTL={isRTL}
-                    labels={labels}
-                    colors={colors}
-                    isDark={isDark}
-                    hideSets={!caps.showSets}
-                    hideReps={!caps.showReps}
-                    onPlayVideo={() => onPlayVideo(mv)}
-                    onPressComments={
-                      onPressComments ? () => onPressComments(mv) : undefined
-                    }
-                  />
-                ))}
+                <View
+                  style={{
+                    flex: 1,
+                    width: StyleSheet.hairlineWidth,
+                    backgroundColor: colors.border,
+                    marginTop: 6,
+                    opacity: isOpen ? 1 : 0.45,
+                  }}
+                />
               </View>
-            ) : null}
+
+              {/* Content column */}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Pressable
+                  onPress={() => toggleSection(s.id)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: isOpen }}
+                  accessibilityLabel={s.title ?? sectionTypeLabel(s.type)}
+                >
+                  {({ pressed }) => (
+                    <View
+                      style={{
+                        flexDirection: isRTL ? 'row-reverse' : 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        paddingVertical: 4,
+                        opacity: pressed ? 0.6 : 1,
+                      }}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: colors.mutedFg,
+                            letterSpacing: 1.4,
+                            textTransform: 'uppercase',
+                            textAlign: isRTL ? 'right' : 'left',
+                            fontFamily: 'DMMono',
+                          }}
+                        >
+                          {s.title ?? sectionTypeLabel(s.type)}
+                          {hasSuperset && shape === 'linear'
+                            ? ` · ${labels.superset} ${String.fromCharCode(65 + sIdx)}`
+                            : ''}
+                          {` · ${movementCount}`}
+                        </Text>
+                        {headerLine ? (
+                          <Text
+                            className="font-display"
+                            numberOfLines={1}
+                            style={{
+                              fontSize: 22,
+                              color: colors.foreground,
+                              letterSpacing: -0.5,
+                              lineHeight: 26,
+                              marginTop: 4,
+                              textAlign: isRTL ? 'right' : 'left',
+                            }}
+                          >
+                            {headerLine}
+                          </Text>
+                        ) : null}
+                        {s.description && isOpen ? (
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              color: colors.mutedFg,
+                              lineHeight: 20,
+                              marginTop: 6,
+                              textAlign: isRTL ? 'right' : 'left',
+                            }}
+                          >
+                            {s.description}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <View
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: isDark
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'rgba(15,23,42,0.05)',
+                        }}
+                      >
+                        <SectionChevron
+                          size={18}
+                          color={colors.mutedFg}
+                          strokeWidth={2.4}
+                        />
+                      </View>
+                    </View>
+                  )}
+                </Pressable>
+
+                {isOpen ? (
+                  <View style={{ gap: 10, marginTop: 6, paddingBottom: 6 }}>
+                    {groups.flat().map((mv, idx) => (
+                      <ExerciseCard
+                        key={mv.id}
+                        movement={mv}
+                        index={idx}
+                        letter={letterFor(mv, idx, groups)}
+                        hasSuperset={hasSuperset}
+                        isRTL={isRTL}
+                        labels={labels}
+                        colors={colors}
+                        isDark={isDark}
+                        hideSets={!caps.showSets}
+                        hideReps={!caps.showReps}
+                        onPlayVideo={() => onPlayVideo(mv)}
+                        onPressComments={
+                          onPressComments ? () => onPressComments(mv) : undefined
+                        }
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            </View>
           </Animated.View>
         );
       })}
@@ -303,7 +352,7 @@ function ExerciseCard({
   return (
     <Animated.View
       entering={FadeInDown.delay(40 + index * 30).duration(260)}
-      layout={LinearTransition.duration(180)}
+      layout={LinearTransition.springify().damping(18).stiffness(200).mass(0.7)}
       style={{
         borderRadius: 18,
         borderCurve: 'continuous',
@@ -418,13 +467,12 @@ function ExerciseCard({
                 <Text
                   numberOfLines={1}
                   style={{
-                    fontSize: 18,
-                    fontWeight: '800',
-                    color: '#0E8C8C',
-                    fontFamily: 'DMMono',
+                    fontSize: 19,
+                    color: colors.primary,
+                    fontFamily: 'DMMono-Medium',
                     fontVariant: ['tabular-nums'],
                     letterSpacing: -0.3,
-                    marginTop: 2,
+                    marginTop: 3,
                     textAlign: isRTL ? 'right' : 'left',
                   }}
                 >
@@ -470,50 +518,47 @@ function ExerciseCard({
             <View
               style={{
                 flexDirection: isRTL ? 'row-reverse' : 'row',
-                gap: 8,
+                borderRadius: 12,
+                borderCurve: 'continuous',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: colors.border,
+                overflow: 'hidden',
               }}
             >
-              {stats.map((s) => (
+              {stats.map((s, i) => (
                 <View
                   key={s.key}
                   style={{
                     flex: 1,
                     paddingVertical: 12,
                     paddingHorizontal: 6,
-                    borderRadius: 12,
-                    borderCurve: 'continuous',
-                    backgroundColor: isDark
-                      ? 'rgba(14,140,140,0.16)'
-                      : 'rgba(14,140,140,0.08)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(14,140,140,0.30)',
                     alignItems: 'center',
+                    borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
+                    borderColor: colors.border,
                   }}
                 >
                   <Text
-                    className="font-display"
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     style={{
-                      fontSize: 24,
-                      fontWeight: '800',
-                      color: '#0E8C8C',
-                      letterSpacing: -0.6,
+                      fontSize: 22,
+                      color: colors.foreground,
+                      letterSpacing: -0.5,
                       fontVariant: ['tabular-nums'],
-                      fontFamily: 'DMMono',
-                      lineHeight: 28,
+                      fontFamily: 'DMMono-Medium',
+                      lineHeight: 26,
                     }}
                   >
                     {s.value}
                   </Text>
                   <Text
                     style={{
-                      fontSize: 10,
-                      fontWeight: '700',
+                      fontSize: 9.5,
                       color: colors.mutedFg,
-                      letterSpacing: 1.2,
+                      letterSpacing: 1,
                       textTransform: 'uppercase',
-                      marginTop: 2,
+                      marginTop: 4,
+                      fontFamily: 'DMMono',
                     }}
                   >
                     {s.label}

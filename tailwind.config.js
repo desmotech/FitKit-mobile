@@ -44,6 +44,10 @@ module.exports = {
           DEFAULT: c('accent'),
           foreground: c('accent-foreground'),
         },
+        energy: {
+          DEFAULT: c('energy'),
+          foreground: c('energy-foreground'),
+        },
         destructive: {
           DEFAULT: c('destructive'),
           foreground: c('destructive-foreground'),
@@ -85,10 +89,28 @@ module.exports = {
         '4xl': 'calc(var(--radius) + 16px)',
       },
       fontFamily: {
-        sans: ['Manrope', 'sans-serif'],
-        display: ['ClashGrotesk', 'sans-serif'],
+        // Body / UI — Assistant (Hebrew + Latin), full weight ramp.
+        // (Russian/Cyrillic body is routed to Manrope via bodyFamily() in
+        // src/lib/type.ts; Assistant has no Cyrillic.)
+        sans: ['Assistant-Regular', 'sans-serif'],
+        'sans-medium': ['Assistant-Medium', 'sans-serif'],
+        'sans-semibold': ['Assistant-SemiBold', 'sans-serif'],
+        'sans-bold': ['Assistant-Bold', 'sans-serif'],
+        'sans-extrabold': ['Assistant-ExtraBold', 'sans-serif'],
+        // Display — Rubik (Hebrew + Latin + Cyrillic; base alias = Bold).
+        display: ['Rubik-Bold', 'sans-serif'],
+        'display-medium': ['Rubik-Medium', 'sans-serif'],
+        'display-semibold': ['Rubik-SemiBold', 'sans-serif'],
+        'display-bold': ['Rubik-Bold', 'sans-serif'],
+        // Numerals / labels — DM Mono.
         mono: ['DMMono', 'monospace'],
-        heebo: ['Heebo', 'sans-serif'],
+        'mono-medium': ['DMMono-Medium', 'monospace'],
+        // Hebrew aliases — now the same universal Rubik/Assistant faces.
+        heebo: ['Assistant-Regular', 'sans-serif'],
+        hebrew: ['Assistant-Regular', 'sans-serif'],
+        'hebrew-bold': ['Assistant-Bold', 'sans-serif'],
+        'hebrew-display': ['Rubik-Bold', 'sans-serif'],
+        'hebrew-display-black': ['Rubik-Black', 'sans-serif'],
       },
       letterSpacing: {
         tightest: '-0.05em',

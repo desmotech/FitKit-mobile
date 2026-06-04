@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Bell, QrCode } from 'lucide-react-native';
 import { type ReactNode } from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useAnnouncementUnreadCount } from '@/hooks/use-announcements';
@@ -42,7 +42,6 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
 
   const unread = useAnnouncementUnreadCount(orgId);
   const unreadCount = unread.data?.data?.count ?? 0;
@@ -55,10 +54,7 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
   const orgInitial = (orgName?.[0] ?? 'F').toUpperCase();
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{ backgroundColor: colors.background }}
-    >
+    <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
       <View
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -66,10 +62,6 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
           justifyContent: 'space-between',
           paddingHorizontal: 16,
           paddingVertical: 10,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: isDark
-            ? 'rgba(255,255,255,0.06)'
-            : 'rgba(15,23,42,0.06)',
         }}
       >
         {/* Org identity */}
@@ -136,23 +128,23 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
           {trailing}
           <HeaderIconButton
             Icon={Bell}
+            variant="glass"
             onPress={() => {
               haptics.tap();
               onPressBell?.();
             }}
             colors={colors}
-            isDark={isDark}
             badge={unreadCount && unreadCount > 0 ? unreadCount : undefined}
           />
           {onPressQR ? (
             <HeaderIconButton
               Icon={QrCode}
+              variant="primary"
               onPress={() => {
                 haptics.tap();
                 onPressQR();
               }}
               colors={colors}
-              isDark={isDark}
             />
           ) : null}
         </View>
@@ -165,34 +157,51 @@ function HeaderIconButton({
   Icon,
   onPress,
   colors,
-  isDark,
+  variant,
   badge,
 }: {
   Icon: typeof Bell;
   onPress: () => void;
-  colors: { mutedFg: string };
-  isDark: boolean;
+  colors: ReturnType<typeof useFKColors>;
+  /** `glass` = translucent panel (bell); `primary` = filled teal (check-in). */
+  variant: 'glass' | 'primary';
   /** When set + > 0, renders a teal numeric badge over the icon. */
   badge?: number;
 }) {
+  const isDark = colors.isDark;
+  const isPrimary = variant === 'primary';
   const showBadge = badge != null && badge > 0;
   const label = showBadge ? (badge > 99 ? '99+' : String(badge)) : null;
   return (
     <TouchableOpacity
       activeOpacity={0.6}
       onPressIn={onPress}
+      hitSlop={6}
       style={{
-        width: 34,
-        height: 34,
-        borderRadius: 17,
+        width: 38,
+        height: 38,
+        borderRadius: 12,
+        borderCurve: 'continuous',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: isDark ? '#1A2A4A' : '#F1F5F9',
+        backgroundColor: isPrimary
+          ? colors.primary
+          : isDark
+            ? 'rgba(58,70,78,0.72)'
+            : 'rgba(255,255,255,0.82)',
         borderWidth: 1,
-        borderColor: isDark ? '#1E3A5F' : '#E2E8F0',
+        borderColor: isPrimary
+          ? 'transparent'
+          : isDark
+            ? 'rgba(255,255,255,0.22)'
+            : 'rgba(255,255,255,0.92)',
       }}
     >
-      <Icon size={15} color={colors.mutedFg} strokeWidth={2.2} />
+      <Icon
+        size={18}
+        color={isPrimary ? '#FFFFFF' : colors.foreground}
+        strokeWidth={2.1}
+      />
       {showBadge ? (
         <View
           style={{
@@ -207,7 +216,7 @@ function HeaderIconButton({
             alignItems: 'center',
             justifyContent: 'center',
             borderWidth: 1.5,
-            borderColor: isDark ? '#0A1628' : '#fff',
+            borderColor: isDark ? '#0B0B0D' : '#fff',
           }}
         >
           <Text

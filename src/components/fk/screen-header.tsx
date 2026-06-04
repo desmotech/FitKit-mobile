@@ -19,7 +19,7 @@
  * centered title pattern (Apple Mail compose / Reminders new task).
  */
 import { type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
@@ -43,20 +43,15 @@ export function FKScreenHeader({
   const { dir } = useI18n();
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
-  const isDark = colors.background === '#0A1628';
 
   return (
-    <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
+    <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
       <View
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           height: 44,
           paddingHorizontal: 12,
-          borderBottomWidth: StyleSheet.hairlineWidth,
-          borderBottomColor: isDark
-            ? 'rgba(255,255,255,0.06)'
-            : 'rgba(60,60,67,0.18)',
         }}
       >
         <FKBackButton onPress={onBack} label={backLabel} />

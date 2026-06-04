@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import {
   Pressable,
   type PressableProps,
@@ -22,19 +22,28 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Animated, {
+  Easing,
+  interpolateColor,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
+import { displayFamily, font } from '@/lib/type';
+import { spring } from '@/lib/motion';
 import { FKGlassPanel } from './glass-panel';
 
 export { HeroStripe } from './hero-stripe';
 export { FKAmbientBackdrop } from './ambient-backdrop';
 export { FKGlassPanel } from './glass-panel';
+export { FKRing } from './ring';
+export { FKDateRail, type FKDateRailDay } from './date-rail';
+export { FKActionBar, FKBtn } from './action-bar';
+export { FKSubScreen } from './sub-screen';
 export { FKBrandMark } from './brand-mark';
 export { FKEdgeStripe } from './edge-stripe';
 export { FKNumberedBadge } from './numbered-badge';
@@ -56,30 +65,44 @@ export {
  * `style={{ ... }}` that needs a theme-aware colour reads from here.
  */
 export const FK_LIGHT = {
-  card: '#FFFFFF',
-  foreground: '#0D1B2A',
-  background: '#F6F8FA',
-  muted: '#EEF2F6',
-  mutedFg: '#5E7082',
-  secondary: '#EEF2F6',
+  card: '#FCFBF7',
+  foreground: '#161512',
+  background: '#F6F4EE',
+  muted: '#EEEBE2',
+  mutedFg: '#605B51', // WCAG AA on bg + glass (≥4.5:1)
+  secondary: '#EEEBE2',
   secondaryFg: '#0E8C8C',
-  border: '#DDE3EA',
+  border: '#E3DFD4',
+  primary: '#0E8C8C', // brand teal — fills/graphics
+  primaryText: '#0A6E6E', // darker teal for small text (AA on light surfaces)
+  energy: '#D7FF3E',
+  energyFg: '#17160F',
 } as const;
 
 export const FK_DARK = {
-  card: '#112240',
-  foreground: '#E8F0F8',
-  background: '#0A1628',
-  muted: '#1A3050',
-  mutedFg: '#6B8FAA',
-  secondary: '#1A3050',
-  secondaryFg: '#E8F0F8',
-  border: '#1E3A5F',
+  card: '#141417',
+  foreground: '#F3F0E9',
+  background: '#0B0B0D',
+  muted: '#1B1B1F',
+  mutedFg: '#A8A398', // WCAG AA on glass (≥4.5:1)
+  secondary: '#1B1B1F',
+  secondaryFg: '#F3F0E9',
+  border: '#26262B',
+  primary: '#27C8BA',
+  primaryText: '#27C8BA', // already AA on dark surfaces
+  energy: '#D7FF3E',
+  energyFg: '#0E0E0A',
 } as const;
 
+/**
+ * Active-theme FK colors + an `isDark` flag. Prefer `colors.isDark` over
+ * comparing `colors.background` to a literal hex (which silently breaks
+ * whenever the palette changes).
+ */
 export function useFKColors() {
   const { colorScheme } = useColorScheme();
-  return colorScheme === 'dark' ? FK_DARK : FK_LIGHT;
+  const isDark = colorScheme === 'dark';
+  return { ...(isDark ? FK_DARK : FK_LIGHT), isDark };
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -410,7 +433,12 @@ export function FKSectionLabel({
   );
 }
 
-// ── Day strip cell — 68px tall, primary fill on active ───────────────
+// ── Day strip cell — "the rail" ──────────────────────────────────────
+// A board-cell slab. Selected = an inverted ink/paper "stamp" (paper fill
+// on the dark board, ink fill on light paper) that springs up with a soft
+// lift; per-day status reads as a thin bar (not a dot); "today" carries the
+// volt energy accent + a slow pulse. Fill + text colors crossfade off a
+// single `p` (selected) progress so moving between days feels continuous.
 
 export type DayState = 'none' | 'has' | 'done' | 'missed';
 
@@ -419,102 +447,156 @@ export function FKDayCell({
   dom,
   state = 'none',
   active,
+  isToday,
   onPress,
 }: {
   dow: string;
   dom: number | string;
   state?: DayState;
   active?: boolean;
+  isToday?: boolean;
   onPress?: () => void;
 }) {
   const haptics = useHaptics();
   const colors = useFKColors();
-  const scale = useSharedValue(active ? 1.04 : 1);
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-  // Animate active state.
-  scale.value = withTiming(active ? 1.04 : 1, { duration: 200 });
+  const { lang } = useI18n() as unknown as { lang: string };
+  const isHe = lang === 'he';
 
-  const dotColor =
+  const p = useSharedValue(active ? 1 : 0); // selected progress 0→1
+  const press = useSharedValue(0);
+  const pulse = useSharedValue(0);
+
+  useEffect(() => {
+    p.value = withSpring(active ? 1 : 0, spring.slide);
+  }, [active, p]);
+
+  useEffect(() => {
+    if (isToday && !active) {
+      pulse.value = withRepeat(
+        withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.quad) }),
+        -1,
+        true,
+      );
+    } else {
+      pulse.value = withTiming(0, { duration: 200 });
+    }
+  }, [isToday, active, pulse]);
+
+  const restFill = colors.card;
+  const selFill = colors.foreground; // inverted slab
+  const selText = colors.background;
+  const restDow = isToday ? colors.energy : colors.mutedFg;
+
+  const barColor =
     state === 'done'
-      ? '#7A8A5C'
+      ? '#8AA86A'
       : state === 'missed'
-        ? '#B84A40'
+        ? '#D0594F'
         : state === 'has'
-          ? '#0E8C8C'
+          ? isToday
+            ? colors.energy
+            : colors.primary
           : 'transparent';
+
+  const slabStyle = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(p.value, [0, 1], [restFill, selFill]),
+    borderColor: interpolateColor(p.value, [0, 1], [colors.border, selFill]),
+    transform: [
+      { scale: 1 + p.value * 0.06 - press.value * 0.05 },
+      { translateY: -p.value * 2 },
+    ],
+    shadowOpacity: 0.14 * p.value,
+  }));
+  const dowStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(p.value, [0, 1], [restDow, selText]),
+  }));
+  const domStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(p.value, [0, 1], [colors.foreground, selText]),
+  }));
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: isToday && !active ? 0.35 + pulse.value * 0.65 : 0,
+    transform: [{ scale: 0.7 + pulse.value * 0.6 }],
+  }));
 
   return (
     <AnimatedPressable
-      onPressIn={() => haptics.select()}
+      onPressIn={() => {
+        haptics.select();
+        press.value = withTiming(1, { duration: 90 });
+      }}
+      onPressOut={() => {
+        press.value = withTiming(0, { duration: 160 });
+      }}
       onPress={onPress}
       style={[
-        animStyle,
+        slabStyle,
         {
           flex: 1,
-          height: 68,
+          height: 66,
           borderRadius: 16,
           borderCurve: 'continuous',
-          borderWidth: 1,
+          borderWidth: StyleSheet.hairlineWidth,
           alignItems: 'center',
           justifyContent: 'center',
-          gap: 2,
+          gap: 3,
+          shadowColor: '#000',
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 6 },
         },
-        active
-          ? {
-              backgroundColor: '#0E8C8C',
-              borderColor: '#0E8C8C',
-              shadowColor: '#0E8C8C',
-              shadowOpacity: 0.3,
-              shadowRadius: 12,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 6,
-            }
-          : {
-              backgroundColor: colors.card,
-              borderColor: 'rgba(94,112,130,0.16)',
-              shadowColor: '#000',
-              shadowOpacity: 0.04,
-              shadowRadius: 4,
-              shadowOffset: { width: 0, height: 1 },
-              elevation: 1,
-            },
       ]}
     >
-      <Text
-        style={{
-          fontSize: 10,
-          fontWeight: '700',
-          letterSpacing: 1,
-          opacity: 0.75,
-          color: active ? '#fff' : 'rgb(94,112,130)',
-        }}
-      >
-        {dow}
-      </Text>
-      <Text
-        className="font-display font-extrabold"
-        style={{
-          fontSize: 17,
-          color: active ? '#fff' : colors.foreground,
-          fontVariant: ['tabular-nums'],
-        }}
-      >
-        {dom}
-      </Text>
-      {state !== 'none' && (
-        <View
-          style={{
+      {/* "today" pulse dot */}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          {
             position: 'absolute',
-            bottom: 7,
+            top: 6,
             width: 5,
             height: 5,
             borderRadius: 999,
-            backgroundColor: active ? '#fff' : dotColor,
-          }}
-        />
-      )}
+            backgroundColor: colors.energy,
+          },
+          pulseStyle,
+        ]}
+      />
+      <Animated.Text
+        style={[
+          {
+            fontFamily: isHe ? font.hebrewBody : font.mono,
+            fontSize: 10,
+            letterSpacing: isHe ? 0 : 1.4,
+            textTransform: 'uppercase',
+          },
+          dowStyle,
+        ]}
+      >
+        {dow}
+      </Animated.Text>
+      <Animated.Text
+        style={[
+          {
+            fontFamily: displayFamily(lang, 'bold'),
+            fontSize: 19,
+            letterSpacing: -0.5,
+            fontVariant: ['tabular-nums'],
+          },
+          domStyle,
+        ]}
+      >
+        {dom}
+      </Animated.Text>
+      {/* status bar — replaces the old dot */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 8,
+          width: 14,
+          height: 3,
+          borderRadius: 999,
+          backgroundColor: state === 'none' ? 'transparent' : barColor,
+        }}
+      />
     </AnimatedPressable>
   );
 }
@@ -777,7 +859,7 @@ export function FKBrandGradient({
   const isDark = colorScheme === 'dark';
   return (
     <LinearGradient
-      colors={isDark ? ['#0A1E3D', '#0D3060'] : ['#0D6B6B', '#0E8C8C']}
+      colors={isDark ? ['#0E3B38', '#0B0B0D'] : ['#0D6B6B', '#0E8C8C']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={style}

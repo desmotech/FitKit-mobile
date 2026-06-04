@@ -43,7 +43,13 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useTabBarPadding, useTabBarTop } from '@/hooks/use-tab-bar-padding';
 import Svg, { Circle } from 'react-native-svg';
-import { FKCard, FKDayCell, MemberHeader, useFKColors } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKCard,
+  FKDateRail,
+  MemberHeader,
+  useFKColors,
+} from '@/components/fk';
 import {
   RestDayCard,
   WorkoutSummaryCard,
@@ -232,8 +238,12 @@ export default function WhiteboardScreen() {
 
   // Empty-state helpers (mirrors web parity).
   const upcomingThisWeek = useMemo(() => {
+    // Only real workouts — rest/note days aren't "on track" items, and this
+    // keeps `nextDayWithWorkout` pointing at an actual workout.
     return all
-      .filter((a) => a.date > selectedDate)
+      .filter(
+        (a) => a.date > selectedDate && a.kind !== 'rest' && a.kind !== 'note',
+      )
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [all, selectedDate]);
   const nextDayWithWorkout = upcomingThisWeek[0]?.date ?? null;
@@ -275,7 +285,8 @@ export default function WhiteboardScreen() {
     });
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
+      <FKAmbientBackdrop />
       <MemberHeader />
 
       <ScrollView
@@ -360,37 +371,34 @@ export default function WhiteboardScreen() {
             only activates after 15pt of horizontal drift so individual
             day taps still fire. */}
         <GestureDetector gesture={weekSwipeGesture}>
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              paddingHorizontal: 16,
-              paddingTop: 14,
-              gap: 6,
-            }}
-          >
-            {weekDays.map((d, idx) => {
-              const iso = ymd(d);
-              const a = byDate.get(iso);
-              const dowShort = dayLabels[idx];
-              const cellState =
-                a == null
-                  ? 'none'
-                  : a.completedAt
-                    ? 'done'
-                    : iso < todayStr
-                      ? 'missed'
-                      : 'has';
-              return (
-                <FKDayCell
-                  key={iso}
-                  dow={dowShort}
-                  dom={d.getDate()}
-                  state={cellState}
-                  active={iso === selectedDate}
-                  onPress={() => setSelectedDate(iso)}
-                />
-              );
-            })}
+          <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+            <FKDateRail
+              selectedKey={selectedDate}
+              onSelect={setSelectedDate}
+              days={weekDays.map((d, idx) => {
+                const iso = ymd(d);
+                const a = byDate.get(iso);
+                const state =
+                  a == null
+                    ? 'none'
+                    : a.kind === 'rest'
+                      ? 'rest'
+                      : a.kind === 'note'
+                        ? 'none'
+                        : a.completedAt
+                          ? 'done' // completed
+                          : iso < todayStr
+                            ? 'missed' // past, not completed
+                            : 'has'; // assigned today / upcoming
+                return {
+                  key: iso,
+                  dow: dayLabels[idx],
+                  dom: d.getDate(),
+                  state,
+                  isToday: iso === todayStr,
+                };
+              })}
+            />
           </View>
         </GestureDetector>
 
@@ -484,6 +492,7 @@ export default function WhiteboardScreen() {
                       0,
                     )}
                     unread={comments.unreadCount}
+                    completed={!!assignment.completedAt}
                     isRTL={isRTL}
                     onOpen={() => {
                       haptics.tap();
@@ -796,7 +805,9 @@ function DailyProgressDock({
           paddingTop: 12,
           paddingBottom: 12,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: 'rgba(94,112,130,0.18)',
+          borderTopColor: isDark
+            ? 'rgba(255,255,255,0.10)'
+            : 'rgba(60,60,67,0.16)',
           flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           gap: 12,
@@ -930,6 +941,8 @@ function RestDayState({
   shortWeekdayFmt: Intl.DateTimeFormat;
 }) {
   const haptics = useHaptics();
+  const colors = useFKColors();
+  const onPrimary = colors.isDark ? '#04201E' : '#FFFFFF';
   const dayName = weekdayFmt.format(new Date(selectedDate));
   const nextDayName = nextDate
     ? weekdayFmt.format(new Date(nextDate))
@@ -947,15 +960,19 @@ function RestDayState({
             height: 58,
             borderRadius: 18,
             borderCurve: 'continuous',
-            backgroundColor: 'rgba(14,140,140,0.10)',
+            backgroundColor: colors.isDark
+              ? 'rgba(39,200,186,0.12)'
+              : 'rgba(14,140,140,0.10)',
             borderWidth: 1,
-            borderColor: 'rgba(14,140,140,0.22)',
+            borderColor: colors.isDark
+              ? 'rgba(39,200,186,0.28)'
+              : 'rgba(14,140,140,0.22)',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 6,
           }}
         >
-          <Coffee size={22} color="#0E8C8C" strokeWidth={2.2} />
+          <Coffee size={22} color={colors.primary} strokeWidth={2.2} />
         </View>
         <Text
           className="font-display font-extrabold text-foreground"
@@ -979,42 +996,108 @@ function RestDayState({
           {hasAnyThisWeek ? labels.subtitle : labels.noneThisWeek}
         </Text>
 
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            gap: 8,
-            marginTop: 12,
-          }}
-        >
-          {!isOnToday ? (
-            <RestChip
-              label={labels.today}
-              variant="subtle"
-              onPress={() => {
-                haptics.tap();
-                onJumpToToday();
+        <View style={{ width: '100%', marginTop: 16, gap: 12 }}>
+          {/* Primary escape hatch — jump to the next workout (or next week). */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => {
+              haptics.tap();
+              if (nextDate) onJumpTo(nextDate);
+              else onNextWeek();
+            }}
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 7,
+              height: 48,
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: colors.primary,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: '800',
+                color: onPrimary,
+                letterSpacing: -0.2,
               }}
-              isRTL={isRTL}
+            >
+              {nextDate && nextDayName
+                ? labels.jumpTo.replace('{day}', nextDayName)
+                : labels.nextWeek}
+            </Text>
+            <ChevronRight
+              size={16}
+              color={onPrimary}
+              strokeWidth={2.6}
+              style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
             />
+          </TouchableOpacity>
+
+          {/* Secondary ghost links — quiet, centered. */}
+          {!isOnToday || nextDate ? (
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 16,
+              }}
+            >
+              {!isOnToday ? (
+                <TouchableOpacity
+                  hitSlop={8}
+                  onPress={() => {
+                    haptics.tap();
+                    onJumpToToday();
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: colors.primaryText,
+                      letterSpacing: -0.1,
+                    }}
+                  >
+                    {labels.today}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {!isOnToday && nextDate ? (
+                <View
+                  style={{
+                    width: 3,
+                    height: 3,
+                    borderRadius: 2,
+                    backgroundColor: colors.border,
+                  }}
+                />
+              ) : null}
+              {nextDate ? (
+                <TouchableOpacity
+                  hitSlop={8}
+                  onPress={() => {
+                    haptics.tap();
+                    onNextWeek();
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: colors.primaryText,
+                      letterSpacing: -0.1,
+                    }}
+                  >
+                    {labels.nextWeek}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : null}
-          {nextDate && nextDayName ? (
-            <RestChip
-              label={labels.jumpTo.replace('{day}', nextDayName)}
-              variant="highlight"
-              trailingChevron
-              onPress={() => onJumpTo(nextDate)}
-              isRTL={isRTL}
-            />
-          ) : null}
-          <RestChip
-            label={labels.nextWeek}
-            variant="subtle"
-            trailingChevron
-            onPress={onNextWeek}
-            isRTL={isRTL}
-          />
         </View>
       </FKCard>
 
@@ -1054,57 +1137,6 @@ function RestDayState({
   );
 }
 
-function RestChip({
-  label,
-  variant,
-  trailingChevron,
-  onPress,
-  isRTL,
-}: {
-  label: string;
-  variant: 'subtle' | 'highlight';
-  trailingChevron?: boolean;
-  onPress: () => void;
-  isRTL: boolean;
-}) {
-  const isHighlight = variant === 'highlight';
-  return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
-      style={{
-        flexDirection: isRTL ? 'row-reverse' : 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingVertical: 8,
-        paddingHorizontal: 14,
-        borderRadius: 999,
-        borderWidth: 1,
-        backgroundColor: isHighlight ? '#0E8C8C' : 'transparent',
-        borderColor: isHighlight ? '#0E8C8C' : 'rgba(94,112,130,0.25)',
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 12.5,
-          fontWeight: '700',
-          color: isHighlight ? '#fff' : 'rgb(94,112,130)',
-          letterSpacing: -0.1,
-        }}
-      >
-        {label}
-      </Text>
-      {trailingChevron ? (
-        <ChevronRight
-          size={13}
-          color={isHighlight ? '#fff' : 'rgb(94,112,130)'}
-          strokeWidth={2.4}
-          style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
-        />
-      ) : null}
-    </TouchableOpacity>
-  );
-}
 
 function UpcomingPreviewRow({
   assignment,
@@ -1120,6 +1152,7 @@ function UpcomingPreviewRow({
   onPress: () => void;
 }) {
   const haptics = useHaptics();
+  const colors = useFKColors();
   const { t } = useI18n();
   const scoringT = (((t as unknown as Record<string, Record<string, unknown>>)
     .workout ?? {}) as Record<string, unknown>).scoringLabels as
@@ -1135,7 +1168,7 @@ function UpcomingPreviewRow({
         <View
           style={{
             height: StyleSheet.hairlineWidth,
-            backgroundColor: 'rgba(94,112,130,0.16)',
+            backgroundColor: colors.border,
             marginLeft: isRTL ? 14 : 70,
             marginRight: isRTL ? 70 : 14,
           }}
@@ -1152,7 +1185,11 @@ function UpcomingPreviewRow({
             paddingVertical: 12,
             paddingHorizontal: 14,
           },
-          pressed && { backgroundColor: 'rgba(0,0,0,0.04)' },
+          pressed && {
+            backgroundColor: colors.isDark
+              ? 'rgba(255,255,255,0.05)'
+              : 'rgba(0,0,0,0.04)',
+          },
         ]}
       >
         <View style={{ width: 44, alignItems: 'center' }}>
@@ -1161,7 +1198,7 @@ function UpcomingPreviewRow({
               fontSize: 10,
               fontWeight: '700',
               letterSpacing: 0.8,
-              color: 'rgba(94,112,130,0.9)',
+              color: colors.mutedFg,
             }}
           >
             {dayShort}
@@ -1214,7 +1251,7 @@ function UpcomingPreviewRow({
         </View>
         <ChevronRight
           size={16}
-          color="rgba(94,112,130,0.45)"
+          color={colors.mutedFg}
           strokeWidth={2.2}
           style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
         />
@@ -1234,7 +1271,7 @@ function NavButton({
 }) {
   const haptics = useHaptics();
   const colors = useFKColors();
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   return (
     <Pressable
       onPressIn={haptics.tap}

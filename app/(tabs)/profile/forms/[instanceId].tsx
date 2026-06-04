@@ -13,9 +13,9 @@
  */
 import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
-import { FKButton, FKGlassPanel, FKScreenHeader, useFKColors } from '@/components/fk';
+import { FKButton, FKGlassPanel, FKSubScreen, useFKColors } from '@/components/fk';
 import { FormRenderer } from '@/components/forms/form-renderer';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -25,7 +25,6 @@ import {
   useSubmitFormInstance,
 } from '@/hooks/use-forms';
 import { useFormUpload } from '@/hooks/use-form-upload';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { FormAnswers } from '@/types/forms';
@@ -39,7 +38,6 @@ export default function SignFormInstanceScreen() {
   const isRTL = dir === 'rtl';
   const s = useFormStrings();
   const colors = useFKColors();
-  const bottomPad = useTabBarPadding();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
@@ -81,19 +79,17 @@ export default function SignFormInstanceScreen() {
     status === 'archived';
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader title={entry?.form.name ?? s.loadingTitle} />
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: bottomPad,
-          gap: 16,
-          flexGrow: 1,
-          justifyContent: isLoading ? 'center' : 'flex-start',
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
+    <FKSubScreen
+      title={entry?.form.name ?? s.loadingTitle}
+      keyboardAvoiding
+      contentStyle={{
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        gap: 16,
+        flexGrow: 1,
+        justifyContent: isLoading ? 'center' : 'flex-start',
+      }}
+    >
         {isLoading ? (
           <View style={{ alignItems: 'center', gap: 12 }}>
             <ActivityIndicator size="large" color={BRAND_TEAL} />
@@ -162,8 +158,7 @@ export default function SignFormInstanceScreen() {
             />
           </FKGlassPanel>
         ) : null}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

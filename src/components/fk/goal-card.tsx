@@ -1,26 +1,28 @@
 /**
  * GoalCard — shared between Goals index (full) and Home dashboard (compact).
  *
+ * Layout (per the design system): a progress Ring leading, then name +
+ * "current → target" sub-line, then a trailing slot.
+ *
  * Variants
- *   `full` — icon + name + type kicker + edit/trash icons + progress bar.
+ *   `full` — Ring + name + value + edit/trash icons.
  *            Used inside /profile/goals/index.tsx.
- *   `compact` — same icon + name + progress bar but no row actions and a
- *            tap-to-open chevron, used on Home where the card pushes to
- *            the goal detail screen instead of inline editing.
+ *   `compact` — Ring + name + value with a tap-to-open chevron, used on Home
+ *            where the card pushes to the goal detail screen.
+ *   Achieved goals swap the Ring for a green check and show an "Achieved" stamp.
  */
 import {
-  CheckCircle2,
+  Check,
   ChevronLeft,
   ChevronRight,
-  Dumbbell,
   Pencil,
-  Target,
   Trash2,
 } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import type { GoalResponse } from '@fitkit/shared';
 import { Text } from '@/components/ui/text';
-import { FKGlassPanel, useFKColors } from './index';
+import { font } from '@/lib/type';
+import { FKGlassPanel, FKRing, useFKColors } from './index';
 
 export type GoalCardVariant = 'full' | 'compact';
 
@@ -62,7 +64,6 @@ export function GoalCard({
   const isCompact = variant === 'compact';
   const isBodyMetric = goal.type === 'body_metric';
   const isAchieved = goal.status === 'achieved';
-  const Icon = isAchieved ? CheckCircle2 : isBodyMetric ? Target : Dumbbell;
   const Chevron = isRTL ? ChevronLeft : ChevronRight;
   const name = isBodyMetric
     ? bmTypes[goal.metricType ?? ''] ?? goal.metricType ?? '—'
@@ -70,6 +71,11 @@ export function GoalCard({
   const isTimeUnit = goal.unit === 'mm:ss' || goal.unit === 'seconds';
   const unitLabel = isTimeUnit ? '' : ` ${goal.unit}`;
   const pct = Math.min(Math.max(goal.progressPercent ?? 0, 0), 100);
+  // "current → target" value line (numerals + Latin unit → mono scoreboard).
+  const sub =
+    goal.currentValue != null
+      ? `${goal.currentValue} → ${goal.targetValue}${unitLabel}`
+      : `→ ${goal.targetValue}${unitLabel}`;
 
   const tintBg = isAchieved
     ? 'rgba(122,138,92,0.16)'
@@ -100,25 +106,36 @@ export function GoalCard({
           gap: 12,
         }}
       >
-        <View
-          style={{
-            width: isCompact ? 36 : 40,
-            height: isCompact ? 36 : 40,
-            borderRadius: 12,
-            backgroundColor: tintBg,
-            borderWidth: 1,
-            borderColor: tintBorder,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Icon size={isCompact ? 16 : 18} color={tintFg} strokeWidth={2.2} />
-        </View>
+        {isAchieved ? (
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              backgroundColor: tintBg,
+              borderWidth: 1,
+              borderColor: tintBorder,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Check size={22} color={tintFg} strokeWidth={2.6} />
+          </View>
+        ) : (
+          <FKRing
+            pct={pct}
+            size={46}
+            sw={4}
+            // Body-metric goals read in warm red; exercise PRs in brand teal.
+            color={isBodyMetric ? '#E0552F' : colors.primary}
+            track={colors.border}
+          />
+        )}
         <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
           <Text
             numberOfLines={1}
             style={{
-              fontSize: 14,
+              fontSize: 14.5,
               fontWeight: '800',
               color: colors.foreground,
               textAlign: isRTL ? 'right' : 'left',
@@ -127,16 +144,16 @@ export function GoalCard({
             {name}
           </Text>
           <Text
+            numberOfLines={1}
             style={{
-              fontSize: 10,
-              fontWeight: '700',
+              fontSize: 11.5,
               color: colors.mutedFg,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-              marginTop: 2,
+              marginTop: 3,
+              fontFamily: font.mono,
+              writingDirection: 'ltr',
             }}
           >
-            {isBodyMetric ? labels.bodyMetric : labels.exercisePr}
+            {sub}
           </Text>
         </View>
 
@@ -178,118 +195,21 @@ export function GoalCard({
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
               alignItems: 'center',
-              gap: 2,
+              gap: 6,
             }}
           >
             {onEdit ? (
-              <Pressable
-                onPress={onEdit}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  {
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  },
-                  pressed && { opacity: 0.5 },
-                ]}
-              >
-                <Pencil size={14} color={colors.mutedFg} strokeWidth={2.2} />
-              </Pressable>
+              <IconButton onPress={onEdit} colors={colors}>
+                <Pencil size={15} color={colors.mutedFg} strokeWidth={2.2} />
+              </IconButton>
             ) : null}
             {onArchive ? (
-              <Pressable
-                onPress={onArchive}
-                hitSlop={8}
-                style={({ pressed }) => [
-                  {
-                    width: 32,
-                    height: 32,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  },
-                  pressed && { opacity: 0.5 },
-                ]}
-              >
-                <Trash2 size={15} color="#B84A40" strokeWidth={2.2} />
-              </Pressable>
+              <IconButton onPress={onArchive} colors={colors}>
+                <Trash2 size={15} color={colors.mutedFg} strokeWidth={2.2} />
+              </IconButton>
             ) : null}
           </View>
         )}
-      </View>
-
-      <View style={{ gap: 6 }}>
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 13,
-              color: colors.mutedFg,
-              fontFamily: 'DMMono',
-            }}
-          >
-            {goal.currentValue != null
-              ? `${goal.currentValue}${unitLabel}`
-              : labels.noData}
-          </Text>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: '800',
-              color: colors.foreground,
-              fontFamily: 'DMMono',
-            }}
-          >
-            {goal.targetValue}
-            {unitLabel}
-          </Text>
-        </View>
-        <View
-          style={{
-            height: 6,
-            borderRadius: 999,
-            overflow: 'hidden',
-            backgroundColor: colors.muted,
-          }}
-        >
-          <View
-            style={{
-              height: '100%',
-              width: `${pct}%`,
-              backgroundColor: tintFg,
-            }}
-          />
-        </View>
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            justifyContent: 'space-between',
-            marginTop: 2,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 10,
-              fontWeight: '700',
-              color: colors.mutedFg,
-              fontVariant: ['tabular-nums'],
-            }}
-          >
-            {pct.toFixed(0)}%
-          </Text>
-          {goal.deadline ? (
-            <Text style={{ fontSize: 10, color: colors.mutedFg }}>
-              {labels.deadline}: {new Date(goal.deadline).toLocaleDateString()}
-            </Text>
-          ) : null}
-        </View>
       </View>
     </FKGlassPanel>
   );
@@ -311,4 +231,52 @@ export function GoalCard({
     );
   }
   return inner;
+}
+
+/**
+ * Bordered square action button (edit / archive). The visuals live on an
+ * inner View — a Pressable `style` function returning an array drops the
+ * base style on first render in this RN setup, which would strip the
+ * border + fill and leave a naked icon.
+ */
+function IconButton({
+  onPress,
+  colors,
+  accessibilityLabel,
+  children,
+}: {
+  onPress: () => void;
+  colors: ReturnType<typeof useFKColors>;
+  accessibilityLabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {({ pressed }) => (
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            borderCurve: 'continuous',
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.isDark
+              ? 'rgba(255,255,255,0.05)'
+              : 'rgba(255,255,255,0.6)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.55 : 1,
+          }}
+        >
+          {children}
+        </View>
+      )}
+    </Pressable>
+  );
 }

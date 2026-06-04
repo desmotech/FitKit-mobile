@@ -16,7 +16,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -28,15 +28,17 @@ import type {
   CreateBodyMetricInput,
 } from '@fitkit/shared';
 import {
+  FKAmbientBackdrop,
   FKModalHeader,
   FKSelectSheet,
   useFKColors,
 } from '@/components/fk';
-import { DatePresetField, LogSectionCard } from '@/components/log';
+import { DatePresetField } from '@/components/log';
 import { Text } from '@/components/ui/text';
 import { useLogMetric } from '@/hooks/use-body-metrics';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { continuousCorners } from '@/lib/utils';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -151,39 +153,46 @@ export default function LogMetricScreen() {
     [type, unitsT],
   );
 
-  return (
-    <SafeAreaView
-      edges={['top']}
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <FKModalHeader
-          title={L.metricTitle}
-          leadingAction={{
-            label: L.hubCancel,
-            onPress: () => router.back(),
-          }}
-          trailingAction={{
-            label: mutation.isPending ? L.workoutSaving : L.workoutSave,
-            style: 'primary',
-            onPress: handleSubmit,
-            disabled: !canSubmit || mutation.isPending,
-          }}
-        />
+  const placeholderColor = isDark
+    ? 'rgba(235,235,245,0.3)'
+    : 'rgba(60,60,67,0.3)';
 
-        <ScrollView
-          contentContainerStyle={{
-            padding: 20,
-            paddingBottom: insets.bottom + 24,
-            gap: 14,
-          }}
-          keyboardShouldPersistTaps="handled"
+  return (
+    <View style={{ flex: 1 }}>
+      <FKAmbientBackdrop />
+      <SafeAreaView
+        edges={['top']}
+        style={{ flex: 1, backgroundColor: 'transparent' }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flex: 1 }}
         >
-          <Animated.View entering={FadeInDown.delay(40).duration(260)}>
-            <LogSectionCard label={L.metricType}>
+          <FKModalHeader
+            title={L.metricTitle}
+            leadingAction={{
+              label: L.hubCancel,
+              onPress: () => router.back(),
+            }}
+            trailingAction={{
+              label: mutation.isPending ? L.workoutSaving : L.workoutSave,
+              style: 'primary',
+              onPress: handleSubmit,
+              disabled: !canSubmit || mutation.isPending,
+            }}
+          />
+
+          <ScrollView
+            contentContainerStyle={{
+              padding: 20,
+              paddingBottom: insets.bottom + 24,
+              gap: 18,
+            }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Type */}
+            <View style={{ gap: 8 }}>
+              <SectionLabel isRTL={isRTL}>{L.metricType}</SectionLabel>
               <FKSelectSheet<BodyMetricType>
                 value={type}
                 placeholder={L.metricSelectType}
@@ -192,41 +201,49 @@ export default function LogMetricScreen() {
                 onChange={onChangeType}
                 cancelLabel={L.hubCancel}
               />
-            </LogSectionCard>
-          </Animated.View>
+            </View>
 
-          <Animated.View entering={FadeInDown.delay(70).duration(260)}>
-            <LogSectionCard label={L.metricValue}>
+            {/* Value + unit */}
+            <View style={{ gap: 8 }}>
+              <SectionLabel isRTL={isRTL}>{L.metricValue}</SectionLabel>
               <View
                 style={{
                   flexDirection: isRTL ? 'row-reverse' : 'row',
                   alignItems: 'center',
-                  gap: 12,
+                  gap: 10,
                 }}
               >
-                <TextInput
-                  accessibilityLabel={L.metricValue}
-                  value={valueText}
-                  onChangeText={setValueText}
-                  placeholder="0.0"
-                  placeholderTextColor={
-                    isDark
-                      ? 'rgba(235,235,245,0.3)'
-                      : 'rgba(60,60,67,0.3)'
-                  }
-                  keyboardType="decimal-pad"
-                  inputMode="decimal"
-                  style={{
-                    flex: 1,
-                    fontSize: 28,
-                    fontWeight: '600',
-                    fontFamily: 'DMMono',
-                    color: colors.foreground,
-                    textAlign: isRTL ? 'right' : 'left',
-                    padding: 0,
-                  }}
-                />
-                <View style={{ minWidth: 100, flexShrink: 0 }}>
+                <View
+                  style={[
+                    continuousCorners,
+                    {
+                      flex: 1,
+                      paddingHorizontal: 16,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                    },
+                  ]}
+                  className="bg-card border-border"
+                >
+                  <TextInput
+                    accessibilityLabel={L.metricValue}
+                    value={valueText}
+                    onChangeText={setValueText}
+                    placeholder="0.0"
+                    placeholderTextColor={placeholderColor}
+                    keyboardType="decimal-pad"
+                    inputMode="decimal"
+                    style={{
+                      paddingVertical: 12,
+                      fontSize: 26,
+                      fontWeight: '700',
+                      fontFamily: 'DMMono',
+                      color: colors.foreground,
+                      textAlign: isRTL ? 'right' : 'left',
+                    }}
+                  />
+                </View>
+                <View style={{ minWidth: 96, flexShrink: 0 }}>
                   <FKSelectSheet<BodyMetricUnit>
                     value={unit}
                     placeholder={L.metricUnit}
@@ -237,67 +254,99 @@ export default function LogMetricScreen() {
                   />
                 </View>
               </View>
-            </LogSectionCard>
-          </Animated.View>
+            </View>
 
-          <Animated.View entering={FadeInDown.delay(100).duration(260)}>
-            <LogSectionCard label={L.metricDate}>
+            {/* When */}
+            <View style={{ gap: 8 }}>
+              <SectionLabel isRTL={isRTL}>{L.metricDate}</SectionLabel>
               <DatePresetField value={recordedAt} onChange={setRecordedAt} />
-            </LogSectionCard>
-          </Animated.View>
+            </View>
 
-          <Animated.View entering={FadeInDown.delay(130).duration(260)}>
-            <LogSectionCard label={L.metricNotes}>
-              <TextInput
-                accessibilityLabel={L.metricNotes}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder={L.metricNotesPlaceholder}
-                placeholderTextColor={
-                  isDark
-                    ? 'rgba(235,235,245,0.3)'
-                    : 'rgba(60,60,67,0.3)'
-                }
-                multiline
-                style={{
-                  minHeight: 72,
-                  fontSize: 15,
-                  color: colors.foreground,
-                  textAlign: isRTL ? 'right' : 'left',
-                  textAlignVertical: 'top',
-                  padding: 0,
-                }}
-              />
-            </LogSectionCard>
-          </Animated.View>
+            {/* Notes */}
+            <View style={{ gap: 8 }}>
+              <SectionLabel isRTL={isRTL}>{L.metricNotes}</SectionLabel>
+              <View
+                style={[
+                  continuousCorners,
+                  {
+                    paddingHorizontal: 14,
+                    paddingVertical: 4,
+                    borderRadius: 14,
+                    borderWidth: 1.5,
+                  },
+                ]}
+                className="bg-card border-border"
+              >
+                <TextInput
+                  accessibilityLabel={L.metricNotes}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder={L.metricNotesPlaceholder}
+                  placeholderTextColor={placeholderColor}
+                  multiline
+                  style={{
+                    minHeight: 72,
+                    paddingVertical: 8,
+                    fontSize: 15,
+                    color: colors.foreground,
+                    textAlign: isRTL ? 'right' : 'left',
+                    textAlignVertical: 'top',
+                  }}
+                />
+              </View>
+            </View>
 
-          {mutation.error && (
-            <Animated.View
-              entering={FadeIn.duration(160)}
-              style={{
-                borderRadius: 12,
-                borderCurve: 'continuous',
-                padding: 12,
-                backgroundColor: isDark
-                  ? 'rgba(255,69,58,0.16)'
-                  : 'rgba(255,59,48,0.12)',
-              }}
-            >
-              <Text
+            {mutation.error && (
+              <Animated.View
+                entering={FadeIn.duration(160)}
                 style={{
-                  fontSize: 13,
-                  fontWeight: '500',
-                  color: isDark ? '#FF453A' : '#D70015',
-                  textAlign: isRTL ? 'right' : 'left',
+                  borderRadius: 12,
+                  borderCurve: 'continuous',
+                  padding: 12,
+                  backgroundColor: isDark
+                    ? 'rgba(255,69,58,0.16)'
+                    : 'rgba(255,59,48,0.12)',
                 }}
               >
-                {L.metricFailed}
-              </Text>
-            </Animated.View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '500',
+                    color: isDark ? '#FF453A' : '#D70015',
+                    textAlign: isRTL ? 'right' : 'left',
+                  }}
+                >
+                  {L.metricFailed}
+                </Text>
+              </Animated.View>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function SectionLabel({
+  children,
+  isRTL,
+}: {
+  children: React.ReactNode;
+  isRTL: boolean;
+}) {
+  return (
+    <Text
+      className="text-muted-foreground"
+      style={{
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.7,
+        textTransform: 'uppercase',
+        textAlign: isRTL ? 'right' : 'left',
+      }}
+    >
+      {children}
+    </Text>
   );
 }
 

@@ -6,11 +6,11 @@
  */
 import { useRef, useState } from 'react';
 import { Calendar, MapPin, User as UserIcon } from 'lucide-react-native';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   FKGlassPanel,
-  FKScreenHeader,
+  FKSubScreen,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,7 +18,6 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 
 type Tab = 'upcoming' | 'past';
@@ -62,7 +61,6 @@ const STATUS_TONE: Record<
 
 export default function HistoryScreen() {
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const { dir, t, lang } = useI18n();
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
@@ -95,12 +93,7 @@ export default function HistoryScreen() {
   const bookings = data?.data ?? [];
 
   return (
-    <View className="flex-1 bg-background">
-      <FKScreenHeader title={labels.title} />
-
-      <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 18 }}
-      >
+    <FKSubScreen title={labels.title} contentStyle={{ gap: 18 }}>
         <Tabs
           value={tab}
           onValueChange={(v) => {
@@ -167,8 +160,7 @@ export default function HistoryScreen() {
             </Animated.View>
           ))
         )}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

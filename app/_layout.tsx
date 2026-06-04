@@ -58,12 +58,45 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    // FitKit display + body fonts. Bundle .otf/.ttf files in assets/fonts/.
-    // See assets/fonts/README.md for sourcing instructions.
-    // ClashGrotesk: require('../assets/fonts/ClashGrotesk-Variable.ttf'),
-    // Manrope: require('../assets/fonts/Manrope-Variable.ttf'),
-    // Heebo: require('../assets/fonts/Heebo-Variable.ttf'),
-    // DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
+    // ── FitKit "Whiteboard" type system ──────────────────────────────
+    // Static per-weight faces. RN/Android weight-matching within a single
+    // family is unreliable, so each weight is registered under its own
+    // family name and referenced explicitly (see src/lib/type.ts). The
+    // bare aliases (Rubik / Assistant / DMMono) keep NativeWind's
+    // `font-display` / `font-sans` / `font-mono` utilities working on
+    // screens not yet migrated to the typed `font` map.
+    //
+    // Bilingual by design: Rubik (display) and Assistant (body) each carry
+    // Hebrew + Latin, so mixed-script strings render in one voice. Manrope
+    // is kept solely as the Russian/Cyrillic body fallback.
+    //
+    // Licensing — all SIL Open Font License 1.1 (free for commercial use):
+    //   Rubik (He + Latin + Cyrillic) · Assistant (He + Latin) · DM Mono · Manrope
+
+    // Display — Rubik. One geometric face across every script.
+    'Rubik-Regular': require('../assets/fonts/Rubik-Regular.ttf'),
+    'Rubik-Medium': require('../assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-SemiBold': require('../assets/fonts/Rubik-SemiBold.ttf'),
+    'Rubik-Bold': require('../assets/fonts/Rubik-Bold.ttf'),
+    'Rubik-Black': require('../assets/fonts/Rubik-Black.ttf'),
+
+    // Body / UI — Assistant (Hebrew + Latin). Base alias = Regular.
+    'Assistant-Regular': require('../assets/fonts/Assistant-Regular.ttf'),
+    'Assistant-Medium': require('../assets/fonts/Assistant-Medium.ttf'),
+    'Assistant-SemiBold': require('../assets/fonts/Assistant-SemiBold.ttf'),
+    'Assistant-Bold': require('../assets/fonts/Assistant-Bold.ttf'),
+    'Assistant-ExtraBold': require('../assets/fonts/Assistant-ExtraBold.ttf'),
+
+    // Numerals — DM Mono (the scoreboard face). Latin/digits only.
+    DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
+    'DMMono-Medium': require('../assets/fonts/DMMono-Medium.ttf'),
+
+    // Russian body fallback — Manrope (Cyrillic; Assistant has none).
+    Manrope: require('../assets/fonts/Manrope-Regular.ttf'),
+    'Manrope-Medium': require('../assets/fonts/Manrope-Medium.ttf'),
+    'Manrope-SemiBold': require('../assets/fonts/Manrope-SemiBold.ttf'),
+    'Manrope-Bold': require('../assets/fonts/Manrope-Bold.ttf'),
+    'Manrope-ExtraBold': require('../assets/fonts/Manrope-ExtraBold.ttf'),
   });
 
   // Preload persisted theme + locale before first paint so the app renders
@@ -176,7 +209,7 @@ function ConfigErrorScreen() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 32,
-        backgroundColor: '#0A1628',
+        backgroundColor: '#0B0B0D',
       }}
     >
       <Text

@@ -54,7 +54,7 @@ export function FKSelectSheet<T extends string>({
   const haptics = useHaptics();
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
-  const isDark = colors.background === '#0A1628';
+  const isDark = colors.isDark;
   const [androidOpen, setAndroidOpen] = useState(false);
 
   const selected = options.find((o) => o.value === value);

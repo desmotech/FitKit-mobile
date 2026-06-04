@@ -9,7 +9,7 @@ function Skeleton({
   return (
     <View
       {...props}
-      className={cn('bg-accent animate-pulse rounded-md', className)}
+      className={cn('bg-muted animate-pulse rounded-md', className)}
       style={[{ borderCurve: 'continuous' as const }, style as object]}
     />
   );

@@ -1,10 +1,14 @@
 /* ============================================================
-   FitKit Mobile — global.css
+   FitKit Mobile — global.css  ·  "Whiteboard" palette
+   Dark-first: matte ink is the hero surface, warm paper is the
+   light adaptation. Teal is the cool/brand accent; volt is the
+   energy accent (today, PRs, the single primary CTA).
+
    HSL channel-split tokens (shadcn pattern). NativeWind 4 +
    Tailwind v3 only honour `/alpha` modifiers when the token is
    in `H S% L%` channel form referenced via
    `hsl(var(--token) / <alpha-value>)` in tailwind.config.js.
-   Hex equivalents listed in comments mirror apps/web/globals.css.
+   Hex equivalents are in the comments (mirror src/lib/theme.ts).
    ============================================================ */
 
 @tailwind base;
@@ -13,35 +17,40 @@
 
 @layer base {
   :root {
-    /* Core — exact HSL of web's oklch tokens (Deep Ocean palette). */
-    --background: 210 17% 97%;          /* #F6F8FA — ocean light  */
-    --foreground: 212 53% 11%;          /* #0D1B2A — deep navy    */
-    --card: 0 0% 100%;                  /* #FFFFFF                */
-    --card-foreground: 212 53% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 212 53% 11%;
+    /* ── Light / "paper" — warm, low-blue, glanceable in a bright gym ── */
+    --background: 44 30% 95%;           /* #F6F4EE — warm paper   */
+    --foreground: 45 10% 8%;            /* #161512 — ink          */
+    --card: 48 38% 98%;                 /* #FCFBF7 — raised paper */
+    --card-foreground: 45 10% 8%;
+    --popover: 48 38% 98%;
+    --popover-foreground: 45 10% 8%;
 
-    /* Primary — Teal */
+    /* Primary — Teal (cool/brand accent) */
     --primary: 180 82% 30%;             /* #0E8C8C                */
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary / Muted */
-    --secondary: 210 22% 95%;           /* #EEF2F6                */
+    /* Secondary / Muted — warm neutrals */
+    --secondary: 44 25% 91%;            /* #EEEBE2                */
     --secondary-foreground: 180 82% 30%;
-    --muted: 210 22% 95%;
-    --muted-foreground: 212 16% 44%;    /* #5E7082 — steel        */
+    --muted: 44 25% 91%;
+    --muted-foreground: 40 8% 40%;      /* #6E695E — warm steel   */
 
-    /* Accent — Sage (FK molecules); web uses teal-wash via --primary. */
+    /* Accent — Sage (FK molecules) */
     --accent: 75 20% 45%;               /* #7A8A5C                */
     --accent-foreground: 0 0% 100%;
+
+    /* Energy — Volt. Athletic high-signal accent. Use sparingly:
+       today, PRs, streaks, the one primary CTA. Pair with ink text. */
+    --energy: 73 100% 62%;              /* #D7FF3E — volt         */
+    --energy-foreground: 60 17% 8%;     /* #17160F — ink on volt  */
 
     /* Destructive — Rust */
     --destructive: 5 49% 49%;           /* #B84A40                */
     --destructive-foreground: 0 0% 100%;
 
     /* Borders / Inputs */
-    --border: 212 19% 89%;              /* #DDE3EA                */
-    --input: 212 19% 89%;
+    --border: 44 22% 86%;               /* #E3DFD4 — warm hairline*/
+    --input: 44 22% 86%;
     --ring: 180 82% 30%;
 
     /* Charts */
@@ -49,7 +58,7 @@
     --chart-2: 75 20% 45%;
     --chart-3: 35 56% 55%;
     --chart-4: 207 33% 43%;
-    --chart-5: 320 18% 47%;
+    --chart-5: 73 90% 50%;
 
     /* Status */
     --success: 75 20% 45%;
@@ -67,31 +76,40 @@
 
   .dark:root,
   .dark {
-    --background: 214 60% 10%;          /* #0A1628 — deep navy    */
-    --foreground: 210 53% 94%;          /* #E8F0F8 — pale ocean   */
-    --card: 218 58% 16%;                /* #112240 — lifted navy  */
-    --card-foreground: 210 53% 94%;
-    --popover: 218 58% 16%;
-    --popover-foreground: 210 53% 94%;
+    /* ── Dark / "board" — matte ink hero surface (the lead identity) ── */
+    --background: 240 8% 5%;            /* #0B0B0D — matte ink    */
+    --foreground: 42 30% 93%;           /* #F3F0E9 — warm chalk   */
+    --card: 240 7% 8%;                  /* #141417 — lifted       */
+    --card-foreground: 42 30% 93%;
+    --popover: 240 7% 8%;
+    --popover-foreground: 42 30% 93%;
 
-    --primary: 180 63% 44%;             /* #2AB8B8 — lighter teal */
+    --primary: 175 67% 47%;             /* #27C8BA — brighter teal*/
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 216 51% 21%;           /* #1A3050 — navy muted   */
-    --secondary-foreground: 210 53% 94%;
-    --muted: 216 51% 21%;
-    --muted-foreground: 207 27% 54%;    /* #6B8FAA — steel muted  */
+    --secondary: 240 7% 11%;            /* #1B1B1F                */
+    --secondary-foreground: 42 30% 93%;
+    --muted: 240 7% 11%;
+    --muted-foreground: 40 8% 57%;      /* #9A958A — warm grey    */
 
-    /* In dark mode FK keeps sage as accent for FK molecules. */
-    --accent: 85 27% 54%;               /* #8AA86A                */
+    --accent: 85 27% 54%;               /* #8AA86A — sage         */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 5 56% 57%;           /* #D05A50                */
+    --energy: 73 100% 62%;              /* #D7FF3E — volt         */
+    --energy-foreground: 60 17% 7%;     /* near-black ink         */
+
+    --destructive: 5 72% 64%;           /* #E0685C — brighter rust*/
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 52% 25%;              /* #1E3A5F                */
-    --input: 216 51% 21%;
-    --ring: 180 63% 44%;
+    --border: 240 7% 16%;               /* #26262B                */
+    --input: 240 7% 16%;
+    --ring: 175 67% 47%;
+
+    --chart-1: 175 67% 47%;
+    --chart-2: 85 27% 54%;
+    --chart-3: 35 56% 55%;
+    --chart-4: 207 33% 50%;
+    --chart-5: 73 100% 62%;
 
     --success: 85 27% 54%;
     --success-foreground: 75 30% 70%;

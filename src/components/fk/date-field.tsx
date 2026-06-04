@@ -89,7 +89,7 @@ export function FKDateField({
         onChange={handleChange}
         // Brand-tint on iOS so the chip + popover match the app theme.
         accentColor="#0E8C8C"
-        themeVariant={colors.background === '#0A1628' ? 'dark' : 'light'}
+        themeVariant={colors.isDark ? 'dark' : 'light'}
       />
       {!value && placeholder ? (
         <Text
