@@ -28,6 +28,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
 import { useFKColors } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -80,6 +81,9 @@ export function WorkoutChat({
   const isDark = colors.isDark;
   const ink = programSheetInk(isDark);
   const insets = useSafeAreaInsets();
+  // Dock the composer above the native tab bar (this is a pushed sub-screen,
+  // same as the profile sub-screens / FKActionBar), not just the home indicator.
+  const tabBarTop = useTabBarTop();
   const { dir, lang, t } = useI18n();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
@@ -351,7 +355,7 @@ export function WorkoutChat({
           paddingTop: 10,
           // Clear the home indicator so the input isn't cut off at the
           // bottom of the sheet (the KAV handles the keyboard above this).
-          paddingBottom: Math.max(insets.bottom, 12),
+          paddingBottom: tabBarTop + 8,
           borderTopWidth: uploads.uploads.length > 0 ? 0 : StyleSheet.hairlineWidth,
           borderTopColor: ink.line,
         }}
