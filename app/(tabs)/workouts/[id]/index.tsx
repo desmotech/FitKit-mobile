@@ -29,6 +29,7 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
+import { useWatchExerciseDemo } from '@/hooks/use-exercise-demo';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   type WorkoutResult,
@@ -84,6 +85,7 @@ export default function WorkoutDetailScreen() {
   const { colorScheme } = useColorScheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const haptics = useHaptics();
+  const watchDemo = useWatchExerciseDemo();
   const scrollBottomPad = useTabBarPadding(100);
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
@@ -698,13 +700,10 @@ export default function WorkoutDetailScreen() {
                   }}
                   onPlayVideo={(mv) => {
                     if (!mv.exercise.videoUrl) return;
-                    router.push({
-                      pathname: '/(tabs)/workouts/[id]/video',
-                      params: {
-                        id: assignment.id,
-                        url: mv.exercise.videoUrl,
-                        title: mv.exercise.name,
-                      },
+                    watchDemo({
+                      url: mv.exercise.videoUrl,
+                      title: mv.exercise.name,
+                      routeId: assignment.id,
                     });
                   }}
                 />

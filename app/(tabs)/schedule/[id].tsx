@@ -48,6 +48,7 @@ import { ProgramSheetSections } from '@/components/workout/program-sheet-section
 import { scoringLabel } from '@/components/workout/workout-summary-card';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useWatchExerciseDemo } from '@/hooks/use-exercise-demo';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
@@ -83,6 +84,7 @@ export default function SessionDetailScreen() {
   const orgId = activeOrganization?.id;
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
+  const watchDemo = useWatchExerciseDemo();
   const colors = useFKColors();
   const ps = useProgramSheetStrings();
   const scrollBottomPad = useTabBarPadding(100);
@@ -551,14 +553,10 @@ export default function SessionDetailScreen() {
                 minutesLabel={labels.minSuffix}
                 onPlayVideo={(mv) => {
                   if (!mv.exercise.videoUrl) return;
-                  haptics.tap();
-                  router.push({
-                    pathname: '/(tabs)/workouts/[id]/video',
-                    params: {
-                      id: session.id,
-                      url: mv.exercise.videoUrl,
-                      title: mv.exercise.name,
-                    },
+                  watchDemo({
+                    url: mv.exercise.videoUrl,
+                    title: mv.exercise.name,
+                    routeId: session.id,
                   });
                 }}
               />
