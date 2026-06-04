@@ -177,7 +177,7 @@ export default function DeleteAccountScreen() {
                 letterSpacing: 1.2,
                 textTransform: 'uppercase',
                 color: colors.mutedFg,
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >
@@ -207,7 +207,7 @@ export default function DeleteAccountScreen() {
                   : 'rgba(15,23,42,0.04)',
                 color: colors.foreground,
                 fontSize: 17,
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 letterSpacing: 1.5,
                 textAlign: isRTL ? 'right' : 'left',
               }}

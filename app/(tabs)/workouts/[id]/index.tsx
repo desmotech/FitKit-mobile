@@ -45,7 +45,7 @@ import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
 import { CoachNote } from '@/components/workout/coach-note';
 import { analytics } from '@/lib/analytics';
-import { displayFamily } from '@/lib/type';
+import { bodyFamily, displayFamily } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
@@ -346,12 +346,12 @@ export default function WorkoutDetailScreen() {
                   <View
                     style={{
                       position: 'absolute',
-                      top: -4,
-                      right: -4,
-                      minWidth: 16,
-                      height: 16,
+                      top: -3,
+                      right: -3,
+                      minWidth: 18,
+                      height: 18,
                       paddingHorizontal: 4,
-                      borderRadius: 8,
+                      borderRadius: 9,
                       backgroundColor: '#0E8C8C',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -361,9 +361,12 @@ export default function WorkoutDetailScreen() {
                   >
                     <Text
                       style={{
-                        fontSize: 9.5,
-                        fontWeight: '800',
+                        fontFamily: bodyFamily(lang, 'bold'),
+                        fontSize: 10,
+                        lineHeight: 13,
                         color: '#fff',
+                        textAlign: 'center',
+                        includeFontPadding: false,
                         fontVariant: ['tabular-nums'],
                       }}
                     >
@@ -420,7 +423,7 @@ export default function WorkoutDetailScreen() {
                 letterSpacing: 1.6,
                 textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
               }}
             >
               {dateKicker}
@@ -441,7 +444,7 @@ export default function WorkoutDetailScreen() {
               >
                 <Text
                   style={{
-                    fontFamily: 'DMMono',
+                    fontFamily: 'Assistant-Medium',
                     fontSize: 10,
                     letterSpacing: 1.2,
                     textTransform: 'uppercase',
@@ -502,7 +505,7 @@ export default function WorkoutDetailScreen() {
                         fontSize: 11,
                         letterSpacing: 1,
                         textTransform: 'uppercase',
-                        fontFamily: 'DMMono-Medium',
+                        fontFamily: 'Assistant-SemiBold',
                         color: i === 0 ? colors.primaryText : ink.muted,
                       }}
                     >
@@ -518,12 +521,25 @@ export default function WorkoutDetailScreen() {
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
               marginTop: 18,
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              borderWidth: 1,
+              borderColor: isDark
+                ? 'rgba(255,255,255,0.14)'
+                : 'rgba(255,255,255,0.85)',
+              backgroundColor: isDark
+                ? 'rgba(70,82,90,0.34)'
+                : 'rgba(255,255,255,0.5)',
+              overflow: 'hidden',
             }}
           >
             {[
               {
                 label: labels.duration,
-                value: estimateDuration(sections, workout.timeCap),
+                value: estimateDuration(sections, workout.timeCap).replace(
+                  /\s*min$/i,
+                  '',
+                ),
               },
               {
                 label: labels.sections,
@@ -539,6 +555,7 @@ export default function WorkoutDetailScreen() {
                 style={{
                   flex: 1,
                   alignItems: 'center',
+                  paddingVertical: 14,
                   paddingHorizontal: 6,
                   borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
                   borderColor: ink.line,
@@ -548,11 +565,12 @@ export default function WorkoutDetailScreen() {
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   style={{
-                    fontSize: 24,
+                    fontSize: 26,
+                    lineHeight: 30,
                     color: colors.foreground,
                     fontVariant: ['tabular-nums'],
                     letterSpacing: -0.5,
-                    fontFamily: 'DMMono-Medium',
+                    fontFamily: displayFamily(lang, 'semibold'),
                   }}
                 >
                   {value}
@@ -564,8 +582,8 @@ export default function WorkoutDetailScreen() {
                     color: ink.muted,
                     letterSpacing: 1,
                     textTransform: 'uppercase',
-                    marginTop: 4,
-                    fontFamily: 'DMMono',
+                    marginTop: 5,
+                    fontFamily: 'Assistant-SemiBold',
                   }}
                 >
                   {label}
@@ -574,6 +592,19 @@ export default function WorkoutDetailScreen() {
             ))}
           </View>
         </View>
+
+        {/* Workout description — the coach's freeform overview / standards,
+            rendered above the structured blocks when the workout carries one. */}
+        {sections.length > 0 && workout.description ? (
+          <View style={{ paddingHorizontal: 18, paddingTop: 16 }}>
+            <FreeformDescription
+              description={workout.description}
+              isRTL={isRTL}
+              lang={lang}
+              colors={colors}
+            />
+          </View>
+        ) : null}
 
         {/* Coach pre-note — static, coach-authored callout (one-directional;
             the two-way chat lives behind the header button). */}
@@ -639,6 +670,7 @@ export default function WorkoutDetailScreen() {
             <FreeformDescription
               description={workout.description}
               isRTL={isRTL}
+              lang={lang}
               colors={colors}
             />
           )}
@@ -804,7 +836,7 @@ function SessionMeter({
     >
       <Text
         style={{
-          fontFamily: 'DMMono',
+          fontFamily: 'Assistant-Medium',
           fontSize: 11,
           letterSpacing: 1.4,
           textTransform: 'uppercase',
@@ -834,7 +866,7 @@ function SessionMeter({
       </View>
       <Text
         style={{
-          fontFamily: 'DMMono',
+          fontFamily: 'Assistant-Medium',
           fontSize: 12,
           color: done ? ink.sage : ink.muted,
           fontVariant: ['tabular-nums'],
@@ -875,7 +907,7 @@ function LastResultFooter({
     <Text
       style={{
         textAlign: 'center',
-        fontFamily: 'DMMono',
+        fontFamily: 'Assistant-Medium',
         fontSize: 11,
         letterSpacing: 0.6,
         color: programSheetInk(colors.isDark).muted,
@@ -896,10 +928,12 @@ function LastResultFooter({
 function FreeformDescription({
   description,
   isRTL,
+  lang,
   colors,
 }: {
   description: string | null | undefined;
   isRTL: boolean;
+  lang: string;
   colors: ReturnType<typeof useFKColors>;
 }) {
   const lines = (description ?? '')
@@ -907,20 +941,7 @@ function FreeformDescription({
     .map((l) => l.trim())
     .filter(Boolean);
 
-  if (lines.length === 0) {
-    return (
-      <Text
-        style={{
-          fontSize: 14,
-          color: colors.mutedFg,
-          textAlign: 'center',
-          paddingVertical: 32,
-        }}
-      >
-        No prescription details.
-      </Text>
-    );
-  }
+  if (lines.length === 0) return null;
 
   return (
     <View
@@ -931,7 +952,9 @@ function FreeformDescription({
         borderCurve: 'continuous',
         backgroundColor: colors.card,
         borderWidth: 1,
-        borderColor: 'rgba(60,60,67,0.18)',
+        borderColor: colors.isDark
+          ? 'rgba(255,255,255,0.12)'
+          : 'rgba(60,60,67,0.16)',
       }}
     >
       {lines.map((line, i) =>
@@ -948,17 +971,17 @@ function FreeformDescription({
                 width: 6,
                 height: 6,
                 borderRadius: 999,
-                backgroundColor: '#0E8C8C',
-                marginTop: 7,
+                backgroundColor: colors.primary,
+                marginTop: 8,
               }}
             />
             <Text
               style={{
                 flex: 1,
+                fontFamily: bodyFamily(lang, 'medium'),
                 fontSize: 15,
                 lineHeight: 22,
                 color: colors.foreground,
-                fontWeight: '500',
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >
@@ -969,10 +992,10 @@ function FreeformDescription({
           <Text
             key={i}
             style={{
+              fontFamily: bodyFamily(lang, 'medium'),
               fontSize: 15,
               lineHeight: 22,
               color: colors.foreground,
-              fontWeight: '500',
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
@@ -1109,7 +1132,7 @@ function HistoryRow({
         {result.scoreValue ? (
           <Text
             className="text-foreground font-bold"
-            style={{ fontSize: 14, fontFamily: 'DMMono' }}
+            style={{ fontSize: 14, fontFamily: 'Assistant-Medium' }}
           >
             {result.scoreValue}
             {result.scoreUnit ? ` ${result.scoreUnit}` : ''}

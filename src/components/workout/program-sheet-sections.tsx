@@ -263,7 +263,7 @@ function SectionRow({
           ) : (
             <Text
               style={{
-                fontFamily: 'DMMono-Medium',
+                fontFamily: 'Assistant-SemiBold',
                 fontSize: 14,
                 letterSpacing: 0.2,
                 color: colors.foreground,
@@ -275,7 +275,7 @@ function SectionRow({
         </AnimatedPressable>
         <Text
           style={{
-            fontFamily: 'DMMono',
+            fontFamily: 'Assistant-Medium',
             fontSize: 10,
             letterSpacing: 0.4,
             color: ink.muted,
@@ -299,7 +299,7 @@ function SectionRow({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               fontSize: 11,
               letterSpacing: 1.4,
               textTransform: 'uppercase',
@@ -331,7 +331,7 @@ function SectionRow({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               fontSize: 11,
               letterSpacing: 1,
               textTransform: 'uppercase',
@@ -481,7 +481,7 @@ function ExRow({
                       : 'rgba(14,140,140,0.28)',
                   }}
                 >
-                  <Text style={{ fontSize: 11, fontFamily: 'DMMono-Medium', color: colors.primaryText }}>
+                  <Text style={{ fontSize: 11, fontFamily: 'Assistant-SemiBold', color: colors.primaryText }}>
                     {letter}
                   </Text>
                 </View>
@@ -506,7 +506,7 @@ function ExRow({
               <Text
                 numberOfLines={1}
                 style={{
-                  fontFamily: 'DMMono-Medium',
+                  fontFamily: 'Assistant-SemiBold',
                   fontSize: 19,
                   letterSpacing: -0.3,
                   color: colors.foreground,
@@ -561,7 +561,7 @@ function ExRow({
                     numberOfLines={1}
                     adjustsFontSizeToFit
                     style={{
-                      fontFamily: 'DMMono-Medium',
+                      fontFamily: 'Assistant-SemiBold',
                       fontSize: 22,
                       lineHeight: 26,
                       letterSpacing: -0.5,
@@ -573,7 +573,7 @@ function ExRow({
                   </Text>
                   <Text
                     style={{
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                       fontSize: 9.5,
                       letterSpacing: 1,
                       textTransform: 'uppercase',
@@ -621,7 +621,7 @@ function ExRow({
                     style={{
                       width: 22,
                       flexShrink: 0,
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                       fontSize: 11,
                       letterSpacing: 1,
                       color: colors.primaryText,
@@ -686,7 +686,7 @@ function ExRow({
                   </View>
                   <Text
                     style={{
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                       fontSize: 11,
                       letterSpacing: 1,
                       textTransform: 'uppercase',

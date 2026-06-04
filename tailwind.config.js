@@ -102,9 +102,10 @@ module.exports = {
         'display-medium': ['Rubik-Medium', 'sans-serif'],
         'display-semibold': ['Rubik-SemiBold', 'sans-serif'],
         'display-bold': ['Rubik-Bold', 'sans-serif'],
-        // Numerals / labels — DM Mono.
-        mono: ['DMMono', 'monospace'],
-        'mono-medium': ['DMMono-Medium', 'monospace'],
+        // Numerals / labels — Assistant (DM Mono removed; numbers use
+        // tabular-nums where alignment matters).
+        mono: ['Assistant-Medium', 'sans-serif'],
+        'mono-medium': ['Assistant-SemiBold', 'sans-serif'],
         // Hebrew aliases — now the same universal Rubik/Assistant faces.
         heebo: ['Assistant-Regular', 'sans-serif'],
         hebrew: ['Assistant-Regular', 'sans-serif'],

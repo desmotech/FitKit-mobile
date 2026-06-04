@@ -23,16 +23,18 @@ export interface ProgramSheetInk {
 export function programSheetInk(isDark: boolean): ProgramSheetInk {
   return isDark
     ? {
-        muted: '#AEB4B9',
-        faint: '#878D92',
-        line: 'rgba(255,255,255,0.14)',
+        // Bright, cool grey — legible on the lighter teal areas of the
+        // ambient gradient where the previous value washed out.
+        muted: '#C9CFD3',
+        faint: '#9BA1A6',
+        line: 'rgba(255,255,255,0.16)',
         sage: '#93C49B',
-        amber: '#E2B85C',
+        amber: '#E7C06A',
       }
     : {
-        muted: '#544F46',
+        muted: '#4C473F',
         faint: '#736D63',
-        line: 'rgba(40,36,30,0.18)',
+        line: 'rgba(40,36,30,0.20)',
         sage: '#5E7E3E',
         amber: '#9A6F1E',
       };

@@ -148,7 +148,7 @@ export function ExercisesView({
                 >
                   <Text
                     style={{
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                       fontSize: 11,
                       color: isOpen ? colors.primary : colors.mutedFg,
                       letterSpacing: 0.2,
@@ -194,7 +194,7 @@ export function ExercisesView({
                             letterSpacing: 1.4,
                             textTransform: 'uppercase',
                             textAlign: isRTL ? 'right' : 'left',
-                            fontFamily: 'DMMono',
+                            fontFamily: 'Assistant-Medium',
                           }}
                         >
                           {s.title ?? sectionTypeLabel(s.type)}
@@ -409,7 +409,7 @@ function ExerciseCard({
                     fontSize: 20,
                     fontWeight: '800',
                     color: '#0E8C8C',
-                    fontFamily: 'DMMono',
+                    fontFamily: 'Assistant-Medium',
                   }}
                 >
                   {ex.name.charAt(0).toUpperCase()}
@@ -441,7 +441,7 @@ function ExerciseCard({
                         fontSize: 11,
                         fontWeight: '800',
                         color: '#0E8C8C',
-                        fontFamily: 'DMMono',
+                        fontFamily: 'Assistant-Medium',
                       }}
                     >
                       {letter}
@@ -469,7 +469,7 @@ function ExerciseCard({
                   style={{
                     fontSize: 19,
                     color: colors.primary,
-                    fontFamily: 'DMMono-Medium',
+                    fontFamily: 'Assistant-SemiBold',
                     fontVariant: ['tabular-nums'],
                     letterSpacing: -0.3,
                     marginTop: 3,
@@ -545,7 +545,7 @@ function ExerciseCard({
                       color: colors.foreground,
                       letterSpacing: -0.5,
                       fontVariant: ['tabular-nums'],
-                      fontFamily: 'DMMono-Medium',
+                      fontFamily: 'Assistant-SemiBold',
                       lineHeight: 26,
                     }}
                   >
@@ -558,7 +558,7 @@ function ExerciseCard({
                       letterSpacing: 1,
                       textTransform: 'uppercase',
                       marginTop: 4,
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                     }}
                   >
                     {s.label}
@@ -608,7 +608,7 @@ function ExerciseCard({
                   letterSpacing: 1.4,
                   textTransform: 'uppercase',
                   textAlign: isRTL ? 'right' : 'left',
-                  fontFamily: 'DMMono',
+                  fontFamily: 'Assistant-Medium',
                 }}
               >
                 {labels.formCues ?? 'Form cues'}

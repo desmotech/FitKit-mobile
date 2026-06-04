@@ -54,7 +54,7 @@ export function FKRing({
         y={mid}
         fill={color}
         fontSize={size * 0.28}
-        fontFamily="DMMono"
+        fontFamily="Assistant-Medium"
         fontWeight="500"
         textAnchor="middle"
         alignmentBaseline="central"

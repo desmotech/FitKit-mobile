@@ -120,35 +120,50 @@ export function useWorkoutComments(
     },
   });
 
-  const markRead = useMutation<{ data: { markedCount: number } }, Error, void>({
+  const markRead = useMutation<
+    { data: { markedCount: number } },
+    Error,
+    void,
+    { prev: InfiniteData | undefined }
+  >({
     mutationFn: () =>
       fetchWithAuth(
         `/organizations/${orgId}/workout-assignments/${workoutAssignmentId}/comments/read`,
         { method: 'PUT' },
       ) as Promise<{ data: { markedCount: number } }>,
-    onSuccess: (result) => {
-      if (!result?.data?.markedCount) return;
-
-      queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
-        if (!old || !currentMembershipId) return old;
+    // Optimistically clear unread the instant the chat opens so the header
+    // badge decreases immediately — independent of the server's markedCount
+    // (which is 0 when a persisted cache is stale, leaving the badge stuck).
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey });
+      const prev = queryClient.getQueryData<InfiniteData>(queryKey);
+      if (currentMembershipId) {
         const readAtIso = new Date().toISOString();
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            data: {
-              ...page.data,
-              messages: page.data.messages.map((m) =>
-                m.recipientMembershipId === currentMembershipId && !m.readAt
-                  ? { ...m, readAt: readAtIso }
-                  : m,
-              ),
-            },
-          })),
-        };
-      });
-
-      // Invalidate sibling surfaces that derive unread state from these
-      // same workout-tagged messages (Feed badges, Whiteboard day strip).
+        queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              data: {
+                ...page.data,
+                messages: page.data.messages.map((m) =>
+                  m.recipientMembershipId === currentMembershipId && !m.readAt
+                    ? { ...m, readAt: readAtIso }
+                    : m,
+                ),
+              },
+            })),
+          };
+        });
+      }
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(queryKey, ctx.prev);
+    },
+    onSuccess: () => {
+      // Refresh sibling surfaces that derive unread state from these same
+      // workout-tagged messages (Feed badges, Whiteboard day strip).
       queryClient.invalidateQueries({
         predicate: (q) => {
           const key = q.queryKey[0];

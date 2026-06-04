@@ -265,7 +265,7 @@ function MetricSummaryCard({
                     fontSize: 22,
                     fontWeight: '800',
                     color: colors.foreground,
-                    fontFamily: 'DMMono',
+                    fontFamily: 'Assistant-Medium',
                     fontVariant: ['tabular-nums'],
                     letterSpacing: -0.4,
                   }}

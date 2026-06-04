@@ -163,7 +163,7 @@ export function SetRow({
         fontSize: 13,
         fontWeight: '600',
         color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
-        fontFamily: 'DMMono',
+        fontFamily: 'Assistant-Medium',
       }}
     >
       {setNumber}
@@ -237,7 +237,7 @@ export function SetRow({
               fontSize: 14,
               fontWeight: '800',
               color: '#0E8C8C',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               letterSpacing: -0.1,
             }}
           >
@@ -390,7 +390,7 @@ function CellInput({
         borderCurve: 'continuous',
         backgroundColor: isDark ? 'rgba(118,118,128,0.30)' : '#FFFFFF',
         fontSize: 15,
-        fontFamily: 'DMMono',
+        fontFamily: 'Assistant-Medium',
         fontWeight: '500',
         color: fg,
         textAlign: 'center',

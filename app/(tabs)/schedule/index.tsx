@@ -383,7 +383,7 @@ export default function ScheduleScreen() {
                 letterSpacing: 1.2,
                 textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
               }}
             >
               {labels.week} {weekNumber(new Date(weekStart))}
@@ -822,7 +822,7 @@ function ClassCard({
               >
                 <Text
                   style={{
-                    fontFamily: 'DMMono',
+                    fontFamily: 'Assistant-Medium',
                     fontWeight: '800',
                     fontSize: 18,
                     letterSpacing: -0.3,

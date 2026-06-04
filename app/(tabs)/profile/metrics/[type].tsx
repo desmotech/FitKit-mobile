@@ -199,7 +199,7 @@ export default function MetricDetailScreen() {
                         fontSize: 15,
                         fontWeight: '800',
                         color: colors.foreground,
-                        fontFamily: 'DMMono',
+                        fontFamily: 'Assistant-Medium',
                         fontVariant: ['tabular-nums'],
                         letterSpacing: -0.3,
                       }}
@@ -377,7 +377,7 @@ function HistoryRow({
                     fontSize: 16,
                     fontWeight: '800',
                     color: colors.foreground,
-                    fontFamily: 'DMMono',
+                    fontFamily: 'Assistant-Medium',
                     fontVariant: ['tabular-nums'],
                     letterSpacing: -0.3,
                   }}

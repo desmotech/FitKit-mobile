@@ -516,7 +516,7 @@ function NumericInput({
         style={{
           paddingVertical: 12,
           fontSize: 16,
-          fontFamily: 'DMMono',
+          fontFamily: 'Assistant-Medium',
           textAlign: isRTL ? 'right' : 'left',
         }}
         className="text-foreground"

@@ -34,8 +34,8 @@ export const font = {
   bodyExtrabold: 'Assistant-ExtraBold',
 
   // Numerals — DM Mono (the "scoreboard"). Latin/digits only.
-  mono: 'DMMono',
-  monoMedium: 'DMMono-Medium',
+  mono: 'Assistant-Medium',
+  monoMedium: 'Assistant-SemiBold',
 
   // Russian body — Manrope (Cyrillic). Routed only for ru via bodyFamily().
   ruBody: 'Manrope',

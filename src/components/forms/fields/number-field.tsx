@@ -69,7 +69,7 @@ export function NumberFieldRenderer({
             flex: 1,
             fontSize: 17,
             fontWeight: '500',
-            fontFamily: 'DMMono',
+            fontFamily: 'Assistant-Medium',
             color: colors.foreground,
             textAlign: isRTL ? 'right' : 'left',
             paddingVertical: 0,

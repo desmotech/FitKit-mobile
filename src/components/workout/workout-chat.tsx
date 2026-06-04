@@ -27,6 +27,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFKColors } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -78,6 +79,7 @@ export function WorkoutChat({
   const colors = useFKColors();
   const isDark = colors.isDark;
   const ink = programSheetInk(isDark);
+  const insets = useSafeAreaInsets();
   const { dir, lang, t } = useI18n();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
@@ -281,7 +283,7 @@ export function WorkoutChat({
                 >
                   <Text
                     style={{
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                       fontSize: 10,
                       letterSpacing: 1,
                       textTransform: 'uppercase',
@@ -345,7 +347,9 @@ export function WorkoutChat({
           gap: 8,
           paddingHorizontal: 10,
           paddingTop: 10,
-          paddingBottom: Platform.OS === 'ios' ? 10 : 12,
+          // Clear the home indicator so the input isn't cut off at the
+          // bottom of the sheet (the KAV handles the keyboard above this).
+          paddingBottom: Math.max(insets.bottom, 12),
           borderTopWidth: uploads.uploads.length > 0 ? 0 : StyleSheet.hairlineWidth,
           borderTopColor: ink.line,
         }}
@@ -475,7 +479,7 @@ function MessageBubble({
       {!isOwn && message.senderName ? (
         <Text
           style={{
-            fontFamily: 'DMMono',
+            fontFamily: 'Assistant-Medium',
             fontSize: 10,
             letterSpacing: 0.6,
             textTransform: 'uppercase',
@@ -530,7 +534,7 @@ function MessageBubble({
             >
               <Text
                 style={{
-                  fontFamily: 'DMMono',
+                  fontFamily: 'Assistant-Medium',
                   fontSize: 9.5,
                   color: metaFg,
                   fontVariant: ['tabular-nums'],

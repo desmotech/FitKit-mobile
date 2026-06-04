@@ -123,7 +123,7 @@ export function TodayClassCard({
                   fontSize: 18,
                   fontWeight: '800',
                   color: '#0E8C8C',
-                  fontFamily: 'DMMono',
+                  fontFamily: 'Assistant-Medium',
                   fontVariant: ['tabular-nums'],
                   letterSpacing: -0.2,
                 }}
