@@ -289,7 +289,7 @@ export function ExercisesView({
 
 // ── Exercise card ──────────────────────────────────────────────────
 
-interface PrescriptionStat {
+export interface PrescriptionStat {
   key: string;
   label: string;
   value: string;
@@ -757,7 +757,7 @@ function ExerciseCard({
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function buildPrescriptionStats(
+export function buildPrescriptionStats(
   movement: WorkoutMovement,
   hideSets: boolean | undefined,
   hideReps: boolean | undefined,
@@ -801,7 +801,7 @@ function buildPrescriptionStats(
   return stats;
 }
 
-function buildPrescriptionSummary(
+export function buildPrescriptionSummary(
   movement: WorkoutMovement,
   stats: PrescriptionStat[],
   fallbackLine: string | null,

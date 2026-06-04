@@ -3,10 +3,15 @@ import {
   AlertCircle,
   ArrowUp,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  Clock,
   Dumbbell,
+  MessageSquare,
   Paperclip,
+  PencilLine,
   X,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
@@ -30,10 +35,7 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Avatar } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -41,7 +43,6 @@ import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import Svg, { Path, Circle } from 'react-native-svg';
 import {
   type WorkoutResult,
-  type WorkoutSection,
   useCompleteAssignment,
   useMyResults,
   useWorkoutAssignment,
@@ -49,16 +50,18 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import {
   FKAmbientBackdrop,
+  FKButton,
   FKScreenHeader,
   useFKColors,
 } from '@/components/fk';
 import { useMessageUploads } from '@/hooks/use-message-uploads';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
-import { ExercisesView } from '@/components/workout/exercises-view';
+import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
 import { analytics } from '@/lib/analytics';
-import { continuousCorners } from '@/lib/utils';
 import { displayFamily } from '@/lib/type';
+import { estimateDuration } from '@/lib/workout-estimate';
+import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 // Static fallback for the static rest/note helper. Detail screen builds
@@ -69,11 +72,10 @@ const HERO_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
 });
 
-type Section = 'exercises' | 'notes' | 'comments';
-
 export default function WorkoutDetailScreen() {
   const router = useRouter();
   const { dir, t, lang } = useI18n();
+  const ps = useProgramSheetStrings();
   const { activeOrganization, primaryMembership } = useCurrentUser();
   const { colorScheme } = useColorScheme();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -89,7 +91,16 @@ export default function WorkoutDetailScreen() {
   const assignmentQuery = useWorkoutAssignment(activeOrganization?.id, id);
   const assignment = assignmentQuery.data?.data;
 
-  const [section, setSection] = useState<Section>('exercises');
+  // Per-section check-off — local session state that drives the progress
+  // meter. The server only tracks whole-workout completion (one-way), so
+  // these checks are intentionally in-memory and reset on reload; a
+  // server-completed workout renders every block done + locked instead.
+  const [checkedSections, setCheckedSections] = useState<
+    Record<string, boolean>
+  >({});
+  // Collapsible entries kept off-tab (History list + Comments thread).
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
   // Workout-anchored comment thread. Hook is enabled-gated so it skips
   // until we have orgId + assignmentId + membershipId.
@@ -109,19 +120,23 @@ export default function WorkoutDetailScreen() {
   const queryClient = useQueryClient();
   const completeAssignment = useCompleteAssignment(activeOrganization?.id, id);
 
-  // Mark thread as read whenever the Comments tab is active and there's
+  // Mark thread as read whenever the Comments entry is open and there's
   // pending unread. `markRead.mutate` is fresh per-render so we gate on
   // unreadCount + isPending to avoid a loop.
   useEffect(() => {
-    if (section !== 'comments') return;
+    if (!commentsOpen) return;
     if (!comments.unreadCount) return;
     if (comments.markRead.isPending) return;
     comments.markRead.mutate();
-  }, [section, comments.unreadCount, comments.markRead]);
+  }, [commentsOpen, comments.unreadCount, comments.markRead]);
 
   // PostHog: capture workout open once the assignment resolves. Gated on
   // workout id so navigating between workouts re-fires.
   const workoutId = assignment?.workout?.id;
+  // My results for this workout — powers the "Last · …" footer and the
+  // collapsible History. Shares a cache key with the History list (React
+  // Query dedupes), so calling it here is free.
+  const myResults = useMyResults(activeOrganization?.id, workoutId);
   useEffect(() => {
     if (!workoutId) return;
     analytics.track('member_workout_viewed', {
@@ -289,6 +304,27 @@ export default function WorkoutDetailScreen() {
     });
   };
 
+  const handleToggleSection = (sectionId: string, willBeDone: boolean) => {
+    setCheckedSections((prev) => ({ ...prev, [sectionId]: willBeDone }));
+  };
+
+  // Session progress meter — local check-offs drive the segments; a
+  // server-completed workout fills every one.
+  const totalSections = sections.length;
+  const doneSections = isCompleted
+    ? totalSections
+    : sections.filter((s) => checkedSections[s.id]).length;
+
+  // Latest result for this workout → "Last · …" footer + History list.
+  const myResultRows = (myResults.data?.data ?? [])
+    .filter((r) => r.workoutId === workout.id)
+    .slice()
+    .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
+  const lastResult = myResultRows[0] ?? null;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = assignment.date === todayStr;
+
   return (
     <View className="flex-1">
       <FKAmbientBackdrop />
@@ -322,18 +358,56 @@ export default function WorkoutDetailScreen() {
               : 'rgba(60,60,67,0.16)',
           }}
         >
-          <Text
+          <View
             style={{
-              fontSize: 11,
-              color: colors.mutedFg,
-              letterSpacing: 1.6,
-              textTransform: 'uppercase',
-              textAlign: isRTL ? 'right' : 'left',
-              fontFamily: 'DMMono',
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
             }}
           >
-            {dateKicker}
-          </Text>
+            <Text
+              numberOfLines={1}
+              style={{
+                flex: 1,
+                fontSize: 11,
+                color: colors.mutedFg,
+                letterSpacing: 1.6,
+                textTransform: 'uppercase',
+                textAlign: isRTL ? 'right' : 'left',
+                fontFamily: 'DMMono',
+              }}
+            >
+              {dateKicker}
+            </Text>
+            {isToday ? (
+              <View
+                style={{
+                  paddingHorizontal: 8,
+                  paddingTop: 4,
+                  paddingBottom: 3,
+                  borderRadius: 8,
+                  borderCurve: 'continuous',
+                  borderWidth: 1,
+                  borderColor: colors.isDark
+                    ? 'rgba(39,200,186,0.5)'
+                    : 'rgba(14,140,140,0.45)',
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: 'DMMono',
+                    fontSize: 10,
+                    letterSpacing: 1.2,
+                    textTransform: 'uppercase',
+                    color: colors.primaryText,
+                  }}
+                >
+                  {ps.today}
+                </Text>
+              </View>
+            ) : null}
+          </View>
 
           <Text
             numberOfLines={3}
@@ -452,194 +526,89 @@ export default function WorkoutDetailScreen() {
           </View>
         </View>
 
-        {/* Tabs — Plan / Notes / Comments. Uses the shared Tabs primitive
-            (rn-primitives/tabs) so behavior matches History + other surfaces.
-            Unread badge sits inline next to the Comments label. */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
-          <Tabs
-            value={section}
-            onValueChange={(v) => {
-              haptics.select();
-              setSection(v as Section);
-            }}
-          >
-            <TabsList className="h-10 w-full p-1">
-              <TabsTrigger value="exercises" className="flex-1">
-                <Text className="text-sm font-semibold">{labels.exercises}</Text>
-              </TabsTrigger>
-              <TabsTrigger value="notes" className="flex-1">
-                <Text className="text-sm font-semibold">{labels.notes}</Text>
-              </TabsTrigger>
-              <TabsTrigger value="comments" className="flex-1">
-                <Text className="text-sm font-semibold">{labels.comments}</Text>
-                {comments.unreadCount > 0 ? (
-                  <View
-                    style={{
-                      minWidth: 18,
-                      height: 18,
-                      borderRadius: 999,
-                      paddingHorizontal: 5,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#0E8C8C',
-                      marginLeft: 4,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontWeight: '800',
-                        color: '#fff',
-                        fontVariant: ['tabular-nums'],
-                      }}
-                    >
-                      {comments.unreadCount > 9 ? '9+' : comments.unreadCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </TabsTrigger>
-            </TabsList>
+        {/* Coach pre-note — folded inline (Notes are kept accessible
+            without a tab bar in the new editorial layout). */}
+        {assignment.coachPreNote ? (
+          <CoachNoteCallout
+            label={ps.coachNote}
+            body={assignment.coachPreNote}
+            isRTL={isRTL}
+            colors={colors}
+          />
+        ) : null}
 
-            <TabsContent value="exercises">
-              <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
-                {sections.length > 0 ? (
-                  <ExercisesView
-                    sections={sections}
-                    isRTL={isRTL}
-                    labels={{
-                      superset: labels.superset,
-                      rounds: labels.rounds,
-                      sets: labels.sets,
-                      load: labels.load,
-                      coach: labels.coach,
-                      comments: labels.comments,
-                    }}
-                    onPlayVideo={(mv) => {
-                      if (!mv.exercise.videoUrl) return;
-                      router.push({
-                        pathname: '/(tabs)/workouts/[id]/video',
-                        params: {
-                          id: assignment.id,
-                          url: mv.exercise.videoUrl,
-                          title: mv.exercise.name,
-                        },
-                      });
-                    }}
-                    onPressComments={(mv) => {
-                      const workoutId = assignment.workout?.id;
-                      if (!workoutId) return;
-                      router.push({
-                        pathname:
-                          '/(tabs)/workouts/[id]/exercise/[movementId]',
-                        params: {
-                          id: workoutId,
-                          movementId: mv.id,
-                          name: mv.exercise.name,
-                        },
-                      });
-                    }}
-                  />
-                ) : (
-                  <FreeformDescription
-                    description={workout.description}
-                    isRTL={isRTL}
-                    colors={colors}
-                  />
+        {/* Body — the structured "program sheet": a session progress meter
+            over numbered sections on a dotted spine. Workouts without
+            sections fall back to the freeform description. */}
+        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
+          {sections.length > 0 ? (
+            <>
+              <SessionMeter
+                label={ps.session}
+                total={totalSections}
+                done={doneSections}
+                segments={sections.map(
+                  (s) => isCompleted || !!checkedSections[s.id],
                 )}
-              </View>
-            </TabsContent>
-
-            <TabsContent value="notes">
-              <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
-                <NotesView
-                  coachPreNote={assignment.coachPreNote ?? null}
-                  coachPostNote={assignment.coachPostNote ?? null}
-                  workoutDescription={workout.description}
-                  labels={{ yourCoach: labels.yourCoach, noNotes: labels.noNotes }}
+                isRTL={isRTL}
+                colors={colors}
+              />
+              <View style={{ marginTop: 18 }}>
+                <ProgramSheetSections
+                  sections={sections}
+                  checked={checkedSections}
+                  locked={isCompleted}
+                  onToggleSection={handleToggleSection}
                   isRTL={isRTL}
-                />
-              </View>
-            </TabsContent>
-
-            <TabsContent value="comments">
-              <View style={{ paddingHorizontal: 18, paddingTop: 8 }}>
-                <CommentsView
-                  isRTL={isRTL}
-                  colors={colors}
-                  isDark={isDark}
-                  lang={lang}
                   labels={{
-                    noComments: labels.noComments,
-                    writeComment: labels.writeComment,
-                    loadEarlier: labels.loadEarlier,
-                    deleteComment: labels.deleteComment,
-                    cancel: labels.cancel,
+                    watchDemo: ps.watchDemo,
+                    formCues: ps.formCues,
+                    comments: ps.comments,
+                    markComplete: ps.a11yMarkSectionComplete,
+                    markIncomplete: ps.a11yMarkSectionIncomplete,
                   }}
-                  currentMembershipId={primaryMembership?.id ?? null}
-                  comments={comments.allComments}
-                  isLoading={comments.query.isLoading}
-                  hasMore={!!comments.query.hasNextPage}
-                  isLoadingMore={comments.query.isFetchingNextPage}
-                  isSending={comments.sendComment.isPending}
-                  onLoadMore={() => comments.query.fetchNextPage()}
-                  uploads={uploads.uploads}
-                  hasPendingUploads={uploads.hasPendingUploads}
-                  onAddPicked={uploads.addPicked}
-                  onRemoveUpload={uploads.removeUpload}
-                  onSend={async (content) => {
-                    const trimmed = content.trim();
-                    const attachmentIds = uploads.getReadyUploadIds();
-                    if (!trimmed && attachmentIds.length === 0) return false;
-                    try {
-                      await comments.sendComment.mutateAsync({
-                        content: trimmed || undefined,
-                        attachmentIds:
-                          attachmentIds.length > 0 ? attachmentIds : undefined,
-                      });
-                      uploads.clearAll();
-                      haptics.success();
-                      return true;
-                    } catch {
-                      haptics.error();
-                      return false;
-                    }
+                  onPlayVideo={(mv) => {
+                    if (!mv.exercise.videoUrl) return;
+                    router.push({
+                      pathname: '/(tabs)/workouts/[id]/video',
+                      params: {
+                        id: assignment.id,
+                        url: mv.exercise.videoUrl,
+                        title: mv.exercise.name,
+                      },
+                    });
                   }}
-                  onDelete={(messageId) => comments.deleteComment.mutate(messageId)}
+                  onPressComments={(mv) => {
+                    const wid = assignment.workout?.id;
+                    if (!wid) return;
+                    router.push({
+                      pathname: '/(tabs)/workouts/[id]/exercise/[movementId]',
+                      params: {
+                        id: wid,
+                        movementId: mv.id,
+                        name: mv.exercise.name,
+                      },
+                    });
+                  }}
                 />
               </View>
-            </TabsContent>
-          </Tabs>
+            </>
+          ) : (
+            <FreeformDescription
+              description={workout.description}
+              isRTL={isRTL}
+              colors={colors}
+            />
+          )}
         </View>
 
-        {/* Inline "Log result" CTA — placed after the exercise content
-            and before MyHistory. The previous design used a sticky
-            BlurView dock at the bottom that overlapped the movement list
-            and forced extra bottom padding on the ScrollView. Inline is
-            simpler, doesn't occlude content, and matches the profile
-            sub-screens' inline-primary-action pattern. */}
-        <View
-          style={{
-            paddingHorizontal: 18,
-            paddingTop: 18,
-            gap: 12,
-          }}
-        >
-          <Button
-            label={labels.logResult}
-            fullWidth
-            size="lg"
-            className="rounded-2xl"
-            onPress={() => {
-              haptics.tap();
-              router.push({
-                pathname: '/log/workout/[id]',
-                params: { id: assignment.id },
-              });
-            }}
-          />
-
-          {/* Mark completed — one-way. Once done (here or via a logged
-              result) it collapses to a static "Completed" confirmation. */}
+        {/* CTA cluster — "Mark completed" is the one elevated, accented
+            moment; "Log result" + "History" are the outlined companions;
+            a "Last · …" line gives a quick glance at the previous effort.
+            History expands in place directly under its button. */}
+        <View style={{ paddingHorizontal: 18, paddingTop: 20, gap: 10 }}>
+          {/* Mark completed — one-way (also auto-set when a result is
+              logged). Once done it collapses to a static confirmation. */}
           {isCompleted ? (
             <View
               style={{
@@ -647,40 +616,445 @@ export default function WorkoutDetailScreen() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
-                paddingVertical: 12,
-                borderRadius: 16,
+                paddingVertical: 16,
+                borderRadius: 18,
                 borderCurve: 'continuous',
                 backgroundColor: 'rgba(122,138,92,0.16)',
               }}
             >
               <Check size={18} color="#7A8A5C" strokeWidth={2.6} />
               <Text style={{ fontSize: 15, fontWeight: '700', color: '#7A8A5C' }}>
-                {labels.completed}
+                {ps.completed}
               </Text>
             </View>
           ) : (
-            <Button
-              label={labels.markComplete}
-              variant="outline"
-              fullWidth
+            <FKButton
+              label={ps.markCompleted}
               size="lg"
+              fullWidth
               className="rounded-2xl"
               disabled={completeAssignment.isPending}
+              leading={<Check size={18} color="#fff" strokeWidth={2.6} />}
               onPress={handleMarkComplete}
             />
           )}
+
+          <View
+            style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 10 }}
+          >
+            <FKButton
+              label={ps.logResult}
+              variant="outline"
+              size="lg"
+              className="rounded-2xl"
+              style={{ flex: 1 }}
+              leading={
+                <PencilLine
+                  size={16}
+                  color={colors.foreground}
+                  strokeWidth={2.2}
+                />
+              }
+              onPress={() => {
+                haptics.tap();
+                router.push({
+                  pathname: '/log/workout/[id]',
+                  params: { id: assignment.id },
+                });
+              }}
+            />
+            <FKButton
+              label={ps.history}
+              variant="outline"
+              size="lg"
+              className="rounded-2xl"
+              style={{ flex: 1 }}
+              leading={
+                <Clock size={16} color={colors.foreground} strokeWidth={2.2} />
+              }
+              trailing={
+                historyOpen ? (
+                  <ChevronUp
+                    size={15}
+                    color={colors.mutedFg}
+                    strokeWidth={2.4}
+                  />
+                ) : (
+                  <ChevronDown
+                    size={15}
+                    color={colors.mutedFg}
+                    strokeWidth={2.4}
+                  />
+                )
+              }
+              onPress={() => {
+                haptics.tap();
+                setHistoryOpen((v) => !v);
+              }}
+            />
+          </View>
+
+          {lastResult ? (
+            <LastResultFooter
+              result={lastResult}
+              labels={{ last: ps.last, rx: ps.rx, scaled: ps.scaled }}
+              lang={lang}
+              colors={colors}
+            />
+          ) : null}
+
+          {/* My History — expands directly under the History CTA. */}
+          <MyHistory
+            results={myResultRows}
+            isRTL={isRTL}
+            expanded={historyOpen}
+            emptyLabel={ps.noHistory}
+            colors={colors}
+          />
         </View>
 
-        {/* My History — collapsible (visible across all section tabs) */}
-        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-          <MyHistory
-            orgId={activeOrganization?.id}
-            workoutId={workout.id}
+        {/* Coach post-note — folded inline. */}
+        {assignment.coachPostNote ? (
+          <CoachNoteCallout
+            label={ps.postWorkout}
+            body={assignment.coachPostNote}
             isRTL={isRTL}
+            colors={colors}
+            tone="post"
           />
+        ) : null}
+
+        {/* Comments — kept accessible as a collapsible entry. */}
+        <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
+          <CommentsToggle
+            label={ps.comments}
+            count={comments.unreadCount}
+            open={commentsOpen}
+            onToggle={() => {
+              haptics.tap();
+              setCommentsOpen((v) => !v);
+            }}
+            isRTL={isRTL}
+            colors={colors}
+          />
+          {commentsOpen ? (
+            <View style={{ marginTop: 12 }}>
+              <CommentsView
+                isRTL={isRTL}
+                colors={colors}
+                isDark={isDark}
+                lang={lang}
+                labels={{
+                  noComments: labels.noComments,
+                  writeComment: labels.writeComment,
+                  loadEarlier: labels.loadEarlier,
+                  deleteComment: labels.deleteComment,
+                  cancel: labels.cancel,
+                }}
+                currentMembershipId={primaryMembership?.id ?? null}
+                comments={comments.allComments}
+                isLoading={comments.query.isLoading}
+                hasMore={!!comments.query.hasNextPage}
+                isLoadingMore={comments.query.isFetchingNextPage}
+                isSending={comments.sendComment.isPending}
+                onLoadMore={() => comments.query.fetchNextPage()}
+                uploads={uploads.uploads}
+                hasPendingUploads={uploads.hasPendingUploads}
+                onAddPicked={uploads.addPicked}
+                onRemoveUpload={uploads.removeUpload}
+                onSend={async (content) => {
+                  const trimmed = content.trim();
+                  const attachmentIds = uploads.getReadyUploadIds();
+                  if (!trimmed && attachmentIds.length === 0) return false;
+                  try {
+                    await comments.sendComment.mutateAsync({
+                      content: trimmed || undefined,
+                      attachmentIds:
+                        attachmentIds.length > 0 ? attachmentIds : undefined,
+                    });
+                    uploads.clearAll();
+                    haptics.success();
+                    return true;
+                  } catch {
+                    haptics.error();
+                    return false;
+                  }
+                }}
+                onDelete={(messageId) => comments.deleteComment.mutate(messageId)}
+              />
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+// ── Coach note callout ───────────────────────────────────────────────
+// Inline replacement for the old Notes tab — a brand-striped card carrying
+// the coach's pre- or post-workout note.
+
+function CoachNoteCallout({
+  label,
+  body,
+  isRTL,
+  colors,
+  tone = 'pre',
+}: {
+  label: string;
+  body: string;
+  isRTL: boolean;
+  colors: ReturnType<typeof useFKColors>;
+  tone?: 'pre' | 'post';
+}) {
+  const accent = tone === 'post' ? '#C9974D' : colors.primaryText;
+  const accentText = tone === 'post' ? '#8B6A35' : colors.primaryText;
+  return (
+    <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
+      <View
+        style={{
+          padding: 16,
+          borderRadius: 18,
+          borderCurve: 'continuous',
+          borderWidth: 1,
+          borderColor:
+            tone === 'post'
+              ? 'rgba(201,151,77,0.30)'
+              : colors.isDark
+                ? 'rgba(39,200,186,0.24)'
+                : 'rgba(14,140,140,0.22)',
+          backgroundColor:
+            tone === 'post' ? 'rgba(201,151,77,0.06)' : 'transparent',
+          overflow: 'hidden',
+        }}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            [isRTL ? 'right' : 'left']: 0,
+            width: 3,
+            backgroundColor: accent,
+          }}
+        />
+        <Text
+          style={{
+            fontFamily: 'DMMono',
+            fontSize: 10,
+            letterSpacing: 1.4,
+            textTransform: 'uppercase',
+            color: accentText,
+            marginBottom: 6,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {label}
+        </Text>
+        <Text
+          style={{
+            fontSize: 13.5,
+            lineHeight: 20,
+            color: colors.foreground,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {body}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Session progress meter ───────────────────────────────────────────
+// One segment per section; fills sage as blocks are checked off. Mirrors
+// the design's "momentum" bar.
+
+function SessionMeter({
+  label,
+  total,
+  done,
+  segments,
+  isRTL,
+  colors,
+}: {
+  label: string;
+  total: number;
+  done: number;
+  segments: boolean[];
+  isRTL: boolean;
+  colors: ReturnType<typeof useFKColors>;
+}) {
+  const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
+  return (
+    <View
+      style={{
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        alignItems: 'center',
+        gap: 11,
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: 'DMMono',
+          fontSize: 11,
+          letterSpacing: 1.4,
+          textTransform: 'uppercase',
+          color: colors.mutedFg,
+        }}
+      >
+        {label}
+      </Text>
+      <View
+        style={{
+          flex: 1,
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          gap: 5,
+        }}
+      >
+        {segments.map((on, i) => (
+          <View
+            key={i}
+            style={{
+              flex: 1,
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: on ? sage : colors.border,
+            }}
+          />
+        ))}
+      </View>
+      <Text
+        style={{
+          fontFamily: 'DMMono',
+          fontSize: 12,
+          color: done ? sage : colors.mutedFg,
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {`${done} / ${total}`}
+      </Text>
+    </View>
+  );
+}
+
+// ── "Last · …" footer ────────────────────────────────────────────────
+
+function LastResultFooter({
+  result,
+  labels,
+  lang,
+  colors,
+}: {
+  result: WorkoutResult;
+  labels: { last: string; rx: string; scaled: string };
+  lang: string;
+  colors: ReturnType<typeof useFKColors>;
+}) {
+  const dateStr = new Intl.DateTimeFormat(lang, {
+    month: 'short',
+    day: 'numeric',
+  })
+    .format(new Date(result.performedAt))
+    .toUpperCase();
+  const score = result.scoreValue
+    ? `${result.scoreValue}${result.scoreUnit ? ` ${result.scoreUnit}` : ''}`
+    : null;
+  const tag = result.rx ? labels.rx : result.scaled ? labels.scaled : null;
+  const tail = [score, tag].filter(Boolean).join(' ');
+  const parts = [labels.last.toUpperCase(), dateStr, tail].filter(Boolean);
+  return (
+    <Text
+      style={{
+        textAlign: 'center',
+        fontFamily: 'DMMono',
+        fontSize: 11,
+        letterSpacing: 0.6,
+        color: colors.mutedFg,
+        marginTop: 1,
+      }}
+    >
+      {parts.join(' · ')}
+    </Text>
+  );
+}
+
+// ── Comments collapsible header ──────────────────────────────────────
+
+function CommentsToggle({
+  label,
+  count,
+  open,
+  onToggle,
+  isRTL,
+  colors,
+}: {
+  label: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  isRTL: boolean;
+  colors: ReturnType<typeof useFKColors>;
+}) {
+  const Chevron = open ? ChevronUp : ChevronDown;
+  return (
+    <Pressable
+      onPress={onToggle}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      style={({ pressed }) => [
+        {
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 10,
+        },
+        pressed && { opacity: 0.6 },
+      ]}
+    >
+      <MessageSquare size={16} color={colors.mutedFg} strokeWidth={2.2} />
+      <Text
+        style={{
+          fontSize: 15,
+          fontWeight: '600',
+          color: colors.foreground,
+        }}
+      >
+        {label}
+      </Text>
+      {count > 0 ? (
+        <View
+          style={{
+            minWidth: 18,
+            height: 18,
+            borderRadius: 999,
+            paddingHorizontal: 5,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#0E8C8C',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 10,
+              fontWeight: '800',
+              color: '#fff',
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {count > 9 ? '9+' : count}
+          </Text>
+        </View>
+      ) : null}
+      <View
+        style={{
+          marginLeft: isRTL ? 0 : 'auto',
+          marginRight: isRTL ? 'auto' : 0,
+        }}
+      >
+        <Chevron size={18} color={colors.mutedFg} strokeWidth={2.2} />
+      </View>
+    </Pressable>
   );
 }
 
@@ -789,69 +1163,47 @@ const HISTORY_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
 });
 
+// My History — controlled by the "History" CTA. Presentational: the screen
+// owns the expanded state + supplies the already-filtered, newest-first
+// result rows (shared cache with the screen's own query).
 function MyHistory({
-  orgId,
-  workoutId,
+  results,
   isRTL,
+  expanded,
+  emptyLabel,
+  colors,
 }: {
-  orgId: string | undefined | null;
-  workoutId: string;
+  results: WorkoutResult[];
   isRTL: boolean;
+  expanded: boolean;
+  emptyLabel: string;
+  colors: ReturnType<typeof useFKColors>;
 }) {
-  const haptics = useHaptics();
-  const [expanded, setExpanded] = useState(false);
-  const results = useMyResults(orgId, workoutId);
-  const all = results.data?.data ?? [];
-  const mine = useMemo(
-    () => all.filter((r) => r.workoutId === workoutId),
-    [all, workoutId],
-  );
-  if (mine.length === 0) return null;
+  if (!expanded) return null;
   return (
-    <View style={{ marginTop: 18 }}>
-      <Pressable
-        onPressIn={haptics.tap}
-        onPress={() => setExpanded((v) => !v)}
-        style={{
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        {expanded ? (
-          <ChevronLeft
-            size={14}
-            color="#5E7082"
-            style={{ transform: [{ rotate: '90deg' }] }}
-          />
-        ) : (
-          <ChevronRight
-            size={14}
-            color="#5E7082"
-            style={{ transform: [{ rotate: '90deg' }] }}
-          />
-        )}
+    <Animated.View entering={FadeIn.duration(220)} style={{ gap: 12 }}>
+      {results.length === 0 ? (
         <Text
-          className="text-foreground font-semibold"
-          style={{ fontSize: 13 }}
+          style={{
+            fontSize: 13,
+            color: colors.mutedFg,
+            textAlign: 'center',
+            paddingVertical: 6,
+          }}
         >
-          My history · {mine.length}
+          {emptyLabel}
         </Text>
-      </Pressable>
-      {expanded && (
-        <Animated.View
-          entering={FadeIn.duration(220)}
-          style={{ marginTop: 12, gap: 12 }}
-        >
-          <HistoryChart results={mine} />
+      ) : (
+        <>
+          <HistoryChart results={results} />
           <View style={{ gap: 6 }}>
-            {mine.map((r) => (
+            {results.map((r) => (
               <HistoryRow key={r.id} result={r} isRTL={isRTL} />
             ))}
           </View>
-        </Animated.View>
+        </>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -1001,180 +1353,6 @@ function parseScore(s: string | null | undefined): number | null {
   }
   const n = Number(s);
   return Number.isFinite(n) ? n : null;
-}
-
-// ── Notes view ───────────────────────────────────────────────────────
-
-function NotesView({
-  coachPreNote,
-  coachPostNote,
-  workoutDescription,
-  labels,
-  isRTL,
-}: {
-  coachPreNote: string | null;
-  coachPostNote: string | null;
-  workoutDescription: string | null;
-  labels: { yourCoach: string; noNotes: string };
-  isRTL: boolean;
-}) {
-  const hasContent = coachPreNote || coachPostNote || workoutDescription;
-  if (!hasContent) {
-    return (
-      <Animated.View
-        entering={FadeIn.duration(220)}
-        className="rounded-2xl bg-card border border-border/30 p-6 items-center"
-        style={continuousCorners}
-      >
-        <Text className="text-muted-foreground text-sm text-center">
-          {labels.noNotes}
-        </Text>
-      </Animated.View>
-    );
-  }
-  return (
-    <Animated.View
-      entering={FadeIn.duration(240)}
-      exiting={FadeOut.duration(140)}
-      className="rounded-2xl bg-card border border-border/30 p-4"
-      style={continuousCorners}
-    >
-      {coachPreNote && (
-        <View>
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              gap: 10,
-              marginBottom: 12,
-            }}
-          >
-            <Avatar name="Coach" size={34} />
-            <View>
-              <Text
-                className="text-foreground font-bold"
-                style={{ fontSize: 13 }}
-              >
-                {labels.yourCoach}
-              </Text>
-              <Text
-                className="text-muted-foreground"
-                style={{ fontSize: 11, marginTop: 1 }}
-              >
-                Coach Note
-              </Text>
-            </View>
-          </View>
-          <Text
-            className="text-foreground"
-            style={{
-              fontSize: 13,
-              lineHeight: 22,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {coachPreNote}
-          </Text>
-        </View>
-      )}
-      {workoutDescription && (
-        <View
-          style={{
-            marginTop: coachPreNote ? 14 : 0,
-            paddingTop: coachPreNote ? 14 : 0,
-            borderTopWidth: coachPreNote ? 1 : 0,
-            borderTopColor: 'rgba(94,112,130,0.16)',
-          }}
-        >
-          <Text
-            className="text-muted-foreground"
-            style={{
-              fontSize: 10,
-              fontWeight: '700',
-              letterSpacing: 0.8,
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            DESCRIPTION
-          </Text>
-          <View style={{ gap: 6 }}>
-            {workoutDescription.split('\n').map((line, idx) => {
-              const isBullet = line.startsWith('-');
-              return (
-                <View
-                  key={idx}
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    gap: 10,
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  {isBullet ? (
-                    <View
-                      style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 3,
-                        marginTop: 7,
-                        backgroundColor: '#0E8C8C',
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : null}
-                  <Text
-                    className="text-foreground"
-                    style={{
-                      flex: 1,
-                      fontSize: 13,
-                      lineHeight: 22,
-                      fontWeight: isBullet ? '500' : '400',
-                      textAlign: isRTL ? 'right' : 'left',
-                    }}
-                  >
-                    {isBullet ? line.substring(2) : line}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-      )}
-      {coachPostNote && (
-        <View
-          style={{
-            marginTop: 14,
-            paddingTop: 14,
-            borderTopWidth: 1,
-            borderTopColor: 'rgba(94,112,130,0.16)',
-          }}
-        >
-          <Text
-            className="text-muted-foreground"
-            style={{
-              fontSize: 10,
-              fontWeight: '700',
-              letterSpacing: 0.8,
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            POST-WORKOUT
-          </Text>
-          <Text
-            className="text-foreground"
-            style={{
-              fontSize: 13,
-              lineHeight: 22,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {coachPostNote}
-          </Text>
-        </View>
-      )}
-    </Animated.View>
-  );
 }
 
 // ── Comments view ────────────────────────────────────────────────────
@@ -2236,84 +2414,6 @@ function DetailSkeleton({
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
-
-// Per-section duration in minutes, driven off the section's shape config
-// rather than a flat movement-count guess. Each container shape has a
-// known way to derive (or upper-bound) its duration:
-//
-//   amrap        → durationMinutes
-//   emom         → (intervalSeconds × rounds) / 60
-//   tabata       → (rounds × (work + rest)) / 60
-//   for_time     → timeCapMinutes (if set)
-//   rep_scheme   → timeCapMinutes (if set)
-//   rounds       → timeCapMinutes (if set)
-//   intervals    → (count × (durationSeconds + restSeconds)) / 60
-//   linear       → no shape time; estimate from movements
-//
-// When config fields are missing we fall back to a movement-count
-// estimate (3 min per movement, 3 min floor) — better than nothing.
-function estimateSectionMinutes(section: WorkoutSection): number {
-  const shape = section.shape ?? null;
-  const config = (section.config ?? {}) as Record<string, unknown>;
-  const getNum = (k: string): number | null => {
-    const v = config[k];
-    return typeof v === 'number' && v > 0 ? v : null;
-  };
-
-  switch (shape) {
-    case 'amrap': {
-      const d = getNum('durationMinutes');
-      if (d) return d;
-      break;
-    }
-    case 'emom': {
-      const interval = getNum('intervalSeconds');
-      const rounds = getNum('rounds');
-      if (interval && rounds) return Math.ceil((interval * rounds) / 60);
-      break;
-    }
-    case 'tabata': {
-      const work = getNum('workSeconds');
-      const rest = getNum('restSeconds');
-      const rounds = getNum('rounds');
-      if (work != null && rest != null && rounds)
-        return Math.ceil((rounds * (work + rest)) / 60);
-      break;
-    }
-    case 'for_time':
-    case 'rep_scheme':
-    case 'rounds': {
-      const cap = getNum('timeCapMinutes');
-      if (cap) return cap;
-      break;
-    }
-    case 'intervals': {
-      const count = getNum('count');
-      const dur = getNum('durationSeconds') ?? 0;
-      const rest = getNum('restSeconds') ?? 0;
-      const per = dur + rest;
-      if (count && per > 0) return Math.ceil((count * per) / 60);
-      break;
-    }
-  }
-
-  // Linear / unspecified — rough movement-count estimate.
-  return Math.max(3, section.movements.length * 3);
-}
-
-function estimateDuration(
-  sections: WorkoutSection[],
-  timeCap: number | null,
-): string {
-  // Workout-level cap wins when set — coaches assign it deliberately
-  // even when multiple sections exist.
-  if (timeCap) return `${timeCap} min`;
-  const total = sections.reduce(
-    (sum, s) => sum + estimateSectionMinutes(s),
-    0,
-  );
-  return `${Math.max(5, total)} min`;
-}
 
 function scoringDisplay(scoring: string): string {
   switch (scoring) {
