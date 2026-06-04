@@ -215,8 +215,10 @@ export function WorkoutChat({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-      style={{ flex: 1, backgroundColor: colors.background }}
+      // Clear the FKScreenHeader (status-bar inset + 44pt nav row) so the
+      // composer lands just above the keyboard, not under it.
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
+      style={{ flex: 1 }}
     >
       <ScrollView
         ref={scrollRef}
