@@ -25,6 +25,13 @@ export default function WorkoutsLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="[id]/chat"
+        options={{
+          presentation: 'pageSheet',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

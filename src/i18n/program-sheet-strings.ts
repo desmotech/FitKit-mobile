@@ -38,6 +38,8 @@ export interface ProgramSheetStrings {
   // Inline coach-note callouts (Notes kept accessible without tabs).
   coachNote: string;
   postWorkout: string;
+  /** Header chat button + chat modal title. */
+  chat: string;
   // A11y.
   a11yMarkSectionComplete: (name: string) => string;
   a11yMarkSectionIncomplete: (name: string) => string;
@@ -63,6 +65,7 @@ const en: ProgramSheetStrings = {
   comments: 'Comments',
   coachNote: 'Coach note',
   postWorkout: 'Post-workout',
+  chat: 'Workout chat',
   a11yMarkSectionComplete: (name) => `Mark complete: ${name}`,
   a11yMarkSectionIncomplete: (name) => `Mark incomplete: ${name}`,
 };
@@ -87,6 +90,7 @@ const he: ProgramSheetStrings = {
   comments: 'תגובות',
   coachNote: 'הערת מאמן',
   postWorkout: 'אחרי האימון',
+  chat: 'צ׳אט אימון',
   a11yMarkSectionComplete: (name) => `סמן כהושלם: ${name}`,
   a11yMarkSectionIncomplete: (name) => `סמן כלא הושלם: ${name}`,
 };
@@ -111,6 +115,7 @@ const ru: ProgramSheetStrings = {
   comments: 'Комментарии',
   coachNote: 'Заметка тренера',
   postWorkout: 'После тренировки',
+  chat: 'Чат тренировки',
   a11yMarkSectionComplete: (name) => `Отметить выполненным: ${name}`,
   a11yMarkSectionIncomplete: (name) => `Отметить невыполненным: ${name}`,
 };
