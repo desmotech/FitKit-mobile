@@ -683,13 +683,25 @@ function ClassCard({
       ? 'soft'
       : 'primary';
 
+  const timeStr = `${pad2(start.getHours())}:${pad2(start.getMinutes())}`;
+  // Start-side accent bar reads availability at a glance (design language):
+  // teal = mine, amber = filling / waitlisted, rust = full, green = open.
+  const accentColor =
+    isBooked || isCheckedIn
+      ? '#0E8C8C'
+      : isWaitlisted || spotsLow
+        ? '#D97706'
+        : isFull
+          ? '#B84A40'
+          : '#10B981';
+
   return (
     <Animated.View
       entering={FadeInDown.delay(40 + index * 30).duration(260)}
     >
       <FKCard
         style={{
-          borderRadius: 22,
+          borderRadius: 20,
           borderWidth: 1,
           borderColor: isOwned
             ? 'rgba(14,140,140,0.3)'
@@ -700,9 +712,28 @@ function ClassCard({
           overflow: 'hidden',
         }}
       >
+        {/* Start-side availability accent bar */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 14,
+            bottom: 14,
+            [isRTL ? 'right' : 'left']: 0,
+            width: 4,
+            borderRadius: 999,
+            backgroundColor: accentColor,
+          }}
+        />
         <TouchableOpacity activeOpacity={0.85} onPress={onPressCard}>
-          <View style={{ padding: 16, gap: 12 }}>
-            {/* Top row: time tile + title/meta + capacity badge */}
+          <View
+            style={{
+              padding: 16,
+              [isRTL ? 'paddingRight' : 'paddingLeft']: 22,
+              gap: 12,
+            }}
+          >
+            {/* Top row: title + capacity/location, time + duration on the end */}
             <View
               style={{
                 flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -710,54 +741,6 @@ function ClassCard({
                 gap: 12,
               }}
             >
-              {/* Time tile */}
-              <View
-                style={{
-                  width: 52,
-                  height: 56,
-                  borderRadius: 14,
-                  borderCurve: 'continuous',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: isOwned
-                    ? '#0E8C8C'
-                    : 'rgba(14,140,140,0.10)',
-                  borderWidth: 1,
-                  borderColor: isOwned
-                    ? '#0E8C8C'
-                    : 'rgba(14,140,140,0.22)',
-                  shadowColor: isOwned ? '#0E8C8C' : 'transparent',
-                  shadowOpacity: isOwned ? 0.25 : 0,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 2 },
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: 'DMMono',
-                    fontWeight: '800',
-                    fontSize: 17,
-                    lineHeight: 19,
-                    color: isOwned ? '#fff' : '#0E8C8C',
-                  }}
-                >
-                  {pad2(start.getHours())}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: 'DMMono',
-                    fontWeight: '700',
-                    fontSize: 11,
-                    lineHeight: 13,
-                    marginTop: 2,
-                    color: isOwned ? 'rgba(255,255,255,0.8)' : 'rgba(14,140,140,0.7)',
-                  }}
-                >
-                  {pad2(start.getMinutes())}
-                </Text>
-              </View>
-
-              {/* Title + meta */}
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text
                   className="font-display font-extrabold text-foreground"
@@ -776,83 +759,109 @@ function ClassCard({
                     flexDirection: isRTL ? 'row-reverse' : 'row',
                     flexWrap: 'wrap',
                     alignItems: 'center',
-                    gap: 6,
-                    marginTop: 4,
+                    gap: 8,
+                    marginTop: 8,
                   }}
                 >
-                  <View
-                    style={{
-                      flexDirection: isRTL ? 'row-reverse' : 'row',
-                      alignItems: 'center',
-                      gap: 3,
+                  <CapacityPill
+                    isBooked={isBooked}
+                    isWaitlisted={isWaitlisted}
+                    isCheckedIn={isCheckedIn}
+                    isFull={isFull}
+                    spotsLow={spotsLow}
+                    capacity={session.capacity}
+                    bookingCount={session.bookingCount}
+                    capacityRemaining={session.capacityRemaining}
+                    labels={{
+                      spotsLeft: labels.spotsLeft,
+                      classFull: labels.classFull,
+                      booked: labels.booked,
+                      waitlisted: labels.waitlisted,
+                      checkedIn: labels.checkedIn,
+                      open: labels.open,
                     }}
-                  >
-                    <Clock size={11} color="rgba(94,112,130,0.85)" strokeWidth={2.2} />
-                    <Text
-                      className="text-muted-foreground"
-                      style={{ fontSize: 11.5, fontWeight: '600' }}
-                    >
-                      {duration} {labels.minSuffix}
-                    </Text>
-                  </View>
+                  />
                   {session.location ? (
-                    <>
+                    <View
+                      style={{
+                        flexDirection: isRTL ? 'row-reverse' : 'row',
+                        alignItems: 'center',
+                        gap: 3,
+                        flexShrink: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      <MapPin
+                        size={11}
+                        color="rgba(94,112,130,0.85)"
+                        strokeWidth={2.2}
+                      />
                       <Text
                         className="text-muted-foreground"
-                        style={{ fontSize: 11, opacity: 0.4 }}
-                      >
-                        •
-                      </Text>
-                      <View
+                        numberOfLines={1}
                         style={{
-                          flexDirection: isRTL ? 'row-reverse' : 'row',
-                          alignItems: 'center',
-                          gap: 3,
+                          fontSize: 11.5,
+                          fontWeight: '600',
                           flexShrink: 1,
-                          minWidth: 0,
                         }}
                       >
-                        <MapPin
-                          size={11}
-                          color="rgba(94,112,130,0.85)"
-                          strokeWidth={2.2}
-                        />
-                        <Text
-                          className="text-muted-foreground"
-                          numberOfLines={1}
-                          style={{
-                            fontSize: 11.5,
-                            fontWeight: '600',
-                            flexShrink: 1,
-                          }}
-                        >
-                          {session.location.name}
-                        </Text>
-                      </View>
-                    </>
+                        {session.location.name}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
               </View>
 
-              {/* Capacity / status pill */}
-              <CapacityPill
-                isBooked={isBooked}
-                isWaitlisted={isWaitlisted}
-                isCheckedIn={isCheckedIn}
-                isFull={isFull}
-                spotsLow={spotsLow}
-                capacity={session.capacity}
-                bookingCount={session.bookingCount}
-                capacityRemaining={session.capacityRemaining}
-                labels={{
-                  spotsLeft: labels.spotsLeft,
-                  classFull: labels.classFull,
-                  booked: labels.booked,
-                  waitlisted: labels.waitlisted,
-                  checkedIn: labels.checkedIn,
-                  open: labels.open,
+              {/* Time + duration */}
+              <View
+                style={{
+                  alignItems: isRTL ? 'flex-start' : 'flex-end',
+                  gap: 5,
+                  flexShrink: 0,
                 }}
-              />
+              >
+                <Text
+                  style={{
+                    fontFamily: 'DMMono',
+                    fontWeight: '800',
+                    fontSize: 18,
+                    letterSpacing: -0.3,
+                    color: colors.foreground,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {timeStr}
+                </Text>
+                <View
+                  style={{
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    gap: 3,
+                    paddingHorizontal: 9,
+                    paddingVertical: 3,
+                    borderRadius: 999,
+                    backgroundColor: 'rgba(120,120,128,0.10)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(94,112,130,0.18)',
+                  }}
+                >
+                  <Clock
+                    size={10}
+                    color="rgba(94,112,130,0.85)"
+                    strokeWidth={2.2}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 10.5,
+                      fontWeight: '700',
+                      color: 'rgba(60,60,67,0.85)',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {duration} {labels.minSuffix}
+                  </Text>
+                </View>
+              </View>
             </View>
 
             {/* Bottom row: coach + action CTA */}

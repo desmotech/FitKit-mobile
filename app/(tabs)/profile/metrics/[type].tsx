@@ -14,7 +14,7 @@
  *     needed" hint instead.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Plus, Trash2 } from 'lucide-react-native';
+import { Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -24,7 +24,6 @@ import type {
   BodyMetricType,
 } from '@fitkit/shared';
 import {
-  FKBtn,
   FKCard,
   FKGlassPanel,
   FKSubScreen,
@@ -133,15 +132,6 @@ export default function MetricDetailScreen() {
       title={typeLabel}
       onAdd={handleAdd}
       addLabel={labels.addMetric}
-      actions={
-        <FKBtn
-          variant="primary"
-          full
-          Icon={Plus}
-          label={labels.addMetric}
-          onPress={handleAdd}
-        />
-      }
     >
         {history.isLoading ? (
           <>
@@ -203,13 +193,7 @@ export default function MetricDetailScreen() {
                   >
                     {summaryT.latest ?? 'Latest'}
                   </Text>
-                  <View
-                    style={{
-                      flexDirection: isRTL ? 'row-reverse' : 'row',
-                      alignItems: 'baseline',
-                      gap: 4,
-                    }}
-                  >
+                  <Text style={{ writingDirection: 'ltr' }}>
                     <Text
                       style={{
                         fontSize: 15,
@@ -229,9 +213,10 @@ export default function MetricDetailScreen() {
                         color: colors.mutedFg,
                       }}
                     >
+                      {' '}
                       {unitLabel}
                     </Text>
-                  </View>
+                  </Text>
                 </View>
               ) : null}
             </FKCard>
@@ -384,12 +369,8 @@ function HistoryRow({
             }}
           >
             <View style={{ flex: 1, minWidth: 0 }}>
-              <View
-                style={{
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  alignItems: 'baseline',
-                  gap: 4,
-                }}
+              <Text
+                style={{ writingDirection: 'ltr', textAlign: isRTL ? 'right' : 'left' }}
               >
                 <Text
                   style={{
@@ -410,9 +391,10 @@ function HistoryRow({
                     color: colors.mutedFg,
                   }}
                 >
+                  {' '}
                   {unitLabel}
                 </Text>
-              </View>
+              </Text>
               {entry.notes ? (
                 <Text
                   numberOfLines={1}

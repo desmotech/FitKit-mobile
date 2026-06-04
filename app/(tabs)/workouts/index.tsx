@@ -492,6 +492,7 @@ export default function WhiteboardScreen() {
                       0,
                     )}
                     unread={comments.unreadCount}
+                    completed={!!assignment.completedAt}
                     isRTL={isRTL}
                     onOpen={() => {
                       haptics.tap();

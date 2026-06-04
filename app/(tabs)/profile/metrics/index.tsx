@@ -251,14 +251,14 @@ function MetricSummaryCard({
               style={{
                 alignItems: isRTL ? 'flex-start' : 'flex-end',
                 gap: 2,
+                flexShrink: 0,
               }}
             >
-              <View
-                style={{
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  alignItems: 'baseline',
-                  gap: 3,
-                }}
+              {/* Numerals (mono) + unit (body) as one LTR text run so the
+                  Hebrew unit shapes correctly and the robust number — not the
+                  unit — sits at the card edge (never clipped). */}
+              <Text
+                style={{ writingDirection: 'ltr', textAlign: isRTL ? 'left' : 'right' }}
               >
                 <Text
                   style={{
@@ -279,9 +279,10 @@ function MetricSummaryCard({
                     color: colors.mutedFg,
                   }}
                 >
+                  {' '}
                   {unitLabel}
                 </Text>
-              </View>
+              </Text>
 
               {valueAbbrev ? (
                 <View
@@ -301,8 +302,6 @@ function MetricSummaryCard({
                       fontSize: 11,
                       fontWeight: '700',
                       color: trendColor,
-                      fontVariant: ['tabular-nums'],
-                      fontFamily: 'DMMono',
                     }}
                   >
                     {item.trend === 'up'

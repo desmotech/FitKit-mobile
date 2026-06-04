@@ -6,12 +6,11 @@
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { Plus, Target } from 'lucide-react-native';
+import { Target } from 'lucide-react-native';
 import { Alert, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { GoalResponse } from '@fitkit/shared';
 import {
-  FKBtn,
   FKGlassPanel,
   FKSubScreen,
   GoalCard,
@@ -102,15 +101,6 @@ export default function GoalsScreen() {
       onAdd={handleAdd}
       addLabel={labels.addGoal}
       contentStyle={{ gap: 18 }}
-      actions={
-        <FKBtn
-          variant="primary"
-          full
-          Icon={Plus}
-          label={labels.addGoal}
-          onPress={handleAdd}
-        />
-      }
     >
         {isLoading ? (
           <View style={{ gap: 12 }}>
