@@ -65,7 +65,7 @@ export function CoachNote({
         >
           <Text
             style={{
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               fontSize: 11,
               letterSpacing: 1.2,
               textTransform: 'uppercase',
@@ -79,7 +79,7 @@ export function CoachNote({
               numberOfLines={1}
               style={{
                 flexShrink: 1,
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 fontSize: 10,
                 letterSpacing: 0.6,
                 textTransform: 'uppercase',
