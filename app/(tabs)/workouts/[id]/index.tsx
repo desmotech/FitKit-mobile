@@ -58,9 +58,11 @@ import { useMessageUploads } from '@/hooks/use-message-uploads';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
+import { CoachNote } from '@/components/workout/coach-note';
 import { analytics } from '@/lib/analytics';
 import { displayFamily } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
+import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -84,6 +86,7 @@ export default function WorkoutDetailScreen() {
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();
+  const ink = programSheetInk(isDark);
 
   // Direct fetch by id — week-independent. Previously this screen looked
   // up the assignment from the current week's data, which silently failed
@@ -330,7 +333,7 @@ export default function WorkoutDetailScreen() {
       <FKAmbientBackdrop />
       {/* Nav title intentionally blank — the workout name lives in the
           poster hero below (no duplication, program-sheet large-title). */}
-      <FKScreenHeader title="" />
+      <FKScreenHeader title="" backLabel={null} />
 
       <ScrollView
         // `never` because FKScreenHeader is the sole owner of the top
@@ -371,7 +374,7 @@ export default function WorkoutDetailScreen() {
               style={{
                 flex: 1,
                 fontSize: 11,
-                color: colors.mutedFg,
+                color: ink.muted,
                 letterSpacing: 1.6,
                 textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
@@ -449,7 +452,7 @@ export default function WorkoutDetailScreen() {
                       borderRadius: 8,
                       borderCurve: 'continuous',
                       borderWidth: 1,
-                      borderColor: i === 0 ? colors.primary : colors.border,
+                      borderColor: i === 0 ? colors.primary : ink.line,
                     }}
                   >
                     <Text
@@ -458,7 +461,7 @@ export default function WorkoutDetailScreen() {
                         letterSpacing: 1,
                         textTransform: 'uppercase',
                         fontFamily: 'DMMono-Medium',
-                        color: i === 0 ? colors.primary : colors.mutedFg,
+                        color: i === 0 ? colors.primaryText : ink.muted,
                       }}
                     >
                       {txt}
@@ -494,11 +497,14 @@ export default function WorkoutDetailScreen() {
                 style={{
                   flex: 1,
                   alignItems: 'center',
+                  paddingHorizontal: 6,
                   borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                  borderColor: colors.border,
+                  borderColor: ink.line,
                 }}
               >
                 <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                   style={{
                     fontSize: 24,
                     color: colors.foreground,
@@ -510,9 +516,10 @@ export default function WorkoutDetailScreen() {
                   {value}
                 </Text>
                 <Text
+                  numberOfLines={1}
                   style={{
                     fontSize: 9.5,
-                    color: colors.mutedFg,
+                    color: ink.muted,
                     letterSpacing: 1,
                     textTransform: 'uppercase',
                     marginTop: 4,
@@ -526,15 +533,19 @@ export default function WorkoutDetailScreen() {
           </View>
         </View>
 
-        {/* Coach pre-note — folded inline (Notes are kept accessible
-            without a tab bar in the new editorial layout). */}
+        {/* Coach pre-note — static, coach-authored callout (one-directional;
+            the two-way chat lives behind the header button). */}
         {assignment.coachPreNote ? (
-          <CoachNoteCallout
-            label={ps.coachNote}
-            body={assignment.coachPreNote}
-            isRTL={isRTL}
-            colors={colors}
-          />
+          <View style={{ paddingHorizontal: 18, paddingTop: 6 }}>
+            <CoachNote
+              text={assignment.coachPreNote}
+              label={ps.coachNote}
+              isRTL={isRTL}
+              lang={lang}
+              colors={colors}
+              ink={ink}
+            />
+          </View>
         ) : null}
 
         {/* Body — the structured "program sheet": a session progress meter
@@ -560,10 +571,11 @@ export default function WorkoutDetailScreen() {
                   locked={isCompleted}
                   onToggleSection={handleToggleSection}
                   isRTL={isRTL}
+                  lang={lang}
                   labels={{
                     watchDemo: ps.watchDemo,
                     formCues: ps.formCues,
-                    comments: ps.comments,
+                    coachNote: ps.coachNote,
                     markComplete: ps.a11yMarkSectionComplete,
                     markIncomplete: ps.a11yMarkSectionIncomplete,
                   }}
@@ -575,18 +587,6 @@ export default function WorkoutDetailScreen() {
                         id: assignment.id,
                         url: mv.exercise.videoUrl,
                         title: mv.exercise.name,
-                      },
-                    });
-                  }}
-                  onPressComments={(mv) => {
-                    const wid = assignment.workout?.id;
-                    if (!wid) return;
-                    router.push({
-                      pathname: '/(tabs)/workouts/[id]/exercise/[movementId]',
-                      params: {
-                        id: wid,
-                        movementId: mv.id,
-                        name: mv.exercise.name,
                       },
                     });
                   }}
@@ -713,15 +713,18 @@ export default function WorkoutDetailScreen() {
           />
         </View>
 
-        {/* Coach post-note — folded inline. */}
+        {/* Coach post-note — static, coach-authored callout. */}
         {assignment.coachPostNote ? (
-          <CoachNoteCallout
-            label={ps.postWorkout}
-            body={assignment.coachPostNote}
-            isRTL={isRTL}
-            colors={colors}
-            tone="post"
-          />
+          <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
+            <CoachNote
+              text={assignment.coachPostNote}
+              label={ps.postWorkout}
+              isRTL={isRTL}
+              lang={lang}
+              colors={colors}
+              ink={ink}
+            />
+          </View>
         ) : null}
 
         {/* Comments — kept accessible as a collapsible entry. */}
@@ -790,83 +793,6 @@ export default function WorkoutDetailScreen() {
   );
 }
 
-// ── Coach note callout ───────────────────────────────────────────────
-// Inline replacement for the old Notes tab — a brand-striped card carrying
-// the coach's pre- or post-workout note.
-
-function CoachNoteCallout({
-  label,
-  body,
-  isRTL,
-  colors,
-  tone = 'pre',
-}: {
-  label: string;
-  body: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-  tone?: 'pre' | 'post';
-}) {
-  const accent = tone === 'post' ? '#C9974D' : colors.primaryText;
-  const accentText = tone === 'post' ? '#8B6A35' : colors.primaryText;
-  return (
-    <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-      <View
-        style={{
-          padding: 16,
-          borderRadius: 18,
-          borderCurve: 'continuous',
-          borderWidth: 1,
-          borderColor:
-            tone === 'post'
-              ? 'rgba(201,151,77,0.30)'
-              : colors.isDark
-                ? 'rgba(39,200,186,0.24)'
-                : 'rgba(14,140,140,0.22)',
-          backgroundColor:
-            tone === 'post' ? 'rgba(201,151,77,0.06)' : 'transparent',
-          overflow: 'hidden',
-        }}
-      >
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            [isRTL ? 'right' : 'left']: 0,
-            width: 3,
-            backgroundColor: accent,
-          }}
-        />
-        <Text
-          style={{
-            fontFamily: 'DMMono',
-            fontSize: 10,
-            letterSpacing: 1.4,
-            textTransform: 'uppercase',
-            color: accentText,
-            marginBottom: 6,
-            textAlign: isRTL ? 'right' : 'left',
-          }}
-        >
-          {label}
-        </Text>
-        <Text
-          style={{
-            fontSize: 13.5,
-            lineHeight: 20,
-            color: colors.foreground,
-            textAlign: isRTL ? 'right' : 'left',
-          }}
-        >
-          {body}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
 // ── Session progress meter ───────────────────────────────────────────
 // One segment per section; fills sage as blocks are checked off. Mirrors
 // the design's "momentum" bar.
@@ -886,7 +812,7 @@ function SessionMeter({
   isRTL: boolean;
   colors: ReturnType<typeof useFKColors>;
 }) {
-  const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
+  const ink = programSheetInk(colors.isDark);
   return (
     <View
       style={{
@@ -901,7 +827,7 @@ function SessionMeter({
           fontSize: 11,
           letterSpacing: 1.4,
           textTransform: 'uppercase',
-          color: colors.mutedFg,
+          color: ink.muted,
         }}
       >
         {label}
@@ -920,7 +846,7 @@ function SessionMeter({
               flex: 1,
               height: 4,
               borderRadius: 2,
-              backgroundColor: on ? sage : colors.border,
+              backgroundColor: on ? ink.sage : ink.line,
             }}
           />
         ))}
@@ -929,7 +855,7 @@ function SessionMeter({
         style={{
           fontFamily: 'DMMono',
           fontSize: 12,
-          color: done ? sage : colors.mutedFg,
+          color: done ? ink.sage : ink.muted,
           fontVariant: ['tabular-nums'],
         }}
       >
@@ -971,7 +897,7 @@ function LastResultFooter({
         fontFamily: 'DMMono',
         fontSize: 11,
         letterSpacing: 0.6,
-        color: colors.mutedFg,
+        color: programSheetInk(colors.isDark).muted,
         marginTop: 1,
       }}
     >
