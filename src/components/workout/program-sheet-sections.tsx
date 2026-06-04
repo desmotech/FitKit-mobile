@@ -10,17 +10,20 @@
  *     session state owned by the screen — it drives the progress meter; the
  *     server only knows whole-workout completion (one-way), so checks reset
  *     on reload and a server-completed workout shows every block done + locked.
+ *   • The section's format ("5 Rounds For Time") is the primary heading; the
+ *     coach's title ("Part 1") is the secondary line beneath it.
+ *   • A static coach note (the section's description) can sit under the rows.
  *   • Movements read as compact editorial rows (name on the leading edge,
  *     the prescription as a DM Mono "score" on the trailing edge). Rows with
- *     coaching detail (stats / notes / cues / a demo video) expand inline to
- *     a stat scoreboard, numbered form cues, and a "Watch demo" link.
+ *     coaching detail (stats / notes / cues / a demo video) expand inline.
  *
- * The prescription formatting + superset grouping are reused from
- * ExercisesView (the Schedule detail's renderer) so the two surfaces never
- * drift. RTL-aware throughout via the `isRTL` prop.
+ * Prescription formatting + superset grouping are reused from ExercisesView
+ * (the Schedule detail's renderer) so the two surfaces never drift. RTL-aware
+ * throughout. Secondary colors come from `programSheetInk` for legibility on
+ * the ambient gradient in both themes.
  */
-import { ChevronDown, Play, Check, MessageSquare } from 'lucide-react-native';
-import { useState, type ReactNode } from 'react';
+import { ChevronDown, Play, Check } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   FadeIn,
@@ -47,8 +50,11 @@ import {
 } from '@/components/workout/exercises-view';
 import { formatPrescription, formatSectionHeader } from '@/lib/format-prescription';
 import { estimateSectionMinutes } from '@/lib/workout-estimate';
+import { programSheetInk, type ProgramSheetInk } from '@/lib/program-sheet-ink';
+import { bodyFamily, displayFamily } from '@/lib/type';
 import { spring } from '@/lib/motion';
 import { getShapeCaps, type SectionShape } from '@fitkit/shared';
+import { CoachNote } from './coach-note';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -59,7 +65,7 @@ const SPINE_X = MARKER_COL / 2 - 1; // centre the 2px line on the marker
 export interface ProgramSheetLabels {
   watchDemo: string;
   formCues: string;
-  comments: string;
+  coachNote: string;
   markComplete: (name: string) => string;
   markIncomplete: (name: string) => string;
 }
@@ -72,9 +78,9 @@ export interface ProgramSheetSectionsProps {
   locked: boolean;
   onToggleSection: (sectionId: string, willBeDone: boolean) => void;
   isRTL: boolean;
+  lang: string;
   labels: ProgramSheetLabels;
   onPlayVideo: (movement: WorkoutMovement) => void;
-  onPressComments?: (movement: WorkoutMovement) => void;
 }
 
 export function ProgramSheetSections({
@@ -83,11 +89,12 @@ export function ProgramSheetSections({
   locked,
   onToggleSection,
   isRTL,
+  lang,
   labels,
   onPlayVideo,
-  onPressComments,
 }: ProgramSheetSectionsProps) {
   const colors = useFKColors();
+  const ink = programSheetInk(colors.isDark);
   const [height, setHeight] = useState(0);
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -97,7 +104,7 @@ export function ProgramSheetSections({
 
   return (
     <View style={{ position: 'relative' }} onLayout={onLayout}>
-      <DottedSpine height={height} isRTL={isRTL} color={colors.border} />
+      <DottedSpine height={height} isRTL={isRTL} color={ink.line} />
       {sections.map((section, index) => (
         <SectionRow
           key={section.id}
@@ -105,14 +112,13 @@ export function ProgramSheetSections({
           index={index}
           done={locked || !!checked[section.id]}
           locked={locked}
-          onToggle={() =>
-            onToggleSection(section.id, !checked[section.id])
-          }
+          onToggle={() => onToggleSection(section.id, !checked[section.id])}
           isRTL={isRTL}
+          lang={lang}
           colors={colors}
+          ink={ink}
           labels={labels}
           onPlayVideo={onPlayVideo}
-          onPressComments={onPressComments}
         />
       ))}
     </View>
@@ -120,9 +126,6 @@ export function ProgramSheetSections({
 }
 
 // ── Dotted spine ─────────────────────────────────────────────────────
-// A single dashed hairline behind the markers (insetInline so it lands on
-// the marker centre in both LTR + RTL). Measured to the section column so
-// it grows / shrinks as rows expand.
 
 function DottedSpine({
   height,
@@ -172,10 +175,11 @@ function SectionRow({
   locked,
   onToggle,
   isRTL,
+  lang,
   colors,
+  ink,
   labels,
   onPlayVideo,
-  onPressComments,
 }: {
   section: WorkoutSection;
   index: number;
@@ -183,28 +187,27 @@ function SectionRow({
   locked: boolean;
   onToggle: () => void;
   isRTL: boolean;
+  lang: string;
   colors: ReturnType<typeof useFKColors>;
+  ink: ProgramSheetInk;
   labels: ProgramSheetLabels;
   onPlayVideo: (movement: WorkoutMovement) => void;
-  onPressComments?: (movement: WorkoutMovement) => void;
 }) {
   const haptics = useHaptics();
   const shape = (section.shape ?? null) as SectionShape | null;
   const caps = getShapeCaps(shape);
   const headerLine = formatSectionHeader({ shape, config: section.config });
   const typeLabel = sectionTypeLabel(section.type);
-  const heading = section.title ?? headerLine ?? typeLabel;
+  // The format/scheme is the primary heading; the coach's title is demoted to
+  // a secondary line. Falls back to the title (then type) for linear sections
+  // that have no formatted scheme.
+  const heading = headerLine ?? section.title ?? typeLabel;
+  const secondary = headerLine && section.title ? section.title : null;
   const kicker = heading === typeLabel ? null : typeLabel;
-  // When a named section also has a shape, the formatted shape line reads as
-  // a secondary "note" under the name (e.g. "Helen" / "FOR TIME · CAP 12:00").
-  const note = section.title && headerLine ? headerLine : null;
-  const tag = shapeTag(shape);
   const count = section.movements.length;
   const groups = groupBySuperset(section.movements);
   const hasSuperset = groups.some((g) => g.length > 1);
   const minutes = estimateSectionMinutes(section);
-
-  const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
 
   const press = useSharedValue(0);
   const markerStyle = useAnimatedStyle(() => ({
@@ -217,20 +220,9 @@ function SectionRow({
     : labels.markComplete(heading);
 
   return (
-    <View
-      style={{
-        flexDirection: isRTL ? 'row-reverse' : 'row',
-        gap: 15,
-      }}
-    >
+    <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 15 }}>
       {/* Numbered marker — tap to check the block off. */}
-      <View
-        style={{
-          width: MARKER_COL,
-          alignItems: 'center',
-          gap: 7,
-        }}
-      >
+      <View style={{ width: MARKER_COL, alignItems: 'center', gap: 7 }}>
         <AnimatedPressable
           onPressIn={() => {
             if (locked) return;
@@ -259,8 +251,8 @@ function SectionRow({
               alignItems: 'center',
               justifyContent: 'center',
               borderWidth: StyleSheet.hairlineWidth,
-              backgroundColor: done ? sage : colors.card,
-              borderColor: done ? sage : colors.border,
+              backgroundColor: done ? ink.sage : colors.card,
+              borderColor: done ? ink.sage : ink.line,
             },
           ]}
         >
@@ -286,8 +278,8 @@ function SectionRow({
             fontFamily: 'DMMono',
             fontSize: 10,
             letterSpacing: 0.4,
-            color: colors.mutedFg,
-            opacity: done ? 0.45 : 1,
+            color: ink.muted,
+            opacity: done ? 0.5 : 1,
           }}
         >
           {`~${minutes}'`}
@@ -300,55 +292,42 @@ function SectionRow({
           flex: 1,
           minWidth: 0,
           paddingBottom: 24,
-          opacity: done ? 0.5 : 1,
+          opacity: done ? 0.55 : 1,
         }}
       >
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            minHeight: 16,
-          }}
-        >
-          {kicker ? (
-            <Text
-              numberOfLines={1}
-              style={{
-                flex: 1,
-                fontFamily: 'DMMono',
-                fontSize: 11,
-                letterSpacing: 1.4,
-                textTransform: 'uppercase',
-                color: colors.mutedFg,
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {`${kicker} · ${count}`}
-            </Text>
-          ) : (
-            <View style={{ flex: 1 }} />
-          )}
-          {tag ? <SectionStamp tag={tag} colors={colors} /> : null}
-        </View>
+        {kicker ? (
+          <Text
+            numberOfLines={1}
+            style={{
+              fontFamily: 'DMMono',
+              fontSize: 11,
+              letterSpacing: 1.4,
+              textTransform: 'uppercase',
+              color: ink.muted,
+              minHeight: 14,
+              textAlign: isRTL ? 'right' : 'left',
+            }}
+          >
+            {`${kicker} · ${count}`}
+          </Text>
+        ) : null}
 
         <Text
           numberOfLines={2}
-          className="font-display"
           style={{
+            fontFamily: displayFamily(lang, 'semibold'),
             fontSize: 22,
             lineHeight: 26,
             letterSpacing: -0.4,
             color: colors.foreground,
-            marginTop: 2,
+            marginTop: kicker ? 2 : 0,
             textAlign: isRTL ? 'right' : 'left',
           }}
         >
           {heading}
         </Text>
 
-        {note ? (
+        {secondary ? (
           <Text
             numberOfLines={1}
             style={{
@@ -356,16 +335,16 @@ function SectionRow({
               fontSize: 11,
               letterSpacing: 1,
               textTransform: 'uppercase',
-              color: colors.mutedFg,
+              color: ink.muted,
               marginTop: 4,
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
-            {note}
+            {secondary}
           </Text>
         ) : null}
 
-        <View style={{ marginTop: note ? 8 : 10 }}>
+        <View style={{ marginTop: secondary ? 8 : 10 }}>
           {groups.flat().map((mv, idx) => (
             <ExRow
               key={mv.id}
@@ -375,22 +354,28 @@ function SectionRow({
               hideSets={!caps.showSets}
               hideReps={!caps.showReps}
               isRTL={isRTL}
+              lang={lang}
               colors={colors}
+              ink={ink}
               labels={labels}
               onPlayVideo={() => onPlayVideo(mv)}
-              onPressComments={
-                onPressComments ? () => onPressComments(mv) : undefined
-              }
             />
           ))}
           {/* Close the row stack with a final hairline. */}
-          <View
-            style={{
-              height: StyleSheet.hairlineWidth,
-              backgroundColor: colors.border,
-            }}
-          />
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: ink.line }} />
         </View>
+
+        {/* Static, coach-authored note for this section. */}
+        {section.description ? (
+          <CoachNote
+            text={section.description}
+            label={labels.coachNote}
+            isRTL={isRTL}
+            lang={lang}
+            colors={colors}
+            ink={ink}
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -405,10 +390,11 @@ function ExRow({
   hideSets,
   hideReps,
   isRTL,
+  lang,
   colors,
+  ink,
   labels,
   onPlayVideo,
-  onPressComments,
 }: {
   movement: WorkoutMovement;
   letter: string;
@@ -416,10 +402,11 @@ function ExRow({
   hideSets: boolean;
   hideReps: boolean;
   isRTL: boolean;
+  lang: string;
   colors: ReturnType<typeof useFKColors>;
+  ink: ProgramSheetInk;
   labels: ProgramSheetLabels;
   onPlayVideo: () => void;
-  onPressComments?: () => void;
 }) {
   const haptics = useHaptics();
   const [open, setOpen] = useState(false);
@@ -428,10 +415,7 @@ function ExRow({
   const stats = buildPrescriptionStats(movement, hideSets, hideReps);
   const fallbackLine =
     stats.length === 0
-      ? formatPrescription(movement.prescription, movement, {
-          hideSets,
-          hideReps,
-        })
+      ? formatPrescription(movement.prescription, movement, { hideSets, hideReps })
       : null;
   const summary = buildPrescriptionSummary(movement, stats, fallbackLine);
   const hasCues = !!ex.cues && ex.cues.length > 0;
@@ -452,10 +436,7 @@ function ExRow({
   return (
     <Animated.View
       layout={LinearTransition.springify().damping(18).stiffness(200).mass(0.7)}
-      style={{
-        borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: colors.border,
-      }}
+      style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ink.line }}
     >
       <Pressable
         onPress={expandable ? toggle : undefined}
@@ -500,13 +481,7 @@ function ExRow({
                       : 'rgba(14,140,140,0.28)',
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontFamily: 'DMMono-Medium',
-                      color: colors.primaryText,
-                    }}
-                  >
+                  <Text style={{ fontSize: 11, fontFamily: 'DMMono-Medium', color: colors.primaryText }}>
                     {letter}
                   </Text>
                 </View>
@@ -515,9 +490,9 @@ function ExRow({
                 numberOfLines={2}
                 style={{
                   flexShrink: 1,
+                  fontFamily: bodyFamily(lang, 'semibold'),
                   fontSize: 15,
                   lineHeight: 20,
-                  fontWeight: '600',
                   letterSpacing: -0.1,
                   color: colors.foreground,
                   textAlign: isRTL ? 'right' : 'left',
@@ -547,11 +522,7 @@ function ExRow({
 
             {expandable ? (
               <Animated.View style={chevronStyle}>
-                <ChevronDown
-                  size={16}
-                  color={colors.mutedFg}
-                  strokeWidth={2.4}
-                />
+                <ChevronDown size={16} color={ink.muted} strokeWidth={2.4} />
               </Animated.View>
             ) : null}
           </View>
@@ -570,7 +541,7 @@ function ExRow({
                 borderRadius: 12,
                 borderCurve: 'continuous',
                 borderWidth: StyleSheet.hairlineWidth,
-                borderColor: colors.border,
+                borderColor: ink.line,
                 overflow: 'hidden',
               }}
             >
@@ -583,7 +554,7 @@ function ExRow({
                     paddingHorizontal: 6,
                     alignItems: 'center',
                     borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                    borderColor: colors.border,
+                    borderColor: ink.line,
                   }}
                 >
                   <Text
@@ -606,7 +577,7 @@ function ExRow({
                       fontSize: 9.5,
                       letterSpacing: 1,
                       textTransform: 'uppercase',
-                      color: colors.mutedFg,
+                      color: ink.muted,
                       marginTop: 4,
                     }}
                   >
@@ -618,26 +589,14 @@ function ExRow({
           ) : null}
 
           {movement.notes ? (
-            <View
-              style={{
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                gap: 10,
-              }}
-            >
-              <View
-                style={{
-                  width: 3,
-                  borderRadius: 2,
-                  backgroundColor: colors.primary,
-                  opacity: 0.65,
-                }}
-              />
+            <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 10 }}>
+              <View style={{ width: 3, borderRadius: 2, backgroundColor: colors.primary, opacity: 0.65 }} />
               <Text
                 style={{
                   flex: 1,
+                  fontFamily: bodyFamily(lang, 'regular'),
                   fontSize: 14,
                   lineHeight: 20,
-                  fontStyle: 'italic',
                   color: colors.foreground,
                   textAlign: isRTL ? 'right' : 'left',
                 }}
@@ -675,9 +634,10 @@ function ExRow({
                   <Text
                     style={{
                       flex: 1,
+                      fontFamily: bodyFamily(lang, 'regular'),
                       fontSize: 13,
                       lineHeight: 18,
-                      color: colors.mutedFg,
+                      color: ink.muted,
                       textAlign: isRTL ? 'right' : 'left',
                     }}
                   >
@@ -688,24 +648,25 @@ function ExRow({
             </View>
           ) : null}
 
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              gap: 16,
-              flexWrap: 'wrap',
-            }}
-          >
-            {hasVideo ? (
-              <InlineAction
-                isRTL={isRTL}
-                colors={colors}
-                label={labels.watchDemo}
-                onPress={() => {
-                  haptics.tap();
-                  onPlayVideo();
-                }}
-                leading={
+          {hasVideo ? (
+            <Pressable
+              onPress={() => {
+                haptics.tap();
+                onPlayVideo();
+              }}
+              hitSlop={6}
+              accessibilityRole="button"
+              accessibilityLabel={labels.watchDemo}
+            >
+              {({ pressed }) => (
+                <View
+                  style={{
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    opacity: pressed ? 0.6 : 1,
+                  }}
+                >
                   <View
                     style={{
                       width: 22,
@@ -723,142 +684,23 @@ function ExRow({
                       style={{ marginLeft: isRTL ? 0 : 1 }}
                     />
                   </View>
-                }
-              />
-            ) : null}
-            {onPressComments ? (
-              <InlineAction
-                isRTL={isRTL}
-                colors={colors}
-                label={labels.comments}
-                muted
-                onPress={() => {
-                  haptics.tap();
-                  onPressComments();
-                }}
-                leading={
-                  <MessageSquare
-                    size={15}
-                    color={colors.mutedFg}
-                    strokeWidth={2}
-                  />
-                }
-              />
-            ) : null}
-          </View>
+                  <Text
+                    style={{
+                      fontFamily: 'DMMono',
+                      fontSize: 11,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      color: colors.primaryText,
+                    }}
+                  >
+                    {labels.watchDemo}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          ) : null}
         </Animated.View>
       ) : null}
     </Animated.View>
   );
-}
-
-// ── Bits ─────────────────────────────────────────────────────────────
-
-function InlineAction({
-  label,
-  leading,
-  onPress,
-  isRTL,
-  colors,
-  muted,
-}: {
-  label: string;
-  leading: ReactNode;
-  onPress: () => void;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-  muted?: boolean;
-}) {
-  return (
-    <Pressable onPress={onPress} hitSlop={6} accessibilityRole="button">
-      {({ pressed }) => (
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: 8,
-            opacity: pressed ? 0.6 : 1,
-          }}
-        >
-          {leading}
-          <Text
-            style={{
-              fontFamily: 'DMMono',
-              fontSize: 11,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-              color: muted ? colors.mutedFg : colors.primaryText,
-            }}
-          >
-            {label}
-          </Text>
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
-/** Outlined mono stamp for the section's format (FOR TIME / AMRAP / …). */
-function SectionStamp({
-  tag,
-  colors,
-}: {
-  tag: { text: string; primary: boolean };
-  colors: ReturnType<typeof useFKColors>;
-}) {
-  return (
-    <View
-      style={{
-        paddingHorizontal: 8,
-        paddingTop: 5,
-        paddingBottom: 4,
-        borderRadius: 8,
-        borderCurve: 'continuous',
-        borderWidth: 1,
-        borderColor: tag.primary
-          ? colors.isDark
-            ? 'rgba(39,200,186,0.5)'
-            : 'rgba(14,140,140,0.45)'
-          : colors.border,
-      }}
-    >
-      <Text
-        style={{
-          fontFamily: 'DMMono',
-          fontSize: 11,
-          letterSpacing: 1,
-          textTransform: 'uppercase',
-          color: tag.primary ? colors.primaryText : colors.mutedFg,
-        }}
-      >
-        {tag.text}
-      </Text>
-    </View>
-  );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────
-
-/** Short format tag for a section's container shape. Null = no stamp. */
-function shapeTag(
-  shape: SectionShape | null,
-): { text: string; primary: boolean } | null {
-  switch (shape) {
-    case 'amrap':
-      return { text: 'AMRAP', primary: true };
-    case 'for_time':
-      return { text: 'For Time', primary: true };
-    case 'emom':
-      return { text: 'EMOM', primary: false };
-    case 'tabata':
-      return { text: 'Tabata', primary: false };
-    case 'rounds':
-      return { text: 'Rounds', primary: false };
-    case 'rep_scheme':
-      return { text: 'Reps', primary: false };
-    case 'intervals':
-      return { text: 'Intervals', primary: false };
-    default:
-      return null;
-  }
 }
