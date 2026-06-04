@@ -336,7 +336,7 @@ export default function WhiteboardScreen() {
                 letterSpacing: 1.2,
                 textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
               }}
             >
               {labels.week} {weekNumber(new Date(weekStart))}
@@ -822,7 +822,7 @@ function DailyProgressDock({
               fontWeight: '800',
               letterSpacing: 1.2,
               textTransform: 'uppercase',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
@@ -895,7 +895,7 @@ function ProgressRing({
         style={{
           fontSize: 11,
           fontWeight: '800',
-          fontFamily: 'DMMono',
+          fontFamily: 'Assistant-Medium',
           color: '#0E8C8C',
         }}
       >

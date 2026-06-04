@@ -189,7 +189,7 @@ export default function FeedbackScreen() {
                 letterSpacing: 1.2,
                 textTransform: 'uppercase',
                 color: colors.mutedFg,
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >
@@ -230,7 +230,7 @@ export default function FeedbackScreen() {
                   bottom: 8,
                   [isRTL ? 'left' : 'right']: 12,
                   fontSize: 11,
-                  fontFamily: 'DMMono',
+                  fontFamily: 'Assistant-Medium',
                   fontVariant: ['tabular-nums'],
                   color:
                     remaining < 100

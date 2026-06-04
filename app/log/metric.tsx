@@ -237,7 +237,7 @@ export default function LogMetricScreen() {
                       paddingVertical: 12,
                       fontSize: 26,
                       fontWeight: '700',
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                       color: colors.foreground,
                       textAlign: isRTL ? 'right' : 'left',
                     }}

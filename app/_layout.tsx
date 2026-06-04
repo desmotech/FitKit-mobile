@@ -87,10 +87,6 @@ function RootLayout() {
     'Assistant-Bold': require('../assets/fonts/Assistant-Bold.ttf'),
     'Assistant-ExtraBold': require('../assets/fonts/Assistant-ExtraBold.ttf'),
 
-    // Numerals — DM Mono (the scoreboard face). Latin/digits only.
-    DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
-    'DMMono-Medium': require('../assets/fonts/DMMono-Medium.ttf'),
-
     // Russian body fallback — Manrope (Cyrillic; Assistant has none).
     Manrope: require('../assets/fonts/Manrope-Regular.ttf'),
     'Manrope-Medium': require('../assets/fonts/Manrope-Medium.ttf'),

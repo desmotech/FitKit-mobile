@@ -128,7 +128,7 @@ export function DailyClassCard({
                   fontSize: 12,
                   marginLeft: isRTL ? 0 : 8,
                   marginRight: isRTL ? 8 : 0,
-                  fontFamily: 'DMMono',
+                  fontFamily: 'Assistant-Medium',
                 }}
               >
                 {startsAt}
@@ -184,7 +184,7 @@ export function DailyClassCard({
                     style={{
                       fontSize: 11,
                       marginTop: 2,
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                     }}
                   >
                     cap {w.timeCap}:00

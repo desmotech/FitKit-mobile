@@ -276,7 +276,7 @@ function PairedSlot({ field }: { field: PairedField }) {
         style={{
           fontSize: 28,
           fontWeight: '600',
-          fontFamily: 'DMMono',
+          fontFamily: 'Assistant-Medium',
           color: colors.foreground,
           textAlign: 'center',
           minWidth: 60,
@@ -330,7 +330,7 @@ function SingleNumeric({
             style={{
               fontSize: 34,
               fontWeight: '600',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               color: colors.foreground,
               textAlign: 'center',
               minWidth: 80,
@@ -402,7 +402,7 @@ function ValueWithUnit({
                 flex: 1,
                 fontSize: 30,
                 fontWeight: '600',
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 color: colors.foreground,
                 textAlign: 'center',
                 padding: 0,
@@ -476,7 +476,7 @@ function InlineUnitSegments({
             style={{
               fontSize: 14,
               fontWeight: '800',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               color: active ? BRAND_TEAL : 'rgb(94,112,130)',
               letterSpacing: -0.1,
             }}

@@ -218,7 +218,7 @@ export default function UploadPhotoScreen() {
                       color: '#fff',
                       fontSize: 22,
                       fontWeight: '800',
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                     }}
                   >
                     {current.progress}%
@@ -320,7 +320,7 @@ export default function UploadPhotoScreen() {
                 color: colors.foreground,
                 fontSize: 16,
                 textAlign: isRTL ? 'right' : 'left',
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
               }}
             />
           </View>
@@ -389,7 +389,7 @@ function FieldLabel({
         textTransform: 'uppercase',
         color: colors.mutedFg,
         textAlign: isRTL ? 'right' : 'left',
-        fontFamily: 'DMMono',
+        fontFamily: 'Assistant-Medium',
       }}
     >
       {label}

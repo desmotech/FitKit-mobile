@@ -560,7 +560,7 @@ function BigTextInput({
           : 'rgba(118,118,128,0.10)',
         fontSize: monoFont ? 22 : 16,
         fontWeight: monoFont ? '700' : '500',
-        fontFamily: monoFont ? 'DMMono' : undefined,
+        fontFamily: monoFont ? 'Assistant-Medium' : undefined,
         color: fg,
         textAlign: centered ? 'center' : isRTL ? 'right' : 'left',
         letterSpacing: monoFont ? 4 : 0,

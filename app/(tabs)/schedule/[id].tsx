@@ -392,7 +392,7 @@ export default function SessionDetailScreen() {
             {session.capacity != null ? (
               <Text
                 className="text-muted-foreground"
-                style={{ fontSize: 12, fontFamily: 'DMMono' }}
+                style={{ fontSize: 12, fontFamily: 'Assistant-Medium' }}
               >
                 {session.bookingCount}/{session.capacity}
               </Text>
@@ -725,7 +725,7 @@ function ParticipantsStack({
               style={{
                 fontSize: 11,
                 fontWeight: '800',
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 color: isFull ? '#B84A40' : '#0E8C8C',
               }}
             >
@@ -809,7 +809,7 @@ function ParticipantsStack({
                       fontSize: 11.5,
                       fontWeight: '800',
                       color: 'rgb(94,112,130)',
-                      fontFamily: 'DMMono',
+                      fontFamily: 'Assistant-Medium',
                     }}
                   >
                     +{overflow}

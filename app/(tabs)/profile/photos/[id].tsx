@@ -234,7 +234,7 @@ export default function PhotoDetailScreen() {
               fontSize: 14,
               marginTop: 4,
               textAlign: isRTL ? 'right' : 'left',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
             }}
           >
             {labels.bodyweight}: {photo.bodyweightKg} kg

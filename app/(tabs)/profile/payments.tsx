@@ -451,7 +451,7 @@ function SubscriptionCard({
             fontSize: 12,
             color: colors.mutedFg,
             marginTop: 2,
-            fontFamily: 'DMMono',
+            fontFamily: 'Assistant-Medium',
             textAlign: isRTL ? 'right' : 'left',
           }}
         >
@@ -575,7 +575,7 @@ function TransactionCard({
               fontSize: 15,
               fontWeight: '800',
               color: colors.foreground,
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
             }}
           >
             {formatAmount(txn.amountInCents, txn.currency)}

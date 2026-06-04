@@ -228,7 +228,7 @@ function CompareTile({
               color: 'rgba(255,255,255,0.8)',
               fontSize: 11,
               marginTop: 2,
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
             }}
           >
             {bodyweightLabel}: {photo.bodyweightKg} kg

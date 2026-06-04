@@ -124,7 +124,7 @@ export function PRCelebration({
               fontSize: 56,
               fontWeight: '800',
               color: '#C9974D',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
               fontVariant: ['tabular-nums'],
               letterSpacing: -1,
               lineHeight: 60,

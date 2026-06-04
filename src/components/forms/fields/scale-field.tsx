@@ -83,7 +83,7 @@ export function ScaleFieldRenderer({
               fontSize: 15,
               fontWeight: '800',
               color: active ? BRAND_TEAL : 'rgb(94,112,130)',
-              fontFamily: 'DMMono',
+              fontFamily: 'Assistant-Medium',
             }}
           >
             {step}

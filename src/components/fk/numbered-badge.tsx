@@ -41,7 +41,7 @@ export function FKNumberedBadge({
     >
       <Text
         style={{
-          fontFamily: 'DMMono',
+          fontFamily: 'Assistant-Medium',
           fontSize: 12,
           fontWeight: '800',
           color: active ? '#fff' : 'rgba(94,112,130,0.9)',

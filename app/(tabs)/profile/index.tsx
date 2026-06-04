@@ -1069,7 +1069,7 @@ export default function ProfileScreen() {
               style={{
                 fontSize: 9,
                 color: colors.mutedFg,
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
               }}
             >
               FitKit v{appVersion}
@@ -1192,7 +1192,7 @@ function RecentPRs({
                   style={{
                     fontSize: 24,
                     lineHeight: 24,
-                    fontFamily: 'DMMono-Medium',
+                    fontFamily: 'Assistant-SemiBold',
                     color: isNew ? accent : colors.foreground,
                     fontVariant: ['tabular-nums'],
                   }}
@@ -1202,7 +1202,7 @@ function RecentPRs({
                 <Text
                   style={{
                     fontSize: 10,
-                    fontFamily: 'DMMono',
+                    fontFamily: 'Assistant-Medium',
                     color: colors.mutedFg,
                   }}
                 >
@@ -1236,7 +1236,7 @@ function HeroStat({
           lineHeight: 26,
           color: accent ?? '#fff',
           fontVariant: ['tabular-nums'],
-          fontFamily: 'DMMono-Medium',
+          fontFamily: 'Assistant-SemiBold',
           includeFontPadding: false,
         }}
       >
@@ -1419,7 +1419,7 @@ function MembershipCard({
                 fontSize: 11.5,
                 color: 'rgba(255,255,255,0.76)',
                 marginTop: 4,
-                fontFamily: 'DMMono',
+                fontFamily: 'Assistant-Medium',
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >

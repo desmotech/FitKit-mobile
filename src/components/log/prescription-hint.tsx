@@ -62,7 +62,7 @@ export function PrescriptionHint({
             color: '#0E8C8C',
             fontSize: 11,
             fontWeight: '600',
-            fontFamily: 'DMMono',
+            fontFamily: 'Assistant-Medium',
             textAlign: isRTL ? 'right' : 'left',
             marginTop: 2,
           }}

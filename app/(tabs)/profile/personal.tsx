@@ -277,7 +277,7 @@ export default function PersonalDetailsScreen() {
                       autoCorrect={false}
                       style={{
                         textAlign: isRTL ? 'right' : 'left',
-                        fontFamily: 'DMMono',
+                        fontFamily: 'Assistant-Medium',
                       }}
                     />
                   </Field>
