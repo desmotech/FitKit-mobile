@@ -10,7 +10,7 @@ import { MessageCircle } from 'lucide-react-native';
 import { FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ConversationResponse } from '@fitkit/shared';
-import { MemberHeader, useFKColors } from '@/components/fk';
+import { FKAmbientBackdrop, MemberHeader, useFKColors } from '@/components/fk';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -47,7 +47,8 @@ export default function MessagesListScreen() {
   );
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
+      <FKAmbientBackdrop />
       <MemberHeader />
 
       <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 }}>

@@ -24,7 +24,13 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { FKCard, FKDayCell, MemberHeader, useFKColors } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKCard,
+  FKDateRail,
+  MemberHeader,
+  useFKColors,
+} from '@/components/fk';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
@@ -333,7 +339,8 @@ export default function ScheduleScreen() {
   const ChevronEnd = isRTL ? ChevronLeft : ChevronRight;
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
+      <FKAmbientBackdrop />
       <MemberHeader />
 
       <ScrollView
@@ -411,33 +418,46 @@ export default function ScheduleScreen() {
             tappable; the gesture only activates after 15pt of horizontal
             drift so individual day taps still fire reliably. */}
         <GestureDetector gesture={weekSwipeGesture}>
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              paddingHorizontal: 16,
-              paddingTop: 14,
-              gap: 6,
-            }}
-          >
-            {weekDays.map((d, idx) => {
-              const iso = ymd(d);
-              const list = byDate.get(iso) ?? [];
-              const myBookings = list.filter((s) => s.myBookingStatus != null);
-              const cellState =
-                list.length === 0 ? 'none' : myBookings.length > 0 ? 'done' : 'has';
-              const dowShort = dayLabels[idx];
-              return (
-                <FKDayCell
-                  key={iso}
-                  dow={dowShort}
-                  dom={d.getDate()}
-                  state={cellState}
-                  active={iso === selectedDate}
-                  isToday={iso === todayStr}
-                  onPress={() => setSelectedDate(iso)}
-                />
-              );
-            })}
+          <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+            <FKDateRail
+              selectedKey={selectedDate}
+              onSelect={setSelectedDate}
+              days={weekDays.map((d, idx) => {
+                const iso = ymd(d);
+                const list = byDate.get(iso) ?? [];
+                const myBookings = list.filter(
+                  (s) => s.myBookingStatus != null,
+                );
+                // Bar reflects MY commitment, not general availability.
+                const attended = myBookings.some(
+                  (s) => s.myBookingStatus === 'attended',
+                );
+                const upcoming =
+                  iso >= todayStr &&
+                  myBookings.some(
+                    (s) =>
+                      s.myBookingStatus === 'confirmed' ||
+                      s.myBookingStatus === 'waitlisted',
+                  );
+                const noShow =
+                  iso < todayStr &&
+                  myBookings.some((s) => s.myBookingStatus === 'confirmed');
+                const state = attended
+                  ? 'done' // attended
+                  : upcoming
+                    ? 'has' // booked ahead
+                    : noShow
+                      ? 'missed' // booked but didn't show
+                      : 'none'; // no booking → no bar
+                return {
+                  key: iso,
+                  dow: dayLabels[idx],
+                  dom: d.getDate(),
+                  state,
+                  isToday: iso === todayStr,
+                };
+              })}
+            />
           </View>
         </GestureDetector>
 

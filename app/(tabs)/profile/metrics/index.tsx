@@ -19,13 +19,13 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { BodyMetricSummaryResponse } from '@fitkit/shared';
 import {
   FKCard,
   FKGlassPanel,
-  FKScreenHeader,
+  FKSubScreen,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +33,6 @@ import { Text } from '@/components/ui/text';
 import { useMyMetricsSummary } from '@/hooks/use-body-metrics';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -43,7 +42,6 @@ const TREND_DOWN = '#B84A40';
 export default function MetricsScreen() {
   const router = useRouter();
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const colors = useFKColors();
   const { dir, t, lang } = useI18n();
   const isRTL = dir === 'rtl';
@@ -87,31 +85,12 @@ export default function MetricsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <FKScreenHeader
-        title={labels.title}
-        trailing={
-          <Pressable
-            onPress={handleAdd}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={labels.addMetric}
-          >
-            {({ pressed }) => (
-              <Plus
-                size={26}
-                color={BRAND_TEAL}
-                strokeWidth={2.6}
-                style={{ opacity: pressed ? 0.5 : 1 }}
-              />
-            )}
-          </Pressable>
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 12 }}
-      >
+    <FKSubScreen
+      title={labels.title}
+      onAdd={handleAdd}
+      addLabel={labels.addMetric}
+      contentStyle={{ gap: 12 }}
+    >
         {summary.isLoading ? (
           <>
             <Skeleton style={{ height: 96, borderRadius: 18 }} />
@@ -154,8 +133,7 @@ export default function MetricsScreen() {
             </Animated.View>
           ))
         )}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 
@@ -257,12 +235,10 @@ function MetricSummaryCard({
               <Text
                 numberOfLines={1}
                 style={{
-                  fontSize: 11,
+                  fontSize: 11.5,
                   fontWeight: '700',
                   color: colors.mutedFg,
-                  letterSpacing: 0.5,
-                  textTransform: 'uppercase',
-                  fontFamily: 'DMMono',
+                  letterSpacing: 0.2,
                   textAlign: isRTL ? 'right' : 'left',
                 }}
               >
@@ -298,10 +274,9 @@ function MetricSummaryCard({
                 </Text>
                 <Text
                   style={{
-                    fontSize: 12,
+                    fontSize: 12.5,
                     fontWeight: '700',
                     color: colors.mutedFg,
-                    fontFamily: 'DMMono',
                   }}
                 >
                   {unitLabel}

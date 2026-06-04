@@ -8,23 +8,21 @@
  */
 import { Image as ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
-import { Camera, Plus } from 'lucide-react-native';
+import { Camera } from 'lucide-react-native';
 import { useMemo } from 'react';
 import {
   Dimensions,
   Pressable,
   RefreshControl,
-  ScrollView,
   View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { FKScreenHeader, useFKColors } from '@/components/fk';
+import { FKSubScreen, useFKColors } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMyProgressPhotos } from '@/hooks/use-progress-photos';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -41,7 +39,6 @@ export default function PhotosScreen() {
   const colors = useFKColors();
   const isDark = colors.isDark;
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const { dir, t, lang } = useI18n();
   const isRTL = dir === 'rtl';
   const { activeOrganization } = useCurrentUser();
@@ -76,42 +73,19 @@ export default function PhotosScreen() {
   const isRefreshing = photosQuery.isRefetching && !isLoading;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader
-        title={labels.title}
-        trailing={
-          <Pressable
-            onPress={handleAdd}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={labels.add}
-          >
-            {({ pressed }) => (
-              <Plus
-                size={26}
-                color={pressed ? colors.mutedFg : BRAND_TEAL}
-                strokeWidth={2.2}
-              />
-            )}
-          </Pressable>
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 8,
-          paddingBottom: bottomPad,
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={() => photosQuery.refetch()}
-            tintColor={colors.mutedFg}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
+    <FKSubScreen
+      title={labels.title}
+      onAdd={handleAdd}
+      addLabel={labels.add}
+      contentStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={() => photosQuery.refetch()}
+          tintColor={colors.mutedFg}
+        />
+      }
+    >
         {isLoading ? (
           <View
             style={{
@@ -219,8 +193,7 @@ export default function PhotosScreen() {
         >
           {labels.privacy}
         </Text>
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

@@ -47,12 +47,15 @@ import {
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
 import { useQueryClient } from '@tanstack/react-query';
-import { FKScreenHeader } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKScreenHeader,
+  useFKColors,
+} from '@/components/fk';
 import { useMessageUploads } from '@/hooks/use-message-uploads';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
 import { ExercisesView } from '@/components/workout/exercises-view';
-import { useFKColors } from '@/components/fk';
 import { analytics } from '@/lib/analytics';
 import { continuousCorners } from '@/lib/utils';
 import { displayFamily } from '@/lib/type';
@@ -287,7 +290,8 @@ export default function WorkoutDetailScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
+      <FKAmbientBackdrop />
       {/* Nav title intentionally blank — the workout name lives in the
           poster hero below (no duplication, program-sheet large-title). */}
       <FKScreenHeader title="" />

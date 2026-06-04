@@ -61,38 +61,41 @@ function RootLayout() {
     // Static per-weight faces. RN/Android weight-matching within a single
     // family is unreliable, so each weight is registered under its own
     // family name and referenced explicitly (see src/lib/type.ts). The
-    // bare aliases (ClashGrotesk / Manrope / DMMono) keep NativeWind's
+    // bare aliases (Rubik / Assistant / DMMono) keep NativeWind's
     // `font-display` / `font-sans` / `font-mono` utilities working on
     // screens not yet migrated to the typed `font` map.
     //
-    // Licensing (all free for commercial use):
-    //   Clash Grotesk — Fontshare ITF Free Font License
-    //   Manrope / DM Mono / Alef / Rubik — SIL Open Font License 1.1
+    // Bilingual by design: Rubik (display) and Assistant (body) each carry
+    // Hebrew + Latin, so mixed-script strings render in one voice. Manrope
+    // is kept solely as the Russian/Cyrillic body fallback.
+    //
+    // Licensing — all SIL Open Font License 1.1 (free for commercial use):
+    //   Rubik (He + Latin + Cyrillic) · Assistant (He + Latin) · DM Mono · Manrope
 
-    // Display — Clash Grotesk (Latin). Base alias = Bold (workhorse).
-    ClashGrotesk: require('../assets/fonts/ClashGrotesk-Bold.ttf'),
-    'ClashGrotesk-Regular': require('../assets/fonts/ClashGrotesk-Regular.ttf'),
-    'ClashGrotesk-Medium': require('../assets/fonts/ClashGrotesk-Medium.ttf'),
-    'ClashGrotesk-Semibold': require('../assets/fonts/ClashGrotesk-Semibold.ttf'),
-    'ClashGrotesk-Bold': require('../assets/fonts/ClashGrotesk-Bold.ttf'),
+    // Display — Rubik. One geometric face across every script.
+    'Rubik-Regular': require('../assets/fonts/Rubik-Regular.ttf'),
+    'Rubik-Medium': require('../assets/fonts/Rubik-Medium.ttf'),
+    'Rubik-SemiBold': require('../assets/fonts/Rubik-SemiBold.ttf'),
+    'Rubik-Bold': require('../assets/fonts/Rubik-Bold.ttf'),
+    'Rubik-Black': require('../assets/fonts/Rubik-Black.ttf'),
 
-    // Body / UI — Manrope (Latin). Base alias = Regular.
+    // Body / UI — Assistant (Hebrew + Latin). Base alias = Regular.
+    'Assistant-Regular': require('../assets/fonts/Assistant-Regular.ttf'),
+    'Assistant-Medium': require('../assets/fonts/Assistant-Medium.ttf'),
+    'Assistant-SemiBold': require('../assets/fonts/Assistant-SemiBold.ttf'),
+    'Assistant-Bold': require('../assets/fonts/Assistant-Bold.ttf'),
+    'Assistant-ExtraBold': require('../assets/fonts/Assistant-ExtraBold.ttf'),
+
+    // Numerals — DM Mono (the scoreboard face). Latin/digits only.
+    DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
+    'DMMono-Medium': require('../assets/fonts/DMMono-Medium.ttf'),
+
+    // Russian body fallback — Manrope (Cyrillic; Assistant has none).
     Manrope: require('../assets/fonts/Manrope-Regular.ttf'),
     'Manrope-Medium': require('../assets/fonts/Manrope-Medium.ttf'),
     'Manrope-SemiBold': require('../assets/fonts/Manrope-SemiBold.ttf'),
     'Manrope-Bold': require('../assets/fonts/Manrope-Bold.ttf'),
     'Manrope-ExtraBold': require('../assets/fonts/Manrope-ExtraBold.ttf'),
-
-    // Numerals / labels — DM Mono (the scoreboard face).
-    DMMono: require('../assets/fonts/DMMono-Regular.ttf'),
-    'DMMono-Medium': require('../assets/fonts/DMMono-Medium.ttf'),
-
-    // Hebrew — Alef (body) + Rubik (display). Replaces Heebo.
-    Alef: require('../assets/fonts/Alef-Regular.ttf'),
-    'Alef-Bold': require('../assets/fonts/Alef-Bold.ttf'),
-    'Rubik-Medium': require('../assets/fonts/Rubik-Medium.ttf'),
-    'Rubik-Bold': require('../assets/fonts/Rubik-Bold.ttf'),
-    'Rubik-Black': require('../assets/fonts/Rubik-Black.ttf'),
   });
 
   // Preload persisted theme + locale before first paint so the app renders

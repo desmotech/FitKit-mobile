@@ -1,29 +1,23 @@
 /**
  * Goal Edit — pageSheet form. PATCHes `/organizations/:orgId/goals/:id`
  * with `targetValue`, `unit`, and optional `deadline`. Type/metric/
- * exercise are immutable post-creation (matches web's edit sheet).
+ * exercise are immutable post-creation (matches web's edit sheet). Saves
+ * via the sticky bottom ActionBar (Cancel · Save).
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Check } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { StyleSheet, TextInput, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import type { GoalResponse } from '@fitkit/shared';
 import {
-  FKButton,
+  FKBtn,
   FKDateField,
   FKGlassPanel,
-  FKModalHeader,
   FKSelectSheet,
+  FKSubScreen,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,7 +25,7 @@ import { Text } from '@/components/ui/text';
 import { useApiQuery, useApiSend } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { cn, continuousCorners } from '@/lib/utils';
+import { continuousCorners } from '@/lib/utils';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BODY_UNITS = ['kg', 'lbs', 'cm', 'in', 'percent'] as const;
@@ -57,7 +51,7 @@ export default function GoalEditScreen() {
   const commonT = (t as unknown as Record<string, Record<string, string>>).common ?? {};
 
   const labels = {
-    title: goalsT.editGoal ?? 'Edit Goal',
+    title: goalsT.editGoal ?? 'Edit goal',
     targetValue: goalsT.targetValue ?? 'Target',
     unit: 'Unit',
     deadline: goalsT.deadline ?? 'Deadline',
@@ -130,208 +124,148 @@ export default function GoalEditScreen() {
       ? bmTypes[goal.metricType ?? ''] ?? goal.metricType ?? '—'
       : goal.exerciseName ?? '—'
     : '';
+  const unitOptions = isBodyMetric
+    ? BODY_UNITS.map((u) => ({ value: u, label: bmUnits[u] ?? u }))
+    : EXERCISE_UNITS.map((u) => ({ value: u, label: u }));
 
   return (
-    <View className="flex-1 bg-background" style={{ direction: dir }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        <FKModalHeader
-          title={labels.title}
-          leadingAction={{
-            label: labels.cancel,
-            onPress: () => router.back(),
-          }}
-          trailingAction={{
-            label: mutation.isPending ? labels.saving : labels.save,
-            style: 'primary',
-            onPress: handleSubmit,
-            disabled: !canSubmit || mutation.isPending,
-          }}
-        />
+    <FKSubScreen
+      title={labels.title}
+      keyboardAvoiding
+      contentStyle={{ gap: 14 }}
+      actions={
+        <>
+          <FKBtn
+            variant="ghost"
+            full
+            label={labels.cancel}
+            onPress={() => router.back()}
+            disabled={mutation.isPending}
+          />
+          <FKBtn
+            variant="primary"
+            full
+            Icon={Check}
+            label={mutation.isPending ? labels.saving : labels.save}
+            onPress={handleSubmit}
+            disabled={!canSubmit || mutation.isPending}
+          />
+        </>
+      }
+    >
+      {isLoading || !goal ? (
+        <Skeleton style={{ height: 280, borderRadius: 20 }} />
+      ) : (
+        <>
+          <FKGlassPanel radius={16} style={{ padding: 14 }}>
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <Text
+                className="font-display"
+                style={{
+                  fontSize: 15,
+                  fontWeight: '800',
+                  color: colors.foreground,
+                  flex: 1,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+                numberOfLines={1}
+              >
+                {goalName}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '700',
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  color: colors.mutedFg,
+                }}
+              >
+                {isBodyMetric ? labels.bodyMetric : labels.exercisePr}
+              </Text>
+            </View>
+          </FKGlassPanel>
 
-        <ScrollView
-          contentContainerStyle={{ padding: 18, paddingBottom: 40, gap: 14 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {isLoading || !goal ? (
-            <Skeleton style={{ height: 280, borderRadius: 20 }} />
-          ) : (
-            <>
-              <FKGlassPanel radius={16} style={{ padding: 14 }}>
-                <View
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <Text
-                    className="font-display"
-                    style={{
-                      fontSize: 15,
-                      fontWeight: '800',
-                      color: colors.foreground,
-                      flex: 1,
-                      textAlign: isRTL ? 'right' : 'left',
-                    }}
-                    numberOfLines={1}
-                  >
-                    {goalName}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 10,
-                      fontWeight: '700',
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
-                      color: colors.mutedFg,
-                    }}
-                  >
-                    {isBodyMetric ? labels.bodyMetric : labels.exercisePr}
-                  </Text>
-                </View>
-              </FKGlassPanel>
+          <Field label={labels.targetValue} isRTL={isRTL}>
+            <View
+              style={[
+                continuousCorners,
+                { paddingHorizontal: 14, borderRadius: 14, borderWidth: 1.5 },
+              ]}
+              className="bg-card border-border"
+            >
+              <TextInput
+                value={targetValue}
+                onChangeText={setTargetValue}
+                placeholder={unit === 'mm:ss' ? '11:00' : '0'}
+                placeholderTextColor={isDark ? '#6B8FAA' : '#5E7082'}
+                keyboardType={
+                  isBodyMetric ? 'decimal-pad' : 'numbers-and-punctuation'
+                }
+                style={{
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  fontFamily: 'DMMono',
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+                className="text-foreground"
+              />
+            </View>
+          </Field>
 
-              <Field label={labels.targetValue} isRTL={isRTL}>
-                <View
-                  style={[
-                    continuousCorners,
-                    { paddingHorizontal: 14, borderRadius: 14, borderWidth: 1.5 },
-                  ]}
-                  className="bg-card border-border"
-                >
-                  <TextInput
-                    value={targetValue}
-                    onChangeText={setTargetValue}
-                    placeholder={unit === 'mm:ss' ? '11:00' : '0'}
-                    placeholderTextColor={isDark ? '#6B8FAA' : '#5E7082'}
-                    keyboardType={
-                      isBodyMetric ? 'decimal-pad' : 'numbers-and-punctuation'
-                    }
-                    style={{
-                      paddingVertical: 12,
-                      fontSize: 16,
-                      fontFamily: 'DMMono',
-                      textAlign: isRTL ? 'right' : 'left',
-                    }}
-                    className="text-foreground"
-                  />
-                </View>
-              </Field>
+          <Field label={labels.unit} isRTL={isRTL}>
+            <FKSelectSheet
+              value={unit}
+              placeholder={labels.unit}
+              title={labels.unit}
+              options={unitOptions}
+              onChange={setUnit}
+            />
+          </Field>
 
-              <Field label={labels.unit} isRTL={isRTL}>
-                {isBodyMetric ? (
-                  <FKSelectSheet
-                    value={unit}
-                    placeholder={labels.unit}
-                    title={labels.unit}
-                    options={BODY_UNITS.map((u) => ({
-                      value: u,
-                      label: bmUnits[u] ?? u,
-                    }))}
-                    onChange={setUnit}
-                  />
-                ) : (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{
-                      gap: 6,
-                      paddingVertical: 2,
-                      flexDirection: isRTL ? 'row-reverse' : 'row',
-                    }}
-                  >
-                    {EXERCISE_UNITS.map((u) => {
-                      const active = unit === u;
-                      return (
-                        <Pressable
-                          key={u}
-                          onPressIn={haptics.select}
-                          onPress={() => setUnit(u)}
-                          style={[
-                            continuousCorners,
-                            {
-                              paddingHorizontal: 12,
-                              paddingVertical: 6,
-                              borderRadius: 999,
-                              borderWidth: 1,
-                            },
-                          ]}
-                          className={cn(
-                            active
-                              ? 'bg-primary border-transparent'
-                              : 'bg-card border-border',
-                          )}
-                        >
-                          <Text
-                            className={cn(
-                              'text-xs font-semibold',
-                              active
-                                ? 'text-primary-foreground'
-                                : 'text-foreground',
-                            )}
-                          >
-                            {u}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </ScrollView>
-                )}
-              </Field>
+          <Field label={labels.deadline} isRTL={isRTL}>
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 6,
+                borderRadius: 14,
+                borderCurve: 'continuous',
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: 'rgba(60,60,67,0.18)',
+                backgroundColor: colors.card,
+              }}
+            >
+              <FKDateField
+                value={deadline}
+                onChange={setDeadline}
+                minimumDate={new Date()}
+                placeholder={labels.deadlinePlaceholder}
+              />
+            </View>
+          </Field>
 
-              <Field label={labels.deadline} isRTL={isRTL}>
-                <View
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    alignItems: 'center',
-                    paddingHorizontal: 14,
-                    paddingVertical: 6,
-                    borderRadius: 14,
-                    borderCurve: 'continuous',
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: 'rgba(60,60,67,0.18)',
-                    backgroundColor: colors.card,
-                  }}
-                >
-                  <FKDateField
-                    value={deadline}
-                    onChange={setDeadline}
-                    minimumDate={new Date()}
-                    placeholder={labels.deadlinePlaceholder}
-                  />
-                </View>
-              </Field>
-
-              {submitError ? (
-                <Animated.View
-                  entering={FadeIn.duration(160)}
-                  style={[continuousCorners, { borderRadius: 12, padding: 12 }]}
-                  className="bg-destructive/[0.10]"
-                >
-                  <Text className="text-destructive" style={{ fontSize: 13 }}>
-                    {submitError}
-                  </Text>
-                </Animated.View>
-              ) : null}
-
-              <Animated.View entering={FadeInDown.delay(80).duration(280)}>
-                <FKButton
-                  label={mutation.isPending ? labels.saving : labels.save}
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  onPress={handleSubmit}
-                  disabled={!canSubmit || mutation.isPending}
-                />
-              </Animated.View>
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+          {submitError ? (
+            <Animated.View
+              entering={FadeIn.duration(160)}
+              style={[continuousCorners, { borderRadius: 12, padding: 12 }]}
+              className="bg-destructive/[0.10]"
+            >
+              <Text className="text-destructive" style={{ fontSize: 13 }}>
+                {submitError}
+              </Text>
+            </Animated.View>
+          ) : null}
+        </>
+      )}
+    </FKSubScreen>
   );
 }
 

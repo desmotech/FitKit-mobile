@@ -37,6 +37,7 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { GoalResponse } from '@fitkit/shared';
 import {
+  FKAmbientBackdrop,
   FKCard,
   FKGlassPanel,
   GoalCard,
@@ -50,7 +51,7 @@ import {
 import { TodayClassCard } from '@/components/schedule/today-class-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { displayFamily } from '@/lib/type';
+import { displayFamily, eyebrow } from '@/lib/type';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTodayClassSessions } from '@/hooks/use-feed-data';
@@ -192,7 +193,8 @@ export default function HomeScreen() {
     (!programWorkout && sessions.length === 0 && !isLoadingToday);
 
   return (
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
+      <FKAmbientBackdrop />
       <MemberHeader onPressQR={() => router.push('/checkin')} />
 
       <ScrollView
@@ -212,9 +214,8 @@ export default function HomeScreen() {
               fontSize: 11,
               fontWeight: '700',
               color: colors.mutedFg,
-              letterSpacing: 1.4,
               textAlign: isRTL ? 'right' : 'left',
-              fontFamily: 'DMMono',
+              ...eyebrow(lang),
             }}
           >
             {dateKicker}
@@ -228,11 +229,22 @@ export default function HomeScreen() {
               lineHeight: 34,
               marginTop: 4,
               textAlign: isRTL ? 'right' : 'left',
-              fontFamily: displayFamily(lang, 'bold'),
+              fontFamily: displayFamily(lang, 'semibold'),
             }}
           >
             {greeting}
-            {firstName ? `, ${firstName}` : ''}
+            {firstName ? (
+              <Text
+                style={{
+                  color: colors.primary,
+                  fontSize: 30,
+                  letterSpacing: -0.8,
+                  fontFamily: displayFamily(lang, 'semibold'),
+                }}
+              >{`, ${firstName}`}</Text>
+            ) : (
+              ''
+            )}
           </Text>
           <Text
             style={{
@@ -286,22 +298,26 @@ export default function HomeScreen() {
                         gap: 8,
                         height: 44,
                         borderRadius: 14,
-                        backgroundColor: 'rgba(14,140,140,0.08)',
+                        backgroundColor: colors.isDark
+                          ? 'rgba(58,70,78,0.72)'
+                          : 'rgba(255,255,255,0.82)',
                         borderWidth: 1,
-                        borderColor: 'rgba(14,140,140,0.25)',
+                        borderColor: colors.isDark
+                          ? 'rgba(39,200,186,0.45)'
+                          : 'rgba(14,140,140,0.40)',
                         opacity: pressed ? 0.82 : 1,
                       }}
                     >
                       <Compass
                         size={16}
-                        color={BRAND_TEAL}
+                        color={colors.primaryText}
                         strokeWidth={2.4}
                       />
                       <Text
                         style={{
                           fontSize: 14,
                           fontWeight: '800',
-                          color: BRAND_TEAL,
+                          color: colors.primaryText,
                           letterSpacing: -0.1,
                         }}
                       >
@@ -406,7 +422,7 @@ export default function HomeScreen() {
                         style={{
                           fontSize: 12,
                           fontWeight: '700',
-                          color: BRAND_TEAL,
+                          color: colors.primaryText,
                           letterSpacing: -0.1,
                         }}
                       >
@@ -414,7 +430,7 @@ export default function HomeScreen() {
                       </Text>
                       <Chevron
                         size={14}
-                        color={BRAND_TEAL}
+                        color={colors.primaryText}
                         strokeWidth={2.4}
                       />
                     </View>
@@ -682,10 +698,8 @@ function SectionKicker({
         fontSize: 11,
         fontWeight: '800',
         color: colors.mutedFg,
-        letterSpacing: 1.4,
-        textTransform: 'uppercase',
         textAlign: isRTL ? 'right' : 'left',
-        fontFamily: 'DMMono',
+        ...eyebrow(isRTL ? 'he' : undefined),
       }}
     >
       {title}

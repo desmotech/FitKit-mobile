@@ -7,13 +7,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  View,
-} from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import { View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import {
   type Gender,
   type Relationship,
@@ -21,10 +16,10 @@ import {
   updateUserProfileSchema,
 } from '@fitkit/shared';
 import {
-  FKButton,
+  FKBtn,
   FKGlassPanel,
-  FKScreenHeader,
   FKSelectSheet,
+  FKSubScreen,
 } from '@/components/fk';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,7 +27,6 @@ import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { continuousCorners } from '@/lib/utils';
 import {
   extractFieldErrors,
@@ -49,7 +43,6 @@ export default function PersonalDetailsScreen() {
   const { fetchWithAuth } = useApi();
   const queryClient = useQueryClient();
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const { dir, lang, t } = useI18n();
   const isRTL = dir === 'rtl';
 
@@ -181,17 +174,29 @@ export default function PersonalDetailsScreen() {
   ];
 
   return (
-    <View className="flex-1 bg-background">
-      <FKScreenHeader title={labels.title} />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 18 }}
-          keyboardShouldPersistTaps="handled"
-        >
+    <FKSubScreen
+      title={labels.title}
+      keyboardAvoiding
+      contentStyle={{ gap: 18 }}
+      actions={
+        <>
+          <FKBtn
+            variant="ghost"
+            full
+            label={labels.cancel}
+            onPress={() => router.back()}
+            disabled={saving}
+          />
+          <FKBtn
+            variant="primary"
+            full
+            label={saving ? labels.saving : labels.save}
+            onPress={handleSave}
+            disabled={saving}
+          />
+        </>
+      }
+    >
           {isLoading && !hydrated ? (
             <Skeleton style={{ height: 320, borderRadius: 20 }} />
           ) : (
@@ -376,32 +381,9 @@ export default function PersonalDetailsScreen() {
                 </Animated.View>
               )}
 
-              <Animated.View
-                entering={FadeInDown.delay(80).duration(280)}
-                style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 10 }}
-              >
-                <FKButton
-                  label={labels.cancel}
-                  variant="outline"
-                  size="lg"
-                  style={{ flex: 1 }}
-                  onPress={() => router.back()}
-                  disabled={saving}
-                />
-                <FKButton
-                  label={saving ? labels.saving : labels.save}
-                  variant="primary"
-                  size="lg"
-                  style={{ flex: 1 }}
-                  onPress={handleSave}
-                  disabled={saving}
-                />
-              </Animated.View>
             </>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+    </FKSubScreen>
   );
 }
 

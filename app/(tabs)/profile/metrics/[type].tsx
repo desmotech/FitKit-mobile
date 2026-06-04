@@ -16,7 +16,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Plus, Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import type {
@@ -24,9 +24,10 @@ import type {
   BodyMetricType,
 } from '@fitkit/shared';
 import {
+  FKBtn,
   FKCard,
   FKGlassPanel,
-  FKScreenHeader,
+  FKSubScreen,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +38,6 @@ import {
 } from '@/hooks/use-body-metrics';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -45,7 +45,6 @@ const BRAND_TEAL = '#0E8C8C';
 export default function MetricDetailScreen() {
   const router = useRouter();
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const colors = useFKColors();
   const { dir, t, lang } = useI18n();
   const isRTL = dir === 'rtl';
@@ -60,6 +59,7 @@ export default function MetricDetailScreen() {
   const types = (bmT.types ?? {}) as Record<string, string>;
   const units = (bmT.units ?? {}) as Record<string, string>;
   const chartT = (bmT.chart ?? {}) as Record<string, string>;
+  const summaryT = (bmT.summary ?? {}) as Record<string, string>;
   const commonT = (dict.common ?? {}) as Record<string, string>;
   const labels = {
     addMetric: (bmT.addMetric as string) ?? 'Add Metric',
@@ -129,29 +129,20 @@ export default function MetricDetailScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <FKScreenHeader
-        title={typeLabel}
-        trailing={
-          <Pressable
-            onPress={handleAdd}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={labels.addMetric}
-          >
-            {({ pressed }) => (
-              <Plus
-                size={26}
-                color={BRAND_TEAL}
-                strokeWidth={2.6}
-                style={{ opacity: pressed ? 0.5 : 1 }}
-              />
-            )}
-          </Pressable>
-        }
-      />
-
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 16 }}>
+    <FKSubScreen
+      title={typeLabel}
+      onAdd={handleAdd}
+      addLabel={labels.addMetric}
+      actions={
+        <FKBtn
+          variant="primary"
+          full
+          Icon={Plus}
+          label={labels.addMetric}
+          onPress={handleAdd}
+        />
+      }
+    >
         {history.isLoading ? (
           <>
             <Skeleton style={{ height: 160, borderRadius: 18 }} />
@@ -191,7 +182,7 @@ export default function MetricDetailScreen() {
                   </Text>
                 </View>
               )}
-              {chartPoints.length >= 1 ? (
+              {entries.length >= 1 ? (
                 <View
                   style={{
                     flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -205,23 +196,42 @@ export default function MetricDetailScreen() {
                       fontSize: 11,
                       fontWeight: '700',
                       color: colors.mutedFg,
-                      letterSpacing: 1.2,
+                      letterSpacing: 0.6,
                       textTransform: 'uppercase',
-                      fontFamily: 'DMMono',
+                      textAlign: isRTL ? 'right' : 'left',
                     }}
                   >
-                    {chartPoints.length} entries
+                    {summaryT.latest ?? 'Latest'}
                   </Text>
-                  <Text
+                  <View
                     style={{
-                      fontSize: 11,
-                      fontWeight: '700',
-                      color: colors.mutedFg,
-                      fontFamily: 'DMMono',
+                      flexDirection: isRTL ? 'row-reverse' : 'row',
+                      alignItems: 'baseline',
+                      gap: 4,
                     }}
                   >
-                    {unitLabel}
-                  </Text>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: '800',
+                        color: colors.foreground,
+                        fontFamily: 'DMMono',
+                        fontVariant: ['tabular-nums'],
+                        letterSpacing: -0.3,
+                      }}
+                    >
+                      {Number(entries[0].value).toFixed(1)}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: '700',
+                        color: colors.mutedFg,
+                      }}
+                    >
+                      {unitLabel}
+                    </Text>
+                  </View>
                 </View>
               ) : null}
             </FKCard>
@@ -263,8 +273,7 @@ export default function MetricDetailScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 
@@ -375,18 +384,35 @@ function HistoryRow({
             }}
           >
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
+              <View
                 style={{
-                  fontSize: 14,
-                  fontWeight: '700',
-                  color: colors.foreground,
-                  fontFamily: 'DMMono',
-                  fontVariant: ['tabular-nums'],
-                  textAlign: isRTL ? 'right' : 'left',
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'baseline',
+                  gap: 4,
                 }}
               >
-                {Number(entry.value).toFixed(1)} {unitLabel}
-              </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '800',
+                    color: colors.foreground,
+                    fontFamily: 'DMMono',
+                    fontVariant: ['tabular-nums'],
+                    letterSpacing: -0.3,
+                  }}
+                >
+                  {Number(entry.value).toFixed(1)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: '700',
+                    color: colors.mutedFg,
+                  }}
+                >
+                  {unitLabel}
+                </Text>
+              </View>
               {entry.notes ? (
                 <Text
                   numberOfLines={1}
@@ -410,10 +436,10 @@ function HistoryRow({
             >
               <Text
                 style={{
-                  fontSize: 11,
+                  fontSize: 11.5,
                   fontWeight: '700',
                   color: colors.mutedFg,
-                  fontFamily: 'DMMono',
+                  letterSpacing: 0.2,
                 }}
               >
                 {dateLabel}

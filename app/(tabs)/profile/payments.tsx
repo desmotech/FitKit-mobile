@@ -12,7 +12,7 @@
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarX, CreditCard, AlertTriangle } from 'lucide-react-native';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type {
   PaymentMethodResponse,
@@ -24,7 +24,7 @@ import {
   FKButton,
   FKEdgeStripe,
   FKGlassPanel,
-  FKScreenHeader,
+  FKSubScreen,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +37,6 @@ import {
   useRenewSubscription,
 } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -78,7 +77,6 @@ const TYPE_TONE: Record<TransactionType, { bg: string; fg: string; border: strin
 export default function PaymentsScreen() {
   const queryClient = useQueryClient();
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const { activeOrganization } = useCurrentUser();
   const { dir, t, lang } = useI18n();
   const colors = useFKColors();
@@ -152,10 +150,7 @@ export default function PaymentsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <FKScreenHeader title={labels.title} />
-
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 20 }}>
+    <FKSubScreen title={labels.title} contentStyle={{ gap: 20 }}>
         {isDebt && (
           <Animated.View entering={FadeInDown.duration(280)}>
             <View
@@ -329,8 +324,7 @@ export default function PaymentsScreen() {
             ))
           )}
         </View>
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

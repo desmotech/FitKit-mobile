@@ -7,12 +7,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { Plus, Target } from 'lucide-react-native';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { GoalResponse } from '@fitkit/shared';
 import {
+  FKBtn,
   FKGlassPanel,
-  FKScreenHeader,
+  FKSubScreen,
   GoalCard,
   useFKColors,
 } from '@/components/fk';
@@ -21,14 +22,12 @@ import { Text } from '@/components/ui/text';
 import { useApiAction, useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 
 export default function GoalsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const { activeOrganization } = useCurrentUser();
   const { dir, t } = useI18n();
   const colors = useFKColors();
@@ -98,31 +97,21 @@ export default function GoalsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <FKScreenHeader
-        title={labels.title}
-        trailing={
-          <Pressable
-            onPress={handleAdd}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel={labels.addGoal}
-          >
-            {({ pressed }) => (
-              <Plus
-                size={26}
-                color="#0E8C8C"
-                strokeWidth={2.6}
-                style={{ opacity: pressed ? 0.5 : 1 }}
-              />
-            )}
-          </Pressable>
-        }
-      />
-
-      <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: bottomPad, gap: 18 }}
-      >
+    <FKSubScreen
+      title={labels.title}
+      onAdd={handleAdd}
+      addLabel={labels.addGoal}
+      contentStyle={{ gap: 18 }}
+      actions={
+        <FKBtn
+          variant="primary"
+          full
+          Icon={Plus}
+          label={labels.addGoal}
+          onPress={handleAdd}
+        />
+      }
+    >
         {isLoading ? (
           <View style={{ gap: 12 }}>
             <Skeleton style={{ height: 132, borderRadius: 20 }} />
@@ -171,27 +160,6 @@ export default function GoalsScreen() {
             >
               {labels.noGoalsHint}
             </Text>
-            <Pressable
-              onPress={handleAdd}
-              style={({ pressed }) => [
-                {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingHorizontal: 18,
-                  paddingVertical: 10,
-                  borderRadius: 12,
-                  backgroundColor: '#0E8C8C',
-                  marginTop: 4,
-                },
-                pressed && { opacity: 0.85 },
-              ]}
-            >
-              <Plus size={14} color="#fff" strokeWidth={2.6} />
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>
-                {labels.addGoal}
-              </Text>
-            </Pressable>
           </FKGlassPanel>
         ) : (
           <>
@@ -248,8 +216,7 @@ export default function GoalsScreen() {
             )}
           </>
         )}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

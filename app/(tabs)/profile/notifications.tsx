@@ -18,7 +18,6 @@ import { useEffect, useState } from 'react';
 import {
   Linking,
   Pressable,
-  ScrollView,
   Switch,
   View,
 } from 'react-native';
@@ -30,7 +29,7 @@ import {
   type NotificationCategory,
   type NotificationChannel,
 } from '@fitkit/shared';
-import { FKScreenHeader, useFKColors } from '@/components/fk';
+import { FKSubScreen, useFKColors } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -38,7 +37,6 @@ import {
   useUpdateNotificationPrefs,
 } from '@/hooks/use-notification-prefs';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -63,7 +61,6 @@ export default function NotificationsSettingsScreen() {
 
   const prefsQuery = useNotificationPrefs();
   const update = useUpdateNotificationPrefs();
-  const bottomPad = useTabBarPadding(32);
 
   // Track OS-level notification permission so we can show the banner.
   const [osGranted, setOsGranted] = useState<boolean | null>(null);
@@ -106,17 +103,11 @@ export default function NotificationsSettingsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader title={labels.title} onBack={() => router.back()} />
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 8,
-          paddingBottom: bottomPad,
-          gap: 16,
-        }}
-        showsVerticalScrollIndicator={false}
-      >
+    <FKSubScreen
+      title={labels.title}
+      onBack={() => router.back()}
+      contentStyle={{ paddingHorizontal: 16, paddingTop: 8, gap: 16 }}
+    >
         {/* OS-permission banner: only affects push, but it's the most
             visible failure so we surface it at the top. */}
         {osGranted === false ? (
@@ -200,8 +191,7 @@ export default function NotificationsSettingsScreen() {
             </Animated.View>
           ))
         )}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

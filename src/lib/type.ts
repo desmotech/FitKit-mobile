@@ -6,68 +6,96 @@
  * the exact weight on both iOS and Android (unlike `fontWeight`, which
  * Android ignores for custom single-weight families).
  *
- * Three voices:
- *   • display — Clash Grotesk. Big, tight, confident. Headlines + hero.
- *   • body    — Manrope. Calm, legible. Everything paragraph/label.
- *   • mono    — DM Mono. The "scoreboard": every number, kicker, and code.
+ * Two bilingual voices + numerals:
+ *   • display — Rubik. Hebrew + Latin + Cyrillic in one geometric face, so
+ *               mixed-script headlines ("Pull Up · 20 דקות") read as one voice.
+ *   • body    — Assistant. Calm, legible Hebrew + Latin. Everything paragraph.
+ *   • mono    — DM Mono. The "scoreboard": pure numerals only (no Hebrew).
  *
- * Hebrew swaps display→Rubik and body→Alef (see `displayFamily`/`bodyFamily`).
+ * Language resolution (see `displayFamily`/`bodyFamily`): display is fully
+ * universal (Rubik covers every script). Body is Assistant for he + en, and
+ * Manrope for ru only — Assistant has no Cyrillic.
  */
 
 export const font = {
-  // Display — Clash Grotesk
-  display: 'ClashGrotesk', // = Bold
-  displayBold: 'ClashGrotesk-Bold',
-  displaySemibold: 'ClashGrotesk-Semibold',
-  displayMedium: 'ClashGrotesk-Medium',
-  displayRegular: 'ClashGrotesk-Regular',
+  // Display — Rubik (Hebrew + Latin + Cyrillic). One face, every script.
+  display: 'Rubik-Bold', // base alias = Bold
+  displayBlack: 'Rubik-Black',
+  displayBold: 'Rubik-Bold',
+  displaySemibold: 'Rubik-SemiBold',
+  displayMedium: 'Rubik-Medium',
+  displayRegular: 'Rubik-Regular',
 
-  // Body / UI — Manrope
-  body: 'Manrope',
-  bodyMedium: 'Manrope-Medium',
-  bodySemibold: 'Manrope-SemiBold',
-  bodyBold: 'Manrope-Bold',
-  bodyExtrabold: 'Manrope-ExtraBold',
+  // Body / UI — Assistant (Hebrew + Latin).
+  body: 'Assistant-Regular',
+  bodyMedium: 'Assistant-Medium',
+  bodySemibold: 'Assistant-SemiBold',
+  bodyBold: 'Assistant-Bold',
+  bodyExtrabold: 'Assistant-ExtraBold',
 
-  // Numerals / labels — DM Mono
+  // Numerals — DM Mono (the "scoreboard"). Latin/digits only.
   mono: 'DMMono',
   monoMedium: 'DMMono-Medium',
 
-  // Hebrew — Alef (body) + Rubik (display)
-  hebrewBody: 'Alef',
-  hebrewBodyBold: 'Alef-Bold',
+  // Russian body — Manrope (Cyrillic). Routed only for ru via bodyFamily().
+  ruBody: 'Manrope',
+  ruBodyMedium: 'Manrope-Medium',
+  ruBodySemibold: 'Manrope-SemiBold',
+  ruBodyBold: 'Manrope-Bold',
+  ruBodyExtrabold: 'Manrope-ExtraBold',
+
+  // Back-compat aliases — Hebrew now shares the universal Rubik/Assistant
+  // faces, so the old Hebrew-only split collapses onto them.
   hebrewDisplay: 'Rubik-Bold',
   hebrewDisplayBlack: 'Rubik-Black',
   hebrewDisplayMedium: 'Rubik-Medium',
+  hebrewBody: 'Assistant-Regular',
+  hebrewBodyBold: 'Assistant-Bold',
+  alef: 'Assistant-Regular',
+  alefBold: 'Assistant-Bold',
 } as const;
 
 type Lang = string | undefined;
 const isHe = (lang: Lang) => lang === 'he';
 
-/** Display family for the active language. Pass the heaviest tier you need. */
+/**
+ * Display family. Rubik covers Hebrew + Latin + Cyrillic, so the face is
+ * language-independent — `_lang` is kept only for call-site symmetry.
+ */
 export function displayFamily(
-  lang: Lang,
+  _lang: Lang,
   tier: 'black' | 'bold' | 'semibold' | 'medium' = 'bold',
 ): string {
-  if (isHe(lang)) {
-    if (tier === 'black') return font.hebrewDisplayBlack;
-    if (tier === 'medium') return font.hebrewDisplayMedium;
-    return font.hebrewDisplay; // bold / semibold → Rubik Bold
+  switch (tier) {
+    case 'black':
+      return font.displayBlack;
+    case 'semibold':
+      return font.displaySemibold;
+    case 'medium':
+      return font.displayMedium;
+    default:
+      return font.displayBold;
   }
-  if (tier === 'black' || tier === 'bold') return font.displayBold;
-  if (tier === 'semibold') return font.displaySemibold;
-  return font.displayMedium;
 }
 
-/** Body family for the active language. */
+/** Body family for the active language. Assistant for he + en; Manrope for ru. */
 export function bodyFamily(
   lang: Lang,
   weight: 'regular' | 'medium' | 'semibold' | 'bold' | 'extrabold' = 'regular',
 ): string {
-  if (isHe(lang)) {
-    return weight === 'regular' || weight === 'medium'
-      ? font.hebrewBody
-      : font.hebrewBodyBold;
+  if (lang === 'ru') {
+    switch (weight) {
+      case 'medium':
+        return font.ruBodyMedium;
+      case 'semibold':
+        return font.ruBodySemibold;
+      case 'bold':
+        return font.ruBodyBold;
+      case 'extrabold':
+        return font.ruBodyExtrabold;
+      default:
+        return font.ruBody;
+    }
   }
   switch (weight) {
     case 'medium':
@@ -81,6 +109,33 @@ export function bodyFamily(
     default:
       return font.body;
   }
+}
+
+/**
+ * Eyebrow / kicker label style, resolved per language.
+ *
+ * Latin gets the DM Mono "scoreboard" look: uppercase, tracked-out. Hebrew
+ * can take NEITHER — DM Mono has no Hebrew glyphs (so it silently falls back
+ * to the system font) and Hebrew script must never be letter-spaced (it
+ * shatters the words). So Hebrew eyebrows render in Assistant SemiBold, flush
+ * and untracked.
+ *
+ * Spread onto the label's Text style:
+ *   style={[{ fontSize: 11, fontWeight: '700', color }, eyebrow(lang)]}
+ */
+export function eyebrow(lang: Lang): {
+  fontFamily: string;
+  letterSpacing: number;
+  textTransform: 'uppercase' | 'none';
+} {
+  if (isHe(lang)) {
+    return {
+      fontFamily: font.bodySemibold,
+      letterSpacing: 0,
+      textTransform: 'none',
+    };
+  }
+  return { fontFamily: font.mono, letterSpacing: 1.4, textTransform: 'uppercase' };
 }
 
 /**

@@ -89,26 +89,26 @@ module.exports = {
         '4xl': 'calc(var(--radius) + 16px)',
       },
       fontFamily: {
-        // Body / UI — Manrope. Weight-specific families for reliable
-        // rendering (Android ignores fontWeight on custom single-weight
-        // families, so we map weight → family explicitly).
-        sans: ['Manrope', 'sans-serif'],
-        'sans-medium': ['Manrope-Medium', 'sans-serif'],
-        'sans-semibold': ['Manrope-SemiBold', 'sans-serif'],
-        'sans-bold': ['Manrope-Bold', 'sans-serif'],
-        'sans-extrabold': ['Manrope-ExtraBold', 'sans-serif'],
-        // Display — Clash Grotesk (base alias = Bold).
-        display: ['ClashGrotesk', 'sans-serif'],
-        'display-medium': ['ClashGrotesk-Medium', 'sans-serif'],
-        'display-semibold': ['ClashGrotesk-Semibold', 'sans-serif'],
-        'display-bold': ['ClashGrotesk-Bold', 'sans-serif'],
+        // Body / UI — Assistant (Hebrew + Latin), full weight ramp.
+        // (Russian/Cyrillic body is routed to Manrope via bodyFamily() in
+        // src/lib/type.ts; Assistant has no Cyrillic.)
+        sans: ['Assistant-Regular', 'sans-serif'],
+        'sans-medium': ['Assistant-Medium', 'sans-serif'],
+        'sans-semibold': ['Assistant-SemiBold', 'sans-serif'],
+        'sans-bold': ['Assistant-Bold', 'sans-serif'],
+        'sans-extrabold': ['Assistant-ExtraBold', 'sans-serif'],
+        // Display — Rubik (Hebrew + Latin + Cyrillic; base alias = Bold).
+        display: ['Rubik-Bold', 'sans-serif'],
+        'display-medium': ['Rubik-Medium', 'sans-serif'],
+        'display-semibold': ['Rubik-SemiBold', 'sans-serif'],
+        'display-bold': ['Rubik-Bold', 'sans-serif'],
         // Numerals / labels — DM Mono.
         mono: ['DMMono', 'monospace'],
         'mono-medium': ['DMMono-Medium', 'monospace'],
-        // Hebrew — Alef body + Rubik display (replaces Heebo).
-        heebo: ['Alef', 'sans-serif'],
-        hebrew: ['Alef', 'sans-serif'],
-        'hebrew-bold': ['Alef-Bold', 'sans-serif'],
+        // Hebrew aliases — now the same universal Rubik/Assistant faces.
+        heebo: ['Assistant-Regular', 'sans-serif'],
+        hebrew: ['Assistant-Regular', 'sans-serif'],
+        'hebrew-bold': ['Assistant-Bold', 'sans-serif'],
         'hebrew-display': ['Rubik-Bold', 'sans-serif'],
         'hebrew-display-black': ['Rubik-Black', 'sans-serif'],
       },

@@ -15,6 +15,7 @@ import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
@@ -29,6 +30,8 @@ import {
   History,
   Camera,
   Scale,
+  Star,
+  Zap,
   LifeBuoy,
   LogOut,
   Mail,
@@ -45,16 +48,15 @@ import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import { ActionSheetIOS, ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  FKEdgeStripe,
+  FKAmbientBackdrop,
   FKGlassPanel,
   MemberHeader,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { displayFamily } from '@/lib/type';
+import { displayFamily, eyebrow } from '@/lib/type';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useMyPersonalRecords,
@@ -135,9 +137,7 @@ export default function ProfileScreen() {
     activeMembership: stat('active', 'Active'),
     thisMonth: stat('classesMonth', 'This Month'),
     newPrsLabel: stat('newPrs', 'New PRs'),
-    totalWods: typeof feedT.totalClasses === 'string'
-      ? (feedT.totalClasses as string)
-      : 'Total',
+    totalWods: stat('totalClasses', 'Total'),
     memberPrefix: stat('memberSince', 'Member since'),
     membershipTitle: membershipT.title ?? 'Membership',
     noPlan: membershipT.noPlan ?? 'You have no active plan',
@@ -199,6 +199,9 @@ export default function ProfileScreen() {
   const totalClasses = (stats.data?.data?.totalClasses as number) ?? 0;
   const subList = subs.data?.data ?? [];
   const prCount = (prs.data?.data ?? []).length;
+  const recentPRRecords = [...(prs.data?.data ?? [])]
+    .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt))
+    .slice(0, 3);
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
 
@@ -343,7 +346,8 @@ export default function ProfileScreen() {
     // No `direction: dir` style — RN double-flips when both `direction` and
     // explicit `flexDirection: row-reverse` are present. We handle layout
     // direction manually via `isRTL`.
-    <View className="flex-1 bg-background">
+    <View className="flex-1">
+      <FKAmbientBackdrop />
       {/* ── Unified org header (shared across Home + Whiteboard + Profile) */}
       <MemberHeader />
 
@@ -354,13 +358,58 @@ export default function ProfileScreen() {
         {/* ── HERO — teal panel, rounded bottom corners */}
         <View
           style={{
-            backgroundColor: '#1B7C7C',
             borderBottomLeftRadius: 28,
             borderBottomRightRadius: 28,
             borderCurve: 'continuous',
             overflow: 'hidden',
           }}
         >
+            {/* teal gradient field */}
+            <LinearGradient
+              colors={
+                colors.isDark
+                  ? ['#16776f', '#0f5650', '#0b3f3b']
+                  : ['#14a39c', '#0E8C8C', '#0b7474']
+              }
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+            {/* top-trailing sheen */}
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255,255,255,0.20)', 'rgba(255,255,255,0)']}
+              start={{ x: 1, y: 0 }}
+              end={{ x: 0.25, y: 0.75 }}
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            />
+            {/* decorative concentric rings, trailing-bottom */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                insetInlineEnd: -60,
+                bottom: -70,
+                width: 180,
+                height: 180,
+                borderRadius: 90,
+                borderWidth: 1.5,
+                borderColor: 'rgba(255,255,255,0.16)',
+              }}
+            />
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                insetInlineEnd: -30,
+                bottom: -40,
+                width: 110,
+                height: 110,
+                borderRadius: 55,
+                borderWidth: 1.5,
+                borderColor: 'rgba(255,255,255,0.16)',
+              }}
+            />
             <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24 }}>
               {/* Avatar + name + chips row */}
               <Animated.View
@@ -503,67 +552,55 @@ export default function ProfileScreen() {
                 </View>
               </Animated.View>
 
-              {/* 3-up stat grid — glass-on-teal */}
+              {/* 3-up stat strip — plain numerals on hairline dividers */}
               <View
                 style={{
                   flexDirection: isRTL ? 'row-reverse' : 'row',
-                  gap: 10,
-                  marginTop: 22,
+                  marginTop: 20,
+                  paddingTop: 16,
+                  borderTopWidth: 1,
+                  borderTopColor: 'rgba(255,255,255,0.20)',
                 }}
               >
-                {[
-                  { value: classesThisMonth, label: labels.thisMonth, delay: 0 },
-                  { value: prCount, label: labels.newPrsLabel, delay: 60 },
-                  { value: totalClasses, label: labels.totalWods, delay: 120 },
-                ].map((s, i) => (
-                  <Animated.View
-                    key={i}
-                    entering={FadeInDown.delay(160 + s.delay).duration(380).springify()}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 14,
-                      paddingHorizontal: 8,
-                      borderRadius: 16,
-                      backgroundColor: 'rgba(255,255,255,0.08)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.14)',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 26,
-                        lineHeight: 32,
-                        color: '#fff',
-                        letterSpacing: -0.5,
-                        fontVariant: ['tabular-nums'],
-                        fontFamily: 'DMMono-Medium',
-                        includeFontPadding: false,
-                        textAlignVertical: 'center',
-                      }}
-                    >
-                      {s.value}
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 9,
-                        color: 'rgba(255,255,255,0.82)',
-                        letterSpacing: 1.2,
-                        textTransform: 'uppercase',
-                        marginTop: 4,
-                        fontFamily: 'DMMono',
-                      }}
-                    >
-                      {s.label}
-                    </Text>
-                  </Animated.View>
-                ))}
+                <HeroStat
+                  value={classesThisMonth}
+                  label={labels.thisMonth}
+                  lang={lang}
+                />
+                <View
+                  style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.20)' }}
+                />
+                <HeroStat
+                  value={prCount}
+                  label={labels.newPrsLabel}
+                  lang={lang}
+                  accent={colors.isDark ? '#EAC35E' : '#FFE27A'}
+                />
+                <View
+                  style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.20)' }}
+                />
+                <HeroStat
+                  value={totalClasses}
+                  label={labels.totalWods}
+                  lang={lang}
+                />
               </View>
             </View>
         </View>
 
         <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 24 }}>
+          {/* ── Recent PRs (scoreboard) ────────────────────────── */}
+          {recentPRRecords.length > 0 ? (
+            <RecentPRs
+              records={recentPRRecords}
+              title={stat('personalRecords', 'Personal Records')}
+              newLabel={commonT.new ?? 'New'}
+              isRTL={isRTL}
+              colors={colors}
+              lang={lang}
+            />
+          ) : null}
+
           {/* ── Membership status ──────────────────────────────── */}
           {subs.isLoading ? (
             <Skeleton style={{ height: 132, borderRadius: 20 }} />
@@ -632,6 +669,7 @@ export default function ProfileScreen() {
           <SettingsGroup colors={colors} isRTL={isRTL}>
             <SettingsRow
               Icon={UserIcon}
+              iconTint={colors.primary}
               label={labels.settingPersonal}
               isRTL={isRTL}
               colors={colors}
@@ -641,6 +679,7 @@ export default function ProfileScreen() {
             <RowDivider isDark={isDark} />
             <SettingsRow
               Icon={Goal}
+              iconTint="#E0552F"
               label={labels.settingGoals}
               isRTL={isRTL}
               colors={colors}
@@ -650,6 +689,7 @@ export default function ProfileScreen() {
             <RowDivider isDark={isDark} />
             <SettingsRow
               Icon={Scale}
+              iconTint="#5E8A4E"
               label={labels.settingMetrics}
               isRTL={isRTL}
               colors={colors}
@@ -659,6 +699,7 @@ export default function ProfileScreen() {
             <RowDivider isDark={isDark} />
             <SettingsRow
               Icon={Camera}
+              iconTint="#B07D2A"
               label={labels.settingPhotos}
               isRTL={isRTL}
               colors={colors}
@@ -668,6 +709,7 @@ export default function ProfileScreen() {
             <RowDivider isDark={isDark} />
             <SettingsRow
               Icon={FileSignature}
+              iconTint="#C0524A"
               label={labels.settingForms}
               isRTL={isRTL}
               colors={colors}
@@ -680,6 +722,7 @@ export default function ProfileScreen() {
           <SettingsGroup colors={colors} isRTL={isRTL}>
             <SettingsRow
               Icon={History}
+              iconTint={colors.primary}
               label={labels.settingHistory}
               isRTL={isRTL}
               colors={colors}
@@ -689,6 +732,7 @@ export default function ProfileScreen() {
             <RowDivider isDark={isDark} />
             <SettingsRow
               Icon={CreditCard}
+              iconTint="#B07D2A"
               label={labels.settingPayment}
               isRTL={isRTL}
               colors={colors}
@@ -809,7 +853,9 @@ export default function ProfileScreen() {
                       borderRadius: 10,
                       borderCurve: 'continuous',
                       overflow: 'hidden',
-                      backgroundColor: isDark ? '#1A2A4A' : '#E2E8F0',
+                      backgroundColor: isDark
+                        ? 'rgba(255,255,255,0.08)'
+                        : 'rgba(40,36,30,0.07)',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
@@ -1048,6 +1094,169 @@ interface ColorTokens {
   border: string;
 }
 
+function RecentPRs({
+  records,
+  title,
+  newLabel,
+  isRTL,
+  colors,
+  lang,
+}: {
+  records: {
+    id: string;
+    displayName: string;
+    value: string;
+    unit: string;
+    achievedAt: string;
+  }[];
+  title: string;
+  newLabel: string;
+  isRTL: boolean;
+  colors: ColorTokens;
+  lang: string | undefined;
+}) {
+  const accent = '#E96A4A';
+  const isRecent = (achievedAt: string) =>
+    Date.now() - new Date(achievedAt).getTime() < 21 * 24 * 3600 * 1000;
+  return (
+    <View style={{ gap: 11 }}>
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 8,
+          marginHorizontal: 2,
+        }}
+      >
+        <Zap size={17} color={accent} fill={accent} strokeWidth={2.2} />
+        <Text
+          style={{
+            fontSize: 18,
+            color: colors.foreground,
+            letterSpacing: -0.3,
+            fontFamily: displayFamily(lang, 'bold'),
+          }}
+        >
+          {title}
+        </Text>
+      </View>
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 9 }}>
+        {records.map((p) => {
+          const isNew = isRecent(p.achievedAt);
+          return (
+            <FKGlassPanel
+              key={p.id}
+              radius={14}
+              style={{ flex: 1, padding: 12, overflow: 'hidden' }}
+            >
+              {isNew ? (
+                <View
+                  style={{
+                    position: 'absolute',
+                    insetInlineEnd: 0,
+                    top: 0,
+                    paddingHorizontal: 6,
+                    paddingVertical: 3,
+                    backgroundColor: accent,
+                    borderEndStartRadius: 9,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      fontWeight: '800',
+                      color: '#fff',
+                      letterSpacing: 0.4,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {newLabel}
+                  </Text>
+                </View>
+              ) : null}
+              <Text
+                numberOfLines={1}
+                style={{ fontSize: 9.5, color: colors.mutedFg, ...eyebrow(lang) }}
+              >
+                {p.displayName}
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'baseline',
+                  gap: 3,
+                  marginTop: 9,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 24,
+                    lineHeight: 24,
+                    fontFamily: 'DMMono-Medium',
+                    color: isNew ? accent : colors.foreground,
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {p.value}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontFamily: 'DMMono',
+                    color: colors.mutedFg,
+                  }}
+                >
+                  {p.unit}
+                </Text>
+              </View>
+            </FKGlassPanel>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function HeroStat({
+  value,
+  label,
+  lang,
+  accent,
+}: {
+  value: number | string;
+  label: string;
+  lang: string | undefined;
+  accent?: string;
+}) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <Text
+        style={{
+          fontSize: 24,
+          lineHeight: 26,
+          color: accent ?? '#fff',
+          fontVariant: ['tabular-nums'],
+          fontFamily: 'DMMono-Medium',
+          includeFontPadding: false,
+        }}
+      >
+        {value}
+      </Text>
+      <Text
+        numberOfLines={1}
+        style={{
+          fontSize: 9.5,
+          color: 'rgba(255,255,255,0.76)',
+          marginTop: 6,
+          ...eyebrow(lang),
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function MembershipCard({
   sub,
   isRTL,
@@ -1079,6 +1288,9 @@ function MembershipCard({
   onRenew: () => void;
 }) {
   const haptics = useHaptics();
+  const { isDark } = useFKColors();
+  const { lang } = useI18n();
+  const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
   const isActive = sub.status === 'active' || sub.status === 'paused';
   const expiresStr = sub.currentPeriodEnd
     ? labels.expires.replace(
@@ -1088,17 +1300,39 @@ function MembershipCard({
     : '';
 
   return (
-    <FKGlassPanel
-      radius={20}
+    <View
       style={{
         padding: 20,
-        borderColor: 'rgba(14,140,140,0.30)',
-        backgroundColor: 'rgba(14,140,140,0.06)',
+        borderRadius: 20,
+        borderCurve: 'continuous',
         gap: 14,
         overflow: 'hidden',
       }}
     >
-      <FKEdgeStripe tone="primary" width={2} />
+      <LinearGradient
+        colors={
+          isDark
+            ? ['#16776f', '#0f5650', '#0b3f3b']
+            : ['#14a39c', '#0E8C8C', '#0b7474']
+        }
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          insetInlineEnd: -26,
+          top: -26,
+          width: 96,
+          height: 96,
+          borderRadius: 48,
+          borderWidth: 1.5,
+          borderColor: 'rgba(255,255,255,0.16)',
+        }}
+      />
+      {/* top row — star kicker + status chip */}
       <View
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -1108,90 +1342,120 @@ function MembershipCard({
       >
         <View
           style={{
-            paddingHorizontal: 8,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 7,
+          }}
+        >
+          <Star size={14} color={goldOnHero} fill={goldOnHero} strokeWidth={1.7} />
+          <Text
+            style={{
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.80)',
+              ...eyebrow(lang),
+            }}
+          >
+            {labels.title}
+          </Text>
+        </View>
+        <View
+          style={{
+            paddingHorizontal: 9,
             paddingVertical: 3,
-            borderRadius: 6,
-            backgroundColor: 'rgba(14,140,140,0.18)',
+            borderRadius: 7,
+            backgroundColor: 'rgba(255,255,255,0.18)',
             borderWidth: 1,
-            borderColor: 'rgba(14,140,140,0.34)',
+            borderColor: 'rgba(255,255,255,0.30)',
           }}
         >
           <Text
             style={{
               fontSize: 10,
               fontWeight: '800',
-              color: '#2AB8B8',
+              color: '#fff',
               letterSpacing: 0.4,
               textTransform: 'uppercase',
             }}
           >
-            {(statusLabels[sub.status] ?? (isActive ? labels.active : sub.status)).toUpperCase()}
+            {(
+              statusLabels[sub.status] ??
+              (isActive ? labels.active : sub.status)
+            ).toUpperCase()}
           </Text>
         </View>
-        <Text
-          className="font-display"
-          style={{
-            fontSize: 13,
-            fontWeight: '800',
-            color: colors.foreground,
-          }}
-        >
-          {labels.title}
-        </Text>
       </View>
 
-      <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
-        <Text
+      {/* bottom row — plan + renews | Manage pill */}
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <View
           style={{
-            fontSize: 14,
-            fontWeight: '700',
-            color: colors.foreground,
-            textAlign: isRTL ? 'right' : 'left',
+            flex: 1,
+            minWidth: 0,
+            alignItems: isRTL ? 'flex-end' : 'flex-start',
           }}
         >
-          {sub.plan.name}
-        </Text>
-        {expiresStr ? (
           <Text
+            numberOfLines={1}
             style={{
-              fontSize: 11,
-              color: colors.mutedFg,
-              marginTop: 2,
+              fontSize: 24,
+              color: '#fff',
+              letterSpacing: -0.4,
               textAlign: isRTL ? 'right' : 'left',
+              fontFamily: displayFamily(lang, 'semibold'),
             }}
           >
-            {expiresStr}
+            {sub.plan.name}
           </Text>
-        ) : null}
+          {expiresStr ? (
+            <Text
+              style={{
+                fontSize: 11.5,
+                color: 'rgba(255,255,255,0.76)',
+                marginTop: 4,
+                fontFamily: 'DMMono',
+                textAlign: isRTL ? 'right' : 'left',
+              }}
+            >
+              {expiresStr}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          onPressIn={haptics.tap}
+          onPress={onRenew}
+          disabled={isRenewing}
+          style={({ pressed }) => [
+            {
+              paddingVertical: 10,
+              paddingHorizontal: 18,
+              borderRadius: 11,
+              backgroundColor: '#fff',
+              shadowColor: '#000',
+              shadowOpacity: 0.16,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 3,
+            },
+            (pressed || isRenewing) && { opacity: 0.85 },
+          ]}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
+            {sub.status === 'past_due' || sub.status === 'cancelled'
+              ? isRenewing
+                ? labels.renewing
+                : labels.renew
+              : labels.manage}
+          </Text>
+        </Pressable>
       </View>
-
-      <Pressable
-        onPressIn={haptics.tap}
-        onPress={onRenew}
-        disabled={isRenewing}
-        style={({ pressed }) => [
-          {
-            paddingVertical: 12,
-            borderRadius: 12,
-            backgroundColor: '#0E8C8C',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#2AB8B8',
-            shadowOpacity: 0.32,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 4,
-          },
-          (pressed || isRenewing) && { opacity: 0.85 },
-        ]}
-      >
-        <Text style={{ fontSize: 14, fontWeight: '800', color: '#fff' }}>
-          {sub.status === 'past_due' || sub.status === 'cancelled'
-            ? (isRenewing ? labels.renewing : labels.renew)
-            : labels.manage}
-        </Text>
-      </Pressable>
-    </FKGlassPanel>
+    </View>
   );
 }
 
@@ -1260,6 +1524,7 @@ function SettingsRow({
   isDark,
   onPress,
   tone,
+  iconTint,
   badgeCount,
 }: {
   Icon: typeof UserIcon;
@@ -1270,16 +1535,20 @@ function SettingsRow({
   isDark: boolean;
   onPress?: () => void;
   tone?: 'default' | 'destructive';
+  /** Per-row icon color (design's colorful icons). Falls back to muted. */
+  iconTint?: string;
   badgeCount?: number;
 }) {
   const haptics = useHaptics();
   const isDestructive = tone === 'destructive';
   const iconBg = isDestructive
     ? 'rgba(244,63,94,0.12)'
-    : isDark
-      ? '#1A2A4A'
-      : '#E2E8F0';
-  const iconColor = isDestructive ? '#F43F5E' : colors.mutedFg;
+    : iconTint
+      ? iconTint + '22'
+      : isDark
+        ? 'rgba(255,255,255,0.08)'
+        : 'rgba(15,23,42,0.06)';
+  const iconColor = isDestructive ? '#F43F5E' : (iconTint ?? colors.mutedFg);
   const labelColor = isDestructive ? '#F43F5E' : colors.foreground;
   const Chevron = isRTL ? ChevronLeft : ChevronRight;
 
@@ -1391,9 +1660,9 @@ function SegmentedRow<T extends string>({
 }) {
   // iOS-style segmented control. Track has visible bg, active segment is a
   // solid white "thumb" pill with brand-teal content + subtle shadow.
-  const trackBg = isDark ? '#1A2A4A' : '#E5E9EE';
+  const trackBg = isDark ? 'rgba(0,0,0,0.22)' : 'rgba(40,36,30,0.06)';
   const thumbBg = isDark ? '#2AB8B8' : '#FFFFFF';
-  const thumbShadow = isDark ? '#000' : '#0F172A';
+  const thumbShadow = isDark ? '#000' : 'rgba(40,40,30,0.45)';
   // Big enough segments to read: 64px per option, capped at sensible widths.
   const segmentWidth = 64;
   const trackWidth = segmentWidth * options.length + 8;

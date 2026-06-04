@@ -251,8 +251,7 @@ export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
         borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(122,138,92,0.30)',
-        backgroundColor: 'rgba(122,138,92,0.06)',
+        borderColor: 'rgba(122,138,92,0.45)',
       }}
     >
       <View

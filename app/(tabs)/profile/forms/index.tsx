@@ -11,7 +11,7 @@
  * this is the normal state.
  */
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import {
@@ -26,7 +26,7 @@ import { useColorScheme } from 'nativewind';
 import {
   FKCard,
   FKGlassPanel,
-  FKScreenHeader,
+  FKSubScreen,
   useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +34,6 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMyForms, type MyFormEntry } from '@/hooks/use-forms';
-import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -59,9 +58,7 @@ export default function MyFormsScreen() {
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const s = useFormStrings();
-  const colors = useFKColors();
   const haptics = useHaptics();
-  const bottomPad = useTabBarPadding();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -124,16 +121,10 @@ export default function MyFormsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader title={s.listTitle} />
-      <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: bottomPad,
-          gap: 20,
-        }}
-      >
+    <FKSubScreen
+      title={s.listTitle}
+      contentStyle={{ paddingHorizontal: 16, paddingTop: 16, gap: 20 }}
+    >
         {query.isLoading ? (
           <View style={{ gap: 12 }}>
             <Skeleton style={{ height: 84, borderRadius: 16 }} />
@@ -209,8 +200,7 @@ export default function MyFormsScreen() {
             ) : null}
           </>
         )}
-      </ScrollView>
-    </View>
+    </FKSubScreen>
   );
 }
 

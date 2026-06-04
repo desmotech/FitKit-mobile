@@ -40,6 +40,10 @@ import { FKGlassPanel } from './glass-panel';
 export { HeroStripe } from './hero-stripe';
 export { FKAmbientBackdrop } from './ambient-backdrop';
 export { FKGlassPanel } from './glass-panel';
+export { FKRing } from './ring';
+export { FKDateRail, type FKDateRailDay } from './date-rail';
+export { FKActionBar, FKBtn } from './action-bar';
+export { FKSubScreen } from './sub-screen';
 export { FKBrandMark } from './brand-mark';
 export { FKEdgeStripe } from './edge-stripe';
 export { FKNumberedBadge } from './numbered-badge';
@@ -65,11 +69,12 @@ export const FK_LIGHT = {
   foreground: '#161512',
   background: '#F6F4EE',
   muted: '#EEEBE2',
-  mutedFg: '#6E695E',
+  mutedFg: '#605B51', // WCAG AA on bg + glass (≥4.5:1)
   secondary: '#EEEBE2',
   secondaryFg: '#0E8C8C',
   border: '#E3DFD4',
-  primary: '#0E8C8C',
+  primary: '#0E8C8C', // brand teal — fills/graphics
+  primaryText: '#0A6E6E', // darker teal for small text (AA on light surfaces)
   energy: '#D7FF3E',
   energyFg: '#17160F',
 } as const;
@@ -79,11 +84,12 @@ export const FK_DARK = {
   foreground: '#F3F0E9',
   background: '#0B0B0D',
   muted: '#1B1B1F',
-  mutedFg: '#9A958A',
+  mutedFg: '#A8A398', // WCAG AA on glass (≥4.5:1)
   secondary: '#1B1B1F',
   secondaryFg: '#F3F0E9',
   border: '#26262B',
   primary: '#27C8BA',
+  primaryText: '#27C8BA', // already AA on dark surfaces
   energy: '#D7FF3E',
   energyFg: '#0E0E0A',
 } as const;
