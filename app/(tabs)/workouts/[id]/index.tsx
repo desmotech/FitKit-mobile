@@ -524,9 +524,11 @@ export default function WorkoutDetailScreen() {
               borderRadius: 14,
               borderCurve: 'continuous',
               borderWidth: 1,
+              // A visible hairline on both themes — the previous white border
+              // was invisible on the light card.
               borderColor: isDark
-                ? 'rgba(255,255,255,0.14)'
-                : 'rgba(255,255,255,0.85)',
+                ? 'rgba(255,255,255,0.22)'
+                : 'rgba(40,36,30,0.16)',
               backgroundColor: isDark
                 ? 'rgba(70,82,90,0.34)'
                 : 'rgba(255,255,255,0.5)',

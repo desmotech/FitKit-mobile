@@ -28,7 +28,9 @@ export default function WorkoutsLayout() {
       <Stack.Screen
         name="[id]/chat"
         options={{
-          presentation: 'pageSheet',
+          // Full-screen (no pageSheet card-peek) so the top/bottom safe zones
+          // match the profile sub-screens instead of looking mis-positioned.
+          presentation: 'fullScreenModal',
           headerShown: false,
         }}
       />

@@ -84,7 +84,7 @@ export const FK_DARK = {
   foreground: '#F3F0E9',
   background: '#0B0B0D',
   muted: '#1B1B1F',
-  mutedFg: '#A8A398', // WCAG AA on glass (≥4.5:1)
+  mutedFg: '#C8C3B8', // bright secondary ink — legible on the dark gradient
   secondary: '#1B1B1F',
   secondaryFg: '#F3F0E9',
   border: '#26262B',

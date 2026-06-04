@@ -4,16 +4,14 @@
  * A contained rail (matte surface + hairline border) with a single inverted
  * pill that springs to the selected day. Each cell: weekday (mono/Alef) over
  * date (display), a status bar (sage = done · teal = scheduled · rust = missed),
- * and a volt pulse ring on today. Visual reference only — fed the app's real
- * week data + selection.
+ * and a static dot in the top corner on today. Visual reference only — fed the
+ * app's real week data + selection.
  */
 import { useEffect, useState } from 'react';
 import { type LayoutChangeEvent, Pressable, View } from 'react-native';
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -154,23 +152,6 @@ function RailCell({
 }) {
   const { lang } = useI18n();
   const haptics = useHaptics();
-  const pulse = useSharedValue(0);
-  useEffect(() => {
-    if (day.isToday) {
-      pulse.value = withRepeat(
-        withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.quad) }),
-        -1,
-        false,
-      );
-    } else {
-      pulse.value = 0;
-    }
-  }, [day.isToday, pulse]);
-
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: 0.5 * (1 - pulse.value),
-    transform: [{ scale: 1 + pulse.value * 2.6 }],
-  }));
 
   const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
   const rust = colors.isDark ? '#E0685C' : '#C0524A';
@@ -213,37 +194,20 @@ function RailCell({
         paddingVertical: 9,
       }}
     >
-      {/* volt today-pulse */}
+      {/* "today" marker — a static dot in the top-right corner of the cell */}
       {day.isToday ? (
         <View
           pointerEvents="none"
           style={{
             position: 'absolute',
-            top: 5,
+            top: 6,
+            right: 7,
             width: 6,
             height: 6,
+            borderRadius: 999,
+            backgroundColor: todayDot,
           }}
-        >
-          <Animated.View
-            style={[
-              {
-                position: 'absolute',
-                inset: 0,
-                borderRadius: 999,
-                backgroundColor: todayDot,
-              },
-              ringStyle,
-            ]}
-          />
-          <View
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: 999,
-              backgroundColor: todayDot,
-            }}
-          />
-        </View>
+        />
       ) : null}
       <Animated.Text
         style={{

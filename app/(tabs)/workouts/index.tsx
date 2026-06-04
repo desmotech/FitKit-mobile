@@ -13,7 +13,6 @@
  *      - expandable section cards (numbered 01/02/03)
  *   5. Sticky daily-progress dock above the OS tab bar (ring + Log CTA)
  */
-import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
 import {
   AlertCircle,
@@ -24,10 +23,8 @@ import {
   RotateCw,
   StickyNote,
 } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import { useMemo, useState } from 'react';
 import {
-  LayoutChangeEvent,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -41,8 +38,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useTabBarPadding, useTabBarTop } from '@/hooks/use-tab-bar-padding';
-import Svg, { Circle } from 'react-native-svg';
+import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
   FKAmbientBackdrop,
   FKCard,
@@ -71,10 +67,6 @@ import {
 } from '@/hooks/use-workouts';
 import { useI18n } from '@/providers/i18n-provider';
 
-// Conservative initial scroll-padding guess until the dock reports its
-// real onLayout height. Replaced at runtime by `dockHeight` state.
-const DOCK_HEIGHT_FALLBACK = 96;
-
 function ymd(d: Date): string {
   return d.toISOString().split('T')[0];
 }
@@ -98,11 +90,10 @@ export default function WhiteboardScreen() {
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const colors = useFKColors();
-  // Real measured dock height (BlurView + ring + label + CTA). Starts at a
-  // conservative fallback and refines once the dock onLayouts.
-  const [dockHeight, setDockHeight] = useState<number>(DOCK_HEIGHT_FALLBACK);
-  // Scroll padding = (tab bar + safe-area + 20) + the measured dock body.
-  const scrollBottomPad = useTabBarPadding(dockHeight + 20);
+  const scrollBottomPad = useTabBarPadding();
+  // Pull-to-refresh state, kept separate from React Query's `isFetching` so a
+  // background refetch on tab focus doesn't strand the RefreshControl spinner.
+  const [refreshing, setRefreshing] = useState(false);
 
   // Locale-aware week start: Sunday for Hebrew, Monday otherwise.
   const lang = (useI18n() as unknown as { lang: string }).lang;
@@ -231,11 +222,6 @@ export default function WhiteboardScreen() {
     [assignment, isWorkoutDay],
   );
 
-  // Daily progress is currently a sections-count proxy. The full
-  // section-completion model lives in the detail screen's log flow.
-  const total = sections.length;
-  const done = sections.filter((s) => isSectionDone(s, assignment)).length;
-
   // Empty-state helpers (mirrors web parity).
   const upcomingThisWeek = useMemo(() => {
     // Only real workouts — rest/note days aren't "on track" items, and this
@@ -304,10 +290,11 @@ export default function WhiteboardScreen() {
         }}
         refreshControl={
           <RefreshControl
-            refreshing={week.isFetching}
+            refreshing={refreshing}
             onRefresh={() => {
               haptics.tap();
-              week.refetch();
+              setRefreshing(true);
+              week.refetch().finally(() => setRefreshing(false));
             }}
             tintColor="#0E8C8C"
           />
@@ -517,26 +504,6 @@ export default function WhiteboardScreen() {
         </View>
       </ScrollView>
 
-      {/* Sticky daily-progress dock — single primary action for the day.
-          Per HIG, the screen should have ONE primary CTA; the inline section
-          and freeform body intentionally do NOT repeat "Log Result". Hidden
-          on rest / note days since there's nothing to log. */}
-      {assignment && isWorkoutDay ? (
-        <DailyProgressDock
-          done={done}
-          total={total}
-          isRTL={isRTL}
-          labels={{
-            label: labels.dailyProgress,
-            keepGoing: labels.keepGoing,
-            completedAll: labels.completedAll,
-          }}
-          onLayout={(e) => {
-            const h = e.nativeEvent.layout.height;
-            if (h > 0 && Math.abs(h - dockHeight) > 1) setDockHeight(h);
-          }}
-        />
-      ) : null}
     </View>
   );
 }
@@ -758,150 +725,6 @@ function CoachNoteCard({
         </View>
       </View>
     </FKCard>
-  );
-}
-
-// ── Daily progress dock (sticky) ───────────────────────────────────
-
-function DailyProgressDock({
-  done,
-  total,
-  isRTL,
-  labels,
-  onLayout,
-}: {
-  done: number;
-  total: number;
-  isRTL: boolean;
-  labels: { label: string; keepGoing: string; completedAll: string };
-  onLayout?: (e: LayoutChangeEvent) => void;
-}) {
-  const { colorScheme } = useColorScheme();
-  const dockBottom = useTabBarTop();
-  const isDark = colorScheme === 'dark';
-  const ratio = total > 0 ? Math.min(1, done / total) : 0;
-  const allDone = total > 0 && done === total;
-  const status = allDone ? labels.completedAll : labels.keepGoing;
-
-  return (
-    <View
-      pointerEvents="box-none"
-      onLayout={onLayout}
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        // Sit above the OS NativeTabs bar (49pt UIKit standard) + home
-        // indicator safe-area. Without this the translucent tab bar
-        // renders over the dock.
-        bottom: dockBottom,
-      }}
-    >
-      <BlurView
-        intensity={isDark ? 60 : 80}
-        tint={isDark ? 'systemMaterialDark' : 'systemMaterial'}
-        style={{
-          paddingHorizontal: 16,
-          paddingTop: 12,
-          paddingBottom: 12,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: isDark
-            ? 'rgba(255,255,255,0.10)'
-            : 'rgba(60,60,67,0.16)',
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          gap: 12,
-        }}
-      >
-        <ProgressRing ratio={ratio} done={done} total={total} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            className="text-muted-foreground"
-            style={{
-              fontSize: 9.5,
-              fontWeight: '800',
-              letterSpacing: 1.2,
-              textTransform: 'uppercase',
-              fontFamily: 'Assistant-Medium',
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {labels.label}
-          </Text>
-          <Text
-            className="font-display font-extrabold text-foreground"
-            numberOfLines={1}
-            style={{
-              fontSize: 14.5,
-              letterSpacing: -0.2,
-              marginTop: 1,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {status}
-          </Text>
-        </View>
-      </BlurView>
-    </View>
-  );
-}
-
-function ProgressRing({
-  ratio,
-  done,
-  total,
-}: {
-  ratio: number;
-  done: number;
-  total: number;
-}) {
-  const size = 40;
-  const stroke = 3;
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - ratio);
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Svg width={size} height={size} style={{ position: 'absolute' }}>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="rgba(14,140,140,0.18)"
-          strokeWidth={stroke}
-          fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          stroke="#0E8C8C"
-          strokeWidth={stroke}
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={`${circ} ${circ}`}
-          strokeDashoffset={offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
-      </Svg>
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '800',
-          fontFamily: 'Assistant-Medium',
-          color: '#0E8C8C',
-        }}
-      >
-        {total > 0 ? `${done}/${total}` : '—'}
-      </Text>
-    </View>
   );
 }
 
@@ -1303,12 +1126,6 @@ function NavButton({
       )}
     </Pressable>
   );
-}
-
-function isSectionDone(section: WorkoutSection, _a: AssignmentDay | null) {
-  // Placeholder until per-section completion lands. Treat the whole
-  // assignment's completedAt as "everything is done" for the dock ratio.
-  return _a?.completedAt ? true : false;
 }
 
 
