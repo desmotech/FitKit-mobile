@@ -72,6 +72,9 @@ export interface LogStrings {
   setColReps: string;
   setColWeight: string;
   setColRPE: string;
+  setColDist: string;
+  setColTime: string;
+  addSet: string;
 
   // Exercise search
   searchPlaceholder: string;
@@ -102,6 +105,8 @@ export interface LogStrings {
   a11ySetNumber: (n: number) => string;
   a11ySetReps: (n: number) => string;
   a11ySetWeight: (n: number) => string;
+  a11ySetDistance: (n: number) => string;
+  a11ySetTime: (n: number) => string;
   a11ySetRpe: (n: number) => string;
   a11ySetMarkDone: (n: number) => string;
   a11yToggleUnit: (unit: string) => string;
@@ -163,6 +168,9 @@ const en: LogStrings = {
   setColReps: 'Reps',
   setColWeight: 'Weight',
   setColRPE: 'RPE',
+  setColDist: 'Dist',
+  setColTime: 'Time',
+  addSet: 'Add set',
 
   searchPlaceholder: 'Search exercises',
   searchRecent: 'Recent',
@@ -187,6 +195,8 @@ const en: LogStrings = {
   a11ySetNumber: (n) => `Set ${n}`,
   a11ySetReps: (n) => `Set ${n} reps`,
   a11ySetWeight: (n) => `Set ${n} weight`,
+  a11ySetDistance: (n) => `Set ${n} distance`,
+  a11ySetTime: (n) => `Set ${n} time`,
   a11ySetRpe: (n) => `Set ${n} R P E`,
   a11ySetMarkDone: (n) => `Mark set ${n} done`,
   a11yToggleUnit: (u) => `Toggle weight unit, currently ${u}`,
@@ -246,6 +256,9 @@ const he: LogStrings = {
   setColReps: 'חזרות',
   setColWeight: 'משקל',
   setColRPE: 'RPE',
+  setColDist: 'מרחק',
+  setColTime: 'זמן',
+  addSet: 'הוסף סט',
 
   searchPlaceholder: 'חיפוש תרגיל',
   searchRecent: 'אחרונים',
@@ -270,6 +283,8 @@ const he: LogStrings = {
   a11ySetNumber: (n) => `סט ${n}`,
   a11ySetReps: (n) => `חזרות, סט ${n}`,
   a11ySetWeight: (n) => `משקל, סט ${n}`,
+  a11ySetDistance: (n) => `מרחק, סט ${n}`,
+  a11ySetTime: (n) => `זמן, סט ${n}`,
   a11ySetRpe: (n) => `RPE, סט ${n}`,
   a11ySetMarkDone: (n) => `סמן סט ${n} כהושלם`,
   a11yToggleUnit: (u) => `שנה יחידת משקל, כרגע ${u}`,
@@ -329,6 +344,9 @@ const ru: LogStrings = {
   setColReps: 'Повт.',
   setColWeight: 'Вес',
   setColRPE: 'RPE',
+  setColDist: 'Дист.',
+  setColTime: 'Время',
+  addSet: 'Добавить подход',
 
   searchPlaceholder: 'Поиск упражнения',
   searchRecent: 'Недавние',
@@ -353,6 +371,8 @@ const ru: LogStrings = {
   a11ySetNumber: (n) => `Подход ${n}`,
   a11ySetReps: (n) => `Повторы, подход ${n}`,
   a11ySetWeight: (n) => `Вес, подход ${n}`,
+  a11ySetDistance: (n) => `Дистанция, подход ${n}`,
+  a11ySetTime: (n) => `Время, подход ${n}`,
   a11ySetRpe: (n) => `RPE, подход ${n}`,
   a11ySetMarkDone: (n) => `Отметить подход ${n} выполненным`,
   a11yToggleUnit: (u) => `Сменить единицу веса, сейчас ${u}`,

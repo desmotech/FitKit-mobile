@@ -21,6 +21,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   TextInput,
   View,
@@ -37,9 +38,10 @@ import {
   LogSectionCard,
   type Performance,
   PerformanceToggle,
-  PRCelebration,
   PrescriptionHint,
   ScoreInput,
+  type SetColumns,
+  type SetRowLast,
   SetTable,
   type SetRowValue,
 } from '@/components/log';
@@ -50,12 +52,16 @@ import { useMyOneRMByExercise } from '@/hooks/use-personal-records';
 import {
   type LogResultInput,
   type LogResultSetInput,
+  type SetResultLite,
   type WorkoutMovement,
+  type WorkoutSection,
   useLatestResult,
   useLogResult,
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
+import { getShapeCaps, type MovementCaps, type SectionShape } from '@fitkit/shared';
 import { analytics } from '@/lib/analytics';
+import { formatSectionHeader } from '@/lib/format-prescription';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import {
   type Score,
@@ -90,11 +96,10 @@ export default function LogWorkoutResultScreen() {
   const scoring = (workout?.scoring ?? 'none') as WorkoutScoring;
 
   const sections = useMemo(() => workout?.sections ?? [], [workout?.sections]);
-  const movementsWithSets = useMemo(
-    () =>
-      sections
-        .flatMap((s) => s.movements)
-        .filter((m) => m.prescribedSets && m.prescribedSets > 0),
+  // Every movement is loggable now — the shape's MovementCaps decide which
+  // columns each one renders, not whether it has prescribed sets.
+  const loggableMovements = useMemo(
+    () => sections.flatMap((s) => s.movements),
     [sections],
   );
 
@@ -119,28 +124,25 @@ export default function LogWorkoutResultScreen() {
   const [notes, setNotes] = useState('');
   const [performedAt, setPerformedAt] = useState<string>(() => isoDate());
   const [setRows, setSetRows] = useState<Record<string, SetRowValue[]>>({});
-  const [celebration, setCelebration] = useState<null | { summary: string }>(
-    null,
-  );
 
   useEffect(() => {
-    if (movementsWithSets.length === 0) return;
+    if (loggableMovements.length === 0) return;
     setSetRows((prev) => {
       if (Object.keys(prev).length > 0) return prev;
       const next: Record<string, SetRowValue[]> = {};
-      for (const m of movementsWithSets) {
-        const count = m.prescribedSets ?? 1;
-        next[m.id] = Array.from({ length: count }, () => ({
-          reps: '',
-          weight: '',
-          weightUnit: 'kg',
-          rpe: '',
-          done: false,
-        }));
+      for (const m of loggableMovements) {
+        const count = Math.max(1, m.prescribedSets ?? 1);
+        next[m.id] = Array.from({ length: count }, () => emptyRow());
       }
       return next;
     });
-  }, [movementsWithSets]);
+  }, [loggableMovements]);
+
+  const addSet = (movementId: string) =>
+    setSetRows((prev) => ({
+      ...prev,
+      [movementId]: [...(prev[movementId] ?? []), emptyRow()],
+    }));
 
   const mutation = useLogResult(orgId, workoutId);
   const canSubmit = scoring === 'none' ? true : isScoreComplete(score);
@@ -150,10 +152,17 @@ export default function LogWorkoutResultScreen() {
     haptics.tap();
     const serialized = serializeScore(score);
     const setResults: LogResultSetInput[] = [];
-    for (const m of movementsWithSets) {
+    for (const m of loggableMovements) {
       const rows = setRows[m.id] ?? [];
       rows.forEach((row, idx) => {
-        if (!row.reps && !row.weight && !row.rpe && !row.done) return;
+        const hasValue =
+          row.reps ||
+          row.weight ||
+          row.distance ||
+          row.duration ||
+          row.rpe ||
+          row.done;
+        if (!hasValue) return;
         setResults.push({
           workoutMovementId: m.id,
           exerciseId: m.exercise.id,
@@ -161,6 +170,9 @@ export default function LogWorkoutResultScreen() {
           reps: row.reps ? Number.parseInt(row.reps, 10) : undefined,
           weight: row.weight || undefined,
           weightUnit: row.weight ? row.weightUnit : undefined,
+          distance: row.distance || undefined,
+          distanceUnit: row.distance ? row.distanceUnit : undefined,
+          duration: row.duration || undefined,
           rpe: row.rpe ? Number.parseInt(row.rpe, 10) : undefined,
         });
       });
@@ -173,63 +185,43 @@ export default function LogWorkoutResultScreen() {
       scaled: perf === 'scaled' || undefined,
       notes: notes.trim() || undefined,
       performedAt: new Date(performedAt).toISOString(),
+      // Anchor to the assignment so the server forks its snapshot (FIT-152)
+      // instead of writing against the mutable library workout.
+      assignmentId: id,
       setResults: setResults.length > 0 ? setResults : undefined,
     };
 
     mutation.mutate(payload, {
-      onSuccess: (response) => {
-        const isPR = response?.data?.isPR ?? false;
+      onSuccess: () => {
+        // Result logging records what was done — it makes no PR judgment.
+        // PRs are logged explicitly elsewhere.
         analytics.track('member_workout_logged', {
           org_id: orgId,
           workout_id: workoutId,
-          is_pr: isPR,
           rx: perf === 'rx',
           scaled: perf === 'scaled',
           has_sets: setResults.length > 0,
+          has_distance: setResults.some((s) => !!s.distance),
           platform: 'mobile',
         });
-        if (isPR) {
-          analytics.track('member_workout_pr', {
-            org_id: orgId,
-            workout_id: workoutId,
-            platform: 'mobile',
-          });
-        }
         queryClient.invalidateQueries({
           predicate: (q) => {
             const key = q.queryKey;
             if (!Array.isArray(key)) return false;
             const joined = key.filter((k) => typeof k === 'string').join('/');
             return (
-              joined.includes('results/me') ||
+              joined.includes('results') ||
+              joined.includes('history') ||
               joined.includes('personal-records')
             );
           },
         });
-        if (isPR) {
-          haptics.success();
-          setCelebration({ summary: formatScoreSummary(score) });
-        } else {
-          haptics.success();
-          router.back();
-        }
+        haptics.success();
+        router.back();
       },
       onError: () => haptics.error(),
     });
   };
-
-  if (celebration) {
-    return (
-      <PRCelebration
-        title={L.workoutNewPr}
-        subtitle={workout?.displayName ?? null}
-        summary={celebration.summary}
-        description={L.workoutNewPrSubtitle}
-        ctaLabel={L.prCtaDone}
-        onPress={() => router.back()}
-      />
-    );
-  }
 
   if (assignmentQuery.isLoading || !workout) {
     return (
@@ -304,31 +296,48 @@ export default function LogWorkoutResultScreen() {
             </Animated.View>
           )}
 
-          {movementsWithSets.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(60).duration(280)}>
-              <LogSectionCard label={L.workoutSetsSection} padding={0}>
-                <View style={{ padding: 12, gap: 16 }}>
-                  {movementsWithSets.map((m) => (
-                    <MovementBlock
-                      key={m.id}
-                      movement={m}
-                      rows={setRows[m.id] ?? []}
-                      prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
-                      oneRMKg={oneRMKg[m.exercise.id] ?? null}
-                      onChange={(idx, update) =>
-                        setSetRows((prev) => ({
-                          ...prev,
-                          [m.id]: (prev[m.id] ?? []).map((r, i) =>
-                            i === idx ? { ...r, ...update } : r,
-                          ),
-                        }))
-                      }
-                    />
-                  ))}
-                </View>
-              </LogSectionCard>
-            </Animated.View>
-          )}
+          {sections.map((section, sIdx) => {
+            if (section.movements.length === 0) return null;
+            const caps = getShapeCaps(
+              (section.shape ?? null) as SectionShape | null,
+            );
+            const shapeLine = formatSectionHeader({
+              shape: (section.shape ?? null) as SectionShape | null,
+              config: section.config,
+            });
+            const label = sectionLabel(section, shapeLine, L.workoutSetsSection);
+            return (
+              <Animated.View
+                key={section.id}
+                entering={FadeInDown.delay(60 + sIdx * 30).duration(280)}
+              >
+                <LogSectionCard label={label} padding={0}>
+                  <View style={{ padding: 12, gap: 16 }}>
+                    {section.movements.map((m) => (
+                      <MovementBlock
+                        key={m.id}
+                        movement={m}
+                        columns={deriveColumns(m, caps)}
+                        rows={setRows[m.id] ?? []}
+                        prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
+                        oneRMKg={oneRMKg[m.exercise.id] ?? null}
+                        addSetLabel={L.addSet}
+                        onAddSet={() => addSet(m.id)}
+                        onChange={(idx, update) =>
+                          setSetRows((prev) => ({
+                            ...prev,
+                            [m.id]: (prev[m.id] ?? []).map((r, i) =>
+                              i === idx ? { ...r, ...update } : r,
+                            ),
+                          }))
+                        }
+                      />
+                    ))}
+                  </View>
+                </LogSectionCard>
+              </Animated.View>
+            );
+          })}
 
           <Animated.View entering={FadeInDown.delay(80).duration(280)}>
             <LogSectionCard label={L.workoutPerformance}>
@@ -417,23 +426,27 @@ export default function LogWorkoutResultScreen() {
 
 function MovementBlock({
   movement,
+  columns,
   rows,
   prevSetsByNumber,
   oneRMKg,
+  addSetLabel,
+  onAddSet,
   onChange,
 }: {
   movement: WorkoutMovement;
+  columns: SetColumns;
   rows: SetRowValue[];
-  prevSetsByNumber: Record<
-    number,
-    { reps: number | null; weight: string | null; weightUnit: string | null }
-  >;
+  prevSetsByNumber: Record<number, SetRowLast>;
   oneRMKg: number | null;
+  addSetLabel: string;
+  onAddSet: () => void;
   onChange: (idx: number, update: Partial<SetRowValue>) => void;
 }) {
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const colors = useFKColors();
+  const haptics = useHaptics();
   return (
     <View style={{ gap: 8 }}>
       <Text
@@ -460,14 +473,30 @@ function MovementBlock({
       />
       <SetTable
         rows={rows}
+        columns={columns}
         prescription={{
           prescription: movement.prescription,
           prescribedReps: movement.prescribedReps,
           prescribedWeight: movement.prescribedWeight,
+          prescribedDistance: movement.prescribedDistance,
         }}
         prevSetsByNumber={prevSetsByNumber}
         onChange={onChange}
       />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={addSetLabel}
+        hitSlop={8}
+        onPress={() => {
+          haptics.select();
+          onAddSet();
+        }}
+        style={{ alignSelf: isRTL ? 'flex-end' : 'flex-start', paddingVertical: 2 }}
+      >
+        <Text style={{ fontSize: 13, fontWeight: '600', color: '#0E8C8C' }}>
+          + {addSetLabel}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -513,25 +542,10 @@ function buildLastHint({
 }
 
 function pickPrevSetsByNumber(
-  lastResult: {
-    setResults?: Array<{
-      workoutMovementId?: string;
-      exerciseId: string;
-      setNumber: number;
-      reps: number | null;
-      weight: string | null;
-      weightUnit: string | null;
-    }>;
-  } | null,
+  lastResult: { setResults?: SetResultLite[] } | null,
   workoutMovementId: string,
-): Record<
-  number,
-  { reps: number | null; weight: string | null; weightUnit: string | null }
-> {
-  const out: Record<
-    number,
-    { reps: number | null; weight: string | null; weightUnit: string | null }
-  > = {};
+): Record<number, SetRowLast> {
+  const out: Record<number, SetRowLast> = {};
   const sets = lastResult?.setResults ?? [];
   for (const s of sets) {
     if (s.workoutMovementId && s.workoutMovementId !== workoutMovementId)
@@ -540,7 +554,54 @@ function pickPrevSetsByNumber(
       reps: s.reps,
       weight: s.weight,
       weightUnit: s.weightUnit,
+      distanceM: s.distanceM,
+      distanceDisplayUnit: s.distanceDisplayUnit,
+      durationSeconds: s.durationSeconds,
     };
   }
   return out;
+}
+
+function emptyRow(): SetRowValue {
+  return {
+    reps: '',
+    weight: '',
+    weightUnit: 'kg',
+    distance: '',
+    distanceUnit: 'm',
+    duration: '',
+    rpe: '',
+    done: false,
+  };
+}
+
+/** Pick which input columns a movement renders. A movement is measured by
+ *  reps OR distance, never both — so an endurance movement (prescribed
+ *  distance) gets distance+time and hides reps/weight. */
+function deriveColumns(movement: WorkoutMovement, caps: MovementCaps): SetColumns {
+  const presc = movement.prescription as Record<string, unknown> | null;
+  const hasDistance =
+    !!(presc && presc.distance) || movement.prescribedDistance != null;
+  const load = presc?.load as Record<string, unknown> | undefined;
+  const rpe = load?.kind === 'rpe' || load?.kind === 'rir';
+  if (hasDistance && caps.showDistance) {
+    return { reps: false, weight: false, distance: true, duration: true, rpe };
+  }
+  return {
+    reps: caps.showReps,
+    weight: caps.showLoad,
+    distance: false,
+    duration: false,
+    rpe,
+  };
+}
+
+/** Card label: prefer the section title, else the formatted shape line
+ *  (e.g. "AMRAP 12 MIN"), else the generic "Per-set details". */
+function sectionLabel(
+  section: WorkoutSection,
+  shapeLine: string | null,
+  fallback: string,
+): string {
+  return section.title || shapeLine || fallback;
 }

@@ -239,11 +239,15 @@ export function shiftWeek(weekStart: string, weeks: number): string {
 // ── Hook: latest result for a workout (for "Last:" hint) ────────────
 
 export interface SetResultLite {
+  workoutMovementId?: string | null;
   exerciseId: string;
   setNumber: number;
   reps: number | null;
   weight: string | null;
   weightUnit: string | null;
+  distanceM?: number | null;
+  distanceDisplayUnit?: string | null;
+  durationSeconds?: number | null;
   rpe: number | null;
 }
 
@@ -301,16 +305,47 @@ export function useMyResults(
   });
 }
 
+/**
+ * Library-scoped repeat history for a single workout — every completion of the
+ * canonical workout across weeks/assignments (server resolves forkedFromId).
+ * Use this for the "my history" trend on the workout view; it's correct
+ * regardless of which day's snapshot the athlete logged against (unlike
+ * filtering `/results/me` by the snapshot-aliased `workoutId`).
+ */
+export function useWorkoutHistory(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+) {
+  const path =
+    orgId && workoutId
+      ? `/organizations/${orgId}/workouts/${workoutId}/results`
+      : '';
+  return useApiQuery<ApiEnvelope<WorkoutResult[]>>({
+    path,
+    queryKey:
+      orgId && workoutId
+        ? ['/organizations', orgId, 'workouts', workoutId, 'results']
+        : ['/workouts/results', 'noop'],
+    queryOptions: { enabled: !!orgId && !!workoutId },
+  });
+}
+
 // ── Hook: log a result ───────────────────────────────────────────────
 
 export interface LogResultSetInput {
-  workoutMovementId: string;
+  workoutMovementId?: string;
   exerciseId: string;
   setNumber: number;
   reps?: number;
   weight?: string;
   weightUnit?: string;
+  // Endurance measure — sent as entered; the server canonicalizes to
+  // distance_m / duration_seconds and preserves the display unit.
+  distance?: string;
+  distanceUnit?: string;
+  duration?: string; // mm:ss | hh:mm:ss | raw seconds
   rpe?: number;
+  notes?: string;
 }
 
 export interface LogResultInput {
@@ -320,12 +355,66 @@ export interface LogResultInput {
   scaled?: boolean;
   notes?: string;
   performedAt: string; // ISO datetime
+  // FIT-152: when set, the server forks the assignment's snapshot if
+  // needed and anchors the result to the snapshot so per-day completions
+  // keep their frozen prescription. Without it the result anchors to the
+  // mutable library workout.
+  assignmentId?: string;
   setResults?: LogResultSetInput[];
 }
 
 export interface LogResultResponse {
-  isPR?: boolean;
-  // …rest of the result envelope; we only need isPR for the celebration.
+  id: string;
+  performedAt?: string;
+  // Result logging makes no PR judgment — PRs are explicit (see useLogManualPR).
+}
+
+// ── Hook: per-exercise set history (trend) ───────────────────────────
+
+export interface ExerciseHistorySet {
+  setNumber: number;
+  reps: number | null;
+  weightKg: number | null;
+  weightDisplayUnit: string | null;
+  distanceM: number | null;
+  distanceDisplayUnit: string | null;
+  durationSeconds: number | null;
+  rpe: number | null;
+}
+
+export interface ExerciseHistorySession {
+  resultId: string;
+  performedAt: string;
+  workoutTitle: string | null;
+  sets: ExerciseHistorySet[];
+  topSetKg: number | null;
+  totalVolumeKg: number | null;
+}
+
+export interface ExerciseHistory {
+  exerciseId: string;
+  exercise: { id: string; name: string };
+  /** Current explicit PR for this exercise — overlay marker on the trend. */
+  pr: { valueNumeric: number; unit: string; achievedAt: string } | null;
+  sessions: ExerciseHistorySession[];
+}
+
+export function useExerciseHistory(
+  orgId: string | undefined | null,
+  exerciseId: string | undefined | null,
+) {
+  const path =
+    orgId && exerciseId
+      ? `/organizations/${orgId}/exercises/${exerciseId}/history/me`
+      : '';
+  return useApiQuery<ApiEnvelope<ExerciseHistory>>({
+    path,
+    queryKey:
+      orgId && exerciseId
+        ? ['/organizations', orgId, 'exercises', exerciseId, 'history', 'me']
+        : ['/exercise-history', 'noop'],
+    queryOptions: { enabled: !!orgId && !!exerciseId },
+  });
 }
 
 export function useLogResult(

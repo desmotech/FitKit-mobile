@@ -11,11 +11,13 @@ export {
 export {
   SetRow,
   SetTable,
+  type SetColumns,
   type SetRowProps,
   type SetRowValue,
   type SetRowLast,
   type SetRowPrescription,
   type SetTableProps,
+  type DistanceUnit,
 } from './set-row';
 export {
   PerformanceToggle,
