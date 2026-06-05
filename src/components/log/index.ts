@@ -19,6 +19,7 @@ export {
   type SetTableProps,
   type DistanceUnit,
 } from './set-row';
+export { SetFocused, type SetFocusedProps } from './set-focused';
 export {
   PerformanceToggle,
   type Performance,

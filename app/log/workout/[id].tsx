@@ -21,7 +21,6 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   TextInput,
   View,
@@ -40,9 +39,9 @@ import {
   PerformanceToggle,
   PrescriptionHint,
   ScoreInput,
+  SetFocused,
   type SetColumns,
   type SetRowLast,
-  SetTable,
   type SetRowValue,
 } from '@/components/log';
 import { Text } from '@/components/ui/text';
@@ -321,7 +320,6 @@ export default function LogWorkoutResultScreen() {
                         rows={setRows[m.id] ?? []}
                         prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
                         oneRMKg={oneRMKg[m.exercise.id] ?? null}
-                        addSetLabel={L.addSet}
                         onAddSet={() => addSet(m.id)}
                         onChange={(idx, update) =>
                           setSetRows((prev) => ({
@@ -430,7 +428,6 @@ function MovementBlock({
   rows,
   prevSetsByNumber,
   oneRMKg,
-  addSetLabel,
   onAddSet,
   onChange,
 }: {
@@ -439,27 +436,39 @@ function MovementBlock({
   rows: SetRowValue[];
   prevSetsByNumber: Record<number, SetRowLast>;
   oneRMKg: number | null;
-  addSetLabel: string;
   onAddSet: () => void;
   onChange: (idx: number, update: Partial<SetRowValue>) => void;
 }) {
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const colors = useFKColors();
-  const haptics = useHaptics();
+  const [active, setActive] = useState(0);
+  const doneCount = rows.filter((r) => r.done).length;
   return (
     <View style={{ gap: 8 }}>
-      <Text
-        numberOfLines={1}
+      <View
         style={{
-          fontSize: 15,
-          fontWeight: '600',
-          color: colors.foreground,
-          textAlign: isRTL ? 'right' : 'left',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'baseline',
+          gap: 8,
         }}
       >
-        {movement.exercise.name}
-      </Text>
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            fontSize: 15,
+            fontWeight: '600',
+            color: colors.foreground,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {movement.exercise.name}
+        </Text>
+        <Text style={{ fontSize: 11, color: colors.mutedFg, fontFamily: 'Assistant-Medium' }}>
+          {doneCount}/{rows.length}
+        </Text>
+      </View>
       <PrescriptionHint
         prescription={movement.prescription}
         fallback={{
@@ -471,32 +480,18 @@ function MovementBlock({
         }}
         oneRMKg={oneRMKg}
       />
-      <SetTable
+      <SetFocused
         rows={rows}
         columns={columns}
-        prescription={{
-          prescription: movement.prescription,
-          prescribedReps: movement.prescribedReps,
-          prescribedWeight: movement.prescribedWeight,
-          prescribedDistance: movement.prescribedDistance,
-        }}
+        active={active}
+        setActive={setActive}
         prevSetsByNumber={prevSetsByNumber}
         onChange={onChange}
-      />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={addSetLabel}
-        hitSlop={8}
-        onPress={() => {
-          haptics.select();
+        onAddSet={() => {
           onAddSet();
+          setActive(rows.length); // focus the newly appended set
         }}
-        style={{ alignSelf: isRTL ? 'flex-end' : 'flex-start', paddingVertical: 2 }}
-      >
-        <Text style={{ fontSize: 13, fontWeight: '600', color: '#0E8C8C' }}>
-          + {addSetLabel}
-        </Text>
-      </Pressable>
+      />
     </View>
   );
 }

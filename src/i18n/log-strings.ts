@@ -75,6 +75,9 @@ export interface LogStrings {
   setColDist: string;
   setColTime: string;
   addSet: string;
+  setN: string;
+  doneCol: string;
+  markDone: string;
 
   // Exercise search
   searchPlaceholder: string;
@@ -210,6 +213,9 @@ const en: LogStrings = {
   setColDist: 'Dist',
   setColTime: 'Time',
   addSet: 'Add set',
+  setN: 'Set',
+  doneCol: 'Done',
+  markDone: 'Mark done',
 
   searchPlaceholder: 'Search exercises',
   searchRecent: 'Recent',
@@ -330,6 +336,9 @@ const he: LogStrings = {
   setColDist: 'מרחק',
   setColTime: 'זמן',
   addSet: 'הוסף סט',
+  setN: 'סט',
+  doneCol: 'בוצע',
+  markDone: 'סמן כבוצע',
 
   searchPlaceholder: 'חיפוש תרגיל',
   searchRecent: 'אחרונים',
@@ -450,6 +459,9 @@ const ru: LogStrings = {
   setColDist: 'Дист.',
   setColTime: 'Время',
   addSet: 'Добавить подход',
+  setN: 'Подход',
+  doneCol: 'Готово',
+  markDone: 'Отметить',
 
   searchPlaceholder: 'Поиск упражнения',
   searchRecent: 'Недавние',
