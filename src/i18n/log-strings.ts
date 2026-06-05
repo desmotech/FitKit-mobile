@@ -100,6 +100,45 @@ export interface LogStrings {
   // Home pill (alongside "Add goal")
   homeLogPr: string;
 
+  // PR board
+  prBoard: string;
+  prLifts: string;
+  prBenchmarks: string;
+  prAchievedOn: string;
+  prNoneTitle: string;
+  prNoneBody: string;
+  prMark: string;
+
+  // Exercise history / trend
+  exerciseHistory: string;
+  histTopSet: string;
+  histVolume: string;
+  histGoal: string;
+  histSessions: string;
+  histNoneTitle: string;
+  histNoneBody: string;
+
+  // Log a PR
+  logPrTitle: string;
+  logPrCta: string;
+  prKindExercise: string;
+  prKindWorkout: string;
+  prMetric: string;
+  prMetricLoad: string;
+  prMetricReps: string;
+  prMetricTime: string;
+  prMetricDistance: string;
+  prValue: string;
+  prDate: string;
+  prPickExercise: string;
+  prPickWorkout: string;
+  prPersonalRecord: string;
+  prPreviousBest: string;
+  prSaveErr: string;
+
+  // Generic
+  retry: string;
+
   // A11y bits
   a11yClose: string;
   a11ySetNumber: (n: number) => string;
@@ -191,6 +230,38 @@ const en: LogStrings = {
 
   homeLogPr: 'Log PR',
 
+  prBoard: 'PR Board',
+  prLifts: 'Lifts',
+  prBenchmarks: 'Benchmarks',
+  prAchievedOn: 'on',
+  prNoneTitle: 'No records yet',
+  prNoneBody: 'Log your first PR to start your records wall.',
+  prMark: 'PR',
+  exerciseHistory: 'Exercise History',
+  histTopSet: 'Top set',
+  histVolume: 'Volume',
+  histGoal: 'Goal',
+  histSessions: 'Sessions',
+  histNoneTitle: 'No history yet',
+  histNoneBody: 'Log your first set to see your trend.',
+  logPrTitle: 'Log a PR',
+  logPrCta: 'Log PR',
+  prKindExercise: 'Exercise',
+  prKindWorkout: 'Workout',
+  prMetric: 'Metric',
+  prMetricLoad: 'Load',
+  prMetricReps: 'Reps',
+  prMetricTime: 'Time',
+  prMetricDistance: 'Distance',
+  prValue: 'Value',
+  prDate: 'Date',
+  prPickExercise: 'Search exercise',
+  prPickWorkout: 'Search workout',
+  prPersonalRecord: 'Personal record',
+  prPreviousBest: 'Previous best',
+  prSaveErr: "Couldn't save your PR",
+  retry: 'Retry',
+
   a11yClose: 'Close',
   a11ySetNumber: (n) => `Set ${n}`,
   a11ySetReps: (n) => `Set ${n} reps`,
@@ -279,6 +350,38 @@ const he: LogStrings = {
 
   homeLogPr: 'תיעוד שיא',
 
+  prBoard: 'שיאים',
+  prLifts: 'הרמות',
+  prBenchmarks: 'בנצ׳מרקים',
+  prAchievedOn: '·',
+  prNoneTitle: 'אין שיאים עדיין',
+  prNoneBody: 'תעד את השיא הראשון שלך כדי להתחיל.',
+  prMark: 'שיא',
+  exerciseHistory: 'היסטוריית תרגיל',
+  histTopSet: 'סט מקס',
+  histVolume: 'נפח',
+  histGoal: 'יעד',
+  histSessions: 'אימונים',
+  histNoneTitle: 'אין היסטוריה עדיין',
+  histNoneBody: 'תעד סט ראשון כדי לראות מגמה.',
+  logPrTitle: 'תיעוד שיא',
+  logPrCta: 'תעד שיא',
+  prKindExercise: 'תרגיל',
+  prKindWorkout: 'אימון',
+  prMetric: 'מדד',
+  prMetricLoad: 'משקל',
+  prMetricReps: 'חזרות',
+  prMetricTime: 'זמן',
+  prMetricDistance: 'מרחק',
+  prValue: 'ערך',
+  prDate: 'תאריך',
+  prPickExercise: 'חפש תרגיל',
+  prPickWorkout: 'חפש אימון',
+  prPersonalRecord: 'שיא אישי',
+  prPreviousBest: 'שיא קודם',
+  prSaveErr: 'לא ניתן לשמור את השיא',
+  retry: 'נסה שוב',
+
   a11yClose: 'סגור',
   a11ySetNumber: (n) => `סט ${n}`,
   a11ySetReps: (n) => `חזרות, סט ${n}`,
@@ -366,6 +469,38 @@ const ru: LogStrings = {
   prCtaDone: 'Готово',
 
   homeLogPr: 'Рекорд',
+
+  prBoard: 'Рекорды',
+  prLifts: 'Силовые',
+  prBenchmarks: 'Бенчмарки',
+  prAchievedOn: '·',
+  prNoneTitle: 'Пока нет рекордов',
+  prNoneBody: 'Запишите первый рекорд, чтобы начать.',
+  prMark: 'PR',
+  exerciseHistory: 'История упражнения',
+  histTopSet: 'Макс. сет',
+  histVolume: 'Объём',
+  histGoal: 'Цель',
+  histSessions: 'Тренировки',
+  histNoneTitle: 'Пока нет истории',
+  histNoneBody: 'Запишите первый подход, чтобы увидеть динамику.',
+  logPrTitle: 'Записать рекорд',
+  logPrCta: 'Записать',
+  prKindExercise: 'Упражнение',
+  prKindWorkout: 'Воркаут',
+  prMetric: 'Метрика',
+  prMetricLoad: 'Вес',
+  prMetricReps: 'Повторы',
+  prMetricTime: 'Время',
+  prMetricDistance: 'Дистанция',
+  prValue: 'Значение',
+  prDate: 'Дата',
+  prPickExercise: 'Найти упражнение',
+  prPickWorkout: 'Найти воркаут',
+  prPersonalRecord: 'Личный рекорд',
+  prPreviousBest: 'Прошлый рекорд',
+  prSaveErr: 'Не удалось сохранить рекорд',
+  retry: 'Повторить',
 
   a11yClose: 'Закрыть',
   a11ySetNumber: (n) => `Подход ${n}`,

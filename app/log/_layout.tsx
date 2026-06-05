@@ -57,6 +57,15 @@ export default function LogLayout() {
           sheetCornerRadius: 24,
         }}
       />
+      <Stack.Screen
+        name="pr"
+        options={{
+          presentation: 'pageSheet',
+          headerShown: false,
+          sheetGrabberVisible: true,
+          sheetCornerRadius: 24,
+        }}
+      />
     </Stack>
   );
 }

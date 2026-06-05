@@ -42,6 +42,7 @@ import {
   Phone,
   Sun,
   Trash2,
+  Trophy,
   User as UserIcon,
 } from 'lucide-react-native';
 import { useState } from 'react';
@@ -150,6 +151,7 @@ export default function ProfileScreen() {
     settingPayment: settingsT.payment ?? 'Payments',
     settingHistory: settingsT.history ?? 'Workout History',
     settingGoals: settingsT.goals ?? 'Goals',
+    settingPrs: settingsT.prs ?? 'PR Board',
     settingMetrics: settingsT.bodyMetrics ?? 'Body Metrics',
     settingPhotos: settingsT.progressPhotos ?? 'Progress Photos',
     settingForms: settingsT.forms ?? formS.listTitle,
@@ -685,6 +687,16 @@ export default function ProfileScreen() {
               colors={colors}
               isDark={isDark}
               onPress={() => router.push('/(tabs)/profile/goals')}
+            />
+            <RowDivider isDark={isDark} />
+            <SettingsRow
+              Icon={Trophy}
+              iconTint="#B07D2A"
+              label={labels.settingPrs}
+              isRTL={isRTL}
+              colors={colors}
+              isDark={isDark}
+              onPress={() => router.push('/(tabs)/profile/prs')}
             />
             <RowDivider isDark={isDark} />
             <SettingsRow
