@@ -757,44 +757,61 @@ function ExerciseCard({
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+export interface PrescriptionStatLabels {
+  sets: string;
+  reps: string;
+  load: string;
+  distance: string;
+  time: string;
+}
+
+const DEFAULT_STAT_LABELS: PrescriptionStatLabels = {
+  sets: 'Sets',
+  reps: 'Reps',
+  load: 'Load',
+  distance: 'Dist.',
+  time: 'Time',
+};
+
 export function buildPrescriptionStats(
   movement: WorkoutMovement,
   hideSets: boolean | undefined,
   hideReps: boolean | undefined,
+  labels: PrescriptionStatLabels = DEFAULT_STAT_LABELS,
 ): PrescriptionStat[] {
   const stats: PrescriptionStat[] = [];
   if (!hideSets && movement.prescribedSets != null) {
     stats.push({
       key: 'sets',
-      label: 'Sets',
+      label: labels.sets,
       value: String(movement.prescribedSets),
     });
   }
   if (!hideReps && movement.prescribedReps) {
     stats.push({
       key: 'reps',
-      label: 'Reps',
+      label: labels.reps,
       value: movement.prescribedReps,
     });
   }
   if (movement.prescribedWeight) {
     stats.push({
       key: 'load',
-      label: 'Load',
+      label: labels.load,
       value: movement.prescribedWeight,
     });
   }
   if (movement.prescribedDistance) {
     stats.push({
       key: 'distance',
-      label: 'Dist.',
+      label: labels.distance,
       value: movement.prescribedDistance,
     });
   }
   if (movement.prescribedDuration) {
     stats.push({
       key: 'duration',
-      label: 'Time',
+      label: labels.time,
       value: movement.prescribedDuration,
     });
   }

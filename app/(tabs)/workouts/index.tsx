@@ -58,28 +58,35 @@ import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { useHaptics } from '@/hooks/use-haptics';
 import {
   type AssignmentDay,
-  type WorkoutSection,
   getWeekOrder,
   getWeekStartDay,
   shiftWeek,
   useMyWeekAssignments,
   weekStartFor,
 } from '@/hooks/use-workouts';
+import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 
 function ymd(d: Date): string {
   return d.toISOString().split('T')[0];
 }
-function formatRange(weekStart: string, fmt: Intl.DateTimeFormat): string {
-  const start = new Date(weekStart);
-  const end = new Date(weekStart);
-  end.setDate(end.getDate() + 6);
-  return `${fmt.format(start)} — ${fmt.format(end)}`;
-}
-function weekNumber(d: Date): number {
-  const start = new Date(d.getFullYear(), 0, 1);
-  const diff = (d.getTime() - start.getTime()) / 86400000;
-  return Math.ceil((diff + start.getDay() + 1) / 7);
+
+const MO_ABBR = [
+  'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+  'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+];
+/** "JUN 2026" — or "MAY–JUN 2026" when the week straddles two months. */
+function monthRangeLabel(weekStart: string): string {
+  const s = new Date(weekStart);
+  const e = new Date(weekStart);
+  e.setDate(e.getDate() + 6);
+  const sM = MO_ABBR[s.getMonth()];
+  const eM = MO_ABBR[e.getMonth()];
+  const sY = s.getFullYear();
+  const eY = e.getFullYear();
+  if (sM === eM && sY === eY) return `${sM} ${sY}`;
+  if (sY === eY) return `${sM}–${eM} ${sY}`;
+  return `${sM} ${sY}–${eM} ${eY}`;
 }
 
 export default function WhiteboardScreen() {
@@ -102,10 +109,6 @@ export default function WhiteboardScreen() {
 
   // Date formatters keyed on the active app language — guarantees that
   // weekday + date strings follow the user's chosen locale, not the OS.
-  const monthDayFmt = useMemo(
-    () => new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric' }),
-    [lang],
-  );
   const fullWeekdayFmt = useMemo(
     () => new Intl.DateTimeFormat(lang, { weekday: 'long' }),
     [lang],
@@ -300,58 +303,34 @@ export default function WhiteboardScreen() {
           />
         }
       >
-        {/* Page title — mirrors Schedule: kicker (Week N) on top, large
-            display date range below, nav chevrons on the trailing edge.
-            Single source of design language for both week-paged
-            screens. */}
+        {/* Week nav — < MONTH YYYY >. The day strip carries the dates, so the
+            month range lives in the nav instead of a redundant title. */}
         <View
           style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
+            justifyContent: 'space-between',
             paddingHorizontal: 18,
-            paddingTop: 16,
-            paddingBottom: 4,
-            gap: 10,
+            paddingTop: 14,
+            paddingBottom: 6,
           }}
         >
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                color: colors.mutedFg,
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-                textAlign: isRTL ? 'right' : 'left',
-                fontFamily: 'Assistant-Medium',
-              }}
-            >
-              {labels.week} {weekNumber(new Date(weekStart))}
-            </Text>
-            <Text
-              className="font-display"
-              numberOfLines={1}
-              style={{
-                fontSize: 22,
-                fontWeight: '800',
-                letterSpacing: -0.5,
-                marginTop: 2,
-                color: colors.foreground,
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {formatRange(weekStart, monthDayFmt)}
-            </Text>
-          </View>
-          <View
+          <NavButton onPress={goPrev} Icon={ChevronStart} />
+          <Text
+            numberOfLines={1}
             style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              gap: 6,
+              textAlign: 'center',
+              fontFamily: font.monoMedium,
+              fontSize: 14,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              color: colors.foreground,
+              fontVariant: ['tabular-nums'],
             }}
           >
-            <NavButton onPress={goPrev} Icon={ChevronStart} />
-            <NavButton onPress={goNext} Icon={ChevronEnd} />
-          </View>
+            {monthRangeLabel(weekStart)}
+          </Text>
+          <NavButton onPress={goNext} Icon={ChevronEnd} />
         </View>
 
         {/* Day strip — swipe horizontally to move week. The gesture
@@ -976,15 +955,28 @@ function UpcomingPreviewRow({
 }) {
   const haptics = useHaptics();
   const colors = useFKColors();
-  const { t } = useI18n();
-  const scoringT = (((t as unknown as Record<string, Record<string, unknown>>)
-    .workout ?? {}) as Record<string, unknown>).scoringLabels as
-    | Record<string, string>
-    | undefined;
-  const dayShort = shortWeekdayFmt
-    .format(new Date(assignment.date))
-    .toUpperCase();
+  const { t, lang } = useI18n() as unknown as {
+    t: Record<string, Record<string, unknown>>;
+    lang: string;
+  };
+  const scoringT = ((t.workouts ?? {}) as Record<string, unknown>)
+    .scoringLabels as Record<string, string> | undefined;
+  const dayShort = shortWeekdayFmt.format(new Date(assignment.date));
   const dom = new Date(assignment.date).getDate();
+  const restLabel = ((t.program ?? {}) as Record<string, string>).restDayTitle;
+  const noteLabel = ((t.workout ?? {}) as Record<string, string>).coachNote;
+  const title =
+    assignment.kind === 'rest'
+      ? restLabel ?? 'Rest day'
+      : assignment.kind === 'note'
+        ? noteLabel ?? 'Coach note'
+        : (assignment.workout?.displayName ?? '—');
+  const subtitle = assignment.workout
+    ? `${scoringLabelI18n(assignment.workout.scoring, scoringT ?? {})}${
+        assignment.workout.timeCap ? ` · ${assignment.workout.timeCap}m` : ''
+      }`
+    : null;
+
   return (
     <>
       {divider ? (
@@ -992,8 +984,8 @@ function UpcomingPreviewRow({
           style={{
             height: StyleSheet.hairlineWidth,
             backgroundColor: colors.border,
-            marginLeft: isRTL ? 14 : 70,
-            marginRight: isRTL ? 70 : 14,
+            [isRTL ? 'marginRight' : 'marginLeft']: 64,
+            [isRTL ? 'marginLeft' : 'marginRight']: 14,
           }}
         />
       ) : null}
@@ -1004,8 +996,9 @@ function UpcomingPreviewRow({
           {
             flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
-            gap: 14,
-            paddingVertical: 12,
+            justifyContent: 'space-between',
+            gap: 12,
+            paddingVertical: 11,
             paddingHorizontal: 14,
           },
           pressed && {
@@ -1015,68 +1008,72 @@ function UpcomingPreviewRow({
           },
         ]}
       >
-        <View style={{ width: 44, alignItems: 'center' }}>
-          <Text
-            style={{
-              fontSize: 10,
-              fontWeight: '700',
-              letterSpacing: 0.8,
-              color: colors.mutedFg,
-            }}
-          >
-            {dayShort}
-          </Text>
-          <Text
-            className="font-display font-extrabold text-foreground"
-            style={{
-              fontSize: 18,
-              fontVariant: ['tabular-nums'],
-              letterSpacing: -0.3,
-              marginTop: 1,
-            }}
-          >
-            {dom}
-          </Text>
-        </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text
-            className="text-foreground"
-            numberOfLines={1}
-            style={{
-              fontSize: 14.5,
-              fontWeight: '600',
-              letterSpacing: -0.1,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {assignment.kind === 'rest'
-              ? 'Rest day'
-              : assignment.kind === 'note'
-                ? 'Coach note'
-                : (assignment.workout?.displayName ?? '—')}
-          </Text>
-          {assignment.workout ? (
+        {/* Date chip + workout — grouped together on the leading edge. */}
+        <View
+          style={{
+            flex: 1,
+            minWidth: 0,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <View style={{ width: 38, alignItems: 'center' }}>
             <Text
-              className="text-muted-foreground"
+              numberOfLines={1}
+              style={{ fontSize: 9.5, color: colors.mutedFg, ...eyebrow(lang) }}
+            >
+              {dayShort}
+            </Text>
+            <Text
               numberOfLines={1}
               style={{
-                fontSize: 12,
+                fontFamily: displayFamily(lang, 'bold'),
+                fontSize: 17,
+                lineHeight: 20,
+                color: colors.foreground,
+                fontVariant: ['tabular-nums'],
+                letterSpacing: -0.3,
                 marginTop: 1,
+              }}
+            >
+              {dom}
+            </Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontFamily: bodyFamily(lang, 'semibold'),
+                fontSize: 14.5,
+                letterSpacing: -0.1,
+                color: colors.foreground,
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >
-              {scoringLabelI18n(assignment.workout.scoring, scoringT ?? {})}
-              {assignment.workout.timeCap
-                ? ` · ${assignment.workout.timeCap}m`
-                : ''}
+              {title}
             </Text>
-          ) : null}
+            {subtitle ? (
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontFamily: font.mono,
+                  fontSize: 11.5,
+                  color: colors.mutedFg,
+                  marginTop: 2,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
         </View>
         <ChevronRight
           size={16}
           color={colors.mutedFg}
           strokeWidth={2.2}
-          style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
+          style={{ transform: [{ scaleX: isRTL ? -1 : 1 }], flexShrink: 0 }}
         />
       </Pressable>
     </>
