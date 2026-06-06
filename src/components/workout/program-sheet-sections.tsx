@@ -37,11 +37,13 @@ import Svg, { Line } from 'react-native-svg';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useI18n } from '@/providers/i18n-provider';
 import {
   type WorkoutMovement,
   type WorkoutSection,
 } from '@/hooks/use-workouts';
 import {
+  type PrescriptionStatLabels,
   buildPrescriptionStats,
   buildPrescriptionSummary,
   groupBySuperset,
@@ -62,6 +64,28 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 const MARKER_COL = 40;
 const SPINE_X = MARKER_COL / 2 - 1; // centre the 2px line on the marker
 
+/**
+ * Localized labels for the rendered workout body — the prescription stat
+ * headers (Sets / Reps / Load / …) and the section-type kicker (Strength /
+ * Warmup / …). Both live under the `workouts` dictionary namespace.
+ */
+function useWorkoutRenderLabels() {
+  const { t } = useI18n() as unknown as {
+    t: Record<string, Record<string, unknown>>;
+  };
+  const w = (t.workouts ?? {}) as Record<string, Record<string, string>>;
+  const pre = (w.prescription ?? {}) as Record<string, string>;
+  const logM = (w.logMobile ?? {}) as Record<string, string>;
+  const statLabels: PrescriptionStatLabels = {
+    sets: pre.sets ?? 'Sets',
+    reps: pre.reps ?? 'Reps',
+    load: pre.load ?? 'Load',
+    distance: logM.distance ?? 'Distance',
+    time: logM.time ?? 'Time',
+  };
+  return { statLabels, sectionTypes: (w.sectionTypes ?? {}) as Record<string, string> };
+}
+
 export interface ProgramSheetLabels {
   watchDemo: string;
   formCues: string;
@@ -81,6 +105,12 @@ export interface ProgramSheetSectionsProps {
   lang: string;
   labels: ProgramSheetLabels;
   onPlayVideo: (movement: WorkoutMovement) => void;
+  /**
+   * Non-interactive mode — static numbered markers, no check-off. Used by the
+   * Schedule session preview ("what am I booking?"), which borrows the visual
+   * treatment without the personal-program completion mechanics.
+   */
+  readOnly?: boolean;
 }
 
 export function ProgramSheetSections({
@@ -92,6 +122,7 @@ export function ProgramSheetSections({
   lang,
   labels,
   onPlayVideo,
+  readOnly = false,
 }: ProgramSheetSectionsProps) {
   const colors = useFKColors();
   const ink = programSheetInk(colors.isDark);
@@ -112,6 +143,7 @@ export function ProgramSheetSections({
           index={index}
           done={locked || !!checked[section.id]}
           locked={locked}
+          readOnly={readOnly}
           onToggle={() => onToggleSection(section.id, !checked[section.id])}
           isRTL={isRTL}
           lang={lang}
@@ -173,6 +205,7 @@ function SectionRow({
   index,
   done,
   locked,
+  readOnly,
   onToggle,
   isRTL,
   lang,
@@ -185,6 +218,7 @@ function SectionRow({
   index: number;
   done: boolean;
   locked: boolean;
+  readOnly: boolean;
   onToggle: () => void;
   isRTL: boolean;
   lang: string;
@@ -194,10 +228,12 @@ function SectionRow({
   onPlayVideo: (movement: WorkoutMovement) => void;
 }) {
   const haptics = useHaptics();
+  const { sectionTypes } = useWorkoutRenderLabels();
   const shape = (section.shape ?? null) as SectionShape | null;
   const caps = getShapeCaps(shape);
   const headerLine = formatSectionHeader({ shape, config: section.config });
-  const typeLabel = sectionTypeLabel(section.type);
+  const typeLabel =
+    sectionTypes[section.type] ?? sectionTypeLabel(section.type);
   // The format/scheme is the primary heading; the coach's title is demoted to
   // a secondary line. Falls back to the title (then type) for linear sections
   // that have no formatted scheme.
@@ -225,22 +261,24 @@ function SectionRow({
       <View style={{ width: MARKER_COL, alignItems: 'center', gap: 7 }}>
         <AnimatedPressable
           onPressIn={() => {
-            if (locked) return;
+            if (locked || readOnly) return;
             press.value = withTiming(1, { duration: 90 });
           }}
           onPressOut={() => {
             press.value = withSpring(0, spring.press);
           }}
           onPress={() => {
-            if (locked) return;
+            if (locked || readOnly) return;
             if (done) haptics.tap();
             else haptics.success();
             onToggle();
           }}
-          disabled={locked}
-          accessibilityRole="button"
-          accessibilityState={{ checked: done, disabled: locked }}
-          accessibilityLabel={a11yLabel}
+          disabled={locked || readOnly}
+          accessibilityRole={readOnly ? undefined : 'button'}
+          accessibilityState={
+            readOnly ? undefined : { checked: done, disabled: locked }
+          }
+          accessibilityLabel={readOnly ? undefined : a11yLabel}
           style={[
             markerStyle,
             {
@@ -409,10 +447,16 @@ function ExRow({
   onPlayVideo: () => void;
 }) {
   const haptics = useHaptics();
+  const { statLabels } = useWorkoutRenderLabels();
   const [open, setOpen] = useState(false);
   const ex = movement.exercise;
   const hasVideo = Boolean(ex.videoUrl);
-  const stats = buildPrescriptionStats(movement, hideSets, hideReps);
+  const stats = buildPrescriptionStats(
+    movement,
+    hideSets,
+    hideReps,
+    statLabels,
+  );
   const fallbackLine =
     stats.length === 0
       ? formatPrescription(movement.prescription, movement, { hideSets, hideReps })

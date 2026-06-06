@@ -18,14 +18,13 @@ import {
   ChevronRight,
   Dumbbell,
   Moon,
-  Timer,
 } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
-import { FKCard } from '@/components/fk';
+import { FKCard, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
+import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 
-const TEAL = '#0E8C8C';
 const SAGE = '#5A6A3F';
 
 // ── Public exports ─────────────────────────────────────────────────
@@ -57,28 +56,37 @@ export function WorkoutSummaryCard({
   isRTL,
   onOpen,
 }: WorkoutSummaryCardProps) {
-  const { t } = useI18n();
-  const dict = t as unknown as Record<string, Record<string, unknown>>;
-  const wT = (dict.workout ?? {}) as Record<string, unknown>;
+  const { t, lang } = useI18n() as unknown as {
+    t: Record<string, Record<string, unknown>>;
+    lang: string;
+  };
+  const dict = t;
+  // Scoring + summary labels live under the `workouts` (plural) namespace —
+  // the singular `workout` namespace only carries timeCap/notFound/etc.
+  const wT = (dict.workouts ?? {}) as Record<string, unknown>;
   const commonT = (dict.common ?? {}) as Record<string, string>;
+  const feedT = (dict.feed ?? {}) as Record<string, string>;
   const scoringT = (wT.scoringLabels ?? {}) as Record<string, string>;
   const summaryT = (wT.summary ?? {}) as Record<string, string>;
+  const capLabel = (summaryT.capSuffix ?? 'cap').trim();
+
+  const colors = useFKColors();
+  const isDark = colors.isDark;
+  const sageAccent = isDark ? '#93C49B' : SAGE;
 
   const isStructured = workout.mode === 'structured' && sectionCount > 0;
   const Chevron = isRTL ? ChevronLeft : ChevronRight;
-  const accent = completed ? SAGE : TEAL;
   const StatusIcon = completed ? CheckCircle2 : Dumbbell;
+  const accent = completed ? sageAccent : colors.primary;
+  const kicker = feedT.programTitle ?? 'Workout';
 
-  // Leading badge = scoring type; secondary = time cap. Move/section counts
-  // become quiet muted chips beneath the title.
   const scoringBadge =
     workout.scoring && workout.scoring !== 'none'
       ? scoringLabel(workout.scoring, scoringT)
       : null;
 
-  // Description preview: keep up to 3 useful lines. Skip lines that are
-  // pure section headers like "For time:" / "AMRAP:" / "EMOM:" — they
-  // add nothing without their body and just waste card real estate.
+  // Freeform scheme preview (non-structured) — skip pure section-header lines
+  // like "For time:" that read as noise without their body.
   const previewLines = (workout.description ?? '')
     .split('\n')
     .map((s) => s.trim())
@@ -86,29 +94,23 @@ export function WorkoutSummaryCard({
     .filter((l) => !/^[\p{L}\s]{2,30}:$/u.test(l))
     .slice(0, 3);
 
-  // Meta chips — consistent order across workouts for pattern recognition.
-  type Chip = { key: string; label: string };
-  const chips: Chip[] = [];
-  if (isStructured && movementCount > 0) {
-    chips.push({
-      key: 'mv',
-      label: `${movementCount} ${
-        movementCount === 1
-          ? summaryT.move ?? 'move'
-          : summaryT.moves ?? 'moves'
-      }`,
+  // Inline scoreboard pairs (structured) — sections · movements · cap, the
+  // design's WorkoutCard idiom (mono value + mono label).
+  const scorePairs: { v: string; l: string }[] = [];
+  if (isStructured) {
+    scorePairs.push({
+      v: String(sectionCount),
+      l: summaryT.sections ?? 'sections',
     });
+    if (movementCount > 0)
+      scorePairs.push({
+        v: String(movementCount),
+        l: summaryT.moves ?? 'movements',
+      });
+    if (workout.timeCap)
+      scorePairs.push({ v: String(workout.timeCap), l: capLabel });
   }
-  if (isStructured && sectionCount > 0) {
-    chips.push({
-      key: 'sec',
-      label: `${sectionCount} ${
-        sectionCount === 1
-          ? summaryT.section ?? 'section'
-          : summaryT.sections ?? 'sections'
-      }`,
-    });
-  }
+  const orderedPairs = isRTL ? [...scorePairs].reverse() : scorePairs;
 
   return (
     <Pressable
@@ -120,202 +122,104 @@ export function WorkoutSummaryCard({
       {({ pressed }) => (
         <FKCard
           style={{
-            padding: 18,
-            borderRadius: 20,
+            padding: 16,
+            borderRadius: 18,
             overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: 'rgba(94,112,130,0.18)',
-            opacity: pressed ? 0.85 : completed ? 0.9 : 1,
+            opacity: pressed ? 0.9 : completed ? 0.92 : 1,
           }}
         >
-          {/* Header: leading status-icon tile, then the badge row + title,
-              then a disclosure chevron (+ unread badge). */}
+          {/* Start-edge accent rule — the design's WorkoutCard signature. */}
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              [isRTL ? 'right' : 'left']: 0,
+              width: 4,
+              backgroundColor: accent,
+            }}
+          />
+
+          {/* Header — mono kicker (icon + label) + scoring stamp / unread. */}
           <View
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'flex-start',
-              gap: 14,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
             }}
           >
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                borderCurve: 'continuous',
-                backgroundColor: completed
-                  ? 'rgba(122,138,92,0.14)'
-                  : 'rgba(14,140,140,0.12)',
-                borderWidth: 1,
-                borderColor: completed
-                  ? 'rgba(122,138,92,0.32)'
-                  : 'rgba(14,140,140,0.30)',
+                flexShrink: 1,
+                minWidth: 0,
+                flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
+                gap: 7,
               }}
             >
-              <StatusIcon size={18} color={accent} strokeWidth={2.2} />
-            </View>
-
-            <View style={{ flex: 1, minWidth: 0 }}>
-              {scoringBadge || workout.timeCap ? (
-                <View
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    gap: 6,
-                    marginBottom: 7,
-                  }}
-                >
-                  {scoringBadge ? (
-                    <View
-                      style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 3,
-                        borderRadius: 999,
-                        backgroundColor: 'rgba(14,140,140,0.12)',
-                        borderWidth: 1,
-                        borderColor: 'rgba(14,140,140,0.28)',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          fontWeight: '800',
-                          color: TEAL,
-                          letterSpacing: 0.4,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {scoringBadge}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {workout.timeCap ? (
-                    <View
-                      style={{
-                        flexDirection: isRTL ? 'row-reverse' : 'row',
-                        alignItems: 'center',
-                        gap: 3,
-                        paddingHorizontal: 8,
-                        paddingVertical: 3,
-                        borderRadius: 999,
-                        backgroundColor: 'rgba(120,120,128,0.10)',
-                        borderWidth: 1,
-                        borderColor: 'rgba(94,112,130,0.18)',
-                      }}
-                    >
-                      <Timer
-                        size={10}
-                        color="rgba(60,60,67,0.7)"
-                        strokeWidth={2.2}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          fontWeight: '700',
-                          color: 'rgba(60,60,67,0.85)',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {workout.timeCap}m
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-
+              <StatusIcon size={15} color={accent} strokeWidth={1.9} />
               <Text
-                className="font-display text-foreground"
-                numberOfLines={2}
-                style={{
-                  fontSize: 17,
-                  fontWeight: '800',
-                  letterSpacing: -0.3,
-                  lineHeight: 21,
-                  textAlign: isRTL ? 'right' : 'left',
-                }}
+                numberOfLines={1}
+                style={{ fontSize: 11, color: colors.mutedFg, ...eyebrow(lang) }}
               >
-                {workout.displayName}
+                {kicker}
               </Text>
-
-              {!isStructured && previewLines.length > 0 ? (
-                <View style={{ marginTop: 8, gap: 4 }}>
-                  {previewLines.map((line, i) => (
-                    <Text
-                      key={i}
-                      className="text-foreground"
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 13.5,
-                        lineHeight: 19,
-                        fontWeight: '500',
-                        textAlign: isRTL ? 'right' : 'left',
-                      }}
-                    >
-                      {line}
-                    </Text>
-                  ))}
-                </View>
-              ) : null}
-
-              {chips.length > 0 ? (
-                <View
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    flexWrap: 'wrap',
-                    gap: 6,
-                    marginTop: 10,
-                  }}
-                >
-                  {chips.map((c) => (
-                    <View
-                      key={c.key}
-                      style={{
-                        paddingHorizontal: 9,
-                        paddingVertical: 3,
-                        borderRadius: 999,
-                        backgroundColor: 'rgba(120,120,128,0.10)',
-                        borderWidth: 1,
-                        borderColor: 'rgba(94,112,130,0.18)',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: '700',
-                          color: 'rgba(60,60,67,0.85)',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {c.label}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
             </View>
-
-            <View style={{ alignItems: 'center', gap: 4, paddingTop: 2 }}>
-              {unread > 0 ? (
+            <View
+              style={{
+                flexShrink: 0,
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {scoringBadge ? (
                 <View
                   style={{
-                    minWidth: 22,
-                    height: 22,
-                    borderRadius: 999,
-                    paddingHorizontal: 7,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: TEAL,
+                    paddingHorizontal: 8,
+                    paddingTop: 5,
+                    paddingBottom: 4,
+                    borderRadius: 7,
+                    borderCurve: 'continuous',
+                    borderWidth: 1,
+                    borderColor: isDark
+                      ? 'rgba(54,214,198,0.42)'
+                      : 'rgba(14,140,140,0.42)',
+                    backgroundColor: isDark
+                      ? 'rgba(54,214,198,0.16)'
+                      : 'rgba(14,140,140,0.12)',
                   }}
                 >
                   <Text
                     style={{
+                      fontSize: 10.5,
+                      color: colors.primaryText,
+                      ...eyebrow(lang),
+                    }}
+                  >
+                    {scoringBadge}
+                  </Text>
+                </View>
+              ) : null}
+              {unread > 0 ? (
+                <View
+                  style={{
+                    minWidth: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    paddingHorizontal: 6,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.primary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: font.monoMedium,
                       fontSize: 11,
-                      fontWeight: '800',
-                      color: '#fff',
+                      color: isDark ? '#04201E' : '#fff',
                       fontVariant: ['tabular-nums'],
                     }}
                   >
@@ -323,16 +227,109 @@ export function WorkoutSummaryCard({
                   </Text>
                 </View>
               ) : null}
-              <Chevron
-                size={20}
-                color="rgba(94,112,130,0.55)"
-                strokeWidth={2.2}
-              />
             </View>
           </View>
 
-          {/* Completed treatment — sage "done" footer, mirrors the design's
-              performed-assignment bar. */}
+          {/* Name (Rubik) + disclosure chevron. */}
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              gap: 12,
+              marginTop: 8,
+            }}
+          >
+            <Text
+              numberOfLines={2}
+              style={{
+                flex: 1,
+                fontFamily: displayFamily(lang, 'semibold'),
+                fontSize: 30,
+                lineHeight: 33,
+                letterSpacing: -0.9,
+                color: colors.foreground,
+                textAlign: isRTL ? 'right' : 'left',
+              }}
+            >
+              {workout.displayName}
+            </Text>
+            <Chevron
+              size={20}
+              color={colors.mutedFg}
+              strokeWidth={2.2}
+              style={{ marginBottom: 3 }}
+            />
+          </View>
+
+          {/* Freeform scheme preview (non-structured workouts). */}
+          {!isStructured && previewLines.length > 0 ? (
+            <View style={{ marginTop: 8, gap: 4 }}>
+              {previewLines.map((line, i) => (
+                <Text
+                  key={i}
+                  numberOfLines={1}
+                  style={{
+                    fontFamily: bodyFamily(lang, 'medium'),
+                    fontSize: 13.5,
+                    lineHeight: 19,
+                    color: colors.mutedFg,
+                    textAlign: isRTL ? 'right' : 'left',
+                  }}
+                >
+                  {line}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Inline scoreboard — value + mono label pairs (structured). */}
+          {orderedPairs.length > 0 ? (
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                columnGap: 12,
+                rowGap: 8,
+                marginTop: 12,
+              }}
+            >
+              {orderedPairs.map((p, i) => (
+                <View
+                  key={i}
+                  style={{
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'baseline',
+                    gap: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: font.monoMedium,
+                      fontSize: 16,
+                      color: colors.foreground,
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {p.v}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      fontSize: 10,
+                      color: colors.mutedFg,
+                      ...eyebrow(lang),
+                    }}
+                  >
+                    {p.l}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {/* Completed treatment — sage "done" footer. */}
           {completed ? (
             <View
               style={{
@@ -344,11 +341,13 @@ export function WorkoutSummaryCard({
                 paddingHorizontal: 12,
                 borderRadius: 12,
                 borderCurve: 'continuous',
-                backgroundColor: 'rgba(122,138,92,0.14)',
+                backgroundColor: isDark
+                  ? 'rgba(122,138,92,0.20)'
+                  : 'rgba(122,138,92,0.14)',
               }}
             >
-              <Check size={14} color={SAGE} strokeWidth={2.6} />
-              <Text style={{ fontSize: 12, fontWeight: '800', color: SAGE }}>
+              <Check size={14} color={sageAccent} strokeWidth={2.6} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: sageAccent }}>
                 {commonT.done ?? 'Done'}
               </Text>
             </View>

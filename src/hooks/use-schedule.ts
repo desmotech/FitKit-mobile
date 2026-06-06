@@ -129,6 +129,63 @@ export function differenceInMinutes(startIso: string, endIso: string): number {
   return Math.max(0, Math.round(ms / 60_000));
 }
 
+/**
+ * Whether — and how — a member can act on a class. Single source of truth for
+ * the Schedule list + the session detail so the CTA + status always agree:
+ *
+ *   book         → open with room (primary "Book")
+ *   waitlist     → full but the waitlist has room (primary "Join waitlist")
+ *   cancel       → I'm booked and can still cancel (within the window)
+ *   cancelLocked → I'm booked but the cancellation window has passed
+ *   leave        → I'm on the waitlist (leaving is always allowed)
+ *   checkedIn    → terminal; I've already checked in
+ *   full         → full with no waitlist room (not bookable)
+ *   closed       → the class has started — the booking window has passed
+ */
+export type ClassBookState =
+  | 'book'
+  | 'waitlist'
+  | 'cancel'
+  | 'cancelLocked'
+  | 'leave'
+  | 'checkedIn'
+  | 'full'
+  | 'closed';
+
+/** Whether a confirmed booking can still be cancelled (within the window, or
+ *  late cancellation is allowed). Waitlist entries are not window-bound. */
+export function canCancelBooking(
+  session: ClassSession,
+  now: number = Date.now(),
+): boolean {
+  const deadline = session.cancellationDeadline
+    ? new Date(session.cancellationDeadline).getTime()
+    : null;
+  const pastWindow = deadline != null && now > deadline;
+  return !pastWindow || session.allowLateCancellation;
+}
+
+export function classBookState(
+  session: ClassSession,
+  now: number = Date.now(),
+): ClassBookState {
+  const isCheckedIn =
+    session.myBookingStatus === 'attended' || !!session.myCheckedInAt;
+  if (isCheckedIn) return 'checkedIn';
+  if (session.myBookingStatus === 'confirmed')
+    return canCancelBooking(session, now) ? 'cancel' : 'cancelLocked';
+  if (session.myBookingStatus === 'waitlisted') return 'leave';
+  // Not my booking — can I still get in?
+  if (now >= new Date(session.startsAt).getTime()) return 'closed';
+  const isFull = session.capacity != null && session.capacityRemaining === 0;
+  if (isFull) {
+    const hasWaitlist =
+      session.waitlistCapacity != null && session.waitlistCapacity > 0;
+    return hasWaitlist ? 'waitlist' : 'full';
+  }
+  return 'book';
+}
+
 // ── Booking mutations ───────────────────────────────────────────────
 
 export interface BookSessionInput {

@@ -43,9 +43,10 @@ import {
 } from '@/components/fk';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
+import { scoringLabel } from '@/components/workout/workout-summary-card';
 import { CoachNote } from '@/components/workout/coach-note';
 import { analytics } from '@/lib/analytics';
-import { bodyFamily, displayFamily } from '@/lib/type';
+import { bodyFamily, displayFamily, eyebrow } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
@@ -123,6 +124,8 @@ export default function WorkoutDetailScreen() {
 
   const dict = (t as unknown as Record<string, Record<string, string>>);
   const messagesT = (t as unknown as Record<string, Record<string, string>>).messages ?? {};
+  const scoringT = (((t as unknown as Record<string, Record<string, unknown>>)
+    .workouts ?? {}).scoringLabels ?? {}) as Record<string, string>;
   const labels = {
     exercises: dict.workouts?.exercises ?? 'Exercises',
     notes: dict.workouts?.notes ?? 'Notes',
@@ -131,26 +134,17 @@ export default function WorkoutDetailScreen() {
     sections: dict.workouts?.sections ?? 'Sections',
     minutes: dict.workouts?.minutes ?? 'min',
     coach: dict.feed?.coach ?? 'COACH',
-    yourCoach: 'Your coach',
     startWorkout: dict.feed?.startWorkout ?? 'Start workout',
     logResult: dict.workouts?.logResult ?? 'Log result',
     markComplete: dict.program?.markComplete ?? 'Mark Complete',
     completed: dict.program?.completed ?? 'Completed',
     completeFailed: dict.program?.completeFailed ?? 'Failed to update',
-    sets: 'Sets',
-    load: 'Load',
-    rest: 'Rest',
-    reply: 'Reply',
     writeComment: messagesT.typePlaceholder ?? 'Write a comment…',
     noComments: messagesT.workoutChatEmpty ?? 'No comments yet',
-    noNotes: 'No notes from your coach yet.',
     loadEarlier: messagesT.loadEarlier ?? 'Load earlier',
     deleteComment: messagesT.delete ?? 'Delete',
     cancel: dict.common?.cancel ?? 'Cancel',
     back: dict.common?.back ?? 'Back',
-    walkthrough: 'WORKOUT WALK-THROUGH',
-    superset: 'SUPERSET',
-    rounds: 'ROUNDS',
   };
 
   if (!assignment && assignmentQuery.isLoading) {
@@ -298,6 +292,22 @@ export default function WorkoutDetailScreen() {
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = assignment.date === todayStr;
+
+  // Hero scoreboard columns. Plain `row` + data reversed for RTL (not a
+  // `row-reverse` container) so the left-border dividers land between every
+  // column in both directions — `row-reverse` left the first inner edge bare.
+  const heroStats = [
+    {
+      label: labels.duration,
+      value: estimateDuration(sections, workout.timeCap).replace(
+        /\s*min$/i,
+        '',
+      ),
+    },
+    { label: labels.sections, value: String(sections.length) },
+    { label: labels.exercises, value: String(totalMovements) },
+  ];
+  const orderedHeroStats = isRTL ? [...heroStats].reverse() : heroStats;
 
   return (
     <View className="flex-1">
@@ -475,7 +485,7 @@ export default function WorkoutDetailScreen() {
           {(() => {
             const stamps: string[] = [];
             if (workout.scoring && workout.scoring !== 'none')
-              stamps.push(scoringDisplay(workout.scoring));
+              stamps.push(scoringLabel(workout.scoring, scoringT));
             if (workout.timeCap)
               stamps.push(`${workout.timeCap} ${labels.minutes}`);
             if (stamps.length === 0) return null;
@@ -503,10 +513,8 @@ export default function WorkoutDetailScreen() {
                     <Text
                       style={{
                         fontSize: 11,
-                        letterSpacing: 1,
-                        textTransform: 'uppercase',
-                        fontFamily: 'Assistant-SemiBold',
                         color: i === 0 ? colors.primaryText : ink.muted,
+                        ...eyebrow(lang),
                       }}
                     >
                       {txt}
@@ -519,7 +527,7 @@ export default function WorkoutDetailScreen() {
 
           <View
             style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
+              flexDirection: 'row',
               marginTop: 18,
               borderRadius: 14,
               borderCurve: 'continuous',
@@ -535,23 +543,7 @@ export default function WorkoutDetailScreen() {
               overflow: 'hidden',
             }}
           >
-            {[
-              {
-                label: labels.duration,
-                value: estimateDuration(sections, workout.timeCap).replace(
-                  /\s*min$/i,
-                  '',
-                ),
-              },
-              {
-                label: labels.sections,
-                value: String(sections.length),
-              },
-              {
-                label: labels.exercises,
-                value: String(totalMovements),
-              },
-            ].map(({ label, value }, i) => (
+            {orderedHeroStats.map(({ label, value }, i) => (
               <View
                 key={i}
                 style={{
@@ -1526,28 +1518,4 @@ function DetailSkeleton({
   );
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
-
-function scoringDisplay(scoring: string): string {
-  switch (scoring) {
-    case 'time':
-      return 'FOR TIME';
-    case 'rounds_reps':
-      return 'AMRAP';
-    case 'reps':
-      return 'REPS';
-    case 'weight':
-    case 'load':
-      return 'STRENGTH';
-    case 'distance':
-    case 'max_distance':
-      return 'DISTANCE';
-    case 'calories':
-      return 'CALORIES';
-    case 'points':
-      return 'POINTS';
-    default:
-      return scoring.toUpperCase();
-  }
-}
 
