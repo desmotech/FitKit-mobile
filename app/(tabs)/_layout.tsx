@@ -9,6 +9,7 @@ import { AuthGate } from '@/providers/auth-gate';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppIconBadge } from '@/hooks/use-badge';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
+import { useRealtimeSubscription } from '@/hooks/use-realtime-subscription';
 import { useMyProgramEnrollments } from '@/hooks/use-workouts';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -26,6 +27,8 @@ export default function TabsLayout() {
   const incompleteForms = useIncompleteFormsCount(activeOrganization?.id);
   // Single owner of the native app-icon badge: server unread total + forms.
   useAppIconBadge(activeOrganization?.id);
+  // Open the realtime socket + keep the inbox/badge live for the session.
+  useRealtimeSubscription();
   const labels =
     (t as unknown as Record<string, Record<string, string>>).mobileTabs ?? {};
   const tint = isDark ? PRIMARY_DARK : PRIMARY_LIGHT;
