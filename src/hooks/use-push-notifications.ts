@@ -140,8 +140,15 @@ export function usePushNotifications() {
           | { route?: string }
           | undefined;
         if (data?.route && typeof data.route === 'string') {
+          // Messages moved out of the (tabs) group to a root-level route, but
+          // the API still deep-links to the legacy /(tabs)/messages/... path.
+          // Rewrite just that prefix so message taps land on the real screen.
+          const route = data.route.replace(
+            /^\/\(tabs\)\/messages/,
+            '/messages',
+          );
           try {
-            router.push(data.route as never);
+            router.push(route as never);
           } catch {
             // Bad route — ignore; the app will at least open.
           }

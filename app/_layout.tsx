@@ -156,6 +156,10 @@ function RootLayout() {
                     <Stack.Screen name="index" />
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(tabs)" />
+                    {/* Messages lives at the root (not in (tabs)) — native
+                        tabs only render declared triggers, so this opens
+                        full-screen over the tab shell, like announcements. */}
+                    <Stack.Screen name="messages" />
                     <Stack.Screen name="checkin" />
                     <Stack.Screen name="log" />
                     <Stack.Screen name="onboarding" />
