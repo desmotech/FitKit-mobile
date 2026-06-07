@@ -49,7 +49,7 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
   const onPressBell = () => router.push('/announcements');
 
   const messagesUnread = useTotalUnread(orgId);
-  const onPressMessages = () => router.push('/(tabs)/messages');
+  const onPressMessages = () => router.push('/messages');
 
   const orgName = activeOrganization?.name ?? 'FitKit';
   const orgLogo =
