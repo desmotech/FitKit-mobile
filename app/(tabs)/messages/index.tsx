@@ -1,16 +1,24 @@
 /**
  * Messages tab — conversation list. Mirrors the web member surface which
  * is staff-only (members can DM coaches/admins/owners, not other
- * members). Tap a row to push to /messages/[id] for the full chat.
+ * members). Tap a row to push to /messages/[id] for the full chat; the
+ * compose button opens the new-conversation picker.
  *
- * No realtime yet — `useConversations` refetches on focus + 30s stale.
+ * Live: `use-realtime-subscription` invalidates the conversation query on
+ * incoming `message` / `unread:updated` socket events; presence dots come
+ * from `usePresence`.
  */
 import { useRouter } from 'expo-router';
-import { MessageCircle } from 'lucide-react-native';
+import { MessageCircle, SquarePen } from 'lucide-react-native';
 import { FlatList, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ConversationResponse } from '@fitkit/shared';
-import { FKAmbientBackdrop, MemberHeader, useFKColors } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKButton,
+  MemberHeader,
+  useFKColors,
+} from '@/components/fk';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -19,6 +27,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useI18n } from '@/providers/i18n-provider';
+import { usePresence } from '@/providers/realtime-provider';
 
 const STAFF_ROLES = new Set(['coach', 'admin', 'owner']);
 
@@ -38,20 +47,36 @@ export default function MessagesListScreen() {
   const labels = {
     title: mobileTabsT.messages ?? 'Messages',
     empty: messagesT.noConversations ?? 'No conversations yet',
-    emptyHint: 'Your coach will reach out here.',
+    emptyHint: 'Message a coach to get started.',
+    newMessage: messagesT.newMessage ?? 'New message',
   };
 
   const { data, isLoading } = useConversations(orgId);
+  const online = usePresence();
   const conversations = (data?.conversations ?? []).filter((c) =>
     STAFF_ROLES.has(c.participantRole),
   );
+
+  const openComposer = () => {
+    haptics.tap();
+    router.push('/(tabs)/messages/new');
+  };
 
   return (
     <View className="flex-1">
       <FKAmbientBackdrop />
       <MemberHeader />
 
-      <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 8 }}>
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 20,
+          paddingTop: 14,
+          paddingBottom: 8,
+        }}
+      >
         <Text
           className="font-display"
           style={{
@@ -64,6 +89,26 @@ export default function MessagesListScreen() {
         >
           {labels.title}
         </Text>
+        <Pressable
+          onPress={openComposer}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={labels.newMessage}
+          style={({ pressed }) => [
+            {
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              borderCurve: 'continuous',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.primary,
+            },
+            pressed && { opacity: 0.8 },
+          ]}
+        >
+          <SquarePen size={18} color="#fff" strokeWidth={2.2} />
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -117,6 +162,13 @@ export default function MessagesListScreen() {
             >
               {labels.emptyHint}
             </Text>
+            <FKButton
+              label={labels.newMessage}
+              size="md"
+              leading={<SquarePen size={16} color="#fff" strokeWidth={2.4} />}
+              onPress={openComposer}
+              style={{ marginTop: 4 }}
+            />
           </View>
         </SafeAreaView>
       ) : (
@@ -130,6 +182,7 @@ export default function MessagesListScreen() {
               isRTL={isRTL}
               lang={lang}
               colors={colors}
+              isOnline={online.has(item.participantMembershipId)}
               onPress={() => {
                 haptics.tap();
                 router.push({
@@ -151,12 +204,14 @@ function ConversationRow({
   isRTL,
   lang,
   colors,
+  isOnline,
   onPress,
 }: {
   conversation: ConversationResponse;
   isRTL: boolean;
   lang: string;
   colors: ReturnType<typeof useFKColors>;
+  isOnline: boolean;
   onPress: () => void;
 }) {
   const lastDate = conversation.lastMessageAt
@@ -195,11 +250,28 @@ function ConversationRow({
         },
       ]}
     >
-      <Avatar
-        name={conversation.participantName}
-        imageUrl={conversation.participantAvatar}
-        size={48}
-      />
+      <View>
+        <Avatar
+          name={conversation.participantName}
+          imageUrl={conversation.participantAvatar}
+          size={48}
+        />
+        {isOnline ? (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 13,
+              height: 13,
+              borderRadius: 999,
+              backgroundColor: '#34C759',
+              borderWidth: 2,
+              borderColor: colors.background,
+            }}
+          />
+        ) : null}
+      </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <View
           style={{

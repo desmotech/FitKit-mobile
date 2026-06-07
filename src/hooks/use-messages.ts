@@ -9,8 +9,10 @@
  *   DELETE /messages/:id — delete own message
  *
  * Same shape as `use-workout-comments`: infinite query + mutations with
- * optimistic cache writes. No realtime hookup yet.
+ * optimistic cache writes, plus realtime: incoming messages prepend to the
+ * open thread and read receipts flip the sent-message ticks live.
  */
+import { useEffect } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -22,6 +24,7 @@ import type {
   MessageResponse,
   MessagesListResponse,
 } from '@fitkit/shared';
+import { useRealtime } from '@/providers/realtime-provider';
 import { useApi } from './use-api';
 
 type Page = MessagesListResponse;
@@ -34,6 +37,7 @@ export function useMessages(
 ) {
   const { fetchWithAuth } = useApi();
   const { isLoaded, isSignedIn } = useAuth();
+  const { onMessage, onReadReceipt } = useRealtime();
   const queryClient = useQueryClient();
 
   const enabled =
@@ -58,6 +62,74 @@ export function useMessages(
     enabled,
     staleTime: 30_000,
   });
+
+  // Realtime: a message from the other participant in THIS thread prepends to
+  // the cache so it appears without a refetch. Own messages aren't broadcast
+  // back to us (the server only emits to the recipient); workout-anchored
+  // comments live in their own thread and are ignored here.
+  useEffect(() => {
+    if (!participantMembershipId || !currentMembershipId) return;
+    const unsub = onMessage((msg) => {
+      if (msg.workoutAssignmentId) return;
+      if (msg.senderMembershipId === currentMembershipId) return;
+      const belongsHere =
+        msg.senderMembershipId === participantMembershipId &&
+        msg.recipientMembershipId === currentMembershipId;
+      if (!belongsHere) return;
+
+      queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
+        if (!old) return old;
+        const exists = old.pages.some((p) =>
+          p.data.messages.some((m) => m.id === msg.id),
+        );
+        if (exists) return old;
+        const [firstPage, ...rest] = old.pages;
+        if (!firstPage) return old;
+        return {
+          ...old,
+          pages: [
+            {
+              data: {
+                ...firstPage.data,
+                messages: [msg, ...firstPage.data.messages],
+              },
+            },
+            ...rest,
+          ],
+        };
+      });
+    });
+    return unsub;
+    // queryKey is derived from the same ids in the dep list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    participantMembershipId,
+    currentMembershipId,
+    onMessage,
+    queryClient,
+  ]);
+
+  // Realtime: the recipient read one of our sent messages — flip its tick.
+  useEffect(() => {
+    const unsub = onReadReceipt(({ messageId, readAt }) => {
+      queryClient.setQueryData<InfiniteData>(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            data: {
+              ...page.data,
+              messages: page.data.messages.map((m) =>
+                m.id === messageId ? { ...m, readAt } : m,
+              ),
+            },
+          })),
+        };
+      });
+    });
+    return unsub;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participantMembershipId, onReadReceipt, queryClient]);
 
   const sendMessage = useMutation<
     { data: MessageResponse },

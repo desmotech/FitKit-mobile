@@ -8,12 +8,13 @@
  */
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Bell, QrCode } from 'lucide-react-native';
+import { Bell, MessageCircle, QrCode } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useAnnouncementUnreadCount } from '@/hooks/use-announcements';
+import { useTotalUnread } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
@@ -46,6 +47,9 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
   const unread = useAnnouncementUnreadCount(orgId);
   const unreadCount = unread.data?.data?.count ?? 0;
   const onPressBell = () => router.push('/announcements');
+
+  const messagesUnread = useTotalUnread(orgId);
+  const onPressMessages = () => router.push('/(tabs)/messages');
 
   const orgName = activeOrganization?.name ?? 'FitKit';
   const orgLogo =
@@ -126,6 +130,16 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
           }}
         >
           {trailing}
+          <HeaderIconButton
+            Icon={MessageCircle}
+            variant="glass"
+            onPress={() => {
+              haptics.tap();
+              onPressMessages();
+            }}
+            colors={colors}
+            badge={messagesUnread > 0 ? messagesUnread : undefined}
+          />
           <HeaderIconButton
             Icon={Bell}
             variant="glass"

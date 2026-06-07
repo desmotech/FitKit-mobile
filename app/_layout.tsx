@@ -13,6 +13,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nProvider } from '@/providers/i18n-provider';
 import { QueryProvider } from '@/providers/query-provider';
+import { RealtimeProvider } from '@/providers/realtime-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import {
   loadLocaleOverride,
@@ -148,9 +149,10 @@ function RootLayout() {
             <I18nProvider initialOverride={settings.locale}>
               <ThemeProvider initialPreference={settings.theme}>
                 <QueryProvider>
-                  <PushBootstrap />
-                  <StatusBar style="auto" />
-                  <Stack screenOptions={{ headerShown: false }}>
+                  <RealtimeProvider>
+                    <PushBootstrap />
+                    <StatusBar style="auto" />
+                    <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="index" />
                     <Stack.Screen name="(auth)" />
                     <Stack.Screen name="(tabs)" />
@@ -176,7 +178,8 @@ function RootLayout() {
                       name="+not-found"
                       options={{ headerShown: true, title: 'Not found' }}
                     />
-                  </Stack>
+                    </Stack>
+                  </RealtimeProvider>
                 </QueryProvider>
               </ThemeProvider>
             </I18nProvider>
