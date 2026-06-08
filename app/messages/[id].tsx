@@ -35,6 +35,8 @@ import { UploadPreviewChip } from '@/components/messages/upload-preview-chip';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { roleLabel } from '@/lib/role-label';
+import { bodyFamily } from '@/lib/type';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -85,7 +87,7 @@ export default function ChatScreen() {
   const labels = {
     placeholder: messagesT.typePlaceholder ?? 'Type a message…',
     loadEarlier: messagesT.loadEarlier ?? 'Load earlier',
-    empty: 'Say hi — your coach will see your message here.',
+    empty: messagesT.startConversation ?? 'Start a conversation',
     delete: commonT.delete ?? 'Delete',
     cancel: commonT.cancel ?? 'Cancel',
     sendFailed: messagesT.sendFailed ?? 'Failed to send',
@@ -158,7 +160,11 @@ export default function ChatScreen() {
     }
   };
 
-  // Build chronological view (FlatList is inverted, so input is reversed)
+  // Build a chronological view (oldest → newest) with a date separator above
+  // each day, then reverse the whole thing. `allMessages` is newest-first and
+  // the FlatList is `inverted` (index 0 renders at the bottom), so reversing
+  // keeps the newest message pinned to the composer with separators above
+  // their day's group.
   const items = useMemo<ChatItem[]>(() => {
     const chronological = [...allMessages].reverse();
     const out: ChatItem[] = [];
@@ -171,6 +177,7 @@ export default function ChatScreen() {
       }
       out.push({ type: 'message', message: msg });
     }
+    out.reverse();
     return out;
   }, [allMessages]);
 
@@ -287,7 +294,7 @@ export default function ChatScreen() {
     ]);
   };
 
-  const subtitle = participantTyping ? labels.typing : participantRole;
+  const subtitle = participantTyping ? labels.typing : roleLabel(participantRole, t);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -415,10 +422,10 @@ export default function ChatScreen() {
                     >
                       <Text
                         style={{
-                          fontSize: 11,
-                          fontWeight: '700',
+                          fontFamily: 'Assistant-Medium',
+                          fontSize: 10,
                           color: colors.mutedFg,
-                          letterSpacing: 0.5,
+                          letterSpacing: 1,
                           textTransform: 'uppercase',
                         }}
                       >
@@ -452,30 +459,33 @@ export default function ChatScreen() {
                     <Pressable
                       onPress={() => thread.query.fetchNextPage()}
                       disabled={thread.query.isFetchingNextPage}
-                      style={({ pressed }) => [
-                        {
-                          paddingHorizontal: 14,
-                          paddingVertical: 6,
-                          borderRadius: 999,
-                          backgroundColor: isDark
-                            ? 'rgba(255,255,255,0.06)'
-                            : 'rgba(15,23,42,0.06)',
-                        },
-                        pressed && { opacity: 0.6 },
-                      ]}
                     >
-                      {thread.query.isFetchingNextPage ? (
-                        <ActivityIndicator size="small" color={colors.mutedFg} />
-                      ) : (
-                        <Text
+                      {({ pressed }) => (
+                        <View
                           style={{
-                            fontSize: 12,
-                            fontWeight: '600',
-                            color: colors.foreground,
+                            paddingHorizontal: 14,
+                            paddingVertical: 6,
+                            borderRadius: 999,
+                            backgroundColor: isDark
+                              ? 'rgba(255,255,255,0.06)'
+                              : 'rgba(15,23,42,0.06)',
+                            opacity: pressed ? 0.6 : 1,
                           }}
                         >
-                          {labels.loadEarlier}
-                        </Text>
+                          {thread.query.isFetchingNextPage ? (
+                            <ActivityIndicator size="small" color={colors.mutedFg} />
+                          ) : (
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                fontWeight: '600',
+                                color: colors.foreground,
+                              }}
+                            >
+                              {labels.loadEarlier}
+                            </Text>
+                          )}
+                        </View>
                       )}
                     </Pressable>
                   </View>
@@ -526,22 +536,25 @@ export default function ChatScreen() {
               hitSlop={6}
               accessibilityRole="button"
               accessibilityLabel="Add attachment"
-              style={({ pressed }) => [
-                {
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  borderCurve: 'continuous',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: isDark
-                    ? 'rgba(255,255,255,0.06)'
-                    : 'rgba(15,23,42,0.05)',
-                },
-                pressed && { opacity: 0.6 },
-              ]}
+              style={{ width: 40, height: 40 }}
             >
-              <Paperclip size={18} color={colors.mutedFg} strokeWidth={2.2} />
+              {({ pressed }) => (
+                <View
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    borderCurve: 'continuous',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'rgba(15,23,42,0.05)',
+                    opacity: pressed ? 0.6 : 1,
+                  }}
+                >
+                  <Paperclip size={18} color={colors.mutedFg} strokeWidth={2.2} />
+                </View>
+              )}
             </Pressable>
 
             <View
@@ -550,7 +563,6 @@ export default function ChatScreen() {
                 minHeight: 40,
                 maxHeight: 120,
                 paddingHorizontal: 14,
-                paddingVertical: 6,
                 borderRadius: 18,
                 borderCurve: 'continuous',
                 backgroundColor: colors.card,
@@ -567,6 +579,7 @@ export default function ChatScreen() {
                 multiline
                 editable={!isSending}
                 style={{
+                  fontFamily: bodyFamily(lang, 'regular'),
                   fontSize: 15,
                   color: colors.foreground,
                   textAlign: isRTL ? 'right' : 'left',
@@ -578,28 +591,28 @@ export default function ChatScreen() {
             <Pressable
               onPress={handleSend}
               disabled={!canSend}
-              style={({ pressed }) => [
-                {
-                  width: 40,
-                  height: 40,
-                  borderRadius: 12,
-                  borderCurve: 'continuous',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: canSend ? '#0E8C8C' : 'rgba(14,140,140,0.35)',
-                },
-                pressed && { opacity: 0.7 },
-              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Send"
+              style={{ width: 40, height: 40 }}
             >
-              {isSending ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Send
-                  size={16}
-                  color="#fff"
-                  strokeWidth={2.6}
-                  style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
-                />
+              {({ pressed }) => (
+                <View
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    borderCurve: 'continuous',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: canSend ? '#0E8C8C' : 'rgba(14,140,140,0.35)',
+                    opacity: pressed && canSend ? 0.7 : 1,
+                  }}
+                >
+                  {isSending ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Send size={17} color="#fff" strokeWidth={2.2} />
+                  )}
+                </View>
               )}
             </Pressable>
           </View>

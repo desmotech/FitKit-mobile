@@ -95,20 +95,23 @@ export default function MessagesListScreen() {
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={labels.newMessage}
-            style={({ pressed }) => [
-              {
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                borderCurve: 'continuous',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.primary,
-              },
-              pressed && { opacity: 0.8 },
-            ]}
           >
-            <SquarePen size={18} color="#fff" strokeWidth={2.2} />
+            {({ pressed }) => (
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  borderCurve: 'continuous',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.8 : 1,
+                }}
+              >
+                <SquarePen size={18} color="#fff" strokeWidth={2.2} />
+              </View>
+            )}
           </Pressable>
         </View>
       </SafeAreaView>
@@ -240,125 +243,126 @@ function ConversationRow({
   const hasUnread = conversation.unreadCount > 0;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        {
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          gap: 12,
-          paddingHorizontal: 12,
-          paddingVertical: 10,
-          borderRadius: 16,
-          borderCurve: 'continuous',
-          backgroundColor: pressed ? 'rgba(60,60,67,0.06)' : 'transparent',
-        },
-      ]}
-    >
-      <View>
-        <Avatar
-          name={conversation.participantName}
-          imageUrl={conversation.participantAvatar}
-          size={48}
-        />
-        {isOnline ? (
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              right: 0,
-              width: 13,
-              height: 13,
-              borderRadius: 999,
-              backgroundColor: '#34C759',
-              borderWidth: 2,
-              borderColor: colors.background,
-            }}
-          />
-        ) : null}
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
+    <Pressable onPress={onPress} accessibilityRole="button">
+      {({ pressed }) => (
         <View
           style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
+            gap: 12,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: 16,
+            borderCurve: 'continuous',
+            backgroundColor: pressed ? 'rgba(60,60,67,0.06)' : 'transparent',
           }}
         >
-          <Text
-            numberOfLines={1}
-            style={{
-              flex: 1,
-              fontSize: 15,
-              fontWeight: hasUnread ? '800' : '600',
-              color: colors.foreground,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {conversation.participantName}
-          </Text>
-          {timeStr ? (
-            <Text
-              style={{
-                fontSize: 11,
-                color: hasUnread ? '#0E8C8C' : colors.mutedFg,
-                fontWeight: hasUnread ? '700' : '500',
-                fontVariant: ['tabular-nums'],
-              }}
-            >
-              {timeStr}
-            </Text>
-          ) : null}
-        </View>
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 3,
-          }}
-        >
-          <Text
-            numberOfLines={1}
-            style={{
-              flex: 1,
-              fontSize: 13,
-              color: hasUnread ? colors.foreground : colors.mutedFg,
-              fontWeight: hasUnread ? '600' : '400',
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {conversation.lastMessage ?? '—'}
-          </Text>
-          {hasUnread ? (
+          <View>
+            <Avatar
+              name={conversation.participantName}
+              imageUrl={conversation.participantAvatar}
+              size={48}
+            />
+            {isOnline ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  width: 13,
+                  height: 13,
+                  borderRadius: 999,
+                  backgroundColor: '#34C759',
+                  borderWidth: 2,
+                  borderColor: colors.background,
+                }}
+              />
+            ) : null}
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <View
               style={{
-                minWidth: 20,
-                height: 20,
-                borderRadius: 999,
-                paddingHorizontal: 6,
+                flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#0E8C8C',
+                justifyContent: 'space-between',
+                gap: 8,
               }}
             >
               <Text
+                numberOfLines={1}
                 style={{
-                  fontSize: 11,
-                  fontWeight: '800',
-                  color: '#fff',
-                  fontVariant: ['tabular-nums'],
+                  flex: 1,
+                  fontSize: 15,
+                  fontWeight: hasUnread ? '800' : '600',
+                  color: colors.foreground,
+                  textAlign: isRTL ? 'right' : 'left',
                 }}
               >
-                {conversation.unreadCount > 99
-                  ? '99+'
-                  : conversation.unreadCount}
+                {conversation.participantName}
               </Text>
+              {timeStr ? (
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: hasUnread ? '#0E8C8C' : colors.mutedFg,
+                    fontWeight: hasUnread ? '700' : '500',
+                    fontVariant: ['tabular-nums'],
+                  }}
+                >
+                  {timeStr}
+                </Text>
+              ) : null}
             </View>
-          ) : null}
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 8,
+                marginTop: 3,
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: hasUnread ? colors.foreground : colors.mutedFg,
+                  fontWeight: hasUnread ? '600' : '400',
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {conversation.lastMessage ?? '—'}
+              </Text>
+              {hasUnread ? (
+                <View
+                  style={{
+                    minWidth: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    paddingHorizontal: 6,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#0E8C8C',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: '800',
+                      color: '#fff',
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {conversation.unreadCount > 99
+                      ? '99+'
+                      : conversation.unreadCount}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
         </View>
-      </View>
+      )}
     </Pressable>
   );
 }

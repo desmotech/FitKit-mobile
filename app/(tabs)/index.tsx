@@ -90,7 +90,12 @@ export default function HomeScreen() {
   const bmTypes = ((dict.bodyMetrics?.types ?? {}) as Record<string, string>);
   const commonT = (dict.common ?? {}) as Record<string, string>;
   const greetingT = (feedT.greeting ?? {}) as Record<string, string>;
-  const subgreetingT = (feedT.subgreeting ?? {}) as Record<string, string>;
+  // Local Hebrew override — shared feed.subgreeting Hebrew was a literal
+  // mistranslation ("count" → לספור) and gendered; en/ru stay from the dict.
+  const subgreetingT =
+    lang === 'he'
+      ? HE_SUBGREETING
+      : ((feedT.subgreeting ?? {}) as Record<string, string>);
 
   const labels = {
     todayKicker: (feedT.todayKicker as string) ?? 'TODAY',
@@ -207,7 +212,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1">
       <FKAmbientBackdrop />
-      <MemberHeader onPressQR={() => router.push('/(tabs)/schedule/scan')} />
+      <MemberHeader />
 
       <ScrollView
         contentInsetAdjustmentBehavior="never"
@@ -246,14 +251,19 @@ export default function HomeScreen() {
           >
             {greeting}
             {firstName ? (
-              <Text
-                style={{
-                  color: colors.primary,
-                  fontSize: 30,
-                  letterSpacing: -0.8,
-                  fontFamily: displayFamily(lang, 'semibold'),
-                }}
-              >{`, ${firstName}`}</Text>
+              <>
+                {', '}
+                <Text
+                  style={{
+                    color: colors.primary,
+                    fontSize: 30,
+                    letterSpacing: -0.8,
+                    fontFamily: displayFamily(lang, 'semibold'),
+                  }}
+                >
+                  {firstName}
+                </Text>
+              </>
             ) : (
               ''
             )}
@@ -737,6 +747,15 @@ function ymd(d: Date): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+/** Natural, gender-neutral Hebrew sub-greetings (replaces the shared dict's
+ *  literal/gendered Hebrew). EN/RU continue to come from feed.subgreeting. */
+const HE_SUBGREETING: Record<string, string> = {
+  fresh: 'יום חדש, הזדמנות חדשה.',
+  hot: 'ממשיכים ברצף!',
+  comeback: 'טוב שחזרת — ממשיכים מאיפה שעצרנו.',
+  rest: 'מנוחה היא חלק מהאימון.',
+};
 
 function greetingForHour(
   hour: number,
