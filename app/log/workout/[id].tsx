@@ -421,7 +421,9 @@ export default function LogWorkoutResultScreen() {
                   textAlign: isRTL ? 'right' : 'left',
                 }}
               >
-                {L.workoutFailed}
+                {mutation.error?.message
+                  ? `${L.workoutFailed} — ${mutation.error.message}`
+                  : L.workoutFailed}
               </Text>
             </Animated.View>
           )}
