@@ -54,6 +54,19 @@ import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
+// Scoring kinds where a single per-workout score + trend line reads as
+// meaningful (benchmark workouts: Fran time, Cindy rounds…). 'weight' strength
+// days and 'none' are excluded — their progression lives in per-exercise
+// history, so the workout history shows completions only.
+const SCORED_TREND_KINDS = new Set<string>([
+  'time',
+  'reps',
+  'rounds_reps',
+  'distance',
+  'calories',
+  'points',
+]);
+
 // Static fallback for the static rest/note helper. Detail screen builds
 // its own lang-aware formatter inside the component body.
 const HERO_DATE_FORMATTER = new Intl.DateTimeFormat(undefined, {
@@ -320,6 +333,7 @@ export default function WorkoutDetailScreen() {
     .slice()
     .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
   const lastResult = myResultRows[0] ?? null;
+  const showsScore = SCORED_TREND_KINDS.has(workout.scoring);
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = assignment.date === todayStr;
@@ -813,7 +827,7 @@ export default function WorkoutDetailScreen() {
             />
           </View>
 
-          {lastResult ? (
+          {lastResult && showsScore ? (
             <LastResultFooter
               result={lastResult}
               labels={{ last: ps.last, rx: ps.rx, scaled: ps.scaled }}
@@ -829,6 +843,8 @@ export default function WorkoutDetailScreen() {
             expanded={historyOpen}
             emptyLabel={ps.noHistory}
             colors={colors}
+            showsScore={showsScore}
+            completedLabel={ps.completed}
             onOpenResult={(resultId) => {
               haptics.tap();
               router.push({
@@ -1080,6 +1096,8 @@ function MyHistory({
   expanded,
   emptyLabel,
   colors,
+  showsScore,
+  completedLabel,
   onOpenResult,
 }: {
   results: WorkoutResult[];
@@ -1087,6 +1105,8 @@ function MyHistory({
   expanded: boolean;
   emptyLabel: string;
   colors: ReturnType<typeof useFKColors>;
+  showsScore: boolean;
+  completedLabel: string;
   onOpenResult: (resultId: string) => void;
 }) {
   if (!expanded) return null;
@@ -1105,13 +1125,15 @@ function MyHistory({
         </Text>
       ) : (
         <>
-          <HistoryChart results={results} />
+          {showsScore ? <HistoryChart results={results} /> : null}
           <View style={{ gap: 6 }}>
             {results.map((r) => (
               <HistoryRow
                 key={r.id}
                 result={r}
                 isRTL={isRTL}
+                showsScore={showsScore}
+                completedLabel={completedLabel}
                 onPress={() => onOpenResult(r.id)}
               />
             ))}
@@ -1168,10 +1190,14 @@ function HistoryChart({ results }: { results: WorkoutResult[] }) {
 function HistoryRow({
   result,
   isRTL,
+  showsScore,
+  completedLabel,
   onPress,
 }: {
   result: WorkoutResult;
   isRTL: boolean;
+  showsScore: boolean;
+  completedLabel: string;
   onPress: () => void;
 }) {
   const ChevronEnd = isRTL ? ChevronLeft : ChevronRight;
@@ -1197,7 +1223,7 @@ function HistoryRow({
           gap: 8,
         }}
       >
-        {result.scoreValue ? (
+        {showsScore && result.scoreValue ? (
           <Text
             className="text-foreground font-bold"
             style={{ fontSize: 14, fontFamily: 'Assistant-Medium' }}
@@ -1205,7 +1231,20 @@ function HistoryRow({
             {result.scoreValue}
             {result.scoreUnit ? ` ${result.scoreUnit}` : ''}
           </Text>
-        ) : null}
+        ) : (
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <Check size={14} color="#7A8A5C" strokeWidth={2.6} />
+            <Text style={{ fontSize: 13, color: '#7A8A5C', fontWeight: '700' }}>
+              {completedLabel}
+            </Text>
+          </View>
+        )}
         {result.rx && (
           <View
             style={{

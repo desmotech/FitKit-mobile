@@ -160,7 +160,13 @@ export default function LogWorkoutResultScreen() {
   const handleSubmit = () => {
     if (!canSubmit || mutation.isPending) return;
     haptics.tap();
-    const serialized = serializeScore(score);
+    // Only send a top score when the athlete actually entered one. Otherwise
+    // send empty so the server stores NULL — never a fabricated "0" that would
+    // pollute the history rows and the trend line.
+    const hasRealScore = scoring !== 'none' && isScoreComplete(score);
+    const serialized = hasRealScore
+      ? serializeScore(score)
+      : { scoreValue: '', scoreUnit: undefined };
     const setResults: LogResultSetInput[] = [];
     for (const m of loggableMovements) {
       const rows = setRows[m.id] ?? [];
