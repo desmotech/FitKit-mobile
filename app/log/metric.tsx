@@ -17,10 +17,7 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import type {
   BodyMetricType,
@@ -29,11 +26,11 @@ import type {
 } from '@fitkit/shared';
 import {
   FKAmbientBackdrop,
-  FKModalHeader,
+  FKScreenHeader,
   FKSelectSheet,
   useFKColors,
 } from '@/components/fk';
-import { DatePresetField } from '@/components/log';
+import { DatePresetField, HeaderSaveButton } from '@/components/log';
 import { Text } from '@/components/ui/text';
 import { useLogMetric } from '@/hooks/use-body-metrics';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -160,26 +157,21 @@ export default function LogMetricScreen() {
   return (
     <View style={{ flex: 1 }}>
       <FKAmbientBackdrop />
-      <SafeAreaView
-        edges={['top']}
-        style={{ flex: 1, backgroundColor: 'transparent' }}
-      >
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
-          <FKModalHeader
+          <FKScreenHeader
             title={L.metricTitle}
-            leadingAction={{
-              label: L.hubCancel,
-              onPress: () => router.back(),
-            }}
-            trailingAction={{
-              label: mutation.isPending ? L.workoutSaving : L.workoutSave,
-              style: 'primary',
-              onPress: handleSubmit,
-              disabled: !canSubmit || mutation.isPending,
-            }}
+            onBack={() => router.back()}
+            trailing={
+              <HeaderSaveButton
+                label={mutation.isPending ? L.workoutSaving : L.workoutSave}
+                onPress={handleSubmit}
+                disabled={!canSubmit || mutation.isPending}
+              />
+            }
           />
 
           <ScrollView
@@ -322,7 +314,7 @@ export default function LogMetricScreen() {
             )}
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }

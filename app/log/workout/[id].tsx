@@ -26,14 +26,12 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { FKModalHeader, useFKColors } from '@/components/fk';
+import { FKScreenHeader, useFKColors } from '@/components/fk';
 import {
   DatePresetField,
+  HeaderSaveButton,
   LogSectionCard,
   type Performance,
   PerformanceToggle,
@@ -237,20 +235,17 @@ export default function LogWorkoutResultScreen() {
 
   if (assignmentQuery.isLoading || !workout) {
     return (
-      <SafeAreaView
-        edges={['top']}
-        style={{ flex: 1, backgroundColor: colors.background }}
-      >
-        <FKModalHeader
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <FKScreenHeader
           title={L.hubTitle}
-          leadingAction={{ label: L.hubCancel, onPress: () => router.back() }}
+          onBack={() => router.back()}
         />
         <View
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
         >
           <ActivityIndicator color={colors.foreground} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -262,29 +257,22 @@ export default function LogWorkoutResultScreen() {
   });
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <FKModalHeader
+        <FKScreenHeader
           // Workout name as the nav-bar title (iOS form-screen convention).
-          // Truncates with ellipsis if long. Removes the inline 28pt title
-          // that was bleeding behind the header and blocking Cancel taps.
           title={workout.displayName}
-          leadingAction={{
-            label: L.hubCancel,
-            onPress: () => router.back(),
-          }}
-          trailingAction={{
-            label: mutation.isPending ? L.workoutSaving : L.workoutSave,
-            style: 'primary',
-            onPress: handleSubmit,
-            disabled: !canSubmit || mutation.isPending,
-          }}
+          onBack={() => router.back()}
+          trailing={
+            <HeaderSaveButton
+              label={mutation.isPending ? L.workoutSaving : L.workoutSave}
+              onPress={handleSubmit}
+              disabled={!canSubmit || mutation.isPending}
+            />
+          }
         />
 
         <ScrollView
@@ -429,7 +417,7 @@ export default function LogWorkoutResultScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

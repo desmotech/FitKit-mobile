@@ -12,11 +12,12 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FKModalHeader } from '@/components/fk';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FKScreenHeader } from '@/components/fk';
 import {
   DatePresetField,
   ExerciseSearchInput,
+  HeaderSaveButton,
   LogSectionCard,
   PRCelebration,
   ScoreInput,
@@ -193,20 +194,21 @@ export default function LogPRScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: t.isDark ? '#0B0B0D' : '#F6F4EE' }}>
+    <View style={{ flex: 1, backgroundColor: t.isDark ? '#0B0B0D' : '#F6F4EE' }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <FKModalHeader
+        <FKScreenHeader
           title={L.logPrTitle}
-          leadingAction={{ label: L.hubCancel, onPress: () => router.back() }}
-          trailingAction={{
-            label: mutation.isPending ? L.workoutSaving : L.logPrCta,
-            style: 'primary',
-            onPress: handleSubmit,
-            disabled: !canSubmit,
-          }}
+          onBack={() => router.back()}
+          trailing={
+            <HeaderSaveButton
+              label={mutation.isPending ? L.workoutSaving : L.logPrCta}
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+            />
+          }
         />
         <ScrollView
           contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24, gap: 16 }}
@@ -326,7 +328,7 @@ export default function LogPRScreen() {
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

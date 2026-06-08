@@ -20,15 +20,13 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { FKModalHeader, useFKColors } from '@/components/fk';
+import { FKScreenHeader, useFKColors } from '@/components/fk';
 import {
   DatePresetField,
   ExerciseSearchInput,
+  HeaderSaveButton,
   LogSectionCard,
   PRCelebration,
   ScoreInput,
@@ -151,26 +149,21 @@ export default function LogLiftScreen() {
   }
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <FKModalHeader
+        <FKScreenHeader
           title={L.liftTitle}
-          leadingAction={{
-            label: L.hubCancel,
-            onPress: () => router.back(),
-          }}
-          trailingAction={{
-            label: mutation.isPending ? L.workoutSaving : L.workoutSave,
-            style: 'primary',
-            onPress: handleSubmit,
-            disabled: !canSubmit || mutation.isPending,
-          }}
+          onBack={() => router.back()}
+          trailing={
+            <HeaderSaveButton
+              label={mutation.isPending ? L.workoutSaving : L.workoutSave}
+              onPress={handleSubmit}
+              disabled={!canSubmit || mutation.isPending}
+            />
+          }
         />
 
         <ScrollView
@@ -258,7 +251,7 @@ export default function LogLiftScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
