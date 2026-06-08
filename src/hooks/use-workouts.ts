@@ -435,11 +435,10 @@ export function useLogResult(
 // ── Hook: mark an assignment completed ───────────────────────────────
 
 /**
- * Marks a workout assignment as completed. One-way, matching the web
- * (`apps/web/.../program-content.tsx`) and the backend — there's no
- * uncomplete endpoint; `POST .../complete` sets status='completed' and
- * stamps completedAt. Logging a result auto-completes too (server-side),
- * so the detail screen drives button state off `status`/`completedAt`.
+ * Marks a workout assignment as completed. `POST .../complete` sets
+ * status='completed' and stamps completedAt. Logging a result auto-completes
+ * too (server-side), so the detail screen drives button state off
+ * `status`/`completedAt`. Reversible via {@link useUncompleteAssignment}.
  */
 export function useCompleteAssignment(
   orgId: string | undefined | null,
@@ -449,6 +448,23 @@ export function useCompleteAssignment(
     path:
       orgId && assignmentId
         ? `/organizations/${orgId}/assignments/${assignmentId}/complete`
+        : '',
+    method: 'POST',
+  });
+}
+
+/**
+ * Undoes a completion (mis-tap recovery). `POST .../uncomplete` resets
+ * status→assigned and clears completedAt; logged results are left intact.
+ */
+export function useUncompleteAssignment(
+  orgId: string | undefined | null,
+  assignmentId: string | undefined | null,
+) {
+  return useApiAction<ApiEnvelope<AssignmentDay>>({
+    path:
+      orgId && assignmentId
+        ? `/organizations/${orgId}/assignments/${assignmentId}/uncomplete`
         : '',
     method: 'POST',
   });

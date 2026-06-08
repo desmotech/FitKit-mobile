@@ -23,6 +23,7 @@ export interface ProgramSheetStrings {
   // CTA cluster.
   markCompleted: string;
   completed: string;
+  undo: string;
   completeFailed: string;
   logResult: string;
   history: string;
@@ -53,6 +54,7 @@ const en: ProgramSheetStrings = {
   exercises: 'Exercises',
   markCompleted: 'Mark completed',
   completed: 'Completed',
+  undo: 'Undo',
   completeFailed: 'Failed to update',
   logResult: 'Log result',
   history: 'History',
@@ -78,6 +80,7 @@ const he: ProgramSheetStrings = {
   exercises: 'תרגילים',
   markCompleted: 'סמן כהושלם',
   completed: 'הושלם',
+  undo: 'בטל',
   completeFailed: 'העדכון נכשל',
   logResult: 'תיעוד תוצאה',
   history: 'היסטוריה',
@@ -103,6 +106,7 @@ const ru: ProgramSheetStrings = {
   exercises: 'Упражнения',
   markCompleted: 'Отметить выполненным',
   completed: 'Выполнено',
+  undo: 'Отменить',
   completeFailed: 'Не удалось обновить',
   logResult: 'Записать результат',
   history: 'История',

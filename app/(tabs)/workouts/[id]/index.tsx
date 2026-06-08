@@ -10,6 +10,7 @@ import {
   Dumbbell,
   MessageSquare,
   PencilLine,
+  RotateCcw,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useMemo, useState } from 'react';
@@ -32,6 +33,7 @@ import {
   type WorkoutResult,
   useCompleteAssignment,
   useMyResults,
+  useUncompleteAssignment,
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
 import { useQueryClient } from '@tanstack/react-query';
@@ -104,6 +106,7 @@ export default function WorkoutDetailScreen() {
   // both reflect the new status.
   const queryClient = useQueryClient();
   const completeAssignment = useCompleteAssignment(activeOrganization?.id, id);
+  const uncompleteAssignment = useUncompleteAssignment(activeOrganization?.id, id);
 
   // PostHog: capture workout open once the assignment resolves. Gated on
   // workout id so navigating between workouts re-fires.
@@ -264,6 +267,31 @@ export default function WorkoutDetailScreen() {
               .join('/')
               .includes('assignments'),
         });
+      },
+      onError: () => {
+        haptics.error();
+        Alert.alert(labels.completeFailed);
+      },
+    });
+  };
+
+  const invalidateAssignments = () =>
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        Array.isArray(q.queryKey) &&
+        q.queryKey
+          .filter((k) => typeof k === 'string')
+          .join('/')
+          .includes('assignments'),
+    });
+
+  const handleUncomplete = () => {
+    if (uncompleteAssignment.isPending || !isCompleted) return;
+    haptics.tap();
+    uncompleteAssignment.mutate(undefined, {
+      onSuccess: () => {
+        haptics.success();
+        invalidateAssignments();
       },
       onError: () => {
         haptics.error();
@@ -685,6 +713,7 @@ export default function WorkoutDetailScreen() {
                 justifyContent: 'center',
                 gap: 8,
                 paddingVertical: 16,
+                paddingHorizontal: 16,
                 borderRadius: 18,
                 borderCurve: 'continuous',
                 backgroundColor: 'rgba(122,138,92,0.16)',
@@ -694,6 +723,25 @@ export default function WorkoutDetailScreen() {
               <Text style={{ fontSize: 15, fontWeight: '700', color: '#7A8A5C' }}>
                 {ps.completed}
               </Text>
+              <View style={{ flex: 1 }} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={ps.undo}
+                hitSlop={10}
+                disabled={uncompleteAssignment.isPending}
+                onPress={handleUncomplete}
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  opacity: uncompleteAssignment.isPending ? 0.5 : 1,
+                }}
+              >
+                <RotateCcw size={14} color="#5A6A3F" strokeWidth={2.4} />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#5A6A3F' }}>
+                  {ps.undo}
+                </Text>
+              </Pressable>
             </View>
           ) : (
             <FKButton
