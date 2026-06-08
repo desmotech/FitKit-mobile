@@ -131,12 +131,26 @@ export default function HomeScreen() {
     queryOptions: { enabled: !!orgId },
   });
 
-  const todayAssignment = useMemo(
-    () =>
-      (weekAssignments.data?.data ?? []).find((a) => a.date === todayYMD) ??
-      null,
+  // A day can carry multiple assignments (multi-component: strength +
+  // metcon + accessory). Keep them all rather than collapsing to the first.
+  const todayAssignments = useMemo(
+    () => (weekAssignments.data?.data ?? []).filter((a) => a.date === todayYMD),
     [weekAssignments.data, todayYMD],
   );
+  const todayWorkouts = useMemo(
+    () =>
+      todayAssignments.filter(
+        (a) => a.kind !== 'rest' && a.kind !== 'note' && a.workout,
+      ),
+    [todayAssignments],
+  );
+  // Primary = first incomplete workout, else the first assignment — drives
+  // the subgreeting only.
+  const todayAssignment =
+    todayWorkouts.find((a) => a.status !== 'completed') ??
+    todayWorkouts[0] ??
+    todayAssignments[0] ??
+    null;
   const sessions = todayClasses.data?.data ?? [];
   const goals = goalsQuery.data?.data ?? [];
   const activeGoals = useMemo(
@@ -184,13 +198,11 @@ export default function HomeScreen() {
   const hasOrg = !!orgId;
   const isLoadingToday =
     hasOrg && (weekAssignments.isLoading || todayClasses.isLoading);
-  const programWorkout =
-    todayAssignment?.kind !== 'rest' && todayAssignment?.kind !== 'note'
-      ? todayAssignment?.workout ?? null
-      : null;
+  const hasWorkoutsToday = todayWorkouts.length > 0;
   const isRestDay =
-    todayAssignment?.kind === 'rest' ||
-    (!programWorkout && sessions.length === 0 && !isLoadingToday);
+    (!hasWorkoutsToday &&
+      todayAssignments.some((a) => a.kind === 'rest')) ||
+    (!hasWorkoutsToday && sessions.length === 0 && !isLoadingToday);
 
   return (
     <View className="flex-1">
@@ -329,28 +341,35 @@ export default function HomeScreen() {
               </View>
             ) : (
               <View style={{ gap: 10 }}>
-                {programWorkout && todayAssignment ? (
-                  <Animated.View
-                    entering={FadeInDown.delay(140).duration(360).springify()}
-                  >
-                    <WorkoutSummaryCard
-                      workout={programWorkout}
-                      sectionCount={programWorkout.sections?.length ?? 0}
-                      movementCount={(programWorkout.sections ?? []).reduce(
-                        (n, s) => n + s.movements.length,
-                        0,
-                      )}
-                      isRTL={isRTL}
-                      onOpen={() => {
-                        haptics.tap();
-                        router.push({
-                          pathname: '/(tabs)/workouts/[id]',
-                          params: { id: todayAssignment.id },
-                        });
-                      }}
-                    />
-                  </Animated.View>
-                ) : null}
+                {todayWorkouts.map((a, i) => {
+                  const w = a.workout;
+                  if (!w) return null;
+                  return (
+                    <Animated.View
+                      key={a.id}
+                      entering={FadeInDown.delay(140 + i * 30)
+                        .duration(360)
+                        .springify()}
+                    >
+                      <WorkoutSummaryCard
+                        workout={w}
+                        sectionCount={w.sections?.length ?? 0}
+                        movementCount={(w.sections ?? []).reduce(
+                          (n, s) => n + s.movements.length,
+                          0,
+                        )}
+                        isRTL={isRTL}
+                        onOpen={() => {
+                          haptics.tap();
+                          router.push({
+                            pathname: '/(tabs)/workouts/[id]',
+                            params: { id: a.id },
+                          });
+                        }}
+                      />
+                    </Animated.View>
+                  );
+                })}
 
                 {sessions.map((s, i) => (
                   <Animated.View

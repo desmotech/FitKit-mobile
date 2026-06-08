@@ -86,6 +86,8 @@ export interface AssignmentDay {
   coachPostNote?: string | null;
   // Server-side completion state if available; client also derives from result presence.
   completedAt?: string | null;
+  /** Unread in-workout chat messages for this assignment (toFullResponse). */
+  unreadCount?: number;
   /** Server returns this on /assignments/my-week (toFullResponse). Null = personal/direct assignment. */
   program?: AssignmentProgramLite | null;
 }
