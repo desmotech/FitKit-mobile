@@ -358,6 +358,9 @@ export default function HomeScreen() {
                           (n, s) => n + s.movements.length,
                           0,
                         )}
+                        completed={
+                          a.status === 'completed' || !!a.completedAt
+                        }
                         isRTL={isRTL}
                         onOpen={() => {
                           haptics.tap();
