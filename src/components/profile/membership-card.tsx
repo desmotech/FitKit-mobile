@@ -1,0 +1,213 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { Star } from 'lucide-react-native';
+import { Pressable, View } from 'react-native';
+import { Text } from '@/components/ui/text';
+import { useFKColors } from '@/components/fk';
+import { useHaptics } from '@/hooks/use-haptics';
+import { displayFamily, eyebrow } from '@/lib/type';
+import { useI18n } from '@/providers/i18n-provider';
+import { type ColorTokens } from './color-tokens';
+
+/** Brand-tinted membership card — plan name, status chip, renewal period, and
+ *  a manage/renew CTA whose label tracks the subscription status. */
+export function MembershipCard({
+  sub,
+  isRTL,
+  colors,
+  labels,
+  statusLabels,
+  isRenewing,
+  onRenew,
+}: {
+  sub: {
+    id: string;
+    status: string;
+    plan: { name: string; type?: string; classCredits?: number | null };
+    remainingCredits?: number | null;
+    currentPeriodEnd?: string | null;
+  };
+  isRTL: boolean;
+  colors: ColorTokens;
+  statusLabels: Record<string, string>;
+  labels: {
+    title: string;
+    active: string;
+    expires: string;
+    manage: string;
+    renew: string;
+    renewing: string;
+  };
+  isRenewing: boolean;
+  onRenew: () => void;
+}) {
+  const haptics = useHaptics();
+  const { isDark } = useFKColors();
+  const { lang } = useI18n();
+  const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
+  const isActive = sub.status === 'active' || sub.status === 'paused';
+  const expiresStr = sub.currentPeriodEnd
+    ? labels.expires.replace(
+        '{date}',
+        new Date(sub.currentPeriodEnd).toLocaleDateString(),
+      )
+    : '';
+
+  return (
+    <View
+      style={{
+        padding: 20,
+        borderRadius: 20,
+        borderCurve: 'continuous',
+        gap: 14,
+        overflow: 'hidden',
+      }}
+    >
+      <LinearGradient
+        colors={
+          isDark
+            ? ['#16776f', '#0f5650', '#0b3f3b']
+            : ['#14a39c', '#0E8C8C', '#0b7474']
+        }
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          insetInlineEnd: -26,
+          top: -26,
+          width: 96,
+          height: 96,
+          borderRadius: 48,
+          borderWidth: 1.5,
+          borderColor: 'rgba(255,255,255,0.16)',
+        }}
+      />
+      {/* top row — star kicker + status chip */}
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <View
+          style={{
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 7,
+          }}
+        >
+          <Star size={14} color={goldOnHero} fill={goldOnHero} strokeWidth={1.7} />
+          <Text
+            style={{
+              fontSize: 11,
+              color: 'rgba(255,255,255,0.80)',
+              ...eyebrow(lang),
+            }}
+          >
+            {labels.title}
+          </Text>
+        </View>
+        <View
+          style={{
+            paddingHorizontal: 9,
+            paddingVertical: 3,
+            borderRadius: 7,
+            backgroundColor: 'rgba(255,255,255,0.18)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.30)',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 10,
+              fontWeight: '800',
+              color: '#fff',
+              letterSpacing: 0.4,
+              textTransform: 'uppercase',
+            }}
+          >
+            {(
+              statusLabels[sub.status] ??
+              (isActive ? labels.active : sub.status)
+            ).toUpperCase()}
+          </Text>
+        </View>
+      </View>
+
+      {/* bottom row — plan + renews | Manage pill */}
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            minWidth: 0,
+            alignItems: isRTL ? 'flex-end' : 'flex-start',
+          }}
+        >
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: 24,
+              color: '#fff',
+              letterSpacing: -0.4,
+              textAlign: isRTL ? 'right' : 'left',
+              fontFamily: displayFamily(lang, 'semibold'),
+            }}
+          >
+            {sub.plan.name}
+          </Text>
+          {expiresStr ? (
+            <Text
+              style={{
+                fontSize: 11.5,
+                color: 'rgba(255,255,255,0.76)',
+                marginTop: 4,
+                fontFamily: 'Assistant-Medium',
+                textAlign: isRTL ? 'right' : 'left',
+              }}
+            >
+              {expiresStr}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          onPressIn={haptics.tap}
+          onPress={onRenew}
+          disabled={isRenewing}
+          style={({ pressed }) => [
+            {
+              paddingVertical: 10,
+              paddingHorizontal: 18,
+              borderRadius: 11,
+              backgroundColor: '#fff',
+              shadowColor: '#000',
+              shadowOpacity: 0.16,
+              shadowRadius: 8,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 3,
+            },
+            (pressed || isRenewing) && { opacity: 0.85 },
+          ]}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
+            {sub.status === 'past_due' || sub.status === 'cancelled'
+              ? isRenewing
+                ? labels.renewing
+                : labels.renew
+              : labels.manage}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}

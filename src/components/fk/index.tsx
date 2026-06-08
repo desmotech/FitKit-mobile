@@ -47,6 +47,7 @@ export { FKSubScreen } from './sub-screen';
 export { FKBrandMark } from './brand-mark';
 export { FKEdgeStripe } from './edge-stripe';
 export { FKNumberedBadge } from './numbered-badge';
+export { FKNavButton } from './nav-button';
 export { MemberHeader } from './member-header';
 export { FKScreenHeader } from './screen-header';
 export { FKModalHeader } from './modal-header';

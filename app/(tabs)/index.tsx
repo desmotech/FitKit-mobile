@@ -207,7 +207,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1">
       <FKAmbientBackdrop />
-      <MemberHeader onPressQR={() => router.push('/checkin')} />
+      <MemberHeader onPressQR={() => router.push('/(tabs)/schedule/scan')} />
 
       <ScrollView
         contentInsetAdjustmentBehavior="never"
