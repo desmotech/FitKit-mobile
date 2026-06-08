@@ -282,6 +282,21 @@ export function useLatestResult(
 
 // ── Hook: my results for the workout (for History list + chart) ─────
 
+export interface WorkoutResultSet {
+  id: string;
+  workoutMovementId: string | null;
+  exerciseId: string;
+  exercise?: { id: string; name: string };
+  setNumber: number;
+  reps: number | null;
+  weightKg: number | null;
+  weightDisplayUnit: string | null;
+  distanceM: number | null;
+  distanceDisplayUnit: string | null;
+  durationSeconds: number | null;
+  rpe: number | null;
+}
+
 export interface WorkoutResult {
   id: string;
   workoutId: string;
@@ -291,6 +306,8 @@ export interface WorkoutResult {
   scaled: boolean;
   performedAt: string;
   notes: string | null;
+  /** Present on the library-scoped history endpoint (toResponseWithSets). */
+  setResults?: WorkoutResultSet[];
 }
 
 export function useMyResults(
@@ -329,6 +346,48 @@ export function useWorkoutHistory(
         ? ['/organizations', orgId, 'workouts', workoutId, 'results']
         : ['/workouts/results', 'noop'],
     queryOptions: { enabled: !!orgId && !!workoutId },
+  });
+}
+
+// ── Hooks: edit / delete a logged result ─────────────────────────────
+
+export interface UpdateResultInput {
+  scoreValue?: string;
+  scoreUnit?: string;
+  rx?: boolean;
+  scaled?: boolean;
+  notes?: string;
+  performedAt?: string;
+}
+
+/** PATCH a logged result. Edits the top-level fields (score / Rx-scaled /
+ *  notes / date); per-set editing is not yet supported server-side. */
+export function useUpdateResult(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+  resultId: string | undefined | null,
+) {
+  return useApiSend<ApiEnvelope<WorkoutResult>, UpdateResultInput>({
+    path:
+      orgId && workoutId && resultId
+        ? `/organizations/${orgId}/workouts/${workoutId}/results/${resultId}`
+        : '',
+    method: 'PATCH',
+  });
+}
+
+/** DELETE a logged result (soft-delete server-side). */
+export function useDeleteResult(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+  resultId: string | undefined | null,
+) {
+  return useApiAction<ApiEnvelope<{ id: string }>>({
+    path:
+      orgId && workoutId && resultId
+        ? `/organizations/${orgId}/workouts/${workoutId}/results/${resultId}`
+        : '',
+    method: 'DELETE',
   });
 }
 

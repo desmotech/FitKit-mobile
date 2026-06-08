@@ -826,6 +826,17 @@ export default function WorkoutDetailScreen() {
             expanded={historyOpen}
             emptyLabel={ps.noHistory}
             colors={colors}
+            onOpenResult={(resultId) => {
+              haptics.tap();
+              router.push({
+                pathname: '/log/result/[id]',
+                params: {
+                  id: resultId,
+                  workoutId: workout.id,
+                  scoring: workout.scoring,
+                },
+              });
+            }}
           />
         </View>
 
@@ -1066,12 +1077,14 @@ function MyHistory({
   expanded,
   emptyLabel,
   colors,
+  onOpenResult,
 }: {
   results: WorkoutResult[];
   isRTL: boolean;
   expanded: boolean;
   emptyLabel: string;
   colors: ReturnType<typeof useFKColors>;
+  onOpenResult: (resultId: string) => void;
 }) {
   if (!expanded) return null;
   return (
@@ -1092,7 +1105,12 @@ function MyHistory({
           <HistoryChart results={results} />
           <View style={{ gap: 6 }}>
             {results.map((r) => (
-              <HistoryRow key={r.id} result={r} isRTL={isRTL} />
+              <HistoryRow
+                key={r.id}
+                result={r}
+                isRTL={isRTL}
+                onPress={() => onOpenResult(r.id)}
+              />
             ))}
           </View>
         </>
@@ -1147,12 +1165,17 @@ function HistoryChart({ results }: { results: WorkoutResult[] }) {
 function HistoryRow({
   result,
   isRTL,
+  onPress,
 }: {
   result: WorkoutResult;
   isRTL: boolean;
+  onPress: () => void;
 }) {
+  const ChevronEnd = isRTL ? ChevronLeft : ChevronRight;
   return (
-    <View
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
       style={{
         flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
@@ -1223,13 +1246,19 @@ function HistoryRow({
           </View>
         )}
       </View>
-      <Text
-        className="text-muted-foreground"
-        style={{ fontSize: 11 }}
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 4,
+        }}
       >
-        {HISTORY_DATE_FORMATTER.format(new Date(result.performedAt))}
-      </Text>
-    </View>
+        <Text className="text-muted-foreground" style={{ fontSize: 11 }}>
+          {HISTORY_DATE_FORMATTER.format(new Date(result.performedAt))}
+        </Text>
+        <ChevronEnd size={14} color="#9A958A" />
+      </View>
+    </Pressable>
   );
 }
 

@@ -139,6 +139,13 @@ export interface LogStrings {
   prPreviousBest: string;
   prSaveErr: string;
 
+  // Logged-result detail
+  resultTitle: string;
+  resultDelete: string;
+  resultDeleteMsg: string;
+  resultDeleteCta: string;
+  resultSetsReadonly: string;
+
   // Generic
   retry: string;
 
@@ -266,6 +273,11 @@ const en: LogStrings = {
   prPersonalRecord: 'Personal record',
   prPreviousBest: 'Previous best',
   prSaveErr: "Couldn't save your PR",
+  resultTitle: 'Logged result',
+  resultDelete: 'Delete this log',
+  resultDeleteMsg: 'Delete this logged result? This cannot be undone.',
+  resultDeleteCta: 'Delete',
+  resultSetsReadonly: 'Logged sets',
   retry: 'Retry',
 
   a11yClose: 'Close',
@@ -389,6 +401,11 @@ const he: LogStrings = {
   prPersonalRecord: 'שיא אישי',
   prPreviousBest: 'שיא קודם',
   prSaveErr: 'לא ניתן לשמור את השיא',
+  resultTitle: 'תוצאה שתועדה',
+  resultDelete: 'מחק תיעוד',
+  resultDeleteMsg: 'למחוק את התוצאה שתועדה? לא ניתן לבטל.',
+  resultDeleteCta: 'מחק',
+  resultSetsReadonly: 'סטים שתועדו',
   retry: 'נסה שוב',
 
   a11yClose: 'סגור',
@@ -512,6 +529,11 @@ const ru: LogStrings = {
   prPersonalRecord: 'Личный рекорд',
   prPreviousBest: 'Прошлый рекорд',
   prSaveErr: 'Не удалось сохранить рекорд',
+  resultTitle: 'Записанный результат',
+  resultDelete: 'Удалить запись',
+  resultDeleteMsg: 'Удалить этот результат? Действие необратимо.',
+  resultDeleteCta: 'Удалить',
+  resultSetsReadonly: 'Записанные подходы',
   retry: 'Повторить',
 
   a11yClose: 'Закрыть',

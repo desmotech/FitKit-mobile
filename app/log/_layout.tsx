@@ -36,6 +36,7 @@ export default function LogLayout() {
       <Stack.Screen name="lift" options={{ headerShown: false }} />
       <Stack.Screen name="metric" options={{ headerShown: false }} />
       <Stack.Screen name="pr" options={{ headerShown: false }} />
+      <Stack.Screen name="result/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }
