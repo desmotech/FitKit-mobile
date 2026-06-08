@@ -144,7 +144,20 @@ export default function LogWorkoutResultScreen() {
     }));
 
   const mutation = useLogResult(orgId, workoutId);
-  const canSubmit = scoring === 'none' ? true : isScoreComplete(score);
+  // The top workout score is optional: a multi-section / strength day with no
+  // scoring (or where the athlete only logged sets) saves without it. Block
+  // only an entirely empty scored log.
+  const hasLoggedSet = useMemo(
+    () =>
+      Object.values(setRows).some((rows) =>
+        rows.some(
+          (r) => r.reps || r.weight || r.distance || r.duration || r.rpe || r.done,
+        ),
+      ),
+    [setRows],
+  );
+  const canSubmit =
+    scoring === 'none' || isScoreComplete(score) || hasLoggedSet;
 
   const handleSubmit = () => {
     if (!canSubmit || mutation.isPending) return;
