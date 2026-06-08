@@ -52,6 +52,12 @@ export interface WorkoutLite {
   mode: string;
   timeCap: number | null;
   sortOrder: number;
+  /**
+   * Lazy-fork back-pointer. For a per-assignment snapshot this is the
+   * canonical library workout id; null when the row IS the library workout.
+   * Use `forkedFromId ?? id` as the library id to scope history across days.
+   */
+  forkedFromId?: string | null;
   sections?: WorkoutSection[];
 }
 
@@ -300,6 +306,8 @@ export interface WorkoutResultSet {
 export interface WorkoutResult {
   id: string;
   workoutId: string;
+  /** Canonical library workout id — stable across every day's snapshot. */
+  libraryWorkoutId?: string | null;
   scoreValue: string | null;
   scoreUnit: string | null;
   rx: boolean;

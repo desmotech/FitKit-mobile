@@ -311,9 +311,12 @@ export default function WorkoutDetailScreen() {
     ? totalSections
     : sections.filter((s) => checkedSections[s.id]).length;
 
-  // Latest result for this workout → "Last · …" footer + History list.
+  // History is scoped to the canonical LIBRARY workout, not this day's
+  // snapshot — otherwise the lazy-fork model hides every prior day's
+  // completion (each assignment has its own snapshot id).
+  const libraryWorkoutId = workout.forkedFromId ?? workout.id;
   const myResultRows = (myResults.data?.data ?? [])
-    .filter((r) => r.workoutId === workout.id)
+    .filter((r) => (r.libraryWorkoutId ?? r.workoutId) === libraryWorkoutId)
     .slice()
     .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
   const lastResult = myResultRows[0] ?? null;
@@ -832,7 +835,7 @@ export default function WorkoutDetailScreen() {
                 pathname: '/log/result/[id]',
                 params: {
                   id: resultId,
-                  workoutId: workout.id,
+                  workoutId: libraryWorkoutId,
                   scoring: workout.scoring,
                 },
               });
