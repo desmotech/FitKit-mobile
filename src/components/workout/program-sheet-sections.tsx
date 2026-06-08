@@ -17,10 +17,10 @@
  *     the prescription as a DM Mono "score" on the trailing edge). Rows with
  *     coaching detail (stats / notes / cues / a demo video) expand inline.
  *
- * Prescription formatting + superset grouping are reused from ExercisesView
- * (the Schedule detail's renderer) so the two surfaces never drift. RTL-aware
- * throughout. Secondary colors come from `programSheetInk` for legibility on
- * the ambient gradient in both themes.
+ * Prescription formatting + superset grouping come from the shared
+ * `prescription` helpers so every surface renders the shape identically.
+ * RTL-aware throughout. Secondary colors come from `programSheetInk` for
+ * legibility on the ambient gradient in both themes.
  */
 import { ChevronDown, Play, Check } from 'lucide-react-native';
 import { useState } from 'react';
@@ -49,7 +49,7 @@ import {
   groupBySuperset,
   letterFor,
   sectionTypeLabel,
-} from '@/components/workout/exercises-view';
+} from '@/components/workout/prescription';
 import { formatPrescription, formatSectionHeader } from '@/lib/format-prescription';
 import { estimateSectionMinutes } from '@/lib/workout-estimate';
 import { programSheetInk, type ProgramSheetInk } from '@/lib/program-sheet-ink';
