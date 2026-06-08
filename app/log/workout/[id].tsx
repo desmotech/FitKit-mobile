@@ -567,8 +567,10 @@ function pickPrevSetsByNumber(
       continue;
     out[s.setNumber] = {
       reps: s.reps,
-      weight: s.weight,
-      weightUnit: s.weightUnit,
+      // The API sends canonical kg + the entered display unit, not the old
+      // weight/weightUnit the prefill used to (wrongly) read.
+      weight: s.weightKg != null ? String(s.weightKg) : null,
+      weightUnit: s.weightDisplayUnit,
       distanceM: s.distanceM,
       distanceDisplayUnit: s.distanceDisplayUnit,
       durationSeconds: s.durationSeconds,

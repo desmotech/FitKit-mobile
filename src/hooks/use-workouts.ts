@@ -1,3 +1,8 @@
+import type {
+  CreateSetResultInput,
+  WorkoutResultResponse,
+  WorkoutSetResultResponse,
+} from '@fitkit/shared';
 import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
 
@@ -246,18 +251,9 @@ export function shiftWeek(weekStart: string, weeks: number): string {
 
 // ── Hook: latest result for a workout (for "Last:" hint) ────────────
 
-export interface SetResultLite {
-  workoutMovementId?: string | null;
-  exerciseId: string;
-  setNumber: number;
-  reps: number | null;
-  weight: string | null;
-  weightUnit: string | null;
-  distanceM?: number | null;
-  distanceDisplayUnit?: string | null;
-  durationSeconds?: number | null;
-  rpe: number | null;
-}
+/** Canonical set shape from the API (weightKg / weightDisplayUnit, not the
+ *  old weight/weightUnit the mobile used to assume). */
+export type SetResultLite = WorkoutSetResultResponse;
 
 export interface LatestResult {
   scoreValue?: string;
@@ -265,7 +261,7 @@ export interface LatestResult {
   rx?: boolean;
   scaled?: boolean;
   performedAt?: string;
-  setResults?: SetResultLite[];
+  setResults?: WorkoutSetResultResponse[];
 }
 
 export function useLatestResult(
@@ -288,35 +284,16 @@ export function useLatestResult(
 
 // ── Hook: my results for the workout (for History list + chart) ─────
 
-export interface WorkoutResultSet {
-  id: string;
-  workoutMovementId: string | null;
-  exerciseId: string;
-  exercise?: { id: string; name: string };
-  setNumber: number;
-  reps: number | null;
-  weightKg: number | null;
-  weightDisplayUnit: string | null;
-  distanceM: number | null;
-  distanceDisplayUnit: string | null;
-  durationSeconds: number | null;
-  rpe: number | null;
-}
+/**
+ * Result shapes reuse the canonical `@fitkit/shared` schemas so the mobile and
+ * API never drift. `WorkoutResult` is the base response plus the optional
+ * `setResults` the library-scoped history endpoint adds (toResponseWithSets).
+ */
+export type WorkoutResultSet = WorkoutSetResultResponse;
 
-export interface WorkoutResult {
-  id: string;
-  workoutId: string;
-  /** Canonical library workout id — stable across every day's snapshot. */
-  libraryWorkoutId?: string | null;
-  scoreValue: string | null;
-  scoreUnit: string | null;
-  rx: boolean;
-  scaled: boolean;
-  performedAt: string;
-  notes: string | null;
-  /** Present on the library-scoped history endpoint (toResponseWithSets). */
-  setResults?: WorkoutResultSet[];
-}
+export type WorkoutResult = WorkoutResultResponse & {
+  setResults?: WorkoutSetResultResponse[];
+};
 
 export function useMyResults(
   orgId: string | undefined | null,
@@ -401,23 +378,12 @@ export function useDeleteResult(
 
 // ── Hook: log a result ───────────────────────────────────────────────
 
-export interface LogResultSetInput {
-  workoutMovementId?: string;
-  exerciseId: string;
-  setNumber: number;
-  reps?: number;
-  weight?: string;
-  weightUnit?: string;
-  // Endurance measure — sent as entered; the server canonicalizes to
-  // distance_m / duration_seconds and preserves the display unit.
-  distance?: string;
-  distanceUnit?: string;
-  duration?: string; // mm:ss | hh:mm:ss | raw seconds
-  rpe?: number;
-  notes?: string;
-}
+/** Per-set log input — the canonical shared contract (matches the API DTO). */
+export type LogResultSetInput = CreateSetResultInput;
 
 export interface LogResultInput {
+  // Required by the server DTO (CreateWorkoutResultDto). The mobile always
+  // sends it — '' when the workout has no score / only sets were logged.
   scoreValue: string;
   scoreUnit?: string;
   rx?: boolean;
@@ -429,7 +395,7 @@ export interface LogResultInput {
   // keep their frozen prescription. Without it the result anchors to the
   // mutable library workout.
   assignmentId?: string;
-  setResults?: LogResultSetInput[];
+  setResults?: CreateSetResultInput[];
 }
 
 export interface LogResultResponse {
