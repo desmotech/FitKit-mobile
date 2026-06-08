@@ -30,33 +30,13 @@ export default function LogLayout() {
           contentStyle: { backgroundColor: 'transparent' },
         }}
       />
-      <Stack.Screen
-        name="workout/[id]"
-        options={{
-          presentation: 'pageSheet',
-          headerShown: false,
-          sheetGrabberVisible: true,
-          sheetCornerRadius: 24,
-        }}
-      />
-      <Stack.Screen
-        name="lift"
-        options={{
-          presentation: 'pageSheet',
-          headerShown: false,
-          sheetGrabberVisible: true,
-          sheetCornerRadius: 24,
-        }}
-      />
-      <Stack.Screen
-        name="metric"
-        options={{
-          presentation: 'pageSheet',
-          headerShown: false,
-          sheetGrabberVisible: true,
-          sheetCornerRadius: 24,
-        }}
-      />
+      {/* The concrete loggers push like every other sub-screen (standard
+          back chevron + top positioning), rather than presenting as sheets. */}
+      <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="lift" options={{ headerShown: false }} />
+      <Stack.Screen name="metric" options={{ headerShown: false }} />
+      <Stack.Screen name="pr" options={{ headerShown: false }} />
+      <Stack.Screen name="result/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }

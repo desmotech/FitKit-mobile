@@ -1,3 +1,8 @@
+import type {
+  CreateSetResultInput,
+  WorkoutResultResponse,
+  WorkoutSetResultResponse,
+} from '@fitkit/shared';
 import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
 
@@ -52,6 +57,12 @@ export interface WorkoutLite {
   mode: string;
   timeCap: number | null;
   sortOrder: number;
+  /**
+   * Lazy-fork back-pointer. For a per-assignment snapshot this is the
+   * canonical library workout id; null when the row IS the library workout.
+   * Use `forkedFromId ?? id` as the library id to scope history across days.
+   */
+  forkedFromId?: string | null;
   sections?: WorkoutSection[];
 }
 
@@ -86,6 +97,8 @@ export interface AssignmentDay {
   coachPostNote?: string | null;
   // Server-side completion state if available; client also derives from result presence.
   completedAt?: string | null;
+  /** Unread in-workout chat messages for this assignment (toFullResponse). */
+  unreadCount?: number;
   /** Server returns this on /assignments/my-week (toFullResponse). Null = personal/direct assignment. */
   program?: AssignmentProgramLite | null;
 }
@@ -238,14 +251,9 @@ export function shiftWeek(weekStart: string, weeks: number): string {
 
 // ── Hook: latest result for a workout (for "Last:" hint) ────────────
 
-export interface SetResultLite {
-  exerciseId: string;
-  setNumber: number;
-  reps: number | null;
-  weight: string | null;
-  weightUnit: string | null;
-  rpe: number | null;
-}
+/** Canonical set shape from the API (weightKg / weightDisplayUnit, not the
+ *  old weight/weightUnit the mobile used to assume). */
+export type SetResultLite = WorkoutSetResultResponse;
 
 export interface LatestResult {
   scoreValue?: string;
@@ -253,7 +261,7 @@ export interface LatestResult {
   rx?: boolean;
   scaled?: boolean;
   performedAt?: string;
-  setResults?: SetResultLite[];
+  setResults?: WorkoutSetResultResponse[];
 }
 
 export function useLatestResult(
@@ -276,16 +284,16 @@ export function useLatestResult(
 
 // ── Hook: my results for the workout (for History list + chart) ─────
 
-export interface WorkoutResult {
-  id: string;
-  workoutId: string;
-  scoreValue: string | null;
-  scoreUnit: string | null;
-  rx: boolean;
-  scaled: boolean;
-  performedAt: string;
-  notes: string | null;
-}
+/**
+ * Result shapes reuse the canonical `@fitkit/shared` schemas so the mobile and
+ * API never drift. `WorkoutResult` is the base response plus the optional
+ * `setResults` the library-scoped history endpoint adds (toResponseWithSets).
+ */
+export type WorkoutResultSet = WorkoutSetResultResponse;
+
+export type WorkoutResult = WorkoutResultResponse & {
+  setResults?: WorkoutSetResultResponse[];
+};
 
 export function useMyResults(
   orgId: string | undefined | null,
@@ -301,31 +309,147 @@ export function useMyResults(
   });
 }
 
-// ── Hook: log a result ───────────────────────────────────────────────
-
-export interface LogResultSetInput {
-  workoutMovementId: string;
-  exerciseId: string;
-  setNumber: number;
-  reps?: number;
-  weight?: string;
-  weightUnit?: string;
-  rpe?: number;
+/**
+ * Library-scoped repeat history for a single workout — every completion of the
+ * canonical workout across weeks/assignments (server resolves forkedFromId).
+ * Use this for the "my history" trend on the workout view; it's correct
+ * regardless of which day's snapshot the athlete logged against (unlike
+ * filtering `/results/me` by the snapshot-aliased `workoutId`).
+ */
+export function useWorkoutHistory(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+) {
+  const path =
+    orgId && workoutId
+      ? `/organizations/${orgId}/workouts/${workoutId}/results`
+      : '';
+  return useApiQuery<ApiEnvelope<WorkoutResult[]>>({
+    path,
+    queryKey:
+      orgId && workoutId
+        ? ['/organizations', orgId, 'workouts', workoutId, 'results']
+        : ['/workouts/results', 'noop'],
+    queryOptions: { enabled: !!orgId && !!workoutId },
+  });
 }
 
+// ── Hooks: edit / delete a logged result ─────────────────────────────
+
+export interface UpdateResultInput {
+  scoreValue?: string;
+  scoreUnit?: string;
+  rx?: boolean;
+  scaled?: boolean;
+  notes?: string;
+  performedAt?: string;
+}
+
+/** PATCH a logged result. Edits the top-level fields (score / Rx-scaled /
+ *  notes / date); per-set editing is not yet supported server-side. */
+export function useUpdateResult(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+  resultId: string | undefined | null,
+) {
+  return useApiSend<ApiEnvelope<WorkoutResult>, UpdateResultInput>({
+    path:
+      orgId && workoutId && resultId
+        ? `/organizations/${orgId}/workouts/${workoutId}/results/${resultId}`
+        : '',
+    method: 'PATCH',
+  });
+}
+
+/** DELETE a logged result (soft-delete server-side). */
+export function useDeleteResult(
+  orgId: string | undefined | null,
+  workoutId: string | undefined | null,
+  resultId: string | undefined | null,
+) {
+  return useApiAction<ApiEnvelope<{ id: string }>>({
+    path:
+      orgId && workoutId && resultId
+        ? `/organizations/${orgId}/workouts/${workoutId}/results/${resultId}`
+        : '',
+    method: 'DELETE',
+  });
+}
+
+// ── Hook: log a result ───────────────────────────────────────────────
+
+/** Per-set log input — the canonical shared contract (matches the API DTO). */
+export type LogResultSetInput = CreateSetResultInput;
+
 export interface LogResultInput {
+  // Required by the server DTO (CreateWorkoutResultDto). The mobile always
+  // sends it — '' when the workout has no score / only sets were logged.
   scoreValue: string;
   scoreUnit?: string;
   rx?: boolean;
   scaled?: boolean;
   notes?: string;
   performedAt: string; // ISO datetime
-  setResults?: LogResultSetInput[];
+  // FIT-152: when set, the server forks the assignment's snapshot if
+  // needed and anchors the result to the snapshot so per-day completions
+  // keep their frozen prescription. Without it the result anchors to the
+  // mutable library workout.
+  assignmentId?: string;
+  setResults?: CreateSetResultInput[];
 }
 
 export interface LogResultResponse {
-  isPR?: boolean;
-  // …rest of the result envelope; we only need isPR for the celebration.
+  id: string;
+  performedAt?: string;
+  // Result logging makes no PR judgment — PRs are explicit (see useLogManualPR).
+}
+
+// ── Hook: per-exercise set history (trend) ───────────────────────────
+
+export interface ExerciseHistorySet {
+  setNumber: number;
+  reps: number | null;
+  weightKg: number | null;
+  weightDisplayUnit: string | null;
+  distanceM: number | null;
+  distanceDisplayUnit: string | null;
+  durationSeconds: number | null;
+  rpe: number | null;
+}
+
+export interface ExerciseHistorySession {
+  resultId: string;
+  performedAt: string;
+  workoutTitle: string | null;
+  sets: ExerciseHistorySet[];
+  topSetKg: number | null;
+  totalVolumeKg: number | null;
+}
+
+export interface ExerciseHistory {
+  exerciseId: string;
+  exercise: { id: string; name: string };
+  /** Current explicit PR for this exercise — overlay marker on the trend. */
+  pr: { valueNumeric: number; unit: string; achievedAt: string } | null;
+  sessions: ExerciseHistorySession[];
+}
+
+export function useExerciseHistory(
+  orgId: string | undefined | null,
+  exerciseId: string | undefined | null,
+) {
+  const path =
+    orgId && exerciseId
+      ? `/organizations/${orgId}/exercises/${exerciseId}/history/me`
+      : '';
+  return useApiQuery<ApiEnvelope<ExerciseHistory>>({
+    path,
+    queryKey:
+      orgId && exerciseId
+        ? ['/organizations', orgId, 'exercises', exerciseId, 'history', 'me']
+        : ['/exercise-history', 'noop'],
+    queryOptions: { enabled: !!orgId && !!exerciseId },
+  });
 }
 
 export function useLogResult(
@@ -344,11 +468,10 @@ export function useLogResult(
 // ── Hook: mark an assignment completed ───────────────────────────────
 
 /**
- * Marks a workout assignment as completed. One-way, matching the web
- * (`apps/web/.../program-content.tsx`) and the backend — there's no
- * uncomplete endpoint; `POST .../complete` sets status='completed' and
- * stamps completedAt. Logging a result auto-completes too (server-side),
- * so the detail screen drives button state off `status`/`completedAt`.
+ * Marks a workout assignment as completed. `POST .../complete` sets
+ * status='completed' and stamps completedAt. Logging a result auto-completes
+ * too (server-side), so the detail screen drives button state off
+ * `status`/`completedAt`. Reversible via {@link useUncompleteAssignment}.
  */
 export function useCompleteAssignment(
   orgId: string | undefined | null,
@@ -358,6 +481,23 @@ export function useCompleteAssignment(
     path:
       orgId && assignmentId
         ? `/organizations/${orgId}/assignments/${assignmentId}/complete`
+        : '',
+    method: 'POST',
+  });
+}
+
+/**
+ * Undoes a completion (mis-tap recovery). `POST .../uncomplete` resets
+ * status→assigned and clears completedAt; logged results are left intact.
+ */
+export function useUncompleteAssignment(
+  orgId: string | undefined | null,
+  assignmentId: string | undefined | null,
+) {
+  return useApiAction<ApiEnvelope<AssignmentDay>>({
+    path:
+      orgId && assignmentId
+        ? `/organizations/${orgId}/assignments/${assignmentId}/uncomplete`
         : '',
     method: 'POST',
   });

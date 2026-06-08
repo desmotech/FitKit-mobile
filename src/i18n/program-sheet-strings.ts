@@ -23,8 +23,10 @@ export interface ProgramSheetStrings {
   // CTA cluster.
   markCompleted: string;
   completed: string;
+  undo: string;
   completeFailed: string;
   logResult: string;
+  logPr: string;
   history: string;
   // "Last" result footer + performance badges.
   last: string;
@@ -53,8 +55,10 @@ const en: ProgramSheetStrings = {
   exercises: 'Exercises',
   markCompleted: 'Mark completed',
   completed: 'Completed',
+  undo: 'Undo',
   completeFailed: 'Failed to update',
   logResult: 'Log result',
+  logPr: 'Log PR',
   history: 'History',
   last: 'Last',
   rx: 'RX',
@@ -78,8 +82,10 @@ const he: ProgramSheetStrings = {
   exercises: 'תרגילים',
   markCompleted: 'סמן כהושלם',
   completed: 'הושלם',
+  undo: 'בטל',
   completeFailed: 'העדכון נכשל',
   logResult: 'תיעוד תוצאה',
+  logPr: 'תיעוד שיא',
   history: 'היסטוריה',
   last: 'אחרון',
   rx: 'RX',
@@ -103,8 +109,10 @@ const ru: ProgramSheetStrings = {
   exercises: 'Упражнения',
   markCompleted: 'Отметить выполненным',
   completed: 'Выполнено',
+  undo: 'Отменить',
   completeFailed: 'Не удалось обновить',
   logResult: 'Записать результат',
+  logPr: 'Записать рекорд',
   history: 'История',
   last: 'Последний',
   rx: 'RX',

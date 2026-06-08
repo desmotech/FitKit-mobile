@@ -10,6 +10,8 @@ import {
   Dumbbell,
   MessageSquare,
   PencilLine,
+  RotateCcw,
+  Trophy,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useMemo, useState } from 'react';
@@ -32,6 +34,7 @@ import {
   type WorkoutResult,
   useCompleteAssignment,
   useMyResults,
+  useUncompleteAssignment,
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
 import { useQueryClient } from '@tanstack/react-query';
@@ -51,6 +54,19 @@ import { estimateDuration } from '@/lib/workout-estimate';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { useI18n } from '@/providers/i18n-provider';
+
+// Scoring kinds where a single per-workout score + trend line reads as
+// meaningful (benchmark workouts: Fran time, Cindy rounds…). 'weight' strength
+// days and 'none' are excluded — their progression lives in per-exercise
+// history, so the workout history shows completions only.
+const SCORED_TREND_KINDS = new Set<string>([
+  'time',
+  'reps',
+  'rounds_reps',
+  'distance',
+  'calories',
+  'points',
+]);
 
 // Static fallback for the static rest/note helper. Detail screen builds
 // its own lang-aware formatter inside the component body.
@@ -104,6 +120,7 @@ export default function WorkoutDetailScreen() {
   // both reflect the new status.
   const queryClient = useQueryClient();
   const completeAssignment = useCompleteAssignment(activeOrganization?.id, id);
+  const uncompleteAssignment = useUncompleteAssignment(activeOrganization?.id, id);
 
   // PostHog: capture workout open once the assignment resolves. Gated on
   // workout id so navigating between workouts re-fires.
@@ -272,6 +289,31 @@ export default function WorkoutDetailScreen() {
     });
   };
 
+  const invalidateAssignments = () =>
+    queryClient.invalidateQueries({
+      predicate: (q) =>
+        Array.isArray(q.queryKey) &&
+        q.queryKey
+          .filter((k) => typeof k === 'string')
+          .join('/')
+          .includes('assignments'),
+    });
+
+  const handleUncomplete = () => {
+    if (uncompleteAssignment.isPending || !isCompleted) return;
+    haptics.tap();
+    uncompleteAssignment.mutate(undefined, {
+      onSuccess: () => {
+        haptics.success();
+        invalidateAssignments();
+      },
+      onError: () => {
+        haptics.error();
+        Alert.alert(labels.completeFailed);
+      },
+    });
+  };
+
   const handleToggleSection = (sectionId: string, willBeDone: boolean) => {
     setCheckedSections((prev) => ({ ...prev, [sectionId]: willBeDone }));
   };
@@ -283,12 +325,20 @@ export default function WorkoutDetailScreen() {
     ? totalSections
     : sections.filter((s) => checkedSections[s.id]).length;
 
-  // Latest result for this workout → "Last · …" footer + History list.
+  // History is scoped to the canonical LIBRARY workout, not this day's
+  // snapshot — otherwise the lazy-fork model hides every prior day's
+  // completion (each assignment has its own snapshot id).
+  const libraryWorkoutId = workout.forkedFromId ?? workout.id;
   const myResultRows = (myResults.data?.data ?? [])
-    .filter((r) => r.workoutId === workout.id)
+    .filter((r) => (r.libraryWorkoutId ?? r.workoutId) === libraryWorkoutId)
     .slice()
     .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
   const lastResult = myResultRows[0] ?? null;
+  const showsScore = SCORED_TREND_KINDS.has(workout.scoring);
+  // A scored workout (Fran time, max-load complex…) can hold a workout-level
+  // PR. The contextual "Log PR" seeds the explicit record prefilled with this
+  // workout + its scoring — the only entry path for a first-time workout PR.
+  const canLogWorkoutPr = !!workout.scoring && workout.scoring !== 'none';
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = assignment.date === todayStr;
@@ -685,6 +735,7 @@ export default function WorkoutDetailScreen() {
                 justifyContent: 'center',
                 gap: 8,
                 paddingVertical: 16,
+                paddingHorizontal: 16,
                 borderRadius: 18,
                 borderCurve: 'continuous',
                 backgroundColor: 'rgba(122,138,92,0.16)',
@@ -694,6 +745,25 @@ export default function WorkoutDetailScreen() {
               <Text style={{ fontSize: 15, fontWeight: '700', color: '#7A8A5C' }}>
                 {ps.completed}
               </Text>
+              <View style={{ flex: 1 }} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={ps.undo}
+                hitSlop={10}
+                disabled={uncompleteAssignment.isPending}
+                onPress={handleUncomplete}
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  opacity: uncompleteAssignment.isPending ? 0.5 : 1,
+                }}
+              >
+                <RotateCcw size={14} color="#5A6A3F" strokeWidth={2.4} />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#5A6A3F' }}>
+                  {ps.undo}
+                </Text>
+              </Pressable>
             </View>
           ) : (
             <FKButton
@@ -762,7 +832,30 @@ export default function WorkoutDetailScreen() {
             />
           </View>
 
-          {lastResult ? (
+          {canLogWorkoutPr ? (
+            <FKButton
+              label={ps.logPr}
+              variant="outline"
+              size="lg"
+              fullWidth
+              className="rounded-2xl"
+              leading={<Trophy size={16} color="#C9974D" strokeWidth={2.2} />}
+              onPress={() => {
+                haptics.tap();
+                router.push({
+                  pathname: '/log/pr',
+                  params: {
+                    kind: 'workout',
+                    workoutId: libraryWorkoutId,
+                    workoutName: workout.displayName ?? '',
+                    scoring: workout.scoring,
+                  },
+                });
+              }}
+            />
+          ) : null}
+
+          {lastResult && showsScore ? (
             <LastResultFooter
               result={lastResult}
               labels={{ last: ps.last, rx: ps.rx, scaled: ps.scaled }}
@@ -778,6 +871,19 @@ export default function WorkoutDetailScreen() {
             expanded={historyOpen}
             emptyLabel={ps.noHistory}
             colors={colors}
+            showsScore={showsScore}
+            completedLabel={ps.completed}
+            onOpenResult={(resultId) => {
+              haptics.tap();
+              router.push({
+                pathname: '/log/result/[id]',
+                params: {
+                  id: resultId,
+                  workoutId: libraryWorkoutId,
+                  scoring: workout.scoring,
+                },
+              });
+            }}
           />
         </View>
 
@@ -1018,12 +1124,18 @@ function MyHistory({
   expanded,
   emptyLabel,
   colors,
+  showsScore,
+  completedLabel,
+  onOpenResult,
 }: {
   results: WorkoutResult[];
   isRTL: boolean;
   expanded: boolean;
   emptyLabel: string;
   colors: ReturnType<typeof useFKColors>;
+  showsScore: boolean;
+  completedLabel: string;
+  onOpenResult: (resultId: string) => void;
 }) {
   if (!expanded) return null;
   return (
@@ -1041,10 +1153,17 @@ function MyHistory({
         </Text>
       ) : (
         <>
-          <HistoryChart results={results} />
+          {showsScore ? <HistoryChart results={results} /> : null}
           <View style={{ gap: 6 }}>
             {results.map((r) => (
-              <HistoryRow key={r.id} result={r} isRTL={isRTL} />
+              <HistoryRow
+                key={r.id}
+                result={r}
+                isRTL={isRTL}
+                showsScore={showsScore}
+                completedLabel={completedLabel}
+                onPress={() => onOpenResult(r.id)}
+              />
             ))}
           </View>
         </>
@@ -1099,12 +1218,21 @@ function HistoryChart({ results }: { results: WorkoutResult[] }) {
 function HistoryRow({
   result,
   isRTL,
+  showsScore,
+  completedLabel,
+  onPress,
 }: {
   result: WorkoutResult;
   isRTL: boolean;
+  showsScore: boolean;
+  completedLabel: string;
+  onPress: () => void;
 }) {
+  const ChevronEnd = isRTL ? ChevronLeft : ChevronRight;
   return (
-    <View
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
       style={{
         flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
@@ -1123,7 +1251,7 @@ function HistoryRow({
           gap: 8,
         }}
       >
-        {result.scoreValue ? (
+        {showsScore && result.scoreValue ? (
           <Text
             className="text-foreground font-bold"
             style={{ fontSize: 14, fontFamily: 'Assistant-Medium' }}
@@ -1131,7 +1259,20 @@ function HistoryRow({
             {result.scoreValue}
             {result.scoreUnit ? ` ${result.scoreUnit}` : ''}
           </Text>
-        ) : null}
+        ) : (
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <Check size={14} color="#7A8A5C" strokeWidth={2.6} />
+            <Text style={{ fontSize: 13, color: '#7A8A5C', fontWeight: '700' }}>
+              {completedLabel}
+            </Text>
+          </View>
+        )}
         {result.rx && (
           <View
             style={{
@@ -1175,13 +1316,19 @@ function HistoryRow({
           </View>
         )}
       </View>
-      <Text
-        className="text-muted-foreground"
-        style={{ fontSize: 11 }}
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 4,
+        }}
       >
-        {HISTORY_DATE_FORMATTER.format(new Date(result.performedAt))}
-      </Text>
-    </View>
+        <Text className="text-muted-foreground" style={{ fontSize: 11 }}>
+          {HISTORY_DATE_FORMATTER.format(new Date(result.performedAt))}
+        </Text>
+        <ChevronEnd size={14} color="#9A958A" />
+      </View>
+    </Pressable>
   );
 }
 

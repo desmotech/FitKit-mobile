@@ -72,6 +72,13 @@ export interface LogStrings {
   setColReps: string;
   setColWeight: string;
   setColRPE: string;
+  setColDist: string;
+  setColTime: string;
+  addSet: string;
+  setN: string;
+  doneCol: string;
+  markDone: string;
+  removeSet: string;
 
   // Exercise search
   searchPlaceholder: string;
@@ -97,11 +104,59 @@ export interface LogStrings {
   // Home pill (alongside "Add goal")
   homeLogPr: string;
 
+  // PR board
+  prBoard: string;
+  prLifts: string;
+  prBenchmarks: string;
+  prAchievedOn: string;
+  prNoneTitle: string;
+  prNoneBody: string;
+  prMark: string;
+
+  // Exercise history / trend
+  exerciseHistory: string;
+  histTopSet: string;
+  histVolume: string;
+  histGoal: string;
+  histSessions: string;
+  histNoneTitle: string;
+  histNoneBody: string;
+
+  // Log a PR
+  logPrTitle: string;
+  logPrCta: string;
+  prKindExercise: string;
+  prKindWorkout: string;
+  prMetric: string;
+  prMetricLoad: string;
+  prMetricReps: string;
+  prMetricTime: string;
+  prMetricDistance: string;
+  prValue: string;
+  prDate: string;
+  prPickExercise: string;
+  prPickWorkout: string;
+  prPersonalRecord: string;
+  prPreviousBest: string;
+  prSaveErr: string;
+
+  // Logged-result detail
+  resultTitle: string;
+  resultDelete: string;
+  resultDeleteMsg: string;
+  resultDeleteCta: string;
+  resultSetsReadonly: string;
+
+  // Generic
+  retry: string;
+
   // A11y bits
   a11yClose: string;
   a11ySetNumber: (n: number) => string;
   a11ySetReps: (n: number) => string;
   a11ySetWeight: (n: number) => string;
+  a11ySetDistance: (n: number) => string;
+  a11ySetTime: (n: number) => string;
   a11ySetRpe: (n: number) => string;
   a11ySetMarkDone: (n: number) => string;
   a11yToggleUnit: (unit: string) => string;
@@ -115,8 +170,8 @@ const en: LogStrings = {
   hubTodayWorkout: "Today's workout",
   hubNoWorkoutToday: 'No workout today',
   hubNoWorkoutTodaySub: 'Log a lift or body metric instead',
-  hubLift: 'Lift or PR',
-  hubLiftSub: 'A new back squat, mile time, anything',
+  hubLift: 'Log a PR',
+  hubLiftSub: 'An exercise or a benchmark workout',
   hubMetric: 'Body metric',
   hubMetricSub: 'Weight, measurements, body fat',
 
@@ -163,6 +218,13 @@ const en: LogStrings = {
   setColReps: 'Reps',
   setColWeight: 'Weight',
   setColRPE: 'RPE',
+  setColDist: 'Dist',
+  setColTime: 'Time',
+  addSet: 'Add set',
+  setN: 'Set',
+  doneCol: 'Done',
+  markDone: 'Mark done',
+  removeSet: 'Remove',
 
   searchPlaceholder: 'Search exercises',
   searchRecent: 'Recent',
@@ -183,10 +245,49 @@ const en: LogStrings = {
 
   homeLogPr: 'Log PR',
 
+  prBoard: 'PR Board',
+  prLifts: 'Lifts',
+  prBenchmarks: 'Benchmarks',
+  prAchievedOn: 'on',
+  prNoneTitle: 'No records yet',
+  prNoneBody: 'Log your first PR to start your records wall.',
+  prMark: 'PR',
+  exerciseHistory: 'Exercise History',
+  histTopSet: 'Top set',
+  histVolume: 'Volume',
+  histGoal: 'Goal',
+  histSessions: 'Sessions',
+  histNoneTitle: 'No history yet',
+  histNoneBody: 'Log your first set to see your trend.',
+  logPrTitle: 'Log a PR',
+  logPrCta: 'Log PR',
+  prKindExercise: 'Exercise',
+  prKindWorkout: 'Workout',
+  prMetric: 'Metric',
+  prMetricLoad: 'Load',
+  prMetricReps: 'Reps',
+  prMetricTime: 'Time',
+  prMetricDistance: 'Distance',
+  prValue: 'Value',
+  prDate: 'Date',
+  prPickExercise: 'Search exercise',
+  prPickWorkout: 'Search workout',
+  prPersonalRecord: 'Personal record',
+  prPreviousBest: 'Previous best',
+  prSaveErr: "Couldn't save your PR",
+  resultTitle: 'Logged result',
+  resultDelete: 'Delete this log',
+  resultDeleteMsg: 'Delete this logged result? This cannot be undone.',
+  resultDeleteCta: 'Delete',
+  resultSetsReadonly: 'Logged sets',
+  retry: 'Retry',
+
   a11yClose: 'Close',
   a11ySetNumber: (n) => `Set ${n}`,
   a11ySetReps: (n) => `Set ${n} reps`,
   a11ySetWeight: (n) => `Set ${n} weight`,
+  a11ySetDistance: (n) => `Set ${n} distance`,
+  a11ySetTime: (n) => `Set ${n} time`,
   a11ySetRpe: (n) => `Set ${n} R P E`,
   a11ySetMarkDone: (n) => `Mark set ${n} done`,
   a11yToggleUnit: (u) => `Toggle weight unit, currently ${u}`,
@@ -198,8 +299,8 @@ const he: LogStrings = {
   hubTodayWorkout: 'האימון של היום',
   hubNoWorkoutToday: 'אין אימון היום',
   hubNoWorkoutTodaySub: 'תעד תרגיל או מדידת גוף במקום',
-  hubLift: 'תרגיל או שיא',
-  hubLiftSub: 'סקוואט חדש, זמן ריצה, מה שתרצה',
+  hubLift: 'תיעוד שיא',
+  hubLiftSub: 'תרגיל או אימון בנצ׳מארק',
   hubMetric: 'מדידת גוף',
   hubMetricSub: 'משקל, מידות, אחוז שומן',
 
@@ -246,6 +347,13 @@ const he: LogStrings = {
   setColReps: 'חזרות',
   setColWeight: 'משקל',
   setColRPE: 'RPE',
+  setColDist: 'מרחק',
+  setColTime: 'זמן',
+  addSet: 'הוסף סט',
+  setN: 'סט',
+  doneCol: 'בוצע',
+  markDone: 'סמן כבוצע',
+  removeSet: 'הסר',
 
   searchPlaceholder: 'חיפוש תרגיל',
   searchRecent: 'אחרונים',
@@ -266,10 +374,49 @@ const he: LogStrings = {
 
   homeLogPr: 'תיעוד שיא',
 
+  prBoard: 'שיאים',
+  prLifts: 'הרמות',
+  prBenchmarks: 'בנצ׳מרקים',
+  prAchievedOn: '·',
+  prNoneTitle: 'אין שיאים עדיין',
+  prNoneBody: 'תעד את השיא הראשון שלך כדי להתחיל.',
+  prMark: 'שיא',
+  exerciseHistory: 'היסטוריית תרגיל',
+  histTopSet: 'סט מקס',
+  histVolume: 'נפח',
+  histGoal: 'יעד',
+  histSessions: 'אימונים',
+  histNoneTitle: 'אין היסטוריה עדיין',
+  histNoneBody: 'תעד סט ראשון כדי לראות מגמה.',
+  logPrTitle: 'תיעוד שיא',
+  logPrCta: 'תעד שיא',
+  prKindExercise: 'תרגיל',
+  prKindWorkout: 'אימון',
+  prMetric: 'מדד',
+  prMetricLoad: 'משקל',
+  prMetricReps: 'חזרות',
+  prMetricTime: 'זמן',
+  prMetricDistance: 'מרחק',
+  prValue: 'ערך',
+  prDate: 'תאריך',
+  prPickExercise: 'חפש תרגיל',
+  prPickWorkout: 'חפש אימון',
+  prPersonalRecord: 'שיא אישי',
+  prPreviousBest: 'שיא קודם',
+  prSaveErr: 'לא ניתן לשמור את השיא',
+  resultTitle: 'תוצאה שתועדה',
+  resultDelete: 'מחק תיעוד',
+  resultDeleteMsg: 'למחוק את התוצאה שתועדה? לא ניתן לבטל.',
+  resultDeleteCta: 'מחק',
+  resultSetsReadonly: 'סטים שתועדו',
+  retry: 'נסה שוב',
+
   a11yClose: 'סגור',
   a11ySetNumber: (n) => `סט ${n}`,
   a11ySetReps: (n) => `חזרות, סט ${n}`,
   a11ySetWeight: (n) => `משקל, סט ${n}`,
+  a11ySetDistance: (n) => `מרחק, סט ${n}`,
+  a11ySetTime: (n) => `זמן, סט ${n}`,
   a11ySetRpe: (n) => `RPE, סט ${n}`,
   a11ySetMarkDone: (n) => `סמן סט ${n} כהושלם`,
   a11yToggleUnit: (u) => `שנה יחידת משקל, כרגע ${u}`,
@@ -281,8 +428,8 @@ const ru: LogStrings = {
   hubTodayWorkout: 'Сегодняшняя тренировка',
   hubNoWorkoutToday: 'Сегодня нет тренировки',
   hubNoWorkoutTodaySub: 'Запишите подход или измерение',
-  hubLift: 'Подход или рекорд',
-  hubLiftSub: 'Новый присед, время на милю, что угодно',
+  hubLift: 'Записать рекорд',
+  hubLiftSub: 'Упражнение или эталонная тренировка',
   hubMetric: 'Измерение тела',
   hubMetricSub: 'Вес, замеры, процент жира',
 
@@ -329,6 +476,13 @@ const ru: LogStrings = {
   setColReps: 'Повт.',
   setColWeight: 'Вес',
   setColRPE: 'RPE',
+  setColDist: 'Дист.',
+  setColTime: 'Время',
+  addSet: 'Добавить подход',
+  setN: 'Подход',
+  doneCol: 'Готово',
+  markDone: 'Отметить',
+  removeSet: 'Удалить',
 
   searchPlaceholder: 'Поиск упражнения',
   searchRecent: 'Недавние',
@@ -349,10 +503,49 @@ const ru: LogStrings = {
 
   homeLogPr: 'Рекорд',
 
+  prBoard: 'Рекорды',
+  prLifts: 'Силовые',
+  prBenchmarks: 'Бенчмарки',
+  prAchievedOn: '·',
+  prNoneTitle: 'Пока нет рекордов',
+  prNoneBody: 'Запишите первый рекорд, чтобы начать.',
+  prMark: 'PR',
+  exerciseHistory: 'История упражнения',
+  histTopSet: 'Макс. сет',
+  histVolume: 'Объём',
+  histGoal: 'Цель',
+  histSessions: 'Тренировки',
+  histNoneTitle: 'Пока нет истории',
+  histNoneBody: 'Запишите первый подход, чтобы увидеть динамику.',
+  logPrTitle: 'Записать рекорд',
+  logPrCta: 'Записать',
+  prKindExercise: 'Упражнение',
+  prKindWorkout: 'Воркаут',
+  prMetric: 'Метрика',
+  prMetricLoad: 'Вес',
+  prMetricReps: 'Повторы',
+  prMetricTime: 'Время',
+  prMetricDistance: 'Дистанция',
+  prValue: 'Значение',
+  prDate: 'Дата',
+  prPickExercise: 'Найти упражнение',
+  prPickWorkout: 'Найти воркаут',
+  prPersonalRecord: 'Личный рекорд',
+  prPreviousBest: 'Прошлый рекорд',
+  prSaveErr: 'Не удалось сохранить рекорд',
+  resultTitle: 'Записанный результат',
+  resultDelete: 'Удалить запись',
+  resultDeleteMsg: 'Удалить этот результат? Действие необратимо.',
+  resultDeleteCta: 'Удалить',
+  resultSetsReadonly: 'Записанные подходы',
+  retry: 'Повторить',
+
   a11yClose: 'Закрыть',
   a11ySetNumber: (n) => `Подход ${n}`,
   a11ySetReps: (n) => `Повторы, подход ${n}`,
   a11ySetWeight: (n) => `Вес, подход ${n}`,
+  a11ySetDistance: (n) => `Дистанция, подход ${n}`,
+  a11ySetTime: (n) => `Время, подход ${n}`,
   a11ySetRpe: (n) => `RPE, подход ${n}`,
   a11ySetMarkDone: (n) => `Отметить подход ${n} выполненным`,
   a11yToggleUnit: (u) => `Сменить единицу веса, сейчас ${u}`,

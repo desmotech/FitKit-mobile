@@ -26,21 +26,20 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { FKModalHeader, useFKColors } from '@/components/fk';
+import { FKAmbientBackdrop, FKScreenHeader, useFKColors } from '@/components/fk';
 import {
   DatePresetField,
+  HeaderSaveButton,
   LogSectionCard,
   type Performance,
   PerformanceToggle,
-  PRCelebration,
   PrescriptionHint,
   ScoreInput,
-  SetTable,
+  SetFocused,
+  type SetColumns,
+  type SetRowLast,
   type SetRowValue,
 } from '@/components/log';
 import { Text } from '@/components/ui/text';
@@ -50,12 +49,16 @@ import { useMyOneRMByExercise } from '@/hooks/use-personal-records';
 import {
   type LogResultInput,
   type LogResultSetInput,
+  type SetResultLite,
   type WorkoutMovement,
+  type WorkoutSection,
   useLatestResult,
   useLogResult,
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
+import { getShapeCaps, type MovementCaps, type SectionShape } from '@fitkit/shared';
 import { analytics } from '@/lib/analytics';
+import { formatSectionHeader } from '@/lib/format-prescription';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import {
   type Score,
@@ -90,11 +93,10 @@ export default function LogWorkoutResultScreen() {
   const scoring = (workout?.scoring ?? 'none') as WorkoutScoring;
 
   const sections = useMemo(() => workout?.sections ?? [], [workout?.sections]);
-  const movementsWithSets = useMemo(
-    () =>
-      sections
-        .flatMap((s) => s.movements)
-        .filter((m) => m.prescribedSets && m.prescribedSets > 0),
+  // Every movement is loggable now — the shape's MovementCaps decide which
+  // columns each one renders, not whether it has prescribed sets.
+  const loggableMovements = useMemo(
+    () => sections.flatMap((s) => s.movements),
     [sections],
   );
 
@@ -119,41 +121,64 @@ export default function LogWorkoutResultScreen() {
   const [notes, setNotes] = useState('');
   const [performedAt, setPerformedAt] = useState<string>(() => isoDate());
   const [setRows, setSetRows] = useState<Record<string, SetRowValue[]>>({});
-  const [celebration, setCelebration] = useState<null | { summary: string }>(
-    null,
-  );
 
   useEffect(() => {
-    if (movementsWithSets.length === 0) return;
+    if (loggableMovements.length === 0) return;
     setSetRows((prev) => {
       if (Object.keys(prev).length > 0) return prev;
       const next: Record<string, SetRowValue[]> = {};
-      for (const m of movementsWithSets) {
-        const count = m.prescribedSets ?? 1;
-        next[m.id] = Array.from({ length: count }, () => ({
-          reps: '',
-          weight: '',
-          weightUnit: 'kg',
-          rpe: '',
-          done: false,
-        }));
+      for (const m of loggableMovements) {
+        const count = Math.max(1, m.prescribedSets ?? 1);
+        next[m.id] = Array.from({ length: count }, () => emptyRow());
       }
       return next;
     });
-  }, [movementsWithSets]);
+  }, [loggableMovements]);
+
+  const addSet = (movementId: string) =>
+    setSetRows((prev) => ({
+      ...prev,
+      [movementId]: [...(prev[movementId] ?? []), emptyRow()],
+    }));
 
   const mutation = useLogResult(orgId, workoutId);
-  const canSubmit = scoring === 'none' ? true : isScoreComplete(score);
+  // The top workout score is optional: a multi-section / strength day with no
+  // scoring (or where the athlete only logged sets) saves without it. Block
+  // only an entirely empty scored log.
+  const hasLoggedSet = useMemo(
+    () =>
+      Object.values(setRows).some((rows) =>
+        rows.some(
+          (r) => r.reps || r.weight || r.distance || r.duration || r.rpe || r.done,
+        ),
+      ),
+    [setRows],
+  );
+  const canSubmit =
+    scoring === 'none' || isScoreComplete(score) || hasLoggedSet;
 
   const handleSubmit = () => {
     if (!canSubmit || mutation.isPending) return;
     haptics.tap();
-    const serialized = serializeScore(score);
+    // Only send a top score when the athlete actually entered one. Otherwise
+    // send empty so the server stores NULL — never a fabricated "0" that would
+    // pollute the history rows and the trend line.
+    const hasRealScore = scoring !== 'none' && isScoreComplete(score);
+    const serialized = hasRealScore
+      ? serializeScore(score)
+      : { scoreValue: '', scoreUnit: undefined };
     const setResults: LogResultSetInput[] = [];
-    for (const m of movementsWithSets) {
+    for (const m of loggableMovements) {
       const rows = setRows[m.id] ?? [];
       rows.forEach((row, idx) => {
-        if (!row.reps && !row.weight && !row.rpe && !row.done) return;
+        const hasValue =
+          row.reps ||
+          row.weight ||
+          row.distance ||
+          row.duration ||
+          row.rpe ||
+          row.done;
+        if (!hasValue) return;
         setResults.push({
           workoutMovementId: m.id,
           exerciseId: m.exercise.id,
@@ -161,6 +186,9 @@ export default function LogWorkoutResultScreen() {
           reps: row.reps ? Number.parseInt(row.reps, 10) : undefined,
           weight: row.weight || undefined,
           weightUnit: row.weight ? row.weightUnit : undefined,
+          distance: row.distance || undefined,
+          distanceUnit: row.distance ? row.distanceUnit : undefined,
+          duration: row.duration || undefined,
           rpe: row.rpe ? Number.parseInt(row.rpe, 10) : undefined,
         });
       });
@@ -173,80 +201,58 @@ export default function LogWorkoutResultScreen() {
       scaled: perf === 'scaled' || undefined,
       notes: notes.trim() || undefined,
       performedAt: new Date(performedAt).toISOString(),
+      // Anchor to the assignment so the server forks its snapshot (FIT-152)
+      // instead of writing against the mutable library workout.
+      assignmentId: id,
       setResults: setResults.length > 0 ? setResults : undefined,
     };
 
     mutation.mutate(payload, {
-      onSuccess: (response) => {
-        const isPR = response?.data?.isPR ?? false;
+      onSuccess: () => {
+        // Result logging records what was done — it makes no PR judgment.
+        // PRs are logged explicitly elsewhere.
         analytics.track('member_workout_logged', {
           org_id: orgId,
           workout_id: workoutId,
-          is_pr: isPR,
           rx: perf === 'rx',
           scaled: perf === 'scaled',
           has_sets: setResults.length > 0,
+          has_distance: setResults.some((s) => !!s.distance),
           platform: 'mobile',
         });
-        if (isPR) {
-          analytics.track('member_workout_pr', {
-            org_id: orgId,
-            workout_id: workoutId,
-            platform: 'mobile',
-          });
-        }
         queryClient.invalidateQueries({
           predicate: (q) => {
             const key = q.queryKey;
             if (!Array.isArray(key)) return false;
             const joined = key.filter((k) => typeof k === 'string').join('/');
             return (
-              joined.includes('results/me') ||
+              joined.includes('results') ||
+              joined.includes('history') ||
               joined.includes('personal-records')
             );
           },
         });
-        if (isPR) {
-          haptics.success();
-          setCelebration({ summary: formatScoreSummary(score) });
-        } else {
-          haptics.success();
-          router.back();
-        }
+        haptics.success();
+        router.back();
       },
       onError: () => haptics.error(),
     });
   };
 
-  if (celebration) {
-    return (
-      <PRCelebration
-        title={L.workoutNewPr}
-        subtitle={workout?.displayName ?? null}
-        summary={celebration.summary}
-        description={L.workoutNewPrSubtitle}
-        ctaLabel={L.prCtaDone}
-        onPress={() => router.back()}
-      />
-    );
-  }
-
   if (assignmentQuery.isLoading || !workout) {
     return (
-      <SafeAreaView
-        edges={['top']}
-        style={{ flex: 1, backgroundColor: colors.background }}
-      >
-        <FKModalHeader
+      <View style={{ flex: 1 }}>
+        <FKAmbientBackdrop />
+        <FKScreenHeader
           title={L.hubTitle}
-          leadingAction={{ label: L.hubCancel, onPress: () => router.back() }}
+          onBack={() => router.back()}
         />
         <View
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
         >
           <ActivityIndicator color={colors.foreground} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -258,29 +264,23 @@ export default function LogWorkoutResultScreen() {
   });
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
+    <View style={{ flex: 1 }}>
+      <FKAmbientBackdrop />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <FKModalHeader
+        <FKScreenHeader
           // Workout name as the nav-bar title (iOS form-screen convention).
-          // Truncates with ellipsis if long. Removes the inline 28pt title
-          // that was bleeding behind the header and blocking Cancel taps.
           title={workout.displayName}
-          leadingAction={{
-            label: L.hubCancel,
-            onPress: () => router.back(),
-          }}
-          trailingAction={{
-            label: mutation.isPending ? L.workoutSaving : L.workoutSave,
-            style: 'primary',
-            onPress: handleSubmit,
-            disabled: !canSubmit || mutation.isPending,
-          }}
+          onBack={() => router.back()}
+          trailing={
+            <HeaderSaveButton
+              label={mutation.isPending ? L.workoutSaving : L.workoutSave}
+              onPress={handleSubmit}
+              disabled={!canSubmit || mutation.isPending}
+            />
+          }
         />
 
         <ScrollView
@@ -304,31 +304,55 @@ export default function LogWorkoutResultScreen() {
             </Animated.View>
           )}
 
-          {movementsWithSets.length > 0 && (
-            <Animated.View entering={FadeInDown.delay(60).duration(280)}>
-              <LogSectionCard label={L.workoutSetsSection} padding={0}>
-                <View style={{ padding: 12, gap: 16 }}>
-                  {movementsWithSets.map((m) => (
-                    <MovementBlock
-                      key={m.id}
-                      movement={m}
-                      rows={setRows[m.id] ?? []}
-                      prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
-                      oneRMKg={oneRMKg[m.exercise.id] ?? null}
-                      onChange={(idx, update) =>
-                        setSetRows((prev) => ({
-                          ...prev,
-                          [m.id]: (prev[m.id] ?? []).map((r, i) =>
-                            i === idx ? { ...r, ...update } : r,
-                          ),
-                        }))
-                      }
-                    />
-                  ))}
-                </View>
-              </LogSectionCard>
-            </Animated.View>
-          )}
+          {sections.map((section, sIdx) => {
+            if (section.movements.length === 0) return null;
+            const caps = getShapeCaps(
+              (section.shape ?? null) as SectionShape | null,
+            );
+            const shapeLine = formatSectionHeader({
+              shape: (section.shape ?? null) as SectionShape | null,
+              config: section.config,
+            });
+            const label = sectionLabel(section, shapeLine, L.workoutSetsSection);
+            return (
+              <Animated.View
+                key={section.id}
+                entering={FadeInDown.delay(60 + sIdx * 30).duration(280)}
+              >
+                <LogSectionCard label={label} padding={0}>
+                  <View style={{ padding: 12, gap: 16 }}>
+                    {section.movements.map((m) => (
+                      <MovementBlock
+                        key={m.id}
+                        movement={m}
+                        columns={deriveColumns(m, caps)}
+                        rows={setRows[m.id] ?? []}
+                        prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
+                        oneRMKg={oneRMKg[m.exercise.id] ?? null}
+                        onAddSet={() => addSet(m.id)}
+                        onRemoveSet={(rowIdx) =>
+                          setSetRows((prev) => ({
+                            ...prev,
+                            [m.id]: (prev[m.id] ?? []).filter(
+                              (_, i) => i !== rowIdx,
+                            ),
+                          }))
+                        }
+                        onChange={(idx, update) =>
+                          setSetRows((prev) => ({
+                            ...prev,
+                            [m.id]: (prev[m.id] ?? []).map((r, i) =>
+                              i === idx ? { ...r, ...update } : r,
+                            ),
+                          }))
+                        }
+                      />
+                    ))}
+                  </View>
+                </LogSectionCard>
+              </Animated.View>
+            );
+          })}
 
           <Animated.View entering={FadeInDown.delay(80).duration(280)}>
             <LogSectionCard label={L.workoutPerformance}>
@@ -403,13 +427,15 @@ export default function LogWorkoutResultScreen() {
                   textAlign: isRTL ? 'right' : 'left',
                 }}
               >
-                {L.workoutFailed}
+                {mutation.error?.message
+                  ? `${L.workoutFailed} — ${mutation.error.message}`
+                  : L.workoutFailed}
               </Text>
             </Animated.View>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -417,36 +443,53 @@ export default function LogWorkoutResultScreen() {
 
 function MovementBlock({
   movement,
+  columns,
   rows,
   prevSetsByNumber,
   oneRMKg,
+  onAddSet,
+  onRemoveSet,
   onChange,
 }: {
   movement: WorkoutMovement;
+  columns: SetColumns;
   rows: SetRowValue[];
-  prevSetsByNumber: Record<
-    number,
-    { reps: number | null; weight: string | null; weightUnit: string | null }
-  >;
+  prevSetsByNumber: Record<number, SetRowLast>;
   oneRMKg: number | null;
+  onAddSet: () => void;
+  onRemoveSet: (idx: number) => void;
   onChange: (idx: number, update: Partial<SetRowValue>) => void;
 }) {
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const colors = useFKColors();
+  const [active, setActive] = useState(0);
+  const doneCount = rows.filter((r) => r.done).length;
   return (
     <View style={{ gap: 8 }}>
-      <Text
-        numberOfLines={1}
+      <View
         style={{
-          fontSize: 15,
-          fontWeight: '600',
-          color: colors.foreground,
-          textAlign: isRTL ? 'right' : 'left',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'baseline',
+          gap: 8,
         }}
       >
-        {movement.exercise.name}
-      </Text>
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            fontSize: 15,
+            fontWeight: '600',
+            color: colors.foreground,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {movement.exercise.name}
+        </Text>
+        <Text style={{ fontSize: 11, color: colors.mutedFg, fontFamily: 'Assistant-Medium' }}>
+          {doneCount}/{rows.length}
+        </Text>
+      </View>
       <PrescriptionHint
         prescription={movement.prescription}
         fallback={{
@@ -458,15 +501,22 @@ function MovementBlock({
         }}
         oneRMKg={oneRMKg}
       />
-      <SetTable
+      <SetFocused
         rows={rows}
-        prescription={{
-          prescription: movement.prescription,
-          prescribedReps: movement.prescribedReps,
-          prescribedWeight: movement.prescribedWeight,
-        }}
+        columns={columns}
+        active={active}
+        setActive={setActive}
         prevSetsByNumber={prevSetsByNumber}
         onChange={onChange}
+        onAddSet={() => {
+          onAddSet();
+          setActive(rows.length); // focus the newly appended set
+        }}
+        onRemoveSet={(rowIdx) => {
+          onRemoveSet(rowIdx);
+          // Keep the active index in range after removal.
+          setActive((prev) => Math.max(0, Math.min(prev, rows.length - 2)));
+        }}
       />
     </View>
   );
@@ -513,34 +563,68 @@ function buildLastHint({
 }
 
 function pickPrevSetsByNumber(
-  lastResult: {
-    setResults?: Array<{
-      workoutMovementId?: string;
-      exerciseId: string;
-      setNumber: number;
-      reps: number | null;
-      weight: string | null;
-      weightUnit: string | null;
-    }>;
-  } | null,
+  lastResult: { setResults?: SetResultLite[] } | null,
   workoutMovementId: string,
-): Record<
-  number,
-  { reps: number | null; weight: string | null; weightUnit: string | null }
-> {
-  const out: Record<
-    number,
-    { reps: number | null; weight: string | null; weightUnit: string | null }
-  > = {};
+): Record<number, SetRowLast> {
+  const out: Record<number, SetRowLast> = {};
   const sets = lastResult?.setResults ?? [];
   for (const s of sets) {
     if (s.workoutMovementId && s.workoutMovementId !== workoutMovementId)
       continue;
     out[s.setNumber] = {
       reps: s.reps,
-      weight: s.weight,
-      weightUnit: s.weightUnit,
+      // The API sends canonical kg + the entered display unit, not the old
+      // weight/weightUnit the prefill used to (wrongly) read.
+      weight: s.weightKg != null ? String(s.weightKg) : null,
+      weightUnit: s.weightDisplayUnit,
+      distanceM: s.distanceM,
+      distanceDisplayUnit: s.distanceDisplayUnit,
+      durationSeconds: s.durationSeconds,
     };
   }
   return out;
+}
+
+function emptyRow(): SetRowValue {
+  return {
+    reps: '',
+    weight: '',
+    weightUnit: 'kg',
+    distance: '',
+    distanceUnit: 'm',
+    duration: '',
+    rpe: '',
+    done: false,
+  };
+}
+
+/** Pick which input columns a movement renders. A movement is measured by
+ *  reps OR distance, never both — so an endurance movement (prescribed
+ *  distance) gets distance+time and hides reps/weight. */
+function deriveColumns(movement: WorkoutMovement, caps: MovementCaps): SetColumns {
+  const presc = movement.prescription as Record<string, unknown> | null;
+  const hasDistance =
+    !!(presc && presc.distance) || movement.prescribedDistance != null;
+  const load = presc?.load as Record<string, unknown> | undefined;
+  const rpe = load?.kind === 'rpe' || load?.kind === 'rir';
+  if (hasDistance && caps.showDistance) {
+    return { reps: false, weight: false, distance: true, duration: true, rpe };
+  }
+  return {
+    reps: caps.showReps,
+    weight: caps.showLoad,
+    distance: false,
+    duration: false,
+    rpe,
+  };
+}
+
+/** Card label: prefer the section title, else the formatted shape line
+ *  (e.g. "AMRAP 12 MIN"), else the generic "Per-set details". */
+function sectionLabel(
+  section: WorkoutSection,
+  shapeLine: string | null,
+  fallback: string,
+): string {
+  return section.title || shapeLine || fallback;
 }

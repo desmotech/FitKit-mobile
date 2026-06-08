@@ -11,12 +11,19 @@ export {
 export {
   SetRow,
   SetTable,
+  type SetColumns,
   type SetRowProps,
   type SetRowValue,
   type SetRowLast,
   type SetRowPrescription,
   type SetTableProps,
+  type DistanceUnit,
 } from './set-row';
+export { SetFocused, type SetFocusedProps } from './set-focused';
+export {
+  HeaderSaveButton,
+  type HeaderSaveButtonProps,
+} from './header-save-button';
 export {
   PerformanceToggle,
   type Performance,

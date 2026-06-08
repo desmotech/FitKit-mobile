@@ -90,14 +90,14 @@ export default function LogHubScreen() {
       },
     },
     {
-      key: 'lift',
+      key: 'pr',
       Icon: Trophy,
       tone: 'warm',
       title: L.hubLift,
       sublabel: L.hubLiftSub,
       onPress: () => {
         haptics.tap();
-        router.replace('/log/lift');
+        router.replace('/log/pr');
       },
     },
     {

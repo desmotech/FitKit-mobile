@@ -7,6 +7,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="personal" />
       <Stack.Screen name="payments" />
       <Stack.Screen name="goals" />
+      <Stack.Screen name="prs" />
       <Stack.Screen name="history" />
       <Stack.Screen name="metrics" />
       <Stack.Screen name="photos" />

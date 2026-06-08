@@ -54,7 +54,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { useHaptics } from '@/hooks/use-haptics';
 import {
   type AssignmentDay,
@@ -92,7 +91,7 @@ function monthRangeLabel(weekStart: string): string {
 export default function WhiteboardScreen() {
   const router = useRouter();
   const { dir, t } = useI18n();
-  const { activeOrganization, primaryMembership } = useCurrentUser();
+  const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
@@ -184,9 +183,15 @@ export default function WhiteboardScreen() {
       (programDict.coachNoteTitle as string) ?? 'Note from your coach',
   };
 
+  // A day can carry several assignments (strength + metcon + accessory).
+  // Group them per date rather than collapsing to one.
   const byDate = useMemo(() => {
-    const m = new Map<string, AssignmentDay>();
-    for (const a of all) m.set(a.date, a);
+    const m = new Map<string, AssignmentDay[]>();
+    for (const a of all) {
+      const list = m.get(a.date);
+      if (list) list.push(a);
+      else m.set(a.date, [a]);
+    }
     return m;
   }, [all]);
 
@@ -199,31 +204,11 @@ export default function WhiteboardScreen() {
     });
   }, [weekStart]);
 
-  const assignment = byDate.get(selectedDate) ?? null;
-  const assignmentKind = (assignment?.kind ?? 'workout') as
-    | 'workout'
-    | 'rest'
-    | 'note';
-  const isWorkoutDay =
-    assignmentKind === 'workout' && !!assignment?.workout;
-
-  // Pull unread-comment count for the currently-displayed assignment so
-  // the tappable header can show a badge that nudges members into the
-  // detail screen's Comments tab.
-  const comments = useWorkoutComments(
-    orgId,
-    isWorkoutDay ? assignment?.id : undefined,
-    primaryMembership?.id,
+  const dayAssignments = useMemo(
+    () => byDate.get(selectedDate) ?? [],
+    [byDate, selectedDate],
   );
-  const sections = useMemo(
-    () =>
-      isWorkoutDay && assignment?.workout?.sections
-        ? assignment.workout.sections
-            .slice()
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-        : [],
-    [assignment, isWorkoutDay],
-  );
+  const hasDayContent = dayAssignments.length > 0;
 
   // Empty-state helpers (mirrors web parity).
   const upcomingThisWeek = useMemo(() => {
@@ -343,19 +328,20 @@ export default function WhiteboardScreen() {
               onSelect={setSelectedDate}
               days={weekDays.map((d, idx) => {
                 const iso = ymd(d);
-                const a = byDate.get(iso);
+                const list = byDate.get(iso) ?? [];
+                const workouts = list.filter(
+                  (x) => x.kind !== 'rest' && x.kind !== 'note' && x.workout,
+                );
                 const state =
-                  a == null
-                    ? 'none'
-                    : a.kind === 'rest'
+                  workouts.length > 0
+                    ? workouts.every((x) => x.completedAt)
+                      ? 'done'
+                      : iso < todayStr
+                        ? 'missed'
+                        : 'has'
+                    : list.some((x) => x.kind === 'rest')
                       ? 'rest'
-                      : a.kind === 'note'
-                        ? 'none'
-                        : a.completedAt
-                          ? 'done' // completed
-                          : iso < todayStr
-                            ? 'missed' // past, not completed
-                            : 'has'; // assigned today / upcoming
+                      : 'none';
                 return {
                   key: iso,
                   dow: dayLabels[idx],
@@ -370,13 +356,13 @@ export default function WhiteboardScreen() {
 
         {/* Selected day content */}
         <View style={{ paddingHorizontal: 18, paddingTop: 18 }}>
-          {week.isLoading && !assignment ? (
+          {week.isLoading && !hasDayContent ? (
             <View style={{ marginTop: 18, gap: 12 }}>
               <Skeleton style={{ height: 80, borderRadius: 18 }} />
               <Skeleton style={{ height: 120, borderRadius: 18 }} />
               <Skeleton style={{ height: 120, borderRadius: 18 }} />
             </View>
-          ) : week.isError && !assignment ? (
+          ) : week.isError && !hasDayContent ? (
             <ProgramErrorState
               title={labels.errorTitle}
               subtitle={labels.errorSubtitle}
@@ -387,7 +373,7 @@ export default function WhiteboardScreen() {
                 week.refetch();
               }}
             />
-          ) : !assignment ? (
+          ) : !hasDayContent ? (
             <RestDayState
               selectedDate={selectedDate}
               today={todayStr}
@@ -428,56 +414,68 @@ export default function WhiteboardScreen() {
               layout={LinearTransition.duration(220)}
               style={{ marginTop: 14, gap: 14 }}
             >
-              {assignmentKind === 'rest' ? (
-                <RestDayCard
-                  title={labels.restDayTitle}
-                  subtitle={labels.restDaySubtitle}
-                  isRTL={isRTL}
-                />
-              ) : assignmentKind === 'note' ? (
-                <CoachNoteCard
-                  title={labels.coachNoteTitle}
-                  body={assignment.note ?? ''}
-                  isRTL={isRTL}
-                />
-              ) : assignment.workout ? (
-                <>
-                  {assignment.coachPreNote ? (
-                    <CoachNotesBanner
-                      text={assignment.coachPreNote}
-                      label={labels.coachNotes}
+              {dayAssignments.map((a) => {
+                if (a.kind === 'rest') {
+                  return (
+                    <RestDayCard
+                      key={a.id}
+                      title={labels.restDayTitle}
+                      subtitle={labels.restDaySubtitle}
                       isRTL={isRTL}
                     />
-                  ) : null}
-
-                  <WorkoutSummaryCard
-                    workout={assignment.workout}
-                    sectionCount={sections.length}
-                    movementCount={sections.reduce(
-                      (acc, s) => acc + s.movements.length,
-                      0,
-                    )}
-                    unread={comments.unreadCount}
-                    completed={!!assignment.completedAt}
-                    isRTL={isRTL}
-                    onOpen={() => {
-                      haptics.tap();
-                      router.push({
-                        pathname: '/(tabs)/workouts/[id]',
-                        params: { id: assignment.id },
-                      });
-                    }}
-                  />
-
-                  {assignment.coachPostNote ? (
-                    <CoachNotesBanner
-                      text={assignment.coachPostNote}
-                      label={labels.coachNotes}
+                  );
+                }
+                if (a.kind === 'note') {
+                  return (
+                    <CoachNoteCard
+                      key={a.id}
+                      title={labels.coachNoteTitle}
+                      body={a.note ?? ''}
                       isRTL={isRTL}
                     />
-                  ) : null}
-                </>
-              ) : null}
+                  );
+                }
+                if (!a.workout) return null;
+                const secs = a.workout.sections ?? [];
+                return (
+                  <View key={a.id} style={{ gap: 14 }}>
+                    {a.coachPreNote ? (
+                      <CoachNotesBanner
+                        text={a.coachPreNote}
+                        label={labels.coachNotes}
+                        isRTL={isRTL}
+                      />
+                    ) : null}
+
+                    <WorkoutSummaryCard
+                      workout={a.workout}
+                      sectionCount={secs.length}
+                      movementCount={secs.reduce(
+                        (acc, s) => acc + s.movements.length,
+                        0,
+                      )}
+                      unread={a.unreadCount ?? 0}
+                      completed={!!a.completedAt}
+                      isRTL={isRTL}
+                      onOpen={() => {
+                        haptics.tap();
+                        router.push({
+                          pathname: '/(tabs)/workouts/[id]',
+                          params: { id: a.id },
+                        });
+                      }}
+                    />
+
+                    {a.coachPostNote ? (
+                      <CoachNotesBanner
+                        text={a.coachPostNote}
+                        label={labels.coachNotes}
+                        isRTL={isRTL}
+                      />
+                    ) : null}
+                  </View>
+                );
+              })}
             </Animated.View>
           )}
         </View>
