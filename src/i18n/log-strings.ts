@@ -170,8 +170,8 @@ const en: LogStrings = {
   hubTodayWorkout: "Today's workout",
   hubNoWorkoutToday: 'No workout today',
   hubNoWorkoutTodaySub: 'Log a lift or body metric instead',
-  hubLift: 'Lift or PR',
-  hubLiftSub: 'A new back squat, mile time, anything',
+  hubLift: 'Log a PR',
+  hubLiftSub: 'An exercise or a benchmark workout',
   hubMetric: 'Body metric',
   hubMetricSub: 'Weight, measurements, body fat',
 
@@ -299,8 +299,8 @@ const he: LogStrings = {
   hubTodayWorkout: 'האימון של היום',
   hubNoWorkoutToday: 'אין אימון היום',
   hubNoWorkoutTodaySub: 'תעד תרגיל או מדידת גוף במקום',
-  hubLift: 'תרגיל או שיא',
-  hubLiftSub: 'סקוואט חדש, זמן ריצה, מה שתרצה',
+  hubLift: 'תיעוד שיא',
+  hubLiftSub: 'תרגיל או אימון בנצ׳מארק',
   hubMetric: 'מדידת גוף',
   hubMetricSub: 'משקל, מידות, אחוז שומן',
 
@@ -428,8 +428,8 @@ const ru: LogStrings = {
   hubTodayWorkout: 'Сегодняшняя тренировка',
   hubNoWorkoutToday: 'Сегодня нет тренировки',
   hubNoWorkoutTodaySub: 'Запишите подход или измерение',
-  hubLift: 'Подход или рекорд',
-  hubLiftSub: 'Новый присед, время на милю, что угодно',
+  hubLift: 'Записать рекорд',
+  hubLiftSub: 'Упражнение или эталонная тренировка',
   hubMetric: 'Измерение тела',
   hubMetricSub: 'Вес, замеры, процент жира',
 

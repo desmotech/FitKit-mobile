@@ -11,6 +11,7 @@ import {
   MessageSquare,
   PencilLine,
   RotateCcw,
+  Trophy,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useMemo, useState } from 'react';
@@ -334,6 +335,10 @@ export default function WorkoutDetailScreen() {
     .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
   const lastResult = myResultRows[0] ?? null;
   const showsScore = SCORED_TREND_KINDS.has(workout.scoring);
+  // A scored workout (Fran time, max-load complex…) can hold a workout-level
+  // PR. The contextual "Log PR" seeds the explicit record prefilled with this
+  // workout + its scoring — the only entry path for a first-time workout PR.
+  const canLogWorkoutPr = !!workout.scoring && workout.scoring !== 'none';
 
   const todayStr = new Date().toISOString().split('T')[0];
   const isToday = assignment.date === todayStr;
@@ -826,6 +831,29 @@ export default function WorkoutDetailScreen() {
               }}
             />
           </View>
+
+          {canLogWorkoutPr ? (
+            <FKButton
+              label={ps.logPr}
+              variant="outline"
+              size="lg"
+              fullWidth
+              className="rounded-2xl"
+              leading={<Trophy size={16} color="#C9974D" strokeWidth={2.2} />}
+              onPress={() => {
+                haptics.tap();
+                router.push({
+                  pathname: '/log/pr',
+                  params: {
+                    kind: 'workout',
+                    workoutId: libraryWorkoutId,
+                    workoutName: workout.displayName ?? '',
+                    scoring: workout.scoring,
+                  },
+                });
+              }}
+            />
+          ) : null}
 
           {lastResult && showsScore ? (
             <LastResultFooter

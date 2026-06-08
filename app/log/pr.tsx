@@ -8,7 +8,7 @@
  * unit follows the metric (G1: time→'s' mm:ss, G2: reps→'reps').
  */
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -55,6 +55,23 @@ const METRIC_SCORING: Record<Metric, WorkoutScoring> = {
   mDist: 'distance',
 };
 
+const SCORING_KINDS: WorkoutScoring[] = [
+  'time',
+  'reps',
+  'rounds_reps',
+  'weight',
+  'distance',
+  'calories',
+  'points',
+  'none',
+];
+
+function normalizeScoring(s: string | undefined): WorkoutScoring {
+  return (SCORING_KINDS as string[]).includes(s ?? '')
+    ? (s as WorkoutScoring)
+    : 'time';
+}
+
 const FALLBACK_UNIT: Record<WorkoutScoring, string> = {
   time: 's', // mm:ss is parsed to seconds server-side (G1)
   reps: 'reps',
@@ -83,26 +100,54 @@ export default function LogPRScreen() {
   const orgId = activeOrganization?.id;
   const insets = useSafeAreaInsets();
 
-  const [kind, setKind] = useState<Kind>('exercise');
+  // Contextual prefill — a scored-workout detail launches this screen with its
+  // workout + scoring locked in. This is the seed path for a first-time
+  // workout PR, which the benchmark picker alone (existing PRs only) can't
+  // reach.
+  const params = useLocalSearchParams<{
+    kind?: string;
+    workoutId?: string;
+    workoutName?: string;
+    scoring?: string;
+  }>();
+  const prefilledWorkout = useMemo(() => {
+    if (params.kind !== 'workout' || !params.workoutId) return null;
+    return {
+      workoutId: params.workoutId,
+      displayName: params.workoutName ?? '',
+      scoring: normalizeScoring(params.scoring),
+    };
+  }, [params.kind, params.workoutId, params.workoutName, params.scoring]);
+
+  const [kind, setKind] = useState<Kind>(
+    prefilledWorkout ? 'workout' : 'exercise',
+  );
   const [metric, setMetric] = useState<Metric>('mLoad');
 
   // Exercise target
   const recents = useRecentExercises(orgId, 5);
   const [exercise, setExercise] = useState<ExerciseSearchResult | null>(null);
 
-  // Workout target — re-PR an existing benchmark (no member workout search yet)
+  // Workout target — re-PR an existing benchmark, or the prefilled workout from
+  // its detail screen (no free member workout search yet).
   const prs = useMyPersonalRecords(orgId);
   const benchmarks = useMemo(
     () => (prs.data?.data ?? []).filter((r) => !r.exerciseId),
     [prs.data],
   );
-  const [workoutId, setWorkoutId] = useState<string | null>(null);
+  const [workoutId, setWorkoutId] = useState<string | null>(
+    prefilledWorkout?.workoutId ?? null,
+  );
   const workoutRow = benchmarks.find((b) => b.workoutId === workoutId) ?? null;
+  const workoutName =
+    prefilledWorkout?.displayName || workoutRow?.displayName || '';
 
   const scoring: WorkoutScoring =
     kind === 'exercise'
       ? METRIC_SCORING[metric]
-      : inferScoringFromUnit(workoutRow?.unit);
+      : prefilledWorkout
+        ? prefilledWorkout.scoring
+        : inferScoringFromUnit(workoutRow?.unit);
 
   const [score, setScore] = useState<Score>(() => emptyScore(scoring));
   const [achievedAt, setAchievedAt] = useState<string>(() => isoDate());
@@ -161,10 +206,7 @@ export default function LogPRScreen() {
         if (improved) {
           haptics.success();
           setCelebration({
-            target:
-              kind === 'exercise'
-                ? exercise?.name ?? ''
-                : workoutRow?.displayName ?? '',
+            target: kind === 'exercise' ? exercise?.name ?? '' : workoutName,
             summary: data?.value ?? formatScoreSummary(score),
             prev: prevBest,
           });
@@ -216,15 +258,19 @@ export default function LogPRScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Segmented
-            t={t}
-            value={kind}
-            onChange={(k) => setKind(k as Kind)}
-            options={[
-              { id: 'exercise', label: L.prKindExercise },
-              { id: 'workout', label: L.prKindWorkout },
-            ]}
-          />
+          {/* Prefilled from a workout's detail → the target is locked; no
+              Exercise/Workout switch. */}
+          {prefilledWorkout ? null : (
+            <Segmented
+              t={t}
+              value={kind}
+              onChange={(k) => setKind(k as Kind)}
+              options={[
+                { id: 'exercise', label: L.prKindExercise },
+                { id: 'workout', label: L.prKindWorkout },
+              ]}
+            />
+          )}
 
           {kind === 'exercise' ? (
             <Animated.View entering={FadeInDown.duration(240)} style={{ gap: 16 }}>
@@ -256,7 +302,18 @@ export default function LogPRScreen() {
           ) : (
             <Animated.View entering={FadeInDown.duration(240)}>
               <LogSectionCard label={L.prKindWorkout}>
-                {benchmarks.length === 0 ? (
+                {prefilledWorkout ? (
+                  <Text
+                    style={{
+                      fontFamily: 'Assistant-SemiBold',
+                      fontSize: 16,
+                      color: t.text,
+                      textAlign: isRTL ? 'right' : 'left',
+                    }}
+                  >
+                    {prefilledWorkout.displayName || L.prKindWorkout}
+                  </Text>
+                ) : benchmarks.length === 0 ? (
                   <Text
                     style={{
                       fontFamily: 'Assistant-Regular',
