@@ -22,7 +22,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { FKScreenHeader, useFKColors } from '@/components/fk';
+import { FKAmbientBackdrop, FKScreenHeader, useFKColors } from '@/components/fk';
 import {
   DatePresetField,
   ExerciseSearchInput,
@@ -149,7 +149,8 @@ export default function LogLiftScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1 }}>
+      <FKAmbientBackdrop />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}

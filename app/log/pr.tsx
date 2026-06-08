@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FKScreenHeader } from '@/components/fk';
+import { FKAmbientBackdrop, FKScreenHeader } from '@/components/fk';
 import {
   DatePresetField,
   ExerciseSearchInput,
@@ -194,7 +194,8 @@ export default function LogPRScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: t.isDark ? '#0B0B0D' : '#F6F4EE' }}>
+    <View style={{ flex: 1 }}>
+      <FKAmbientBackdrop />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}

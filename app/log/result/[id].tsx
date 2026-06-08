@@ -10,15 +10,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FKScreenHeader, useFKColors } from '@/components/fk';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
+import { FKSubScreen, useFKColors } from '@/components/fk';
 import { Kicker, MONO, glass, useWB, type WBTokens } from '@/components/log/whiteboard';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -40,7 +33,6 @@ export default function ResultDetailScreen() {
   const L = useLogStrings();
   const { dir, lang } = useI18n();
   const isRTL = dir === 'rtl';
-  const insets = useSafeAreaInsets();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
@@ -88,26 +80,17 @@ export default function ResultDetailScreen() {
   const perfLabel = result?.rx ? L.perfRx : result?.scaled ? L.perfScaled : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <FKScreenHeader title={L.resultTitle} onBack={() => router.back()} />
-
+    <FKSubScreen title={L.resultTitle} onBack={() => router.back()}>
       {loading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={{ paddingTop: 80, alignItems: 'center' }}>
           <ActivityIndicator color={colors.foreground} />
         </View>
       ) : !result ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+        <View style={{ paddingTop: 80, alignItems: 'center' }}>
           <Text style={{ color: colors.mutedFg, fontSize: 15 }}>{L.histNoneTitle}</Text>
         </View>
       ) : (
-        <ScrollView
-          contentContainerStyle={{
-            padding: 20,
-            paddingBottom: insets.bottom + 24,
-            gap: 16,
-          }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={{ gap: 16 }}>
           {/* Summary card — score, performance, date */}
           <View style={[glass(t, { radius: 18 }), { padding: 18 }]}>
             <View
@@ -244,9 +227,9 @@ export default function ResultDetailScreen() {
               {L.resultDelete}
             </Text>
           </Pressable>
-        </ScrollView>
+        </View>
       )}
-    </View>
+    </FKSubScreen>
   );
 }
 
