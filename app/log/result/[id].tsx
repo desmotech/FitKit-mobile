@@ -1,54 +1,34 @@
 /**
- * Logged-result detail — view / edit / delete a single workout result.
+ * Logged-result detail — read-only view + delete.
  *
- * Edits the top-level fields (score · Rx/Scaled · notes · date) via PATCH and
- * deletes via DELETE. Logged sets are shown read-only; per-set editing is a
- * follow-up (needs server-side update() support for setResults).
+ * Per the product decision, a logged result is not partially editable: you
+ * either see it (score, performance, notes, date, and the logged sets in a
+ * legible per-exercise list) or delete it and log a new one. No mixed
+ * edit/read state.
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Trash2 } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useColorScheme } from 'nativewind';
 import { FKScreenHeader, useFKColors } from '@/components/fk';
-import {
-  DatePresetField,
-  HeaderSaveButton,
-  LogSectionCard,
-  type Performance,
-  PerformanceToggle,
-  ScoreInput,
-} from '@/components/log';
-import { MONO, useWB } from '@/components/log/whiteboard';
+import { Kicker, MONO, glass, useWB, type WBTokens } from '@/components/log/whiteboard';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import {
   type WorkoutResultSet,
   useDeleteResult,
-  useUpdateResult,
   useWorkoutHistory,
 } from '@/hooks/use-workouts';
 import { useLogStrings } from '@/i18n/use-log-strings';
-import {
-  type Score,
-  type WorkoutScoring,
-  emptyScore,
-  isScoreComplete,
-  parseScore,
-  serializeScore,
-} from '@/lib/score';
 import { useI18n } from '@/providers/i18n-provider';
 
 export default function ResultDetailScreen() {
@@ -58,22 +38,15 @@ export default function ResultDetailScreen() {
   const colors = useFKColors();
   const t = useWB();
   const L = useLogStrings();
-  const { dir } = useI18n();
+  const { dir, lang } = useI18n();
   const isRTL = dir === 'rtl';
-  const { colorScheme } = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
-  const params = useLocalSearchParams<{
-    id: string;
-    workoutId: string;
-    scoring?: string;
-  }>();
+  const params = useLocalSearchParams<{ id: string; workoutId: string }>();
   const resultId = params.id;
   const workoutId = params.workoutId;
-  const scoring = (params.scoring ?? 'none') as WorkoutScoring;
 
   const history = useWorkoutHistory(orgId, workoutId);
   const result = useMemo(
@@ -81,66 +54,7 @@ export default function ResultDetailScreen() {
     [history.data, resultId],
   );
 
-  const [score, setScore] = useState<Score>(() => emptyScore(scoring));
-  const [perf, setPerf] = useState<Performance | null>(null);
-  const [notes, setNotes] = useState('');
-  const [performedAt, setPerformedAt] = useState<string>(() => isoDate());
-  const [hydrated, setHydrated] = useState(false);
-
-  // Hydrate the form once the result resolves.
-  useEffect(() => {
-    if (!result || hydrated) return;
-    setScore(
-      parseScore(scoring, {
-        scoreValue: result.scoreValue,
-        scoreUnit: result.scoreUnit,
-      }),
-    );
-    setPerf(result.rx ? 'rx' : result.scaled ? 'scaled' : null);
-    setNotes(result.notes ?? '');
-    setPerformedAt(result.performedAt.split('T')[0]);
-    setHydrated(true);
-  }, [result, hydrated, scoring]);
-
-  const update = useUpdateResult(orgId, workoutId, resultId);
   const del = useDeleteResult(orgId, workoutId, resultId);
-
-  const canSave =
-    hydrated && (scoring === 'none' || isScoreComplete(score)) && !update.isPending;
-
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      predicate: (q) => {
-        const key = q.queryKey;
-        if (!Array.isArray(key)) return false;
-        const joined = key.filter((k) => typeof k === 'string').join('/');
-        return joined.includes('results') || joined.includes('history');
-      },
-    });
-
-  const handleSave = () => {
-    if (!canSave) return;
-    haptics.tap();
-    const serialized = serializeScore(score);
-    update.mutate(
-      {
-        scoreValue: serialized.scoreValue,
-        scoreUnit: serialized.scoreUnit,
-        rx: perf === 'rx',
-        scaled: perf === 'scaled',
-        notes: notes.trim() || undefined,
-        performedAt: new Date(performedAt).toISOString(),
-      },
-      {
-        onSuccess: () => {
-          haptics.success();
-          invalidate();
-          router.back();
-        },
-        onError: () => haptics.error(),
-      },
-    );
-  };
 
   const handleDelete = () => {
     Alert.alert(L.resultDelete, L.resultDeleteMsg, [
@@ -153,7 +67,14 @@ export default function ResultDetailScreen() {
           del.mutate(undefined, {
             onSuccess: () => {
               haptics.success();
-              invalidate();
+              queryClient.invalidateQueries({
+                predicate: (q) => {
+                  const key = q.queryKey;
+                  if (!Array.isArray(key)) return false;
+                  const joined = key.filter((k) => typeof k === 'string').join('/');
+                  return joined.includes('results') || joined.includes('history');
+                },
+              });
               router.back();
             },
             onError: () => haptics.error(),
@@ -164,202 +85,276 @@ export default function ResultDetailScreen() {
   };
 
   const loading = history.isLoading && !result;
+  const perfLabel = result?.rx ? L.perfRx : result?.scaled ? L.perfScaled : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
-      >
-        <FKScreenHeader
-          title={L.resultTitle}
-          onBack={() => router.back()}
-          trailing={
-            result ? (
-              <HeaderSaveButton
-                label={update.isPending ? L.workoutSaving : L.workoutSave}
-                onPress={handleSave}
-                disabled={!canSave}
-              />
-            ) : undefined
-          }
-        />
+      <FKScreenHeader title={L.resultTitle} onBack={() => router.back()} />
 
-        {loading ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={colors.foreground} />
-          </View>
-        ) : !result ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
-            <Text style={{ color: colors.mutedFg, fontSize: 14 }}>{L.histNoneTitle}</Text>
-          </View>
-        ) : (
-          <ScrollView
-            contentContainerStyle={{
-              padding: 20,
-              paddingBottom: insets.bottom + 24,
-              gap: 14,
-            }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {scoring !== 'none' && (
-              <LogSectionCard label={L.workoutScoreSection}>
-                <ScoreInput score={score} onChange={setScore} />
-              </LogSectionCard>
-            )}
-
-            <LogSectionCard label={L.workoutPerformance}>
-              <PerformanceToggle
-                value={perf}
-                onChange={setPerf}
-                labels={{ rx: L.perfRx, scaled: L.perfScaled, modified: L.perfModified }}
-              />
-            </LogSectionCard>
-
-            <LogSectionCard label={L.workoutNotesSection}>
-              <TextInput
-                accessibilityLabel={L.workoutNotesSection}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder={L.workoutNotesPlaceholder}
-                placeholderTextColor={
-                  isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
-                }
-                multiline
-                style={{
-                  minHeight: 64,
-                  fontSize: 15,
-                  color: colors.foreground,
-                  textAlignVertical: 'top',
-                  textAlign: isRTL ? 'right' : 'left',
-                  padding: 0,
-                }}
-              />
-            </LogSectionCard>
-
-            <LogSectionCard label={L.workoutWhenSection}>
-              <DatePresetField
-                value={performedAt}
-                onChange={setPerformedAt}
-                labels={{
-                  today: L.dateToday,
-                  yesterday: L.dateYesterday,
-                  custom: L.dateCustom,
-                }}
-              />
-            </LogSectionCard>
-
-            {result.setResults && result.setResults.length > 0 && (
-              <LogSectionCard label={L.resultSetsReadonly}>
-                <ReadonlySets t={t} sets={result.setResults} isRTL={isRTL} />
-              </LogSectionCard>
-            )}
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={handleDelete}
-              disabled={del.isPending}
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.foreground} />
+        </View>
+      ) : !result ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+          <Text style={{ color: colors.mutedFg, fontSize: 15 }}>{L.histNoneTitle}</Text>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={{
+            padding: 20,
+            paddingBottom: insets.bottom + 24,
+            gap: 16,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Summary card — score, performance, date */}
+          <View style={[glass(t, { radius: 18 }), { padding: 18 }]}>
+            <View
               style={{
                 flexDirection: isRTL ? 'row-reverse' : 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                paddingVertical: 14,
-                borderRadius: 14,
-                borderCurve: 'continuous',
-                backgroundColor: t.roseSoft,
-                opacity: del.isPending ? 0.5 : 1,
+                alignItems: 'flex-end',
+                justifyContent: 'space-between',
               }}
             >
-              <Trash2 size={17} color={t.rose} strokeWidth={2.2} />
-              <Text style={{ fontSize: 15, fontFamily: 'Assistant-Bold', color: t.rose }}>
-                {L.resultDelete}
+              <View>
+                <Kicker color={t.muted}>{L.workoutScoreSection}</Kicker>
+                <View
+                  style={{
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'baseline',
+                    gap: 6,
+                    marginTop: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: MONO,
+                      fontSize: 34,
+                      color: t.text,
+                      letterSpacing: -0.6,
+                    }}
+                  >
+                    {result.scoreValue ?? '—'}
+                  </Text>
+                  {result.scoreUnit ? (
+                    <Text style={{ fontFamily: MONO, fontSize: 15, color: t.muted }}>
+                      {result.scoreUnit}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+              {perfLabel ? (
+                <View
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: result.rx
+                      ? 'rgba(122,138,92,0.18)'
+                      : 'rgba(201,151,77,0.18)',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: 'Assistant-Bold',
+                      fontSize: 12,
+                      color: result.rx ? '#5A6A3F' : '#A8742E',
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {perfLabel}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+            <View
+              style={{
+                marginTop: 14,
+                paddingTop: 14,
+                borderTopWidth: 1,
+                borderTopColor: t.hairline,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: MONO,
+                  fontSize: 13,
+                  color: t.muted,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {formatDate(result.performedAt, lang)}
               </Text>
-            </Pressable>
-          </ScrollView>
-        )}
-      </KeyboardAvoidingView>
+            </View>
+          </View>
+
+          {/* Notes */}
+          {result.notes?.trim() ? (
+            <View style={[glass(t, { radius: 16 }), { padding: 16 }]}>
+              <Kicker color={t.muted} style={{ marginBottom: 8 }}>
+                {L.workoutNotesSection}
+              </Kicker>
+              <Text
+                style={{
+                  fontFamily: 'Assistant-Regular',
+                  fontSize: 15,
+                  lineHeight: 21,
+                  color: t.text,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {result.notes.trim()}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Logged sets — legible per-exercise list */}
+          {result.setResults && result.setResults.length > 0 ? (
+            <View>
+              <Kicker color={t.muted} style={{ marginHorizontal: 2, marginBottom: 10 }}>
+                {L.resultSetsReadonly}
+              </Kicker>
+              <View style={{ gap: 14 }}>
+                <SetGroups t={t} sets={result.setResults} isRTL={isRTL} setN={L.setN} />
+              </View>
+            </View>
+          ) : null}
+
+          {/* Delete */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleDelete}
+            disabled={del.isPending}
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              marginTop: 4,
+              paddingVertical: 15,
+              borderRadius: 14,
+              borderCurve: 'continuous',
+              backgroundColor: t.roseSoft,
+              opacity: del.isPending ? 0.5 : 1,
+            }}
+          >
+            <Trash2 size={18} color={t.rose} strokeWidth={2.2} />
+            <Text style={{ fontSize: 15, fontFamily: 'Assistant-Bold', color: t.rose }}>
+              {L.resultDelete}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      )}
     </View>
   );
 }
 
-function ReadonlySets({
+// ── Set list (read-only, grouped by exercise) ───────────────────────
+
+function SetGroups({
   t,
   sets,
   isRTL,
+  setN,
 }: {
-  t: ReturnType<typeof useWB>;
+  t: WBTokens;
   sets: WorkoutResultSet[];
   isRTL: boolean;
+  setN: string;
 }) {
-  // Group by exercise so multi-movement results read clearly.
   const groups = useMemo(() => {
     const m = new Map<string, { name: string; sets: WorkoutResultSet[] }>();
     for (const s of sets) {
-      const key = s.exerciseId;
-      const g = m.get(key) ?? { name: s.exercise?.name ?? '—', sets: [] };
+      const g = m.get(s.exerciseId) ?? { name: s.exercise?.name ?? '—', sets: [] };
       g.sets.push(s);
-      m.set(key, g);
+      m.set(s.exerciseId, g);
     }
     return Array.from(m.values());
   }, [sets]);
 
   return (
-    <View style={{ gap: 12 }}>
+    <>
       {groups.map((g, gi) => (
-        <View key={gi} style={{ gap: 6 }}>
+        <View key={gi} style={[glass(t, { radius: 16 }), { overflow: 'hidden' }]}>
           <Text
             style={{
-              fontSize: 13,
-              fontFamily: 'Assistant-SemiBold',
+              fontFamily: 'Assistant-Bold',
+              fontSize: 15,
               color: t.text,
+              paddingHorizontal: 16,
+              paddingTop: 13,
+              paddingBottom: 9,
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
             {g.name}
           </Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 6,
-              justifyContent: isRTL ? 'flex-end' : 'flex-start',
-            }}
-          >
-            {g.sets
-              .slice()
-              .sort((a, b) => a.setNumber - b.setNumber)
-              .map((s) => (
-                <View
-                  key={s.id}
+          {g.sets
+            .slice()
+            .sort((a, b) => a.setNumber - b.setNumber)
+            .map((s, i) => (
+              <View
+                key={s.id}
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  borderTopWidth: 1,
+                  borderTopColor: t.hairline,
+                }}
+              >
+                <Text
                   style={{
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                    borderCurve: 'continuous',
-                    borderWidth: 1,
-                    borderColor: t.hairline,
+                    width: 52,
+                    fontFamily: MONO,
+                    fontSize: 12,
+                    color: t.faint,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.4,
+                    textAlign: isRTL ? 'right' : 'left',
                   }}
                 >
-                  <Text style={{ fontFamily: MONO, fontSize: 12.5, color: t.muted }}>
-                    {setLabel(s)}
+                  {setN} {i + 1}
+                </Text>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontFamily: MONO,
+                    fontSize: 17,
+                    color: t.text,
+                    letterSpacing: -0.2,
+                    textAlign: isRTL ? 'right' : 'left',
+                  }}
+                >
+                  {primaryMetric(s)}
+                </Text>
+                {s.rpe != null ? (
+                  <Text style={{ fontFamily: MONO, fontSize: 13, color: t.muted }}>
+                    RPE {s.rpe}
                   </Text>
-                </View>
-              ))}
-          </View>
+                ) : null}
+              </View>
+            ))}
         </View>
       ))}
-    </View>
+    </>
   );
 }
 
-function setLabel(s: WorkoutResultSet): string {
-  if (s.weightKg != null)
-    return `${round1(s.weightKg)}${s.weightDisplayUnit ?? 'kg'}×${s.reps ?? 0}`;
-  if (s.distanceM != null) return `${round1(s.distanceM)}${s.distanceDisplayUnit ?? 'm'}`;
-  if (s.durationSeconds != null) return `${s.durationSeconds}s`;
-  if (s.reps != null) return `${s.reps}`;
+function primaryMetric(s: WorkoutResultSet): string {
+  if (s.weightKg != null) {
+    const unit = s.weightDisplayUnit ?? 'kg';
+    return `${round1(s.weightKg)} ${unit} × ${s.reps ?? 0}`;
+  }
+  if (s.distanceM != null) {
+    const unit = s.distanceDisplayUnit ?? 'm';
+    return `${round1(s.distanceM)} ${unit}`;
+  }
+  if (s.durationSeconds != null) return secondsToClock(s.durationSeconds);
+  if (s.reps != null) return `${s.reps} reps`;
   return '—';
 }
 
@@ -367,9 +362,20 @@ function round1(n: number): string {
   return String(Math.round(n * 10) / 10);
 }
 
-function isoDate(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+function secondsToClock(total: number): string {
+  const tt = Math.max(0, Math.floor(total));
+  const m = Math.floor(tt / 60);
+  const sec = tt % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function formatDate(iso: string, lang: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat(lang, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(d);
 }

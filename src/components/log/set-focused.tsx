@@ -7,7 +7,7 @@
  * weight / distance / duration / rpe); time uses a numeric mm:ss field
  * rather than a stepper.
  */
-import { Check, Minus, Plus } from 'lucide-react-native';
+import { Check, Minus, Plus, Trash2 } from 'lucide-react-native';
 import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -33,6 +33,8 @@ export interface SetFocusedProps {
   prevSetsByNumber?: Record<number, SetRowLast>;
   onChange: (index: number, next: Partial<SetRowValue>) => void;
   onAddSet: () => void;
+  /** Remove the set at `index`. Omitted/disabled when only one set remains. */
+  onRemoveSet: (index: number) => void;
 }
 
 const STEP_KEYS = ['reps', 'weight', 'distance', 'rpe'] as const;
@@ -46,6 +48,7 @@ export function SetFocused({
   prevSetsByNumber,
   onChange,
   onAddSet,
+  onRemoveSet,
 }: SetFocusedProps) {
   const t = useWB();
   const { dir } = useI18n();
@@ -139,9 +142,34 @@ export function SetFocused({
             marginBottom: 12,
           }}
         >
-          <Kicker color={t.muted}>
-            {L.setN} {idx + 1}
-          </Kicker>
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <Kicker color={t.muted}>
+              {L.setN} {idx + 1}
+            </Kicker>
+            {rows.length > 1 ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={L.removeSet}
+                hitSlop={8}
+                onPress={() => {
+                  haptics.tap();
+                  onRemoveSet(idx);
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              >
+                <Trash2 size={13} color={t.rose} strokeWidth={2.2} />
+                <Text style={{ fontFamily: MONO, fontSize: 11, color: t.rose }}>
+                  {L.removeSet}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
           <View style={{ flexDirection: 'row', gap: 6 }}>
             {columns.weight ? (
               <UnitToggle

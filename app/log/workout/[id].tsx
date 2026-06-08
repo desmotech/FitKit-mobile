@@ -322,6 +322,14 @@ export default function LogWorkoutResultScreen() {
                         prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
                         oneRMKg={oneRMKg[m.exercise.id] ?? null}
                         onAddSet={() => addSet(m.id)}
+                        onRemoveSet={(rowIdx) =>
+                          setSetRows((prev) => ({
+                            ...prev,
+                            [m.id]: (prev[m.id] ?? []).filter(
+                              (_, i) => i !== rowIdx,
+                            ),
+                          }))
+                        }
                         onChange={(idx, update) =>
                           setSetRows((prev) => ({
                             ...prev,
@@ -430,6 +438,7 @@ function MovementBlock({
   prevSetsByNumber,
   oneRMKg,
   onAddSet,
+  onRemoveSet,
   onChange,
 }: {
   movement: WorkoutMovement;
@@ -438,6 +447,7 @@ function MovementBlock({
   prevSetsByNumber: Record<number, SetRowLast>;
   oneRMKg: number | null;
   onAddSet: () => void;
+  onRemoveSet: (idx: number) => void;
   onChange: (idx: number, update: Partial<SetRowValue>) => void;
 }) {
   const { dir } = useI18n();
@@ -491,6 +501,11 @@ function MovementBlock({
         onAddSet={() => {
           onAddSet();
           setActive(rows.length); // focus the newly appended set
+        }}
+        onRemoveSet={(rowIdx) => {
+          onRemoveSet(rowIdx);
+          // Keep the active index in range after removal.
+          setActive((prev) => Math.max(0, Math.min(prev, rows.length - 2)));
         }}
       />
     </View>

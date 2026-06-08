@@ -78,6 +78,7 @@ export interface LogStrings {
   setN: string;
   doneCol: string;
   markDone: string;
+  removeSet: string;
 
   // Exercise search
   searchPlaceholder: string;
@@ -223,6 +224,7 @@ const en: LogStrings = {
   setN: 'Set',
   doneCol: 'Done',
   markDone: 'Mark done',
+  removeSet: 'Remove',
 
   searchPlaceholder: 'Search exercises',
   searchRecent: 'Recent',
@@ -351,6 +353,7 @@ const he: LogStrings = {
   setN: 'סט',
   doneCol: 'בוצע',
   markDone: 'סמן כבוצע',
+  removeSet: 'הסר',
 
   searchPlaceholder: 'חיפוש תרגיל',
   searchRecent: 'אחרונים',
@@ -479,6 +482,7 @@ const ru: LogStrings = {
   setN: 'Подход',
   doneCol: 'Готово',
   markDone: 'Отметить',
+  removeSet: 'Удалить',
 
   searchPlaceholder: 'Поиск упражнения',
   searchRecent: 'Недавние',

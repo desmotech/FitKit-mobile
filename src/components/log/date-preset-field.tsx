@@ -85,20 +85,19 @@ export function DatePresetField({
     },
   ];
 
-  const chips = segments.map((seg, idx) => (
+  const chips = segments.map((seg) => (
     <View
       key={seg.key}
       style={{
         flex: 1,
-        marginLeft: idx === 0 ? 0 : 10,
-        height: 40,
-        borderRadius: 14,
+        height: 44,
+        borderRadius: 12,
         borderCurve: 'continuous',
-        borderWidth: 2,
-        borderColor: seg.active ? BRAND_TEAL : 'rgba(94,112,130,0.30)',
+        borderWidth: seg.active ? 1.5 : 1,
+        borderColor: seg.active ? BRAND_TEAL : 'rgba(94,112,130,0.22)',
         backgroundColor: seg.active
           ? 'rgba(14,140,140,0.12)'
-          : 'rgba(120,120,128,0.10)',
+          : 'rgba(120,120,128,0.08)',
         overflow: 'hidden',
       }}
     >
@@ -111,13 +110,14 @@ export function DatePresetField({
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
+          paddingHorizontal: 4,
         }}
       >
         <Text
           numberOfLines={1}
           style={{
-            fontSize: 14,
-            fontWeight: '800',
+            fontSize: 15,
+            fontWeight: '700',
             color: seg.active ? BRAND_TEAL : 'rgb(94,112,130)',
             letterSpacing: -0.1,
           }}
@@ -130,8 +130,10 @@ export function DatePresetField({
 
   return (
     <View>
-      <View style={{ flexDirection: 'row' }}>
-        {isRTL ? chips.slice().reverse() : chips}
+      {/* `gap` keeps spacing even in both directions — the old per-chip
+          marginLeft broke symmetry once the row was reversed for RTL. */}
+      <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', gap: 8 }}>
+        {chips}
       </View>
 
       {(customOpen || isCustom) && (
