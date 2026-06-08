@@ -105,15 +105,17 @@ export default function ResultDetailScreen() {
                 <View
                   style={{
                     flexDirection: isRTL ? 'row-reverse' : 'row',
-                    alignItems: 'baseline',
+                    alignItems: 'flex-end',
                     gap: 6,
                     marginTop: 6,
                   }}
                 >
                   <Text
+                    allowFontScaling={false}
                     style={{
                       fontFamily: MONO,
                       fontSize: 34,
+                      lineHeight: 42,
                       color: t.text,
                       letterSpacing: -0.6,
                     }}
@@ -121,7 +123,14 @@ export default function ResultDetailScreen() {
                     {result.scoreValue ?? '—'}
                   </Text>
                   {result.scoreUnit ? (
-                    <Text style={{ fontFamily: MONO, fontSize: 15, color: t.muted }}>
+                    <Text
+                      style={{
+                        fontFamily: MONO,
+                        fontSize: 15,
+                        lineHeight: 24,
+                        color: t.muted,
+                      }}
+                    >
                       {result.scoreUnit}
                     </Text>
                   ) : null}
