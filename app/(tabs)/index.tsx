@@ -28,7 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Compass,
-  Plus,
+  type LucideIcon,
   Target,
   Trophy,
 } from 'lucide-react-native';
@@ -48,6 +48,7 @@ import {
   RestDayCard,
   WorkoutSummaryCard,
 } from '@/components/workout/workout-summary-card';
+import { WeekGlance } from '@/components/workout/week-glance';
 import { TodayClassCard } from '@/components/schedule/today-class-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -56,6 +57,7 @@ import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTodayClassSessions } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useMyWeekSessions } from '@/hooks/use-schedule';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
   getWeekStartDay,
@@ -66,6 +68,7 @@ import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
+const BRAND_GOLD = '#C9974D';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -112,7 +115,6 @@ export default function HomeScreen() {
     attended: (feedT.attendedFor as string) ?? 'Checked in',
     coach: (feedT.coachLabel as string) ?? 'Coach',
     noGoals: (feedT.noGoals as string) ?? 'Set your first fitness goal',
-    setGoal: (feedT.setGoal as string) ?? 'Set a goal',
     bodyMetric: goalsT.bodyMetric ?? 'Body Metric',
     exercisePr: goalsT.exercisePr ?? 'Exercise PR',
     achieved: goalsT.achieved ?? 'Achieved',
@@ -130,6 +132,7 @@ export default function HomeScreen() {
   const todayYMD = useMemo(() => ymd(today), [today]);
 
   const weekAssignments = useMyWeekAssignments(orgId, weekStart);
+  const weekSessions = useMyWeekSessions(orgId, weekStart);
   const todayClasses = useTodayClassSessions(orgId);
   const goalsQuery = useApiQuery<{ data: GoalResponse[] }>({
     path: orgId ? `/organizations/${orgId}/goals/me` : '',
@@ -415,10 +418,75 @@ export default function HomeScreen() {
           </Animated.View>
         ) : null}
 
+        {/* ── This week ────────────────────────────────────────────── */}
+        {hasOrg ? (
+          <Animated.View
+            entering={FadeInDown.delay(120).duration(380).springify()}
+            style={{ paddingHorizontal: 20, paddingTop: 22, gap: 10 }}
+          >
+            {weekAssignments.isLoading || weekSessions.isLoading ? (
+              <Skeleton style={{ height: 78, borderRadius: 16 }} />
+            ) : (
+              <WeekGlance
+                weekStart={weekStart}
+                todayYMD={todayYMD}
+                assignments={weekAssignments.data?.data ?? []}
+                sessions={weekSessions.data?.data ?? []}
+                title={L.homeThisWeek}
+              />
+            )}
+          </Animated.View>
+        ) : null}
+
+        {/* ── Quick actions ────────────────────────────────────────── */}
+        {hasOrg ? (
+          <Animated.View
+            entering={FadeInDown.delay(150).duration(380).springify()}
+            style={{ paddingHorizontal: 20, paddingTop: 26, gap: 10 }}
+          >
+            <SectionKicker
+              title={L.homeQuickActions}
+              isRTL={isRTL}
+              colors={colors}
+            />
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                gap: 10,
+              }}
+            >
+              <QuickActionTile
+                icon={Target}
+                label={labels.addGoal}
+                accent={BRAND_TEAL}
+                isDark={colors.isDark}
+                fg={colors.foreground}
+                isRTL={isRTL}
+                onPress={() => {
+                  haptics.tap();
+                  router.push('/(tabs)/profile/goals/new');
+                }}
+              />
+              <QuickActionTile
+                icon={Trophy}
+                label={L.homeLogPr}
+                accent={BRAND_GOLD}
+                isDark={colors.isDark}
+                fg={colors.foreground}
+                isRTL={isRTL}
+                onPress={() => {
+                  haptics.tap();
+                  router.push('/log/lift');
+                }}
+              />
+            </View>
+          </Animated.View>
+        ) : null}
+
         {/* ── Goals ────────────────────────────────────────────────── */}
         {hasOrg ? (
           <Animated.View
-            entering={FadeInDown.delay(160).duration(380).springify()}
+            entering={FadeInDown.delay(180).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 26, gap: 10 }}
           >
             <View
@@ -474,75 +542,56 @@ export default function HomeScreen() {
             {goalsQuery.isLoading ? (
               <Skeleton style={{ height: 132, borderRadius: 18 }} />
             ) : activeGoals.length === 0 ? (
-              <FKGlassPanel
-                radius={18}
-                style={{
-                  padding: 24,
-                  alignItems: 'center',
-                  gap: 12,
-                  borderStyle: 'dashed',
+              <Pressable
+                onPress={() => {
+                  haptics.tap();
+                  router.push('/(tabs)/profile/goals/new');
                 }}
+                accessibilityRole="button"
+                accessibilityLabel={labels.noGoals}
               >
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    backgroundColor: 'rgba(14,140,140,0.10)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(14,140,140,0.30)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Target size={22} color={BRAND_TEAL} strokeWidth={2.2} />
-                </View>
-                <Text
-                  className="font-display"
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '800',
-                    color: colors.foreground,
-                    textAlign: 'center',
-                    letterSpacing: -0.2,
-                  }}
-                >
-                  {labels.noGoals}
-                </Text>
-                <Pressable
-                  onPress={() => {
-                    haptics.tap();
-                    router.push('/(tabs)/profile/goals/new');
-                  }}
-                >
-                  {({ pressed }) => (
+                {({ pressed }) => (
+                  <FKGlassPanel
+                    radius={16}
+                    style={{
+                      padding: 14,
+                      flexDirection: isRTL ? 'row-reverse' : 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      borderStyle: 'dashed',
+                      opacity: pressed ? 0.85 : 1,
+                    }}
+                  >
                     <View
                       style={{
-                        flexDirection: isRTL ? 'row-reverse' : 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingHorizontal: 16,
-                        height: 38,
+                        width: 40,
+                        height: 40,
                         borderRadius: 12,
-                        backgroundColor: BRAND_TEAL,
-                        opacity: pressed ? 0.82 : 1,
+                        borderCurve: 'continuous',
+                        backgroundColor: 'rgba(14,140,140,0.10)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(14,140,140,0.30)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                       }}
                     >
-                      <Plus size={14} color="#fff" strokeWidth={2.6} />
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          fontWeight: '800',
-                          color: '#fff',
-                          letterSpacing: -0.1,
-                        }}
-                      >
-                        {labels.setGoal}
-                      </Text>
+                      <Target size={20} color={BRAND_TEAL} strokeWidth={2.2} />
                     </View>
-                  )}
-                </Pressable>
-              </FKGlassPanel>
+                    <Text
+                      style={{
+                        flex: 1,
+                        fontSize: 13.5,
+                        fontWeight: '600',
+                        color: colors.mutedFg,
+                        textAlign: isRTL ? 'right' : 'left',
+                      }}
+                    >
+                      {labels.noGoals}
+                    </Text>
+                    <Chevron size={18} color={colors.mutedFg} strokeWidth={2.2} />
+                  </FKGlassPanel>
+                )}
+              </Pressable>
             ) : (
               <View style={{ gap: 10 }}>
                 {activeGoals.map((goal, i) => (
@@ -574,103 +623,6 @@ export default function HomeScreen() {
                     />
                   </Animated.View>
                 ))}
-
-                {/* Add-goal + Log-PR pills, side-by-side. PR logging
-                    is a first-tier home action now — same visual weight
-                    as Add goal. */}
-                <View
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    gap: 10,
-                  }}
-                >
-                  <Pressable
-                    onPress={() => {
-                      haptics.tap();
-                      router.push('/(tabs)/profile/goals/new');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={labels.addGoal}
-                    style={{ flex: 1 }}
-                  >
-                    {({ pressed }) => (
-                      <View
-                        style={{
-                          flexDirection: isRTL ? 'row-reverse' : 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 6,
-                          height: 44,
-                          borderRadius: 14,
-                          backgroundColor: 'rgba(14,140,140,0.08)',
-                          borderWidth: 1,
-                          borderColor: 'rgba(14,140,140,0.25)',
-                          borderStyle: 'dashed',
-                          opacity: pressed ? 0.82 : 1,
-                        }}
-                      >
-                        <Plus
-                          size={14}
-                          color={BRAND_TEAL}
-                          strokeWidth={2.6}
-                        />
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: '800',
-                            color: BRAND_TEAL,
-                            letterSpacing: -0.1,
-                          }}
-                        >
-                          {labels.addGoal}
-                        </Text>
-                      </View>
-                    )}
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      haptics.tap();
-                      router.push('/log/lift');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={L.homeLogPr}
-                    style={{ flex: 1 }}
-                  >
-                    {({ pressed }) => (
-                      <View
-                        style={{
-                          flexDirection: isRTL ? 'row-reverse' : 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 6,
-                          height: 44,
-                          borderRadius: 14,
-                          backgroundColor: 'rgba(201,151,77,0.08)',
-                          borderWidth: 1,
-                          borderColor: 'rgba(201,151,77,0.30)',
-                          borderStyle: 'dashed',
-                          opacity: pressed ? 0.82 : 1,
-                        }}
-                      >
-                        <Trophy
-                          size={14}
-                          color="#C9974D"
-                          strokeWidth={2.6}
-                        />
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: '800',
-                            color: '#C9974D',
-                            letterSpacing: -0.1,
-                          }}
-                        >
-                          {L.homeLogPr}
-                        </Text>
-                      </View>
-                    )}
-                  </Pressable>
-                </View>
               </View>
             )}
           </Animated.View>
@@ -739,7 +691,91 @@ function SectionKicker({
   );
 }
 
+/** A home "quick action" — an icon-in-tint tile that fills half the row.
+ *  Color-coded by `accent` (teal for goals, gold for PRs) so the two read as
+ *  distinct, tappable entry points rather than thin secondary pills. */
+function QuickActionTile({
+  icon: Icon,
+  label,
+  accent,
+  isDark,
+  fg,
+  isRTL,
+  onPress,
+}: {
+  icon: LucideIcon;
+  label: string;
+  accent: string;
+  isDark: boolean;
+  fg: string;
+  isRTL: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={{ flex: 1 }}
+    >
+      {({ pressed }) => (
+        <View
+          style={{
+            minHeight: 92,
+            padding: 14,
+            borderRadius: 18,
+            borderCurve: 'continuous',
+            backgroundColor: hexToRgba(accent, isDark ? 0.14 : 0.09),
+            borderWidth: 1,
+            borderColor: hexToRgba(accent, isDark ? 0.42 : 0.28),
+            justifyContent: 'space-between',
+            opacity: pressed ? 0.85 : 1,
+          }}
+        >
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              borderCurve: 'continuous',
+              alignSelf: isRTL ? 'flex-end' : 'flex-start',
+              backgroundColor: hexToRgba(accent, isDark ? 0.24 : 0.16),
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Icon size={20} color={accent} strokeWidth={2.4} />
+          </View>
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: 15,
+              fontWeight: '800',
+              color: fg,
+              letterSpacing: -0.2,
+              marginTop: 10,
+              textAlign: isRTL ? 'right' : 'left',
+            }}
+          >
+            {label}
+          </Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────
+
+/** `#RRGGBB` → `rgba(r, g, b, a)` so a single brand hex can drive a tile's
+ *  fill, border, and icon-chip at different opacities. */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 function ymd(d: Date): string {
   const y = d.getFullYear();
