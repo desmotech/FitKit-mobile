@@ -67,6 +67,7 @@ import {
   formatScoreSummary,
   isScoreComplete,
   parseScore,
+  secondsToClock,
   serializeScore,
 } from '@/lib/score';
 import { useI18n } from '@/providers/i18n-provider';
@@ -102,7 +103,7 @@ export default function LogWorkoutResultScreen() {
 
   const latest = useLatestResult(orgId, workoutId);
   const lastResult = latest.data?.data ?? null;
-  const { oneRMKg } = useMyOneRMByExercise(orgId);
+  const { oneRMKg, isLoading: oneRMLoading } = useMyOneRMByExercise(orgId);
 
   // i18n: all strings come from the local log dictionary (he/en/ru).
   // See src/i18n/log-strings.ts; the shared @fitkit/shared dictionary
@@ -122,23 +123,49 @@ export default function LogWorkoutResultScreen() {
   const [performedAt, setPerformedAt] = useState<string>(() => isoDate());
   const [setRows, setSetRows] = useState<Record<string, SetRowValue[]>>({});
 
+  // A per-movement factory that seeds a set row from the prescription so the
+  // member confirms numbers instead of retyping them every set. Column-aware
+  // (only fields the row renders get prefilled) and keyed by movement id so
+  // both the initial seed and "+ Add set" reuse it. Recomputed when the 1RM
+  // map arrives so %1RM loads resolve to a concrete target.
+  const defaultRowFactories = useMemo(() => {
+    const map: Record<string, () => SetRowValue> = {};
+    for (const section of sections) {
+      const caps = getShapeCaps((section.shape ?? null) as SectionShape | null);
+      for (const m of section.movements) {
+        const columns = deriveColumns(m, caps);
+        const oneRM = oneRMKg[m.exercise.id] ?? null;
+        map[m.id] = () => defaultRow(m, columns, oneRM);
+      }
+    }
+    return map;
+  }, [sections, oneRMKg]);
+
   useEffect(() => {
     if (loggableMovements.length === 0) return;
+    // Hold off until the 1RM map settles so %1RM loads seed a real target
+    // rather than blank. A disabled/errored PR query also clears isLoading,
+    // so logging is never blocked indefinitely.
+    if (oneRMLoading) return;
     setSetRows((prev) => {
       if (Object.keys(prev).length > 0) return prev;
       const next: Record<string, SetRowValue[]> = {};
       for (const m of loggableMovements) {
         const count = Math.max(1, m.prescribedSets ?? 1);
-        next[m.id] = Array.from({ length: count }, () => emptyRow());
+        const make = defaultRowFactories[m.id] ?? emptyRow;
+        next[m.id] = Array.from({ length: count }, () => make());
       }
       return next;
     });
-  }, [loggableMovements]);
+  }, [loggableMovements, oneRMLoading, defaultRowFactories]);
 
   const addSet = (movementId: string) =>
     setSetRows((prev) => ({
       ...prev,
-      [movementId]: [...(prev[movementId] ?? []), emptyRow()],
+      [movementId]: [
+        ...(prev[movementId] ?? []),
+        (defaultRowFactories[movementId] ?? emptyRow)(),
+      ],
     }));
 
   const mutation = useLogResult(orgId, workoutId);
@@ -146,12 +173,7 @@ export default function LogWorkoutResultScreen() {
   // scoring (or where the athlete only logged sets) saves without it. Block
   // only an entirely empty scored log.
   const hasLoggedSet = useMemo(
-    () =>
-      Object.values(setRows).some((rows) =>
-        rows.some(
-          (r) => r.reps || r.weight || r.distance || r.duration || r.rpe || r.done,
-        ),
-      ),
+    () => Object.values(setRows).some((rows) => rows.some(isLoggableRow)),
     [setRows],
   );
   const canSubmit =
@@ -171,14 +193,7 @@ export default function LogWorkoutResultScreen() {
     for (const m of loggableMovements) {
       const rows = setRows[m.id] ?? [];
       rows.forEach((row, idx) => {
-        const hasValue =
-          row.reps ||
-          row.weight ||
-          row.distance ||
-          row.duration ||
-          row.rpe ||
-          row.done;
-        if (!hasValue) return;
+        if (!isLoggableRow(row)) return;
         setResults.push({
           workoutMovementId: m.id,
           exerciseId: m.exercise.id,
@@ -342,7 +357,7 @@ export default function LogWorkoutResultScreen() {
                           setSetRows((prev) => ({
                             ...prev,
                             [m.id]: (prev[m.id] ?? []).map((r, i) =>
-                              i === idx ? { ...r, ...update } : r,
+                              i === idx ? { ...r, ...update, touched: true } : r,
                             ),
                           }))
                         }
@@ -596,6 +611,168 @@ function emptyRow(): SetRowValue {
     rpe: '',
     done: false,
   };
+}
+
+/** A row is logged when it carries a value AND isn't an untouched prescription
+ *  prefill. Pre-filled sets the member never confirmed (didn't mark done or
+ *  edit) are the coach's plan, not performed work, so they're left out. */
+function isLoggableRow(row: SetRowValue): boolean {
+  const hasValue = !!(
+    row.reps ||
+    row.weight ||
+    row.distance ||
+    row.duration ||
+    row.rpe ||
+    row.done
+  );
+  if (!hasValue) return false;
+  if (row.prefilled && !row.done && !row.touched) return false;
+  return true;
+}
+
+// ── Prescription-seeded defaults ─────────────────────────────────────
+
+/** Build a set row pre-filled from a movement's prescription so the member
+ *  confirms numbers instead of retyping them. Column-aware — only fields the
+ *  row actually renders are seeded — and flags the row `prefilled` so an
+ *  untouched default isn't mistaken for performed work on save. */
+function defaultRow(
+  movement: WorkoutMovement,
+  columns: SetColumns,
+  oneRMKg: number | null,
+): SetRowValue {
+  const row = emptyRow();
+  const presc = (movement.prescription ?? null) as Record<string, unknown> | null;
+  let prefilled = false;
+
+  if (columns.reps) {
+    const reps = prescribedReps(presc, movement.prescribedReps);
+    if (reps != null) {
+      row.reps = String(reps);
+      prefilled = true;
+    }
+  }
+  if (columns.weight) {
+    const load = prescribedLoad(presc, oneRMKg);
+    if (load) {
+      row.weight = String(load.value);
+      row.weightUnit = load.unit;
+      prefilled = true;
+    }
+  }
+  if (columns.distance) {
+    const dist = prescribedDistance(presc);
+    if (dist) {
+      row.distance = String(dist.value);
+      row.distanceUnit = dist.unit;
+      prefilled = true;
+    }
+  }
+  if (columns.duration) {
+    const seconds = prescribedDurationSeconds(presc);
+    if (seconds != null) {
+      row.duration = secondsToClock(seconds);
+      prefilled = true;
+    }
+  }
+  if (columns.rpe) {
+    const rpe = prescribedRpe(presc);
+    if (rpe != null) {
+      row.rpe = String(rpe);
+      prefilled = true;
+    }
+  }
+  row.prefilled = prefilled;
+  return row;
+}
+
+/** Reps default: fixed → its value; range → the bottom of the range; AMRAP and
+ *  timed holds → none (no single sensible rep count). Falls back to a leading
+ *  integer in the flat `prescribedReps` ("5", or "8" from "8-12"). */
+function prescribedReps(
+  presc: Record<string, unknown> | null,
+  flat: string | null | undefined,
+): number | null {
+  const reps = presc?.reps as Record<string, unknown> | undefined;
+  if (reps && typeof reps === 'object') {
+    switch (reps.kind) {
+      case 'fixed':
+        return prescNum(reps.value);
+      case 'range':
+        return prescNum(reps.min);
+      default:
+        return null; // amrap / time → leave blank
+    }
+  }
+  if (flat) {
+    const m = /^\s*(\d+)/.exec(flat);
+    if (m) return Number.parseInt(m[1], 10);
+  }
+  return null;
+}
+
+/** Load default in the row's weight unit. Absolute loads seed directly; %1RM
+ *  loads resolve against the member's 1RM (when on file) to the same nearest-
+ *  0.5kg target <PrescriptionHint> shows. RPE/RIR and other non-weight loads
+ *  seed no weight — RPE is handled by its own column. */
+function prescribedLoad(
+  presc: Record<string, unknown> | null,
+  oneRMKg: number | null,
+): { value: number; unit: SetRowValue['weightUnit'] } | null {
+  const load = presc?.load as Record<string, unknown> | undefined;
+  if (!load || typeof load !== 'object') return null;
+  switch (load.kind) {
+    case 'absolute': {
+      const value = prescNum(load.value);
+      if (value == null || value <= 0) return null;
+      return { value, unit: load.unit === 'lb' ? 'lb' : 'kg' };
+    }
+    case 'percent_1rm': {
+      const pct = prescNum(load.value);
+      if (pct == null || pct <= 0 || oneRMKg == null || oneRMKg <= 0) return null;
+      const value = Math.round(((oneRMKg * pct) / 100) * 2) / 2; // nearest 0.5 kg
+      return value > 0 ? { value, unit: 'kg' } : null;
+    }
+    default:
+      return null;
+  }
+}
+
+function prescribedDistance(
+  presc: Record<string, unknown> | null,
+): { value: number; unit: SetRowValue['distanceUnit'] } | null {
+  const dist = presc?.distance as Record<string, unknown> | undefined;
+  if (!dist || typeof dist !== 'object') return null;
+  const value = prescNum(dist.value);
+  if (value == null || value <= 0) return null;
+  const u = typeof dist.unit === 'string' ? dist.unit : 'm';
+  return { value, unit: u === 'km' || u === 'mi' ? u : 'm' };
+}
+
+function prescribedDurationSeconds(
+  presc: Record<string, unknown> | null,
+): number | null {
+  const reps = presc?.reps as Record<string, unknown> | undefined;
+  if (reps && typeof reps === 'object' && reps.kind === 'time') {
+    return prescNum(reps.seconds);
+  }
+  return null;
+}
+
+function prescribedRpe(presc: Record<string, unknown> | null): number | null {
+  const load = presc?.load as Record<string, unknown> | undefined;
+  if (!load || typeof load !== 'object') return null;
+  if (load.kind === 'rpe' || load.kind === 'rir') return prescNum(load.value);
+  return null;
+}
+
+function prescNum(v: unknown): number | null {
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
 
 /** Pick which input columns a movement renders. A movement is measured by

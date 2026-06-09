@@ -38,6 +38,13 @@ export interface SetRowValue {
   duration: string; // mm:ss | hh:mm:ss
   rpe: string;
   done: boolean;
+  /** Seeded from the movement's prescription rather than entered by the
+   *  member. The logger skips an untouched prefill on save so a prescribed
+   *  set the athlete never did isn't recorded as performed work. */
+  prefilled?: boolean;
+  /** Flips true the first time the member edits a field or toggles done on
+   *  this row — i.e. they engaged with (confirmed) the set. */
+  touched?: boolean;
 }
 
 /** Which input columns a row renders. Derived once by the parent from the
