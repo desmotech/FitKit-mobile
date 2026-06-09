@@ -1,0 +1,181 @@
+// Post-checkout verification. Mirrors apps/web's shop/payment-return: on a
+// success redirect we poll /subscriptions/my until the webhook flips the
+// subscription to `active`, then surface success / processing / cancelled.
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { CheckCircle2, Clock, XCircle } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { SubscriptionWithPlan } from '@fitkit/shared';
+import { FKAmbientBackdrop, FKButton, useFKColors } from '@/components/fk';
+import { Text } from '@/components/ui/text';
+import { useApi } from '@/hooks/use-api';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import * as analytics from '@/lib/analytics';
+import { queryKeys } from '@/lib/query-keys';
+import { displayFamily } from '@/lib/type';
+import { useI18n } from '@/providers/i18n-provider';
+
+const MAX_POLLS = 10;
+const POLL_INTERVAL_MS = 2000;
+
+type VerifyState = 'verifying' | 'confirmed' | 'pending' | 'cancelled';
+
+export default function PaymentReturnScreen() {
+  const router = useRouter();
+  const { t, lang } = useI18n();
+  const colors = useFKColors();
+  const queryClient = useQueryClient();
+  const { activeOrganization } = useCurrentUser();
+  const orgId = activeOrganization?.id;
+
+  const params = useLocalSearchParams<{ status?: string; sub?: string }>();
+  const isSuccess = params.status === 'success';
+  const subId = typeof params.sub === 'string' ? params.sub : undefined;
+
+  const prT = ((t as unknown as Record<string, Record<string, unknown>>).shop
+    ?.paymentReturn ?? {}) as Record<string, string>;
+
+  const [state, setState] = useState<VerifyState>(
+    isSuccess ? 'verifying' : 'cancelled',
+  );
+
+  // fetchWithAuth has an unstable identity (Clerk getToken) — keep it in a
+  // ref so the polling effect never lists it as a dependency.
+  const { fetchWithAuth } = useApi();
+  const fetchRef = useRef(fetchWithAuth);
+  fetchRef.current = fetchWithAuth;
+
+  const trackedRef = useRef(false);
+  useEffect(() => {
+    if (trackedRef.current || !orgId || isSuccess) return;
+    trackedRef.current = true;
+    analytics.track('member_payment_return_failed', { org_id: orgId });
+  }, [isSuccess, orgId]);
+
+  useEffect(() => {
+    if (!isSuccess || !orgId) return;
+    let attempts = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const invalidate = () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.plans.all(orgId) });
+    };
+
+    const poll = async () => {
+      if (cancelled) return;
+      try {
+        const res = (await fetchRef.current(
+          `/organizations/${orgId}/subscriptions/my`,
+        )) as { data: SubscriptionWithPlan[] };
+        const list = res?.data ?? [];
+        const activated = subId
+          ? list.some((s) => s.id === subId && s.status === 'active')
+          : list.some((s) => s.status === 'active');
+        if (activated) {
+          invalidate();
+          analytics.track('member_payment_return_success', {
+            org_id: orgId,
+            subscription_id: subId,
+          });
+          setState('confirmed');
+          return;
+        }
+      } catch {
+        // Network blip — keep polling until the attempt cap.
+      }
+      attempts++;
+      if (attempts >= MAX_POLLS) {
+        invalidate();
+        analytics.track('member_payment_return_timeout', {
+          org_id: orgId,
+          subscription_id: subId,
+        });
+        setState('pending');
+        return;
+      }
+      timer = setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
+    timer = setTimeout(poll, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [isSuccess, orgId, subId, queryClient]);
+
+  const view =
+    state === 'verifying'
+      ? {
+          icon: <ActivityIndicator size="large" color={colors.primary} />,
+          title: prT.verifyingTitle ?? 'Verifying payment...',
+          desc: prT.verifyingDesc ?? 'Please wait while we confirm your payment.',
+        }
+      : state === 'confirmed'
+        ? {
+            icon: <CheckCircle2 size={56} color="#7A8A5C" strokeWidth={1.8} />,
+            title: prT.successTitle ?? 'Payment Successful!',
+            desc: prT.successDesc ?? 'Your subscription has been activated.',
+          }
+        : state === 'pending'
+          ? {
+              icon: <Clock size={56} color="#C9974D" strokeWidth={1.8} />,
+              title: prT.processingTitle ?? 'Payment Received',
+              desc:
+                prT.processingDesc ??
+                'Your payment is being processed. Your subscription will be activated shortly.',
+            }
+          : {
+              icon: <XCircle size={56} color={colors.mutedFg} strokeWidth={1.8} />,
+              title: prT.cancelledTitle ?? 'Payment Cancelled',
+              desc:
+                prT.cancelledDesc ??
+                'No payment was made. You can try again from the shop.',
+            };
+
+  return (
+    <View style={{ flex: 1 }} className="bg-background">
+      <FKAmbientBackdrop />
+      <SafeAreaView
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 32,
+        }}
+      >
+        <View style={{ marginBottom: 20 }}>{view.icon}</View>
+        <Text
+          style={{
+            fontFamily: displayFamily(lang, 'bold'),
+            fontSize: 20,
+            letterSpacing: -0.3,
+            color: colors.foreground,
+            textAlign: 'center',
+            marginBottom: 8,
+          }}
+        >
+          {view.title}
+        </Text>
+        <Text
+          className="text-muted-foreground"
+          style={{ fontSize: 14, lineHeight: 20, textAlign: 'center', marginBottom: 28 }}
+        >
+          {view.desc}
+        </Text>
+        <FKButton
+          label={prT.backToShop ?? 'Back to Shop'}
+          variant="primary"
+          disabled={state === 'verifying'}
+          onPress={() => router.replace('/(tabs)/shop')}
+          style={{ minWidth: 200 }}
+        />
+      </SafeAreaView>
+    </View>
+  );
+}

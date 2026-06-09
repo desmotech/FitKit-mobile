@@ -42,6 +42,8 @@ export const queryKeys = {
   payments: {
     all: (orgId: string, filters?: Record<string, unknown>) =>
       ['/organizations', orgId, 'payments', filters] as const,
+    config: (orgId: string) =>
+      ['/organizations', orgId, 'payment-config'] as const,
   },
   subscriptions: {
     all: (orgId: string, filters?: Record<string, unknown>) =>
