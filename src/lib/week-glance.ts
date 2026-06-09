@@ -88,8 +88,11 @@ function toLocalYmd(d: Date): string {
 }
 
 function addDays(ymd: string, n: number): string {
-  const [y, m, d] = ymd.split('-').map((p) => Number.parseInt(p, 10));
-  return toLocalYmd(new Date(y, (m ?? 1) - 1, (d ?? 1) + n));
+  const [ys, ms, ds] = ymd.split('-');
+  const y = Number.parseInt(ys ?? '', 10);
+  const m = Number.parseInt(ms ?? '', 10);
+  const d = Number.parseInt(ds ?? '', 10);
+  return toLocalYmd(new Date(y, m - 1, d + n));
 }
 
 // ── Builder ──────────────────────────────────────────────────────────

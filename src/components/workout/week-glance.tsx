@@ -338,8 +338,12 @@ function visualFor(
 
 /** Parse a `YYYY-MM-DD` as a *local* date (no UTC shift) for weekday labels. */
 function parseLocal(ymd: string): Date {
-  const [y, m, d] = ymd.split('-').map((p) => Number.parseInt(p, 10));
-  return new Date(y, (m ?? 1) - 1, d ?? 1);
+  const [ys, ms, ds] = ymd.split('-');
+  return new Date(
+    Number.parseInt(ys ?? '', 10),
+    Number.parseInt(ms ?? '', 10) - 1,
+    Number.parseInt(ds ?? '', 10),
+  );
 }
 
 function withAlpha(hex: string, alpha: number): string {

@@ -115,7 +115,6 @@ export default function HomeScreen() {
     attended: (feedT.attendedFor as string) ?? 'Checked in',
     coach: (feedT.coachLabel as string) ?? 'Coach',
     noGoals: (feedT.noGoals as string) ?? 'Set your first fitness goal',
-    setGoal: (feedT.setGoal as string) ?? 'Set a goal',
     bodyMetric: goalsT.bodyMetric ?? 'Body Metric',
     exercisePr: goalsT.exercisePr ?? 'Exercise PR',
     achieved: goalsT.achieved ?? 'Achieved',
