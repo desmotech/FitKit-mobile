@@ -15,6 +15,7 @@
  *     (the iOS form-field convention).
  */
 import { useColorScheme } from 'nativewind';
+import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
@@ -237,10 +238,16 @@ function PairedSlot({ field }: { field: PairedField }) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();
+  const [focused, setFocused] = useState(false);
+  // While editing we show the RAW number so a second digit can be typed.
+  // Zero-padding a single digit ("5" → "05") fills the 2-char `maxLength`
+  // budget and the field then silently rejects the next keystroke — the
+  // bug where seconds only ever accepts one digit. We only pad at rest
+  // (blurred) to keep the MM : SS look.
   const display =
     field.value == null
       ? ''
-      : field.maxLength === 2
+      : !focused && field.maxLength === 2
         ? String(field.value).padStart(2, '0')
         : String(field.value);
   return (
@@ -269,6 +276,8 @@ function PairedSlot({ field }: { field: PairedField }) {
         accessibilityLabel={field.a11y}
         value={display}
         onChangeText={(t) => field.onChange(parseInt10(t, field.clamp ?? null))}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         placeholder={field.placeholder ?? '0'}
         placeholderTextColor={isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'}
         keyboardType="number-pad"
