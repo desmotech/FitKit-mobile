@@ -48,6 +48,7 @@ import {
   RestDayCard,
   WorkoutSummaryCard,
 } from '@/components/workout/workout-summary-card';
+import { WeekGlance } from '@/components/workout/week-glance';
 import { TodayClassCard } from '@/components/schedule/today-class-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -56,6 +57,7 @@ import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useTodayClassSessions } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useMyWeekSessions } from '@/hooks/use-schedule';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
   getWeekStartDay,
@@ -131,6 +133,7 @@ export default function HomeScreen() {
   const todayYMD = useMemo(() => ymd(today), [today]);
 
   const weekAssignments = useMyWeekAssignments(orgId, weekStart);
+  const weekSessions = useMyWeekSessions(orgId, weekStart);
   const todayClasses = useTodayClassSessions(orgId);
   const goalsQuery = useApiQuery<{ data: GoalResponse[] }>({
     path: orgId ? `/organizations/${orgId}/goals/me` : '',
@@ -412,6 +415,26 @@ export default function HomeScreen() {
                   </Animated.View>
                 ))}
               </View>
+            )}
+          </Animated.View>
+        ) : null}
+
+        {/* ── This week ────────────────────────────────────────────── */}
+        {hasOrg ? (
+          <Animated.View
+            entering={FadeInDown.delay(120).duration(380).springify()}
+            style={{ paddingHorizontal: 20, paddingTop: 22, gap: 10 }}
+          >
+            {weekAssignments.isLoading || weekSessions.isLoading ? (
+              <Skeleton style={{ height: 78, borderRadius: 16 }} />
+            ) : (
+              <WeekGlance
+                weekStart={weekStart}
+                todayYMD={todayYMD}
+                assignments={weekAssignments.data?.data ?? []}
+                sessions={weekSessions.data?.data ?? []}
+                title={L.homeThisWeek}
+              />
             )}
           </Animated.View>
         ) : null}

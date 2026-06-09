@@ -105,6 +105,8 @@ export interface LogStrings {
   homeLogPr: string;
   // Home "Quick actions" section kicker
   homeQuickActions: string;
+  // Home "This week" section kicker
+  homeThisWeek: string;
 
   // PR board
   prBoard: string;
@@ -247,6 +249,7 @@ const en: LogStrings = {
 
   homeLogPr: 'Log PR',
   homeQuickActions: 'Quick actions',
+  homeThisWeek: 'This week',
 
   prBoard: 'PR Board',
   prLifts: 'Lifts',
@@ -377,6 +380,7 @@ const he: LogStrings = {
 
   homeLogPr: 'תיעוד שיא',
   homeQuickActions: 'פעולות מהירות',
+  homeThisWeek: 'השבוע',
 
   prBoard: 'שיאים',
   prLifts: 'הרמות',
@@ -507,6 +511,7 @@ const ru: LogStrings = {
 
   homeLogPr: 'Рекорд',
   homeQuickActions: 'Быстрые действия',
+  homeThisWeek: 'На этой неделе',
 
   prBoard: 'Рекорды',
   prLifts: 'Силовые',
