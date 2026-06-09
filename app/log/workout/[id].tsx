@@ -125,17 +125,27 @@ export default function LogWorkoutResultScreen() {
 
   // A per-movement factory that seeds a set row from the prescription so the
   // member confirms numbers instead of retyping them every set. Column-aware
-  // (only fields the row renders get prefilled) and keyed by movement id so
-  // both the initial seed and "+ Add set" reuse it. Recomputed when the 1RM
-  // map arrives so %1RM loads resolve to a concrete target.
+  // (only fields the row renders get prefilled), rep-scheme aware (set N of a
+  // 21-15-9 gets that round's reps), and keyed by movement id so the initial
+  // seed, "+ Add set", and auto-advance all share it. `targetSets` is how many
+  // sets the prescription implies — both the seed count and the auto-advance
+  // cap. Recomputed when the 1RM map arrives so %1RM loads resolve to a target.
   const defaultRowFactories = useMemo(() => {
-    const map: Record<string, () => SetRowValue> = {};
+    const map: Record<
+      string,
+      { make: (setIndex: number) => SetRowValue; targetSets: number }
+    > = {};
     for (const section of sections) {
       const caps = getShapeCaps((section.shape ?? null) as SectionShape | null);
+      const scheme = repSchemeFor(section);
       for (const m of section.movements) {
         const columns = deriveColumns(m, caps);
         const oneRM = oneRMKg[m.exercise.id] ?? null;
-        map[m.id] = () => defaultRow(m, columns, oneRM);
+        map[m.id] = {
+          make: (setIndex) =>
+            defaultRow(m, columns, oneRM, scheme ? scheme[setIndex] ?? null : null),
+          targetSets: targetSetCount(m, section, scheme),
+        };
       }
     }
     return map;
@@ -151,22 +161,23 @@ export default function LogWorkoutResultScreen() {
       if (Object.keys(prev).length > 0) return prev;
       const next: Record<string, SetRowValue[]> = {};
       for (const m of loggableMovements) {
-        const count = Math.max(1, m.prescribedSets ?? 1);
-        const make = defaultRowFactories[m.id] ?? emptyRow;
-        next[m.id] = Array.from({ length: count }, () => make());
+        const factory = defaultRowFactories[m.id];
+        const count = factory?.targetSets ?? Math.max(1, m.prescribedSets ?? 1);
+        next[m.id] = Array.from({ length: count }, (_, i) =>
+          factory ? factory.make(i) : emptyRow(),
+        );
       }
       return next;
     });
   }, [loggableMovements, oneRMLoading, defaultRowFactories]);
 
   const addSet = (movementId: string) =>
-    setSetRows((prev) => ({
-      ...prev,
-      [movementId]: [
-        ...(prev[movementId] ?? []),
-        (defaultRowFactories[movementId] ?? emptyRow)(),
-      ],
-    }));
+    setSetRows((prev) => {
+      const rows = prev[movementId] ?? [];
+      const factory = defaultRowFactories[movementId];
+      const nextRow = factory ? factory.make(rows.length) : emptyRow();
+      return { ...prev, [movementId]: [...rows, nextRow] };
+    });
 
   const mutation = useLogResult(orgId, workoutId);
   // The top workout score is optional: a multi-section / strength day with no
@@ -344,6 +355,10 @@ export default function LogWorkoutResultScreen() {
                         rows={setRows[m.id] ?? []}
                         prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
                         oneRMKg={oneRMKg[m.exercise.id] ?? null}
+                        targetSets={
+                          defaultRowFactories[m.id]?.targetSets ??
+                          Math.max(1, m.prescribedSets ?? 1)
+                        }
                         onAddSet={() => addSet(m.id)}
                         onRemoveSet={(rowIdx) =>
                           setSetRows((prev) => ({
@@ -462,6 +477,7 @@ function MovementBlock({
   rows,
   prevSetsByNumber,
   oneRMKg,
+  targetSets,
   onAddSet,
   onRemoveSet,
   onChange,
@@ -471,6 +487,7 @@ function MovementBlock({
   rows: SetRowValue[];
   prevSetsByNumber: Record<number, SetRowLast>;
   oneRMKg: number | null;
+  targetSets: number;
   onAddSet: () => void;
   onRemoveSet: (idx: number) => void;
   onChange: (idx: number, update: Partial<SetRowValue>) => void;
@@ -480,6 +497,21 @@ function MovementBlock({
   const colors = useFKColors();
   const [active, setActive] = useState(0);
   const doneCount = rows.filter((r) => r.done).length;
+
+  // Marking a set done jumps focus to the next set so the member flows through
+  // a multi-set prescription without tapping "+". If the next set isn't seeded
+  // yet but the prescription still calls for more, append it.
+  const handleChange = (idx: number, update: Partial<SetRowValue>) => {
+    onChange(idx, update);
+    if (update.done !== true) return; // only advance when a set becomes done
+    if (idx + 1 < rows.length) {
+      setActive(idx + 1);
+    } else if (rows.length < targetSets) {
+      onAddSet();
+      setActive(rows.length);
+    }
+  };
+
   return (
     <View style={{ gap: 8 }}>
       <View
@@ -522,7 +554,7 @@ function MovementBlock({
         active={active}
         setActive={setActive}
         prevSetsByNumber={prevSetsByNumber}
-        onChange={onChange}
+        onChange={handleChange}
         onAddSet={() => {
           onAddSet();
           setActive(rows.length); // focus the newly appended set
@@ -632,6 +664,48 @@ function isLoggableRow(row: SetRowValue): boolean {
 
 // ── Prescription-seeded defaults ─────────────────────────────────────
 
+/** Defensive ceiling so a malformed config (e.g. `rounds: 9999`) can't seed a
+ *  runaway number of rows. */
+const MAX_SEEDED_SETS = 50;
+
+/** How many sets a prescription implies — drives both the initial seed count
+ *  and the auto-advance cap. A rep scheme has one set per step (21-15-9 → 3);
+ *  otherwise the movement's prescribed set count, then a "rounds" section's
+ *  round count, falling back to a single set. */
+function targetSetCount(
+  movement: WorkoutMovement,
+  section: WorkoutSection,
+  scheme: number[] | null,
+): number {
+  const raw = scheme
+    ? scheme.length
+    : movement.prescribedSets && movement.prescribedSets > 0
+      ? movement.prescribedSets
+      : sectionRounds(section) ?? 1;
+  return Math.min(MAX_SEEDED_SETS, Math.max(1, raw));
+}
+
+/** The per-set rep ladder for a rep-scheme section (e.g. [21, 15, 9]); null for
+ *  any other shape. Reads the same `repsScheme` config <formatSectionHeader>
+ *  renders as the "21-15-9" header. */
+function repSchemeFor(section: WorkoutSection): number[] | null {
+  if (section.shape !== 'rep_scheme') return null;
+  const raw = section.config?.repsScheme;
+  if (!Array.isArray(raw)) return null;
+  const nums = raw
+    .map((v) => prescNum(v))
+    .filter((n): n is number => n != null && n > 0);
+  return nums.length > 0 ? nums : null;
+}
+
+/** Round count for a "rounds for time" section — each round is one set per
+ *  movement. Other timed shapes (EMOM/Tabata/AMRAP) keep their own prescribed
+ *  set count rather than expanding to one row per interval. */
+function sectionRounds(section: WorkoutSection): number | null {
+  if (section.shape !== 'rounds') return null;
+  return prescNum(section.config?.rounds);
+}
+
 /** Build a set row pre-filled from a movement's prescription so the member
  *  confirms numbers instead of retyping them. Column-aware — only fields the
  *  row actually renders are seeded — and flags the row `prefilled` so an
@@ -640,13 +714,16 @@ function defaultRow(
   movement: WorkoutMovement,
   columns: SetColumns,
   oneRMKg: number | null,
+  repsOverride: number | null = null,
 ): SetRowValue {
   const row = emptyRow();
   const presc = (movement.prescription ?? null) as Record<string, unknown> | null;
   let prefilled = false;
 
   if (columns.reps) {
-    const reps = prescribedReps(presc, movement.prescribedReps);
+    // A rep scheme (21-15-9) sets this round's reps directly; otherwise fall
+    // back to the movement's own prescription.
+    const reps = repsOverride ?? prescribedReps(presc, movement.prescribedReps);
     if (reps != null) {
       row.reps = String(reps);
       prefilled = true;
