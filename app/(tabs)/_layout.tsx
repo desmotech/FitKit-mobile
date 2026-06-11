@@ -1,8 +1,4 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-
-const Label = NativeTabs.Trigger.Label;
-const Icon = NativeTabs.Trigger.Icon;
-const Badge = NativeTabs.Trigger.Badge;
 import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
 import { AuthGate } from '@/providers/auth-gate';
@@ -13,6 +9,10 @@ import { useRealtimeSubscription } from '@/hooks/use-realtime-subscription';
 import { useMyProgramEnrollments } from '@/hooks/use-workouts';
 import { usePaymentConfig, usePlans } from '@/hooks/use-shop';
 import { useI18n } from '@/providers/i18n-provider';
+
+const Label = NativeTabs.Trigger.Label;
+const Icon = NativeTabs.Trigger.Icon;
+const Badge = NativeTabs.Trigger.Badge;
 
 const PRIMARY_LIGHT = '#0E8C8C';
 const PRIMARY_DARK = '#2AB8B8';
@@ -26,12 +26,17 @@ export default function TabsLayout() {
   const orgId = activeOrganization?.id;
   const enrollments = useMyProgramEnrollments(orgId);
   const isEnrolledInProgram = (enrollments.data?.data?.length ?? 0) > 0;
-  // Shop tab: only when the org has an active payment provider AND ≥1 plan.
+  // Shop tab: only when the org has an active payment provider AND ≥1
+  // shoppable plan. TODO(FIT-203): course-type plans are excluded — mobile
+  // can't fulfill them yet, so an org with only course plans shouldn't
+  // surface an (empty) Shop tab.
   const plans = usePlans(orgId);
   const paymentConfig = usePaymentConfig(orgId);
+  const shoppablePlanCount = (plans.data?.data ?? []).filter(
+    (p) => p.type !== 'course',
+  ).length;
   const shouldShowShop =
-    paymentConfig.data?.data?.isActive === true &&
-    (plans.data?.data?.length ?? 0) > 0;
+    paymentConfig.data?.data?.isActive === true && shoppablePlanCount > 0;
   const incompleteForms = useIncompleteFormsCount(activeOrganization?.id);
   // Single owner of the native app-icon badge: server unread total + forms.
   useAppIconBadge(activeOrganization?.id);

@@ -44,7 +44,10 @@ export default function ShopScreen() {
   const subsQ = useMySubscription(orgId);
   const purchase = usePurchasePlan(orgId);
 
-  const plans = plansQ.data?.data ?? [];
+  // TODO(FIT-203): course-type plans need the dedicated course checkout +
+  // a library player that mobile doesn't have yet — hide them until
+  // courses GA on mobile.
+  const plans = (plansQ.data?.data ?? []).filter((p) => p.type !== 'course');
   const hasPaymentProvider = payQ.data?.data?.isActive === true;
   const subs = useMemo(() => subsQ.data?.data ?? [], [subsQ.data]);
 

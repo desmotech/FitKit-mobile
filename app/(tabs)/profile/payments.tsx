@@ -11,8 +11,11 @@
  * via `useRenewSubscription` from use-feed-data.
  */
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { CalendarX, CreditCard, AlertTriangle } from 'lucide-react-native';
-import { ActivityIndicator, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type {
   PaymentMethodResponse,
@@ -34,11 +37,15 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   type SubscriptionLite,
   useMySubscription,
+  useRegisterPaymentMethod,
   useRenewSubscription,
+  useResumeCancellation,
 } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
+
+const CARD_RETURN_URL = 'fitkit://profile/payments';
 
 interface Transaction {
   id: string;
@@ -90,21 +97,30 @@ export default function PaymentsScreen() {
   const phType = (phT.type ?? {}) as Record<TransactionType, string>;
   const membershipT = (profileT.membership ?? {}) as Record<string, unknown>;
   const membershipStatus = (membershipT.status ?? {}) as Record<string, string>;
+  const subscriptionsT = ((t as unknown as Record<string, Record<string, unknown>>)
+    .subscriptions ?? {}) as Record<string, string>;
 
   const labels = {
     title: settingsT.payment ?? 'Payments',
-    paymentMethodNone: 'No payment method on file',
-    paymentMethodExpires: 'Expires',
+    cardExpires: (phT.cardExpires as string) ?? 'Expires {date}',
     subscriptionTitle: (membershipT.title as string) ?? 'Membership',
-    nextBilling: 'Next billing',
-    transactionsTitle: 'Transaction History',
+    nextBilling: (phT.nextBilling as string) ?? 'Next billing',
+    transactionsTitle: (phT.title as string) ?? 'Transaction History',
     transactionsEmpty: (phT.empty as string) ?? 'No payments yet',
-    scheduledCancel: 'Scheduled to end',
-    scheduledCancelDesc: 'Your plan will not renew after the current period.',
     renew: (membershipT.renew as string) ?? 'Renew',
     renewing: (membershipT.renewing as string) ?? 'Renewing…',
-    manage: 'Manage subscription',
-    manageHint: 'Cancel or update card from the web app.',
+    cancelAction: subscriptionsT.cancelAction ?? 'Cancel subscription',
+    resumeAction: subscriptionsT.resumeAction ?? 'Keep my subscription',
+    scheduledCancelBanner:
+      subscriptionsT.scheduledCancelBanner ?? 'Scheduled to cancel on {date}',
+    scheduledCancelDesc:
+      subscriptionsT.scheduledCancelDesc ?? "You'll keep full access until then.",
+    debtTitle:
+      (phT.debtTitle as string) ?? 'Your account has an outstanding balance',
+    debtDesc:
+      (phT.debtDesc as string) ??
+      'You cannot book classes until the balance is resolved.',
+    resolve: (phT.resolve as string) ?? 'Resolve',
   };
 
   const txnPath = orgId ? `/organizations/${orgId}/payments/my` : '';
@@ -113,8 +129,12 @@ export default function PaymentsScreen() {
     queryOptions: { enabled: !!orgId },
   });
 
+  const router = useRouter();
   const subs = useMySubscription(orgId);
   const renew = useRenewSubscription(orgId);
+  const resume = useResumeCancellation(orgId);
+  const registerCard = useRegisterPaymentMethod(orgId);
+  const [resolving, setResolving] = useState(false);
 
   const { data: methodsData } = useApiQuery<{ data: PaymentMethodResponse[] }>({
     path: orgId ? `/organizations/${orgId}/payment-methods/my` : '',
@@ -131,6 +151,21 @@ export default function PaymentsScreen() {
 
   const transactions = txnData?.data ?? [];
   const isDebt = (activeSub?.status as unknown as string) === 'debt';
+
+  // Localized billing-interval suffix (e.g. "/month"), reused from the shop
+  // plan-card strings which already ship in the published dictionary.
+  const planCardT = ((t as unknown as Record<string, Record<string, unknown>>)
+    .shop?.planCard ?? {}) as Record<string, string>;
+  const intervalKey: Record<string, string> = {
+    weekly: 'perWeek',
+    monthly: 'perMonth',
+    quarterly: 'perQuarter',
+    yearly: 'perYear',
+  };
+  const subInterval = activeSub?.plan.interval ?? undefined;
+  const intervalLabel = subInterval
+    ? (planCardT[intervalKey[subInterval]] ?? `/${subInterval}`)
+    : '';
 
   const formatAmount = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(lang, { style: 'currency', currency });
@@ -149,15 +184,76 @@ export default function PaymentsScreen() {
     });
   };
 
+  const handleResume = () => {
+    if (!activeSub || !orgId || resume.isPending) return;
+    haptics.tap();
+    resume.mutate(
+      { id: activeSub.id },
+      {
+        onSuccess: () => {
+          haptics.success();
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+          });
+        },
+        onError: () => haptics.error(),
+      },
+    );
+  };
+
+  const handleCancel = () => {
+    if (!activeSub) return;
+    haptics.tap();
+    router.push({
+      pathname: '/(tabs)/profile/cancel-subscription',
+      params: {
+        id: activeSub.id,
+        plan: activeSub.plan.name,
+        periodEnd:
+          (activeSub as unknown as { currentPeriodEnd?: string | null })
+            .currentPeriodEnd ?? '',
+      },
+    });
+  };
+
+  // Card registration / debt resolution: open the hosted page, then refetch.
+  const handleUpdateCard = async () => {
+    if (!orgId || registerCard.isPending || resolving) return;
+    haptics.tap();
+    setResolving(true);
+    try {
+      const res = await registerCard.mutateAsync({
+        successUrl: `${CARD_RETURN_URL}?card=success`,
+        cancelUrl: `${CARD_RETURN_URL}?card=cancelled`,
+      });
+      const url = res.data?.paymentPageUrl;
+      if (url) {
+        await WebBrowser.openAuthSessionAsync(url, CARD_RETURN_URL);
+      }
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+      });
+      queryClient.invalidateQueries({
+        queryKey: [`/organizations/${orgId}/payment-methods/my`],
+      });
+      queryClient.invalidateQueries({ queryKey: [txnPath] });
+    } catch (e) {
+      haptics.error();
+      Alert.alert('', e instanceof Error ? e.message : labels.debtDesc);
+    } finally {
+      setResolving(false);
+    }
+  };
+
+  const cardBusy = resolving || registerCard.isPending;
+
   return (
     <FKSubScreen title={labels.title} contentStyle={{ gap: 20 }}>
         {isDebt && (
           <Animated.View entering={FadeInDown.duration(280)}>
             <View
               style={{
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                alignItems: 'flex-start',
-                gap: 10,
+                gap: 12,
                 padding: 14,
                 borderRadius: 16,
                 borderCurve: 'continuous',
@@ -166,29 +262,50 @@ export default function PaymentsScreen() {
                 borderColor: 'rgba(184,74,64,0.30)',
               }}
             >
-              <AlertTriangle size={18} color="#B84A40" strokeWidth={2.4} />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '700',
-                    color: '#B84A40',
-                    textAlign: isRTL ? 'right' : 'left',
-                  }}
-                >
-                  Outstanding balance
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: '#B84A40',
-                    marginTop: 2,
-                    textAlign: isRTL ? 'right' : 'left',
-                  }}
-                >
-                  You cannot book classes until the balance is resolved.
-                </Text>
+              <View
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <AlertTriangle size={18} color="#B84A40" strokeWidth={2.4} />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: '#B84A40',
+                      textAlign: isRTL ? 'right' : 'left',
+                    }}
+                  >
+                    {labels.debtTitle}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: '#B84A40',
+                      marginTop: 2,
+                      textAlign: isRTL ? 'right' : 'left',
+                    }}
+                  >
+                    {labels.debtDesc}
+                  </Text>
+                </View>
               </View>
+              <FKButton
+                label={labels.resolve}
+                variant="destructive"
+                size="sm"
+                fullWidth
+                onPress={handleUpdateCard}
+                disabled={cardBusy}
+                trailing={
+                  cardBusy ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : undefined
+                }
+              />
             </View>
           </Animated.View>
         )}
@@ -205,36 +322,45 @@ export default function PaymentsScreen() {
             statusLabels={membershipStatus}
             onRenew={handleRenew}
             isRenewing={renew.isPending && renew.variables === activeSub.id}
+            onCancel={handleCancel}
+            onResume={handleResume}
+            isResuming={resume.isPending}
+            intervalLabel={intervalLabel}
             formatAmount={formatAmount}
             lang={lang}
           />
         ) : null}
 
-        {/* ── Payment method ───────────────────────────────── */}
-        <FKGlassPanel radius={20} style={{ padding: 16, gap: 12 }}>
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              gap: 12,
-            }}
-          >
+        {/* ── Payment method — only shown when a card is on file.
+            Members can't add a card here (registration happens during
+            checkout / debt resolution), so an empty placeholder is just
+            noise. ── */}
+        {activeMethod ? (
+          <FKGlassPanel radius={20} style={{ padding: 16 }}>
             <View
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                backgroundColor: 'rgba(14,140,140,0.10)',
-                borderWidth: 1,
-                borderColor: 'rgba(14,140,140,0.30)',
+                flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: 12,
               }}
             >
-              <CreditCard size={18} color="#0E8C8C" strokeWidth={2.2} />
-            </View>
-            {activeMethod ? (
-              <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(14,140,140,0.10)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(14,140,140,0.30)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <CreditCard size={18} color="#0E8C8C" strokeWidth={2.2} />
+              </View>
+              <View
+                style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}
+              >
                 <Text
                   style={{
                     fontSize: 14,
@@ -249,28 +375,16 @@ export default function PaymentsScreen() {
                   <Text
                     style={{ fontSize: 11, color: colors.mutedFg, marginTop: 2 }}
                   >
-                    {labels.paymentMethodExpires}{' '}
-                    {String(activeMethod.expiryMonth).padStart(2, '0')}/
-                    {activeMethod.expiryYear}
+                    {labels.cardExpires.replace(
+                      '{date}',
+                      `${String(activeMethod.expiryMonth).padStart(2, '0')}/${activeMethod.expiryYear}`,
+                    )}
                   </Text>
                 ) : null}
               </View>
-            ) : (
-              <Text style={{ fontSize: 13, color: colors.mutedFg, flex: 1 }}>
-                {labels.paymentMethodNone}
-              </Text>
-            )}
-          </View>
-          <Text
-            style={{
-              fontSize: 11,
-              color: colors.mutedFg,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {labels.manageHint}
-          </Text>
-        </FKGlassPanel>
+            </View>
+          </FKGlassPanel>
+        ) : null}
 
         {/* ── Transactions ────────────────────────────────── */}
         <View style={{ gap: 12 }}>
@@ -338,6 +452,10 @@ function SubscriptionCard({
   statusLabels,
   onRenew,
   isRenewing,
+  onCancel,
+  onResume,
+  isResuming,
+  intervalLabel,
   formatAmount,
   lang,
 }: {
@@ -347,19 +465,26 @@ function SubscriptionCard({
   labels: {
     subscriptionTitle: string;
     nextBilling: string;
-    scheduledCancel: string;
+    scheduledCancelBanner: string;
     scheduledCancelDesc: string;
     renew: string;
     renewing: string;
+    cancelAction: string;
+    resumeAction: string;
   };
   statusLabels: Record<string, string>;
   onRenew: () => void;
   isRenewing: boolean;
+  onCancel: () => void;
+  onResume: () => void;
+  isResuming: boolean;
+  intervalLabel: string;
   formatAmount: (cents: number, currency: string) => string;
   lang: string;
 }) {
   const status = sub.status;
   const showRenew = status === 'past_due' || status === 'cancelled';
+  const showCancel = status === 'active';
   const scheduledToCancel = !!(
     sub as unknown as { cancelAtPeriodEnd?: boolean }
   ).cancelAtPeriodEnd;
@@ -376,7 +501,7 @@ function SubscriptionCard({
   const isActive = status === 'active' || status === 'paused';
   const statusTone = isActive
     ? { bg: 'rgba(122,138,92,0.16)', fg: '#5A6A3F', border: 'rgba(122,138,92,0.28)' }
-    : status === 'past_due' || status === 'cancelled'
+    : status === 'past_due' || status === 'cancelled' || status === 'debt'
       ? { bg: 'rgba(184,74,64,0.12)', fg: '#B84A40', border: 'rgba(184,74,64,0.28)' }
       : { bg: 'rgba(120,120,128,0.12)', fg: '#5E7082', border: 'transparent' };
 
@@ -455,8 +580,8 @@ function SubscriptionCard({
             textAlign: isRTL ? 'right' : 'left',
           }}
         >
-          {formatAmount(sub.plan.priceInCents, sub.plan.currency)} /{' '}
-          {sub.plan.interval}
+          {formatAmount(sub.plan.priceInCents, sub.plan.currency)}
+          {intervalLabel}
         </Text>
         {periodEndStr ? (
           <Text
@@ -476,8 +601,6 @@ function SubscriptionCard({
       {scheduledToCancel && (
         <View
           style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'flex-start',
             gap: 10,
             padding: 12,
             borderRadius: 12,
@@ -486,29 +609,53 @@ function SubscriptionCard({
             borderColor: 'rgba(201,151,77,0.30)',
           }}
         >
-          <CalendarX size={16} color="#8B6A35" strokeWidth={2.2} />
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: '700',
-                color: '#8B6A35',
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {labels.scheduledCancel}
-            </Text>
-            <Text
-              style={{
-                fontSize: 11,
-                color: '#8B6A35',
-                marginTop: 2,
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {labels.scheduledCancelDesc}
-            </Text>
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <CalendarX size={16} color="#8B6A35" strokeWidth={2.2} />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: '#8B6A35',
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {labels.scheduledCancelBanner.replace(
+                  '{date}',
+                  periodEndStr ?? '—',
+                )}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: '#8B6A35',
+                  marginTop: 2,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {labels.scheduledCancelDesc}
+              </Text>
+            </View>
           </View>
+          <FKButton
+            label={labels.resumeAction}
+            variant="outline"
+            size="sm"
+            fullWidth
+            onPress={onResume}
+            disabled={isResuming}
+            trailing={
+              isResuming ? (
+                <ActivityIndicator size="small" color="#8B6A35" />
+              ) : undefined
+            }
+          />
         </View>
       )}
 
@@ -522,6 +669,22 @@ function SubscriptionCard({
           disabled={isRenewing}
           trailing={isRenewing ? <ActivityIndicator size="small" color="#fff" /> : undefined}
         />
+      )}
+
+      {showCancel && !scheduledToCancel && (
+        <Pressable
+          onPress={onCancel}
+          hitSlop={8}
+          style={{
+            alignSelf: isRTL ? 'flex-start' : 'flex-end',
+            paddingVertical: 6,
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}>
+            {labels.cancelAction}
+          </Text>
+        </Pressable>
       )}
     </FKGlassPanel>
   );

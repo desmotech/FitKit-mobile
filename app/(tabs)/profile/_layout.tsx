@@ -27,6 +27,13 @@ export default function ProfileLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="cancel-subscription"
+        options={{
+          presentation: 'pageSheet',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }
