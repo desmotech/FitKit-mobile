@@ -21,6 +21,9 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# Local build credentials (eas credentials) — holds the p12 password in plaintext
+credentials.json
+
 # Builds
 *.apk
 *.aab
