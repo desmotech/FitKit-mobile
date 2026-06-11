@@ -254,3 +254,57 @@ export function useRenewSubscription(orgId: string | undefined | null) {
     method: 'POST',
   });
 }
+
+/**
+ * Member: schedule cancellation at end of the current period. `reason` is
+ * required by the API. Reversible via {@link useResumeCancellation} until the
+ * period actually ends.
+ */
+export function useCancelAtPeriodEnd(orgId: string | undefined | null) {
+  return useApiSend<
+    ApiEnvelope<SubscriptionLite>,
+    { id: string; reason: string }
+  >({
+    path: (b) =>
+      `/organizations/${orgId}/subscriptions/my/${b.id}/cancel-at-period-end`,
+    method: 'POST',
+  });
+}
+
+/** Member: undo a scheduled cancellation before it takes effect. */
+export function useResumeCancellation(orgId: string | undefined | null) {
+  return useApiSend<ApiEnvelope<SubscriptionLite>, { id: string }>({
+    path: (b) => `/organizations/${orgId}/subscriptions/my/${b.id}/resume`,
+    method: 'POST',
+  });
+}
+
+/**
+ * Member: request immediate cancellation + refund. Opens a
+ * `cancellation_requests` row for the gym owner to approve — not an instant
+ * cancel.
+ */
+export function useRequestCancellation(orgId: string | undefined | null) {
+  return useApiSend<
+    ApiEnvelope<unknown>,
+    { id: string; reason: string; refundRequested: boolean }
+  >({
+    path: (b) =>
+      `/organizations/${orgId}/subscriptions/my/${b.id}/cancellation-requests`,
+    method: 'POST',
+  });
+}
+
+/**
+ * Member self-service card registration. Returns a hosted payment-page URL to
+ * open in the in-app browser (same pattern as plan checkout).
+ */
+export function useRegisterPaymentMethod(orgId: string | undefined | null) {
+  return useApiSend<
+    ApiEnvelope<{ paymentPageUrl: string }>,
+    { successUrl: string; cancelUrl: string }
+  >({
+    path: orgId ? `/organizations/${orgId}/payment-methods/register` : '',
+    method: 'POST',
+  });
+}

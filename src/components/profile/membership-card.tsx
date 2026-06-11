@@ -180,32 +180,35 @@ export function MembershipCard({
             </Text>
           ) : null}
         </View>
-        <Pressable
-          onPressIn={haptics.tap}
-          onPress={onRenew}
-          disabled={isRenewing}
-          style={({ pressed }) => [
-            {
-              paddingVertical: 10,
-              paddingHorizontal: 18,
-              borderRadius: 11,
-              backgroundColor: '#fff',
-              shadowColor: '#000',
-              shadowOpacity: 0.16,
-              shadowRadius: 8,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 3,
-            },
-            (pressed || isRenewing) && { opacity: 0.85 },
-          ]}
-        >
-          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
-            {sub.status === 'past_due' || sub.status === 'cancelled'
-              ? isRenewing
-                ? labels.renewing
-                : labels.renew
-              : labels.manage}
-          </Text>
+        {/* Children-as-function + static View: a `Pressable style={() => …}`
+            function gets dropped in this RN build, so the white pill never
+            rendered (teal text on teal card = invisible). */}
+        <Pressable onPressIn={haptics.tap} onPress={onRenew} disabled={isRenewing}>
+          {({ pressed }) => (
+            <View
+              style={{
+                paddingVertical: 10,
+                paddingHorizontal: 18,
+                borderRadius: 11,
+                borderCurve: 'continuous',
+                backgroundColor: '#fff',
+                shadowColor: '#000',
+                shadowOpacity: 0.16,
+                shadowRadius: 8,
+                shadowOffset: { width: 0, height: 3 },
+                elevation: 3,
+                opacity: pressed || isRenewing ? 0.85 : 1,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
+                {sub.status === 'past_due' || sub.status === 'cancelled'
+                  ? isRenewing
+                    ? labels.renewing
+                    : labels.renew
+                  : labels.manage}
+              </Text>
+            </View>
+          )}
         </Pressable>
       </View>
     </View>

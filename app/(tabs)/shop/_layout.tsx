@@ -1,0 +1,16 @@
+import { Stack } from 'expo-router';
+
+/**
+ * Shop tab stack. The plans list is `index`; the post-checkout
+ * verification screen (`payment-return`) is pushed on top and also serves
+ * the `fitkit://shop/payment-return` deep link the payment provider
+ * redirects to.
+ */
+export default function ShopLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="payment-return" />
+    </Stack>
+  );
+}
