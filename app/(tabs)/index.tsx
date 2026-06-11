@@ -45,6 +45,7 @@ import {
   useFKColors,
 } from '@/components/fk';
 import {
+  OpenDayCard,
   RestDayCard,
   WorkoutSummaryCard,
 } from '@/components/workout/workout-summary-card';
@@ -109,6 +110,10 @@ export default function HomeScreen() {
     restDaySubtitle:
       (feedT.restDaySubtitle as string) ??
       'Take it easy — recovery is training too.',
+    openDayTitle: (feedT.openDayTitle as string) ?? 'No workout on the board today',
+    openDaySubtitle:
+      (feedT.openDaySubtitle as string) ??
+      'Nothing programmed — get some easy movement in: a walk, mobility, or a light stretch.',
     browseWeek: (feedT.browseWeek as string) ?? 'Browse this week',
     booked: (feedT.bookedFor as string) ?? 'Booked',
     waitlisted: (feedT.waitlistedFor as string) ?? 'Waitlist',
@@ -207,10 +212,16 @@ export default function HomeScreen() {
   const isLoadingToday =
     hasOrg && (weekAssignments.isLoading || todayClasses.isLoading);
   const hasWorkoutsToday = todayWorkouts.length > 0;
-  const isRestDay =
-    (!hasWorkoutsToday &&
-      todayAssignments.some((a) => a.kind === 'rest')) ||
-    (!hasWorkoutsToday && sessions.length === 0 && !isLoadingToday);
+  // Coach-assigned rest (kind: 'rest') is real recovery → sage "Rest day".
+  // An empty board (nothing programmed, nothing booked) is an *open* day,
+  // not rest → teal "keep moving" nudge instead of mislabeling it as rest.
+  const isAssignedRest =
+    !hasWorkoutsToday && todayAssignments.some((a) => a.kind === 'rest');
+  const isOpenDay =
+    !hasWorkoutsToday &&
+    !isAssignedRest &&
+    sessions.length === 0 &&
+    !isLoadingToday;
 
   return (
     <View className="flex-1">
@@ -299,13 +310,21 @@ export default function HomeScreen() {
 
             {isLoadingToday ? (
               <Skeleton style={{ height: 132, borderRadius: 20 }} />
-            ) : isRestDay ? (
+            ) : isAssignedRest || isOpenDay ? (
               <View style={{ gap: 10 }}>
-                <RestDayCard
-                  title={labels.restDayTitle}
-                  subtitle={labels.restDaySubtitle}
-                  isRTL={isRTL}
-                />
+                {isAssignedRest ? (
+                  <RestDayCard
+                    title={labels.restDayTitle}
+                    subtitle={labels.restDaySubtitle}
+                    isRTL={isRTL}
+                  />
+                ) : (
+                  <OpenDayCard
+                    title={labels.openDayTitle}
+                    subtitle={labels.openDaySubtitle}
+                    isRTL={isRTL}
+                  />
+                )}
                 <Pressable
                   onPress={() => {
                     haptics.tap();
@@ -791,6 +810,7 @@ const HE_SUBGREETING: Record<string, string> = {
   hot: 'ממשיכים ברצף!',
   comeback: 'טוב שחזרת — ממשיכים מאיפה שעצרנו.',
   rest: 'מנוחה היא חלק מהאימון.',
+  open: 'יום פנוי — קצת תנועה תמיד טובה.',
 };
 
 function greetingForHour(
@@ -805,8 +825,9 @@ function greetingForHour(
 
 /**
  * Picks a sub-greeting that reflects the member's current state without
- * needing new server data. Order matters: rest first (most specific),
- * then hot streak based on top-goal progress, then fresh default.
+ * needing new server data. Order matters: assigned rest first (most
+ * specific), then open/empty board, then hot streak based on top-goal
+ * progress, then fresh default.
  *
  * "Comeback" is intentionally not wired yet — we don't have an easy
  * "last activity" signal without another fetch, so we leave that line in
@@ -823,10 +844,14 @@ function subGreetingFor({
   topGoalProgress: number | null;
   subgreetingT: Record<string, string>;
 }): string {
-  const isRest =
-    assignment?.kind === 'rest' ||
-    (!assignment && sessionsCount === 0);
-  if (isRest) return subgreetingT.rest ?? 'Recovery is part of the work.';
+  if (assignment?.kind === 'rest') {
+    return subgreetingT.rest ?? 'Recovery is part of the work.';
+  }
+  // Empty board — nothing programmed, nothing booked. Not rest; nudge
+  // toward light movement rather than implying prescribed recovery.
+  if (!assignment && sessionsCount === 0) {
+    return subgreetingT.open ?? 'Open day — move a little anyway.';
+  }
   if (topGoalProgress != null && topGoalProgress >= 70) {
     return subgreetingT.hot ?? "You're on a roll.";
   }

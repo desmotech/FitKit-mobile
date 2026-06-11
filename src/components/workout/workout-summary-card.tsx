@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Dumbbell,
+  Footprints,
   Moon,
 } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
@@ -415,6 +416,90 @@ export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
             style={{
               fontSize: 13,
               color: '#5A6A3F',
+              marginTop: 3,
+              lineHeight: 18,
+              textAlign: isRTL ? 'right' : 'left',
+            }}
+          >
+            {subtitle}
+          </Text>
+        </View>
+      </View>
+    </FKCard>
+  );
+}
+
+// ── Open day card ──────────────────────────────────────────────────
+
+export interface OpenDayCardProps {
+  title: string;
+  subtitle: string;
+  isRTL: boolean;
+}
+
+/**
+ * Shown when nothing's on the board — no programmed workout, no booked
+ * class — as distinct from a coach-assigned rest day. Teal "keep moving"
+ * treatment (vs the sage Moon rest card) so an empty day reads as an
+ * invitation to move lightly, not as prescribed recovery.
+ */
+export function OpenDayCard({ title, subtitle, isRTL }: OpenDayCardProps) {
+  const colors = useFKColors();
+  const accent = colors.isDark ? '#27C8BA' : '#0A6E6E';
+  return (
+    <FKCard
+      style={{
+        padding: 18,
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: colors.isDark
+          ? 'rgba(39,200,186,0.40)'
+          : 'rgba(14,140,140,0.38)',
+      }}
+    >
+      <View
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          gap: 14,
+          alignItems: 'center',
+        }}
+      >
+        <View
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 14,
+            backgroundColor: colors.isDark
+              ? 'rgba(39,200,186,0.16)'
+              : 'rgba(14,140,140,0.12)',
+            borderWidth: 1,
+            borderColor: colors.isDark
+              ? 'rgba(39,200,186,0.32)'
+              : 'rgba(14,140,140,0.28)',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Footprints size={22} color={colors.primary} strokeWidth={2.2} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text
+            className="font-display"
+            style={{
+              fontSize: 17,
+              fontWeight: '800',
+              color: accent,
+              letterSpacing: -0.3,
+              textAlign: isRTL ? 'right' : 'left',
+            }}
+          >
+            {title}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              color: colors.mutedFg,
               marginTop: 3,
               lineHeight: 18,
               textAlign: isRTL ? 'right' : 'left',
