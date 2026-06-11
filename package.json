@@ -18,7 +18,7 @@
     "@clerk/clerk-expo": "^2.19.31",
     "@clerk/localizations": "^3.37.5",
     "@expo/vector-icons": "^15.0.3",
-    "@fitkit/shared": "npm:@desmotech/fitkit-shared@^0.1.0",
+    "@fitkit/shared": "npm:@desmotech/fitkit-shared@^0.1.10",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "8.6.0",
     "@react-native-menu/menu": "^2.0.0",
