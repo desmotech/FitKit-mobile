@@ -270,6 +270,7 @@ export function WorkoutBlock({
               watchDemo: ps.watchDemo,
               formCues: ps.formCues,
               coachNote: ps.coachNote,
+              afterEachRound: ps.afterEachRound,
               markComplete: ps.a11yMarkSectionComplete,
               markIncomplete: ps.a11yMarkSectionIncomplete,
             }}

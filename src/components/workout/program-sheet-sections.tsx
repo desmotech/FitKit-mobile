@@ -22,7 +22,7 @@
  * RTL-aware throughout. Secondary colors come from `programSheetInk` for
  * legibility on the ambient gradient in both themes.
  */
-import { ChevronDown, Play, Check } from 'lucide-react-native';
+import { ChevronDown, Play, Check, Repeat } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -47,6 +47,7 @@ import {
   buildPrescriptionStats,
   buildPrescriptionSummary,
   groupBySuperset,
+  isPerRoundConstant,
   letterFor,
   sectionTypeLabel,
 } from '@/components/workout/prescription';
@@ -90,6 +91,8 @@ export interface ProgramSheetLabels {
   watchDemo: string;
   formCues: string;
   coachNote: string;
+  /** Divider above per-round "cash-out" movements (prescription.each_round). */
+  afterEachRound: string;
   markComplete: (name: string) => string;
   markIncomplete: (name: string) => string;
 }
@@ -242,7 +245,14 @@ function SectionRow({
   const kicker = heading === typeLabel ? null : typeLabel;
   const count = section.movements.length;
   const groups = groupBySuperset(section.movements);
-  const hasSuperset = groups.some((g) => g.length > 1);
+  // Movements flagged `each_round` are fixed cash-outs done after every round —
+  // split them out (keeping superset groups intact) so they render under an
+  // "After each round" divider rather than inline with the laddered work. The
+  // divider simply never appears when nothing is flagged.
+  const isAfterGroup = (g: WorkoutMovement[]) =>
+    g.some((m) => isPerRoundConstant(m.prescription));
+  const mainGroups = groups.filter((g) => !isAfterGroup(g));
+  const afterGroups = groups.filter(isAfterGroup);
   const minutes = estimateSectionMinutes(section);
 
   const press = useSharedValue(0);
@@ -383,22 +393,31 @@ function SectionRow({
         ) : null}
 
         <View style={{ marginTop: secondary ? 8 : 10 }}>
-          {groups.flat().map((mv, idx) => (
-            <ExRow
-              key={mv.id}
-              movement={mv}
-              letter={letterFor(mv, idx, groups)}
-              hasSuperset={hasSuperset}
-              hideSets={!caps.showSets}
-              hideReps={!caps.showReps}
+          {renderMovementRows(mainGroups, {
+            caps,
+            isRTL,
+            lang,
+            colors,
+            ink,
+            labels,
+            onPlayVideo,
+          })}
+          {afterGroups.length > 0 ? (
+            <AfterEachRoundDivider
+              label={labels.afterEachRound}
               isRTL={isRTL}
-              lang={lang}
-              colors={colors}
               ink={ink}
-              labels={labels}
-              onPlayVideo={() => onPlayVideo(mv)}
             />
-          ))}
+          ) : null}
+          {renderMovementRows(afterGroups, {
+            caps,
+            isRTL,
+            lang,
+            colors,
+            ink,
+            labels,
+            onPlayVideo,
+          })}
           {/* Close the row stack with a final hairline. */}
           <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: ink.line }} />
         </View>
@@ -419,6 +438,91 @@ function SectionRow({
   );
 }
 
+// ── Movement row list ────────────────────────────────────────────────
+
+interface MovementRowContext {
+  caps: ReturnType<typeof getShapeCaps>;
+  isRTL: boolean;
+  lang: string;
+  colors: ReturnType<typeof useFKColors>;
+  ink: ProgramSheetInk;
+  labels: ProgramSheetLabels;
+  onPlayVideo: (movement: WorkoutMovement) => void;
+}
+
+/**
+ * Render a slice of superset groups as a flat run of ExRows. Letters and the
+ * superset flag are derived from the slice itself so the "main" and "after
+ * each round" runs each label independently (A, B, … within their own run).
+ */
+function renderMovementRows(
+  groups: WorkoutMovement[][],
+  ctx: MovementRowContext,
+) {
+  const hasSuperset = groups.some((g) => g.length > 1);
+  return groups.flat().map((mv, idx) => (
+    <ExRow
+      key={mv.id}
+      movement={mv}
+      letter={letterFor(mv, idx, groups)}
+      hasSuperset={hasSuperset}
+      hideSets={!ctx.caps.showSets}
+      hideReps={!ctx.caps.showReps}
+      isConstant={isPerRoundConstant(mv.prescription)}
+      isRTL={ctx.isRTL}
+      lang={ctx.lang}
+      colors={ctx.colors}
+      ink={ctx.ink}
+      labels={ctx.labels}
+      onPlayVideo={() => ctx.onPlayVideo(mv)}
+    />
+  ));
+}
+
+/**
+ * Quiet divider that introduces the per-round cash-out movements — a small
+ * looping glyph + uppercase label, echoing the section kicker's typography.
+ */
+function AfterEachRoundDivider({
+  label,
+  isRTL,
+  ink,
+}: {
+  label: string;
+  isRTL: boolean;
+  ink: ProgramSheetInk;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        alignItems: 'center',
+        gap: 7,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: ink.line,
+        paddingTop: 12,
+        paddingBottom: 4,
+        paddingHorizontal: 2,
+      }}
+    >
+      <Repeat size={11} color={ink.faint} strokeWidth={2.4} />
+      <Text
+        numberOfLines={1}
+        style={{
+          fontFamily: 'Assistant-Medium',
+          fontSize: 10,
+          letterSpacing: 1.2,
+          textTransform: 'uppercase',
+          color: ink.faint,
+          textAlign: isRTL ? 'right' : 'left',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 // ── Exercise row ─────────────────────────────────────────────────────
 
 function ExRow({
@@ -427,6 +531,7 @@ function ExRow({
   hasSuperset,
   hideSets,
   hideReps,
+  isConstant,
   isRTL,
   lang,
   colors,
@@ -439,6 +544,12 @@ function ExRow({
   hasSuperset: boolean;
   hideSets: boolean;
   hideReps: boolean;
+  /**
+   * Per-round constant (`prescription.each_round`). Its own reps must show
+   * even in a rep_scheme/rounds section that otherwise hides reps (the header
+   * dictates the laddered reps; this movement carries fixed reps of its own).
+   */
+  isConstant: boolean;
   isRTL: boolean;
   lang: string;
   colors: ReturnType<typeof useFKColors>;
@@ -451,15 +562,20 @@ function ExRow({
   const [open, setOpen] = useState(false);
   const ex = movement.exercise;
   const hasVideo = Boolean(ex.videoUrl);
+  // A per-round constant keeps its own reps even when the section hides them.
+  const effectiveHideReps = hideReps && !isConstant;
   const stats = buildPrescriptionStats(
     movement,
     hideSets,
-    hideReps,
+    effectiveHideReps,
     statLabels,
   );
   const fallbackLine =
     stats.length === 0
-      ? formatPrescription(movement.prescription, movement, { hideSets, hideReps })
+      ? formatPrescription(movement.prescription, movement, {
+          hideSets,
+          hideReps: effectiveHideReps,
+        })
       : null;
   const summary = buildPrescriptionSummary(movement, stats, fallbackLine);
   const hasCues = !!ex.cues && ex.cues.length > 0;
