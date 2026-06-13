@@ -37,6 +37,8 @@ export interface ProgramSheetStrings {
   watchDemo: string;
   formCues: string;
   comments: string;
+  /** Divider above per-round "cash-out" movements (prescription.each_round). */
+  afterEachRound: string;
   // Inline coach-note callouts (Notes kept accessible without tabs).
   coachNote: string;
   postWorkout: string;
@@ -67,6 +69,7 @@ const en: ProgramSheetStrings = {
   watchDemo: 'Watch demo',
   formCues: 'Form cues',
   comments: 'Comments',
+  afterEachRound: 'After each round',
   coachNote: 'Coach note',
   postWorkout: 'Post-workout',
   chat: 'Workout chat',
@@ -94,6 +97,7 @@ const he: ProgramSheetStrings = {
   watchDemo: 'צפה בהדגמה',
   formCues: 'דגשי ביצוע',
   comments: 'תגובות',
+  afterEachRound: 'אחרי כל סבב',
   coachNote: 'הערת מאמן',
   postWorkout: 'אחרי האימון',
   chat: 'צ׳אט אימון',
@@ -121,6 +125,7 @@ const ru: ProgramSheetStrings = {
   watchDemo: 'Смотреть демо',
   formCues: 'Техника',
   comments: 'Комментарии',
+  afterEachRound: 'После каждого раунда',
   coachNote: 'Заметка тренера',
   postWorkout: 'После тренировки',
   chat: 'Чат тренировки',
