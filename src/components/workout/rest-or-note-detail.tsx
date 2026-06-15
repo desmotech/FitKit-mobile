@@ -100,6 +100,7 @@ export function RestOrNoteDetail({
             className="font-display"
             style={{
               fontSize: 20,
+              lineHeight: 26,
               fontWeight: '800',
               color: tintFg,
               letterSpacing: -0.3,

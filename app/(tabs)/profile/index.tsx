@@ -452,6 +452,7 @@ export default function ProfileScreen() {
                         style={{
                           color: '#fff',
                           fontSize: 28,
+                          lineHeight: 34,
                           fontWeight: '800',
                           letterSpacing: -0.5,
                         }}
@@ -504,6 +505,7 @@ export default function ProfileScreen() {
                       numberOfLines={1}
                       style={{
                         fontSize: 24,
+                        lineHeight: 30,
                         color: '#fff',
                         letterSpacing: -0.6,
                         textAlign: isRTL ? 'right' : 'left',

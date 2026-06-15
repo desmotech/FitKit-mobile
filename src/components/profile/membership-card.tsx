@@ -158,6 +158,7 @@ export function MembershipCard({
             numberOfLines={1}
             style={{
               fontSize: 24,
+              lineHeight: 30,
               color: '#fff',
               letterSpacing: -0.4,
               textAlign: isRTL ? 'right' : 'left',

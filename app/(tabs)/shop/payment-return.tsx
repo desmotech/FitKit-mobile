@@ -154,6 +154,7 @@ export default function PaymentReturnScreen() {
           style={{
             fontFamily: displayFamily(lang, 'bold'),
             fontSize: 20,
+            lineHeight: 26,
             letterSpacing: -0.3,
             color: colors.foreground,
             textAlign: 'center',

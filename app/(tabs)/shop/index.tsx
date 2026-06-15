@@ -157,6 +157,7 @@ export default function ShopScreen() {
           style={{
             fontFamily: displayFamily(lang, 'bold'),
             fontSize: 24,
+            lineHeight: 30,
             letterSpacing: -0.5,
             color: colors.foreground,
             textAlign: isRTL ? 'right' : 'left',

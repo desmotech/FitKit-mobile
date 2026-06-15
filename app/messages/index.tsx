@@ -82,6 +82,7 @@ export default function MessagesListScreen() {
             style={{
               flex: 1,
               fontSize: 24,
+              lineHeight: 30,
               fontWeight: '800',
               letterSpacing: -0.4,
               color: colors.foreground,

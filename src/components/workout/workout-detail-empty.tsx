@@ -107,6 +107,7 @@ export function NotFoundOrError({
             className="font-display"
             style={{
               fontSize: 22,
+              lineHeight: 28,
               fontWeight: '800',
               color: colors.foreground,
               textAlign: 'center',
