@@ -5,7 +5,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'FitKit',
   slug: 'fitkit',
   scheme: 'fitkit',
-  version: '1.0.1',
+  version: '1.0.2',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'automatic',
@@ -33,6 +33,138 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSLocationWhenInUseUsageDescription:
         'FitKit uses your location to verify you are at the gym for class check-in.',
       ITSAppUsesNonExemptEncryption: false,
+    },
+    // Apple privacy manifest — declares the data the app collects so the
+    // on-device App Privacy Report and the App Store nutrition label are
+    // accurate. Neither posthog-react-native nor @sentry/react-native ships
+    // its own PrivacyInfo.xcprivacy, so their collection MUST be declared
+    // here. Expo merges this with the required-reason API types from the base
+    // template (see @expo/config-plugins mergePrivacyInfo). NSPrivacyTracking
+    // stays false — all collection is first-party (no IDFA / cross-app
+    // tracking), so no ATT prompt. Keep in sync with the App Store Connect
+    // "App Privacy" answers and the Play Console Data safety form.
+    privacyManifests: {
+      NSPrivacyTracking: false,
+      // Required-reason APIs used by React Native core + AsyncStorage. These
+      // were previously injected into the generated file, but declaring the
+      // collected-data types above makes withPrivacyInfo own the whole
+      // manifest — so they must be listed here or they'd drop out. Expo
+      // merges these additively (dedupes reasons).
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+          NSPrivacyAccessedAPITypeReasons: ['C617.1', '0A2A.1', '3B52.1'],
+        },
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
+          NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+        },
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime',
+          NSPrivacyAccessedAPITypeReasons: ['35F9.1'],
+        },
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryDiskSpace',
+          NSPrivacyAccessedAPITypeReasons: ['E174.1', '85F4.1'],
+        },
+      ],
+      NSPrivacyCollectedDataTypes: [
+        // Identity — Clerk auth + PostHog identify(user.id, { email, name }).
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeEmailAddress',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            'NSPrivacyCollectedDataTypePurposeAnalytics',
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeName',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            'NSPrivacyCollectedDataTypePurposeAnalytics',
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeUserID',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+            'NSPrivacyCollectedDataTypePurposeAnalytics',
+          ],
+        },
+        // Product analytics — PostHog $screen + member_* events.
+        {
+          NSPrivacyCollectedDataType:
+            'NSPrivacyCollectedDataTypeProductInteraction',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAnalytics',
+          ],
+        },
+        // Diagnostics — Sentry. Linked to identity: useAnalyticsIdentify calls
+        // Sentry.setUser({ id, email }) + tags the PostHog session id, so
+        // crash/perf reports carry the user (full web parity). sendDefaultPii
+        // stays false (no incidental IP/PII beyond the explicit user object).
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeCrashData',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+        },
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePerformanceData',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+        },
+        // First-party feature data sent to the FitKit API.
+        {
+          // GPS gym check-in (ACCESS_FINE_LOCATION).
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePreciseLocation',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+        },
+        {
+          // Progress photos / form-check videos.
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePhotosorVideos',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+        },
+        {
+          // Workouts, PRs, logged sets.
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeFitness',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+        },
+        {
+          // Body metrics (weight, measurements).
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeHealth',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAppFunctionality',
+          ],
+        },
+      ],
     },
   },
   android: {

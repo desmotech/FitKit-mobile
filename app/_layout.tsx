@@ -16,6 +16,7 @@ import { QueryProvider } from '@/providers/query-provider';
 import { RealtimeProvider } from '@/providers/realtime-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import {
+  loadAnalyticsConsent,
   loadLocaleOverride,
   loadThemePreference,
   type ThemePreference,
@@ -23,6 +24,7 @@ import {
 import type { Locale } from '@/i18n/config';
 import { secureTokenCache } from '@/lib/secure-token-cache';
 import { apiUrl, clerkPublishableKey, sentryDsn } from '@/lib/api';
+import { hydrateAnalyticsConsent } from '@/lib/analytics';
 import { useAnalyticsIdentify } from '@/hooks/use-analytics-identify';
 import { useScreenTracking } from '@/hooks/use-screen-tracking';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
@@ -106,11 +108,16 @@ function RootLayout() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([loadThemePreference(), loadLocaleOverride()]).then(
-      ([theme, locale]) => {
-        if (!cancelled) setSettings({ theme, locale });
-      },
-    );
+    Promise.all([
+      loadThemePreference(),
+      loadLocaleOverride(),
+      loadAnalyticsConsent(),
+    ]).then(([theme, locale, analyticsConsent]) => {
+      if (!cancelled) {
+        hydrateAnalyticsConsent(analyticsConsent);
+        setSettings({ theme, locale });
+      }
+    });
     return () => {
       cancelled = true;
     };

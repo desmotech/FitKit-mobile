@@ -75,3 +75,26 @@ export async function clearLocaleOverride(): Promise<void> {
     // Non-fatal — see saveThemePreference.
   }
 }
+
+const ANALYTICS_KEY = 'fitkit:settings:analyticsConsent';
+
+/**
+ * Whether the user opted in to product analytics (PostHog). Defaults to
+ * `false` — analytics stays off until the user explicitly accepts, mirroring
+ * the web app's decline-by-default cookie-consent posture.
+ */
+export async function loadAnalyticsConsent(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(ANALYTICS_KEY)) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export async function saveAnalyticsConsent(granted: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(ANALYTICS_KEY, granted ? 'true' : 'false');
+  } catch {
+    // Non-fatal — see saveThemePreference.
+  }
+}

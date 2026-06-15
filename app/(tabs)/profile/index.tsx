@@ -36,6 +36,7 @@ import {
   Smartphone,
   Pencil,
   Phone,
+  ShieldCheck,
   Sun,
   Trash2,
   Trophy,
@@ -162,6 +163,7 @@ export default function ProfileScreen() {
     settingNotifications: settingsT.notifications ?? 'Notifications',
     settingHelp: settingsT.help ?? 'Help & Support',
     settingDangerZone: settingsT.dangerZone ?? 'Account',
+    settingPrivacy: settingsT.privacy ?? 'Privacy & data',
     settingSignOut: settingsT.signOut ?? 'Sign Out',
     settingDeleteAccount:
       ((profileT.deleteAccount as Record<string, string> | undefined)?.settingLabel) ??
@@ -998,6 +1000,19 @@ export default function ProfileScreen() {
               />
             </SettingsGroup>
           </View>
+
+          {/* Privacy & data — analytics opt-out (GDPR withdrawal) */}
+          <SettingsGroup colors={colors} isRTL={isRTL}>
+            <SettingsRow
+              Icon={ShieldCheck}
+              label={labels.settingPrivacy}
+              isRTL={isRTL}
+              colors={colors}
+              isDark={isDark}
+              iconTint="#0E8C8C"
+              onPress={() => router.push('/(tabs)/profile/privacy')}
+            />
+          </SettingsGroup>
 
           {/* Danger zone — Delete Account */}
           <SettingsGroup colors={colors} isRTL={isRTL}>

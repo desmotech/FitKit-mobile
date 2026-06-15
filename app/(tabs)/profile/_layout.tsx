@@ -13,6 +13,7 @@ export default function ProfileLayout() {
       <Stack.Screen name="photos" />
       <Stack.Screen name="forms" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="privacy" />
       <Stack.Screen
         name="delete-account"
         options={{
