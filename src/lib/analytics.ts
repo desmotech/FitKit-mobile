@@ -10,6 +10,7 @@
  */
 import PostHog from 'posthog-react-native';
 import { featureFlagBootstrap, posthogHost, posthogKey } from './api';
+import { saveAnalyticsConsent } from './settings-store';
 
 // PostHog's strict `PostHogEventProperties` recursively enforces JsonType.
 // We treat properties as a permissive bag at the call site (numbers,
@@ -20,7 +21,25 @@ type EventProperties = Record<string, unknown>;
 let client: PostHog | null = null;
 let inited = false;
 
+// Analytics stays OFF until the user opts in — matches the web app's
+// decline-by-default cookie consent. Hydrated from storage at startup, then
+// flipped from the accept-terms checkbox / Profile > Privacy toggle.
+let consentGranted = false;
+const consentListeners = new Set<() => void>();
+
+function notifyConsent() {
+  for (const l of consentListeners) {
+    try {
+      l();
+    } catch {
+      /* swallow */
+    }
+  }
+}
+
 function ensure(): PostHog | null {
+  // Gate before marking `inited` so a later opt-in can still construct.
+  if (!consentGranted) return null;
   if (inited) return client;
   inited = true;
   if (!posthogKey) return null;
@@ -35,6 +54,51 @@ function ensure(): PostHog | null {
       : {}),
   });
   return client;
+}
+
+/** Current opt-in state (synchronous — safe for useSyncExternalStore). */
+export function getAnalyticsConsent(): boolean {
+  return consentGranted;
+}
+
+/** Subscribe to consent changes so identity sync can re-run on opt-in. */
+export function subscribeAnalyticsConsent(cb: () => void): () => void {
+  consentListeners.add(cb);
+  return () => {
+    consentListeners.delete(cb);
+  };
+}
+
+/** Apply the persisted choice at startup. Constructs eagerly when granted so
+ *  app-open / lifecycle events are captured from launch; never re-persists. */
+export function hydrateAnalyticsConsent(granted: boolean): void {
+  consentGranted = granted;
+  if (granted) ensure();
+  notifyConsent();
+}
+
+/** Flip consent at runtime (accept-terms checkbox / Profile toggle). Persists
+ *  the choice, enables or disables the live client, and notifies subscribers. */
+export function setAnalyticsConsent(granted: boolean): void {
+  if (granted === consentGranted) return;
+  consentGranted = granted;
+  void saveAnalyticsConsent(granted);
+  if (granted) {
+    const c = ensure();
+    try {
+      void c?.optIn();
+    } catch {
+      /* swallow */
+    }
+  } else if (client) {
+    try {
+      void client.optOut();
+      client.reset();
+    } catch {
+      /* swallow */
+    }
+  }
+  notifyConsent();
 }
 
 /**

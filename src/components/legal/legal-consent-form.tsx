@@ -33,6 +33,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import type { ConsentContext, LegalDocumentType } from '@fitkit/shared';
+import { setAnalyticsConsent } from '@/lib/analytics';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -98,10 +99,19 @@ export function LegalConsentForm({
     submitError:
       (legalT?.submitError as string) ??
       'Failed to record your acceptance. Please try again.',
+    analyticsConsentLabel:
+      (legalT?.analyticsConsentLabel as string) ??
+      'Share anonymous usage data to help improve FitKit.',
+    analyticsConsentHint:
+      (legalT?.analyticsConsentHint as string) ??
+      'Optional. You can change this anytime in Profile.',
   };
 
   const [coreAccepted, setCoreAccepted] = useState(false);
   const [waiverAccepted, setWaiverAccepted] = useState(false);
+  // Optional — defaults OFF (decline-by-default, matching web). Does NOT gate
+  // submit; persisted + applied to PostHog only after a successful accept.
+  const [analyticsAccepted, setAnalyticsAccepted] = useState(false);
   const allChecked = coreAccepted && waiverAccepted;
 
   // In embedded mode, notify parent once both boxes are ticked.
@@ -125,16 +135,23 @@ export function LegalConsentForm({
       {
         onSuccess: async () => {
           haptics.success();
-          // CRITICAL: await the refetch before navigating. AuthGate
+          // CRITICAL: await a real refetch before navigating. AuthGate
           // re-derives needsLegalConsent from /legal/consents/status —
           // if we redirect to /(tabs) while the cache is still stale
           // (needs: true), AuthGate ping-pongs us back to this screen.
-          // We only invalidate the status query (single source of
-          // truth — see useNeedsLegalConsent's doc-comment for why we
-          // don't rely on the user.pendingLegalConsents flag).
+          // refetchType:'all' is required: this screen has no active
+          // observer of the status query (AuthGate unmounted when it
+          // redirected here), so the default 'active' invalidate would
+          // be a no-op and leave the stale value in cache. See
+          // useNeedsLegalConsent for why status is the single source of
+          // truth (not the user.pendingLegalConsents flag).
           await queryClient.invalidateQueries({
             queryKey: ['/legal/consents/status'],
+            refetchType: 'all',
           });
+          // Apply the optional analytics choice now that legal acceptance
+          // succeeded. Local-only preference (mirrors web's cookie consent).
+          setAnalyticsConsent(analyticsAccepted);
           onAccepted();
         },
         onError: () => haptics.error(),
@@ -225,6 +242,40 @@ export function LegalConsentForm({
           <Text>{labels.waiverConsentPrefix} </Text>
           <DocLink type="fitness_waiver" label={docNamesT.fitness_waiver} />
           <Text>.</Text>
+        </Text>
+      </ConsentRow>
+
+      {/* Optional analytics consent — does NOT gate submit. Decline-by-default
+          like web's cookie banner; withdrawable later in Profile > Privacy. */}
+      <ConsentRow
+        accessibilityLabel={labels.analyticsConsentLabel}
+        checked={analyticsAccepted}
+        onToggle={() => {
+          haptics.select();
+          setAnalyticsAccepted((v) => !v);
+        }}
+        isRTL={isRTL}
+      >
+        <Text
+          style={{
+            fontSize: 14.5,
+            lineHeight: 22,
+            color: colors.foreground,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {labels.analyticsConsentLabel}
+        </Text>
+        <Text
+          style={{
+            fontSize: 12,
+            lineHeight: 16,
+            color: mutedFg,
+            marginTop: 2,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {labels.analyticsConsentHint}
         </Text>
       </ConsentRow>
 
