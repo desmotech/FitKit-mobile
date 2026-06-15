@@ -6,6 +6,9 @@ import { useI18n } from '@/providers/i18n-provider';
 /** How long to reuse a cached Clerk JWT (ms). Clerk JWTs are valid for 60s. */
 const TOKEN_CACHE_TTL = 10_000;
 
+/** Abort a request that stalls longer than this (ms) so the UI can recover. */
+const REQUEST_TIMEOUT_MS = 20_000;
+
 /** Error thrown when the API responds with a non-2xx status. `status`
  *  lets callers (react-query retry logic, AuthGate) branch on 401. */
 export class ApiError extends Error {
@@ -45,16 +48,28 @@ export function useApi() {
 
   const fetchWithAuth = useCallback(
     async (path: string, options?: RequestInit) => {
-      const doFetch = async (token: string | null) =>
-        fetch(`${apiUrl}${path}`, {
-          ...options,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Locale': lang,
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            ...options?.headers,
-          },
-        });
+      const doFetch = async (token: string | null) => {
+        // Abort a stalled request so the UI doesn't hang on a half-open
+        // connection. Respect a caller-supplied signal when present.
+        const controller = options?.signal ? null : new AbortController();
+        const timeout = controller
+          ? setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+          : null;
+        try {
+          return await fetch(`${apiUrl}${path}`, {
+            ...options,
+            signal: options?.signal ?? controller?.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Locale': lang,
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...options?.headers,
+            },
+          });
+        } finally {
+          if (timeout) clearTimeout(timeout);
+        }
+      };
 
       let token = await getCachedToken();
       let res = await doFetch(token);

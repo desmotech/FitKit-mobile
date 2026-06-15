@@ -43,7 +43,8 @@ import {
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { useColorScheme } from 'nativewind';
-import { ActionSheetIOS, ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   FKAmbientBackdrop,
@@ -295,24 +296,20 @@ export default function ProfileScreen() {
     const options = hasImage
       ? [avatarLabels.cancel, avatarLabels.camera, avatarLabels.library, avatarLabels.remove]
       : [avatarLabels.cancel, avatarLabels.camera, avatarLabels.library];
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options,
-          cancelButtonIndex: 0,
-          destructiveButtonIndex: hasImage ? 3 : undefined,
-        },
-        (i) => {
-          if (i === 1) setAvatarFromSource('camera');
-          else if (i === 2) setAvatarFromSource('library');
-          else if (i === 3 && hasImage) {
-            applyAvatar(() => clerkUser.setProfileImage({ file: null }));
-          }
-        },
-      );
-    } else {
-      setAvatarFromSource('library');
-    }
+    showActionSheet(
+      {
+        options,
+        cancelButtonIndex: 0,
+        destructiveButtonIndex: hasImage ? 3 : undefined,
+      },
+      (i) => {
+        if (i === 1) setAvatarFromSource('camera');
+        else if (i === 2) setAvatarFromSource('library');
+        else if (i === 3 && hasImage) {
+          applyAvatar(() => clerkUser.setProfileImage({ file: null }));
+        }
+      },
+    );
   };
 
   const handleSignOut = () =>

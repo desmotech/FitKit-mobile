@@ -14,7 +14,6 @@ import { router } from 'expo-router';
 import { ImagePlus, X } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  ActionSheetIOS,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +22,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showActionSheet } from '@/lib/action-sheet';
 import {
   FKDateField,
   FKModalHeader,
@@ -125,20 +125,16 @@ export default function UploadPhotoScreen() {
 
   const showPickSheet = useCallback(() => {
     haptics.tap();
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [labels.cancel, labels.fromCamera, labels.fromLibrary],
-          cancelButtonIndex: 0,
-        },
-        (i) => {
-          if (i === 1) pickFrom('camera');
-          else if (i === 2) pickFrom('library');
-        },
-      );
-    } else {
-      pickFrom('library');
-    }
+    showActionSheet(
+      {
+        options: [labels.cancel, labels.fromCamera, labels.fromLibrary],
+        cancelButtonIndex: 0,
+      },
+      (i) => {
+        if (i === 1) pickFrom('camera');
+        else if (i === 2) pickFrom('library');
+      },
+    );
   }, [haptics, labels, pickFrom]);
 
   const canSave =

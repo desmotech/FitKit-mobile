@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, ChevronRight, GitCompare, Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -30,6 +31,7 @@ export default function PhotoDetailScreen() {
   const colors = useFKColors();
   const isDark = colors.isDark;
   const haptics = useHaptics();
+  const insets = useSafeAreaInsets();
   const { dir, t, lang } = useI18n();
   const isRTL = dir === 'rtl';
   const params = useLocalSearchParams<{ id: string }>();
@@ -125,7 +127,7 @@ export default function PhotoDetailScreen() {
           left: 0,
           right: 0,
           zIndex: 10,
-          paddingTop: 56,
+          paddingTop: insets.top + 8,
           paddingHorizontal: 12,
           flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',

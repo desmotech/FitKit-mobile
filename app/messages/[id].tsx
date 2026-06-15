@@ -14,7 +14,6 @@ import { Paperclip, Send } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   FlatList,
@@ -25,6 +24,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { MessageResponse } from '@fitkit/shared';
@@ -264,21 +264,17 @@ export default function ChatScreen() {
         fileSize: a.fileSize,
       });
     };
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [labels.takePhoto, labels.library, labels.cancel],
-          cancelButtonIndex: 2,
-          userInterfaceStyle: isDark ? 'dark' : 'light',
-        },
-        (idx) => {
-          if (idx === 0) void run('camera');
-          else if (idx === 1) void run('library');
-        },
-      );
-    } else {
-      void run('library');
-    }
+    showActionSheet(
+      {
+        options: [labels.takePhoto, labels.library, labels.cancel],
+        cancelButtonIndex: 2,
+        userInterfaceStyle: isDark ? 'dark' : 'light',
+      },
+      (idx) => {
+        if (idx === 0) void run('camera');
+        else if (idx === 1) void run('library');
+      },
+    );
   };
 
   const handleLongPress = (msg: MessageResponse) => {

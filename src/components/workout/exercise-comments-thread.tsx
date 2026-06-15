@@ -14,7 +14,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { ArrowUp, Paperclip, Play, X } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
-  ActionSheetIOS,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +23,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
@@ -112,23 +112,19 @@ export function ExerciseCommentsThread({
 
   const showAttachSheet = useCallback(() => {
     haptics.tap();
-    if (Platform.OS === 'ios') {
-      const camera = get(t, 'progressPhotos.fromCamera') ?? 'Take photo';
-      const library = get(t, 'progressPhotos.fromLibrary') ?? 'Choose from library';
-      const cancel = get(t, 'common.cancel') ?? 'Cancel';
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [cancel, camera, library],
-          cancelButtonIndex: 0,
-        },
-        (i) => {
-          if (i === 1) pickFrom('camera');
-          else if (i === 2) pickFrom('library');
-        },
-      );
-    } else {
-      pickFrom('library');
-    }
+    const camera = get(t, 'progressPhotos.fromCamera') ?? 'Take photo';
+    const library = get(t, 'progressPhotos.fromLibrary') ?? 'Choose from library';
+    const cancel = get(t, 'common.cancel') ?? 'Cancel';
+    showActionSheet(
+      {
+        options: [cancel, camera, library],
+        cancelButtonIndex: 0,
+      },
+      (i) => {
+        if (i === 1) pickFrom('camera');
+        else if (i === 2) pickFrom('library');
+      },
+    );
   }, [haptics, pickFrom, t]);
 
   const send = useCallback(async () => {

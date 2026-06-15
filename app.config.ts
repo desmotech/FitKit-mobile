@@ -121,7 +121,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-location',
       {
-        locationAlwaysAndWhenInUsePermission:
+        locationWhenInUsePermission:
           'FitKit uses your location to verify check-in at the gym.',
       },
     ],

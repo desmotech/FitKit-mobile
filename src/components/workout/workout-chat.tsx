@@ -16,7 +16,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { AlertCircle, ArrowUp, Paperclip, X } from 'lucide-react-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
@@ -27,6 +26,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { showActionSheet } from '@/lib/action-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
 import { useFKColors } from '@/components/fk';
@@ -181,21 +181,17 @@ export function WorkoutChat({
         fileSize: a.fileSize,
       });
     };
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [labels.takePhoto, labels.library, labels.cancel],
-          cancelButtonIndex: 2,
-          userInterfaceStyle: isDark ? 'dark' : 'light',
-        },
-        (idx) => {
-          if (idx === 0) void run('camera');
-          else if (idx === 1) void run('library');
-        },
-      );
-    } else {
-      void run('library');
-    }
+    showActionSheet(
+      {
+        options: [labels.takePhoto, labels.library, labels.cancel],
+        cancelButtonIndex: 2,
+        userInterfaceStyle: isDark ? 'dark' : 'light',
+      },
+      (idx) => {
+        if (idx === 0) void run('camera');
+        else if (idx === 1) void run('library');
+      },
+    );
   };
 
   const handleLongPress = (msg: MessageResponse) => {
