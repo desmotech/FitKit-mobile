@@ -54,9 +54,9 @@ import { TodayClassCard } from '@/components/schedule/today-class-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { displayFamily, eyebrow } from '@/lib/type';
+import { isCancelled, isMyBooking } from '@/lib/week-glance';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useTodayClassSessions } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMyWeekSessions } from '@/hooks/use-schedule';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
@@ -138,7 +138,6 @@ export default function HomeScreen() {
 
   const weekAssignments = useMyWeekAssignments(orgId, weekStart);
   const weekSessions = useMyWeekSessions(orgId, weekStart);
-  const todayClasses = useTodayClassSessions(orgId);
   const goalsQuery = useApiQuery<{ data: GoalResponse[] }>({
     path: orgId ? `/organizations/${orgId}/goals/me` : '',
     queryOptions: { enabled: !!orgId },
@@ -164,7 +163,19 @@ export default function HomeScreen() {
     todayWorkouts[0] ??
     todayAssignments[0] ??
     null;
-  const sessions = todayClasses.data?.data ?? [];
+  // Today's classes are derived from the same week query the rail uses —
+  // a single source so "Today" and "This week" agree. Booked/attended only
+  // (waitlist isn't a firm seat), cancelled excluded.
+  const todaySessions = useMemo(
+    () =>
+      (weekSessions.data?.data ?? []).filter(
+        (s) =>
+          !isCancelled(s) &&
+          isMyBooking(s) &&
+          ymd(new Date(s.startsAt)) === todayYMD,
+      ),
+    [weekSessions.data, todayYMD],
+  );
   const goals = goalsQuery.data?.data ?? [];
   const activeGoals = useMemo(
     () =>
@@ -182,7 +193,7 @@ export default function HomeScreen() {
   const greeting = greetingForHour(today.getHours(), greetingT);
   const subgreeting = subGreetingFor({
     assignment: todayAssignment,
-    sessionsCount: sessions.length,
+    sessionsCount: todaySessions.length,
     topGoalProgress: activeGoals[0]?.progressPercent ?? null,
     subgreetingT,
   });
@@ -210,7 +221,7 @@ export default function HomeScreen() {
   // ── Section state derivations ─────────────────────────────────────
   const hasOrg = !!orgId;
   const isLoadingToday =
-    hasOrg && (weekAssignments.isLoading || todayClasses.isLoading);
+    hasOrg && (weekAssignments.isLoading || weekSessions.isLoading);
   const hasWorkoutsToday = todayWorkouts.length > 0;
   // Coach-assigned rest (kind: 'rest') is real recovery → sage "Rest day".
   // An empty board (nothing programmed, nothing booked) is an *open* day,
@@ -220,7 +231,7 @@ export default function HomeScreen() {
   const isOpenDay =
     !hasWorkoutsToday &&
     !isAssignedRest &&
-    sessions.length === 0 &&
+    todaySessions.length === 0 &&
     !isLoadingToday;
 
   return (
@@ -406,7 +417,7 @@ export default function HomeScreen() {
                   );
                 })}
 
-                {sessions.map((s, i) => (
+                {todaySessions.map((s, i) => (
                   <Animated.View
                     key={s.id}
                     entering={FadeInDown.delay(

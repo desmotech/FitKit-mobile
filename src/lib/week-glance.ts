@@ -71,12 +71,15 @@ const isRestCell = (a: GlanceAssignment): boolean => a.kind === 'rest';
 const isWorkoutDone = (a: GlanceAssignment): boolean =>
   a.status === 'completed' || a.completedAt != null;
 
-/** A firm seat — confirmed or already attended (waitlist doesn't count). */
-const isMyBooking = (s: GlanceSession): boolean =>
+/** A firm seat — confirmed or already attended (waitlist doesn't count).
+ *  Exported as the single source of truth for "is this my booking" so the
+ *  Home "Today" gate and this rail can't drift apart. */
+export const isMyBooking = (s: GlanceSession): boolean =>
   s.myBookingStatus === 'confirmed' || s.myBookingStatus === 'attended';
 const isAttended = (s: GlanceSession): boolean =>
   s.myBookingStatus === 'attended' || s.myCheckedInAt != null;
-const isCancelled = (s: GlanceSession): boolean => s.status === 'cancelled';
+export const isCancelled = (s: GlanceSession): boolean =>
+  s.status === 'cancelled';
 
 // ── Date helpers (local calendar day, no UTC drift) ──────────────────
 

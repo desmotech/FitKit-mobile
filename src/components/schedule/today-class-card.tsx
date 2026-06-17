@@ -15,15 +15,25 @@ import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import { FKCard, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
-import type { TodayClassSession } from '@/hooks/use-feed-data';
 
 const TIME_FMT = new Intl.DateTimeFormat(undefined, {
   hour: 'numeric',
   minute: '2-digit',
 });
 
+/** Structural subset this read-only card renders. Both the week
+ *  `ClassSession` and the legacy `TodayClassSession` satisfy it, so Home can
+ *  feed it straight from the week-sessions query. */
+export interface TodayCardSession {
+  startsAt: string | null;
+  classType: { name: string };
+  coach: { firstName: string | null; lastName: string | null } | null;
+  location: { name: string } | null;
+  myBookingStatus: 'confirmed' | 'waitlisted' | 'attended' | null;
+}
+
 export interface TodayClassCardProps {
-  session: TodayClassSession;
+  session: TodayCardSession;
   isRTL: boolean;
   labels: {
     /** "Booked" badge label */
