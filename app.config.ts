@@ -276,10 +276,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-video',
       {
-        // Embedded exercise demos auto-pause when the screen unmounts;
-        // background playback isn't needed and adds entitlement weight.
+        // Exercise demos play in a fullscreen sheet and auto-pause when it
+        // unmounts. Neither background playback nor PiP is needed — and both
+        // force `audio` into UIBackgroundModes, which App Review rejects
+        // (2.5.4) since the app has no persistent-audio feature.
         supportsBackgroundPlayback: false,
-        supportsPictureInPicture: true,
+        supportsPictureInPicture: false,
       },
     ],
     [

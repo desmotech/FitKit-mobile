@@ -117,7 +117,6 @@ export default function VideoPlayerScreen() {
               style={{ flex: 1 }}
               player={player}
               fullscreenOptions={{ enable: true }}
-              allowsPictureInPicture
               contentFit="contain"
               nativeControls
             />
