@@ -19,6 +19,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { apiUrl } from '@/lib/api';
+import { useI18n } from '@/providers/i18n-provider';
 
 const PROJECT_ID =
   (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
@@ -50,6 +51,11 @@ let currentToken: string | null = null;
 
 export function usePushNotifications() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
+  // The app's active language (in-app override → device locale). Sent at
+  // registration so the server can localize push copy to this device. A
+  // re-render after the member switches language re-runs the effect and
+  // re-registers the token with the new locale.
+  const { lang } = useI18n();
   const respSubRef = useRef<Notifications.Subscription | null>(null);
   const registeredFor = useRef<string | null>(null);
 
@@ -108,9 +114,11 @@ export function usePushNotifications() {
         if (cancelled || !token) return;
         currentToken = token;
 
-        // Avoid double-registering the same token across rerenders.
-        if (registeredFor.current === token) return;
-        registeredFor.current = token;
+        // Avoid re-registering unless the token OR the active locale changed,
+        // so an in-app language switch updates the device's stored locale.
+        const registrationKey = `${token}:${lang}`;
+        if (registeredFor.current === registrationKey) return;
+        registeredFor.current = registrationKey;
 
         const jwt = await getToken();
         if (!jwt) return;
@@ -122,7 +130,7 @@ export function usePushNotifications() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${jwt}`,
           },
-          body: JSON.stringify({ expoPushToken: token, platform }),
+          body: JSON.stringify({ expoPushToken: token, platform, locale: lang }),
         });
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -162,7 +170,7 @@ export function usePushNotifications() {
       respSubRef.current?.remove();
       respSubRef.current = null;
     };
-  }, [isLoaded, isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn, getToken, lang]);
 }
 
 /**
