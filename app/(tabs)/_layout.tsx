@@ -6,7 +6,11 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppIconBadge } from '@/hooks/use-badge';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useRealtimeSubscription } from '@/hooks/use-realtime-subscription';
-import { useMyProgramEnrollments } from '@/hooks/use-workouts';
+import {
+  hasScheduleProgram,
+  useMyProgramEnrollments,
+  useOrgPrograms,
+} from '@/hooks/use-workouts';
 import { usePaymentConfig, usePlans } from '@/hooks/use-shop';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -17,7 +21,9 @@ const Badge = NativeTabs.Trigger.Badge;
 const PRIMARY_LIGHT = '#0E8C8C';
 const PRIMARY_DARK = '#2AB8B8';
 
-// Program tab only shows for members enrolled in a coaching program.
+// Tabs are org/membership-aware: the Schedule tab shows only when the org
+// runs a class-scheduled program, the Program tab only for members enrolled
+// in a coaching program, and the Shop tab only when the org sells plans.
 export default function TabsLayout() {
   const { t } = useI18n();
   const { colorScheme } = useColorScheme();
@@ -26,6 +32,11 @@ export default function TabsLayout() {
   const orgId = activeOrganization?.id;
   const enrollments = useMyProgramEnrollments(orgId);
   const isEnrolledInProgram = (enrollments.data?.data?.length ?? 0) > 0;
+  // Schedule tab: only when the org runs a class-scheduled program. These
+  // have no per-member enrollment — if the org has one it's open to every
+  // member — so we read the org-wide program list, not `my-enrollments`.
+  const orgPrograms = useOrgPrograms(orgId);
+  const showSchedule = hasScheduleProgram(orgPrograms.data?.data);
   // Shop tab: only when the org has an active payment provider AND ≥1
   // shoppable plan. TODO(FIT-203): course-type plans are excluded — mobile
   // can't fulfill them yet, so an org with only course plans shouldn't
@@ -67,13 +78,15 @@ export default function TabsLayout() {
               drawable="ic_menu_home"
             />
           </NativeTabs.Trigger>
-          <NativeTabs.Trigger name="schedule">
-            <Label>{labels.schedule ?? 'Schedule'}</Label>
-            <Icon
-              sf={{ default: 'calendar', selected: 'calendar' }}
-              drawable="ic_menu_my_calendar"
-            />
-          </NativeTabs.Trigger>
+          {showSchedule ? (
+            <NativeTabs.Trigger name="schedule">
+              <Label>{labels.schedule ?? 'Schedule'}</Label>
+              <Icon
+                sf={{ default: 'calendar', selected: 'calendar' }}
+                drawable="ic_menu_my_calendar"
+              />
+            </NativeTabs.Trigger>
+          ) : null}
           {isEnrolledInProgram ? (
             <NativeTabs.Trigger name="workouts">
               <Label>{labels.program ?? 'Program'}</Label>

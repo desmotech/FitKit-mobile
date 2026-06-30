@@ -131,6 +131,41 @@ export function useMyProgramEnrollments(orgId: string | undefined | null) {
   });
 }
 
+// ── Hook: all programs the org offers ────────────────────────────────
+
+/**
+ * `deliveryMode` value for class-scheduled programs. A schedule program
+ * has no per-member enrollment — if the org runs one it's open to every
+ * member — so its presence can't be read off `useMyProgramEnrollments`
+ * and must come from the org-wide program list.
+ */
+export const SCHEDULE_DELIVERY_MODE = 'schedule';
+
+/**
+ * Every program the org offers, regardless of the current member's
+ * enrollments. Used to gate the Schedule tab on whether the org runs a
+ * schedule-delivery program (see {@link SCHEDULE_DELIVERY_MODE}).
+ */
+export function useOrgPrograms(orgId: string | undefined | null) {
+  const path = orgId ? `/organizations/${orgId}/programs` : '';
+  return useApiQuery<ApiEnvelope<AssignmentProgramLite[]>>({
+    path,
+    queryKey: orgId
+      ? ['/organizations', orgId, 'programs']
+      : ['/programs', 'noop'],
+    queryOptions: { enabled: !!orgId },
+  });
+}
+
+/** Whether `programs` contains a class-scheduled program. */
+export function hasScheduleProgram(
+  programs: AssignmentProgramLite[] | undefined,
+): boolean {
+  return (programs ?? []).some(
+    (p) => p.deliveryMode === SCHEDULE_DELIVERY_MODE,
+  );
+}
+
 // ── Hook: this week's assignments ────────────────────────────────────
 
 /**
