@@ -1,0 +1,8 @@
+Welcome to FitKit — your gym, in your pocket.
+
+• Track every personal record and watch your progress grow
+• Follow your coach-assigned workout program, day by day
+• Book classes and check in with a quick QR scan
+• Keep your membership and profile in one place
+
+This is our first release. We'd love to hear what you think!
