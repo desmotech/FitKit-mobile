@@ -95,4 +95,5 @@ The app does not have a persistent-audio feature. The `audio` entry in
 `UIBackgroundModes` was added automatically by the Picture-in-Picture option of
 our video component, which is only used for short exercise-demo clips and is not
 needed. We have disabled Picture-in-Picture, which removes the `audio`
-background mode entirely. This is fixed in the next build we will submit.
+background mode entirely. This is fixed in the build now attached to this
+submission, version 1.0.2 (25).
