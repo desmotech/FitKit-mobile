@@ -6,15 +6,18 @@
  *   - Form in a single FKGlassPanel (matches the onboarding-screen idiom)
  *   - 11pt uppercase labels above each input (same as profile/personal.tsx)
  *   - Trailing eye-toggle on the password field
- *   - Inline "Forgot password?" link (right-aligned, opens the marketing
- *     reset URL via expo-web-browser)
+ *   - Inline "Forgot password?" link (right-aligned, switches to the
+ *     native Clerk reset flow — no web page involved)
  *   - FKButton primary CTA at the bottom of the card
  *   - Footer link to sign-up
  *
- * The MFA stage reuses the same shell with a different card body —
- * single code input + verify button + "use a different account" ghost.
+ * The MFA and password-reset stages reuse the same shell with different
+ * card bodies. Reset uses Clerk's reset_password_email_code strategy:
+ * create() emails the code, attemptFirstFactor() takes code + new
+ * password in one shot and signs the user in.
  */
 import { useSignIn } from '@clerk/clerk-expo';
+import type { SignInResource } from '@clerk/types';
 import { router } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useState } from 'react';
@@ -27,7 +30,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as WebBrowser from 'expo-web-browser';
 import { useColorScheme } from 'nativewind';
 import {
   FKBrandMark,
@@ -39,7 +41,7 @@ import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
 
-type Stage = 'credentials' | 'second-factor';
+type Stage = 'credentials' | 'second-factor' | 'reset-request' | 'reset-verify';
 
 type SecondFactorStrategy =
   | 'totp'
@@ -70,6 +72,8 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [factor, setFactor] = useState<ChosenFactor | null>(null);
   const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -109,6 +113,20 @@ export default function SignInScreen() {
       auth?.mfaEmailDesc ?? 'Enter the code we just emailed you.',
     mfaBackupDesc:
       auth?.mfaBackupDesc ?? 'Enter one of your backup codes.',
+    resetTitle: auth?.resetTitle ?? 'Reset your password',
+    resetRequestDesc:
+      auth?.resetRequestDesc ??
+      "Enter your email and we'll send you a reset code.",
+    resetVerifyDesc:
+      auth?.resetVerifyDesc ??
+      'Enter the code we emailed you and choose a new password.',
+    resetSend: auth?.resetSend ?? 'Send reset code',
+    resetSending: auth?.resetSending ?? 'Sending…',
+    resetCodeLabel: auth?.resetCodeLabel ?? 'Reset code',
+    newPassword: auth?.newPassword ?? 'New password',
+    resetSubmit: auth?.resetSubmit ?? 'Reset password',
+    resetSubmitting: auth?.resetSubmitting ?? 'Resetting…',
+    resetBack: auth?.resetBack ?? 'Back to sign in',
   };
 
   const factorDescription = (() => {
@@ -129,7 +147,51 @@ export default function SignInScreen() {
     setStage('credentials');
     setFactor(null);
     setCode('');
+    setNewPassword('');
     setError(null);
+  };
+
+  const enterSecondFactor = async (attempt: SignInResource) => {
+    const supported = attempt.supportedSecondFactors ?? [];
+    const totp = supported.find((f) => f.strategy === 'totp');
+    const phone = supported.find((f) => f.strategy === 'phone_code');
+    const emailCode = supported.find((f) => f.strategy === 'email_code');
+    const backup = supported.find((f) => f.strategy === 'backup_code');
+    const chosen = totp ?? phone ?? emailCode ?? backup;
+
+    if (!chosen) {
+      setError(
+        'Account requires multi-factor verification, but no supported strategy is enrolled. Contact support.',
+      );
+      haptics.error();
+      return;
+    }
+
+    if (chosen.strategy === 'phone_code') {
+      await signIn?.prepareSecondFactor({
+        strategy: 'phone_code',
+        phoneNumberId: chosen.phoneNumberId,
+      });
+    } else if (chosen.strategy === 'email_code') {
+      await signIn?.prepareSecondFactor({
+        strategy: 'email_code',
+        emailAddressId: chosen.emailAddressId,
+      });
+    }
+
+    setFactor({
+      strategy: chosen.strategy as SecondFactorStrategy,
+      phoneNumberId:
+        chosen.strategy === 'phone_code' ? chosen.phoneNumberId : undefined,
+      emailAddressId:
+        chosen.strategy === 'email_code' ? chosen.emailAddressId : undefined,
+      safeIdentifier:
+        'safeIdentifier' in chosen
+          ? (chosen as { safeIdentifier?: string }).safeIdentifier
+          : undefined,
+    });
+    setCode('');
+    setStage('second-factor');
   };
 
   const handleSignIn = async () => {
@@ -151,45 +213,7 @@ export default function SignInScreen() {
       }
 
       if (attempt.status === 'needs_second_factor') {
-        const supported = attempt.supportedSecondFactors ?? [];
-        const totp = supported.find((f) => f.strategy === 'totp');
-        const phone = supported.find((f) => f.strategy === 'phone_code');
-        const emailCode = supported.find((f) => f.strategy === 'email_code');
-        const backup = supported.find((f) => f.strategy === 'backup_code');
-        const chosen = totp ?? phone ?? emailCode ?? backup;
-
-        if (!chosen) {
-          setError(
-            'Account requires multi-factor verification, but no supported strategy is enrolled. Contact support.',
-          );
-          haptics.error();
-          return;
-        }
-
-        if (chosen.strategy === 'phone_code') {
-          await signIn.prepareSecondFactor({
-            strategy: 'phone_code',
-            phoneNumberId: chosen.phoneNumberId,
-          });
-        } else if (chosen.strategy === 'email_code') {
-          await signIn.prepareSecondFactor({
-            strategy: 'email_code',
-            emailAddressId: chosen.emailAddressId,
-          });
-        }
-
-        setFactor({
-          strategy: chosen.strategy as SecondFactorStrategy,
-          phoneNumberId:
-            chosen.strategy === 'phone_code' ? chosen.phoneNumberId : undefined,
-          emailAddressId:
-            chosen.strategy === 'email_code' ? chosen.emailAddressId : undefined,
-          safeIdentifier:
-            'safeIdentifier' in chosen
-              ? (chosen as { safeIdentifier?: string }).safeIdentifier
-              : undefined,
-        });
-        setStage('second-factor');
+        await enterSecondFactor(attempt);
         return;
       }
 
@@ -249,10 +273,82 @@ export default function SignInScreen() {
 
   const openForgotPassword = () => {
     haptics.tap();
-    WebBrowser.openBrowserAsync('https://fitkit.fit/forgot-password', {
-      controlsColor: BRAND_TEAL,
-      dismissButtonStyle: 'close',
-    }).catch(() => undefined);
+    setError(null);
+    setStage('reset-request');
+  };
+
+  const handleRequestReset = async () => {
+    if (!isLoaded || submitting || !email.trim()) return;
+    haptics.tap();
+    setError(null);
+    setSubmitting(true);
+    try {
+      await signIn.create({
+        strategy: 'reset_password_email_code',
+        identifier: email.trim(),
+      });
+      setCode('');
+      setNewPassword('');
+      setStage('reset-verify');
+    } catch (err: unknown) {
+      const clerkError = (err as {
+        errors?: { code?: string; message: string; longMessage?: string }[];
+      }).errors?.[0];
+      let detail =
+        clerkError?.longMessage ?? clerkError?.message ?? 'Could not send reset code.';
+      if (clerkError?.code === 'form_identifier_not_found') {
+        detail = auth?.accountNotFound ?? "We couldn't find that account.";
+      }
+      setError(detail);
+      haptics.error();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!isLoaded || submitting) return;
+    haptics.tap();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await signIn.attemptFirstFactor({
+        strategy: 'reset_password_email_code',
+        code: code.trim(),
+        password: newPassword,
+      });
+
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        haptics.success();
+        router.replace('/(tabs)');
+        return;
+      }
+
+      if (result.status === 'needs_second_factor') {
+        await enterSecondFactor(result);
+        return;
+      }
+
+      setError(`Unexpected reset status: ${result.status}`);
+      haptics.error();
+    } catch (err: unknown) {
+      const clerkError = (err as {
+        errors?: { code?: string; message: string; longMessage?: string }[];
+      }).errors?.[0];
+      let detail = clerkError
+        ? `${clerkError.longMessage ?? clerkError.message}`
+        : 'Password reset failed.';
+      if (clerkError?.code === 'form_password_pwned') {
+        detail =
+          auth?.passwordPwned ??
+          'This password has appeared in a data breach. Please choose a different one.';
+      }
+      setError(detail);
+      haptics.error();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -305,7 +401,11 @@ export default function SignInScreen() {
                   paddingTop: 4,
                 }}
               >
-                {stage === 'credentials' ? labels.welcome : labels.mfaTitle}
+                {stage === 'credentials'
+                  ? labels.welcome
+                  : stage === 'second-factor'
+                    ? labels.mfaTitle
+                    : labels.resetTitle}
               </Text>
               <Text
                 style={{
@@ -319,7 +419,13 @@ export default function SignInScreen() {
                 }}
                 numberOfLines={2}
               >
-                {stage === 'credentials' ? labels.subtitle : factorDescription}
+                {stage === 'credentials'
+                  ? labels.subtitle
+                  : stage === 'second-factor'
+                    ? factorDescription
+                    : stage === 'reset-request'
+                      ? labels.resetRequestDesc
+                      : labels.resetVerifyDesc}
               </Text>
             </View>
           </View>
@@ -398,7 +504,7 @@ export default function SignInScreen() {
                 onPress={handleSignIn}
               />
             </FKGlassPanel>
-          ) : (
+          ) : stage === 'second-factor' ? (
             <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
               <Field label={labels.mfaCodeLabel} isRTL={isRTL}>
                 <BigTextInput
@@ -438,6 +544,103 @@ export default function SignInScreen() {
 
               <FKButton
                 label={labels.mfaBack}
+                variant="ghost"
+                size="md"
+                fullWidth
+                onPress={resetToCredentials}
+              />
+            </FKGlassPanel>
+          ) : stage === 'reset-request' ? (
+            <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
+              <Field label={labels.email} isRTL={isRTL}>
+                <BigTextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder={labels.emailPlaceholder}
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  returnKeyType="go"
+                  onSubmitEditing={handleRequestReset}
+                  isDark={isDark}
+                  isRTL={isRTL}
+                  fg={colors.foreground}
+                />
+              </Field>
+
+              {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
+
+              <FKButton
+                label={submitting ? labels.resetSending : labels.resetSend}
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={submitting || !email.trim()}
+                onPress={handleRequestReset}
+              />
+
+              <FKButton
+                label={labels.resetBack}
+                variant="ghost"
+                size="md"
+                fullWidth
+                onPress={resetToCredentials}
+              />
+            </FKGlassPanel>
+          ) : (
+            <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
+              <Field label={labels.resetCodeLabel} isRTL={isRTL}>
+                <BigTextInput
+                  value={code}
+                  onChangeText={setCode}
+                  placeholder="------"
+                  autoCapitalize="none"
+                  autoComplete="one-time-code"
+                  keyboardType="number-pad"
+                  textContentType="oneTimeCode"
+                  isDark={isDark}
+                  isRTL={isRTL}
+                  fg={colors.foreground}
+                  monoFont
+                  centered
+                />
+              </Field>
+
+              <Field label={labels.newPassword} isRTL={isRTL}>
+                <PasswordInput
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder={labels.passwordPlaceholder}
+                  visible={showNewPassword}
+                  onToggleVisibility={() => {
+                    haptics.select();
+                    setShowNewPassword((v) => !v);
+                  }}
+                  isDark={isDark}
+                  isRTL={isRTL}
+                  fg={colors.foreground}
+                  showLabel={labels.showPassword}
+                  hideLabel={labels.hidePassword}
+                  onSubmit={handleResetPassword}
+                  isNewPassword
+                />
+              </Field>
+
+              {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
+
+              <FKButton
+                label={submitting ? labels.resetSubmitting : labels.resetSubmit}
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={submitting || !code.trim() || !newPassword}
+                onPress={handleResetPassword}
+              />
+
+              <FKButton
+                label={labels.resetBack}
                 variant="ghost"
                 size="md"
                 fullWidth
@@ -581,6 +784,7 @@ function PasswordInput({
   showLabel,
   hideLabel,
   onSubmit,
+  isNewPassword,
 }: {
   value: string;
   onChangeText: (s: string) => void;
@@ -593,6 +797,7 @@ function PasswordInput({
   showLabel: string;
   hideLabel: string;
   onSubmit?: () => void;
+  isNewPassword?: boolean;
 }) {
   const ToggleIcon = visible ? EyeOff : Eye;
   return (
@@ -619,10 +824,10 @@ function PasswordInput({
           isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
         }
         autoCapitalize="none"
-        autoComplete="password"
+        autoComplete={isNewPassword ? 'new-password' : 'password'}
         autoCorrect={false}
         secureTextEntry={!visible}
-        textContentType="password"
+        textContentType={isNewPassword ? 'newPassword' : 'password'}
         returnKeyType="go"
         onSubmitEditing={onSubmit}
         style={{
