@@ -42,10 +42,12 @@ import {
   useResumeCancellation,
 } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
+import { paymentReturnUrl } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
-const CARD_RETURN_URL = 'fitkit://profile/payments';
+const CARD_RETURN_PATH = 'profile/payments';
+const CARD_RETURN_URL = `fitkit://${CARD_RETURN_PATH}`;
 
 interface Transaction {
   id: string;
@@ -223,8 +225,8 @@ export default function PaymentsScreen() {
     setResolving(true);
     try {
       const res = await registerCard.mutateAsync({
-        successUrl: `${CARD_RETURN_URL}?card=success`,
-        cancelUrl: `${CARD_RETURN_URL}?card=cancelled`,
+        successUrl: paymentReturnUrl(CARD_RETURN_PATH, { card: 'success' }),
+        cancelUrl: paymentReturnUrl(CARD_RETURN_PATH, { card: 'cancelled' }),
       });
       const url = res.data?.paymentPageUrl;
       if (url) {
