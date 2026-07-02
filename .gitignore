@@ -54,3 +54,6 @@ coverage/
 
 CHECKIN_HANDOFF.md
 LOGGING_SPEC.md
+
+# Google Play service account key (eas submit) — never commit
+google-service-account.json
