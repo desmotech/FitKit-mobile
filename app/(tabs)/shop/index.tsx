@@ -16,12 +16,14 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import { usePaymentConfig, usePlans, usePurchasePlan } from '@/hooks/use-shop';
+import { paymentReturnUrl } from '@/lib/api';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import * as analytics from '@/lib/analytics';
 import { displayFamily } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 
-const RETURN_URL = 'fitkit://shop/payment-return';
+const RETURN_PATH = 'shop/payment-return';
+const RETURN_URL = `fitkit://${RETURN_PATH}`;
 
 export default function ShopScreen() {
   const router = useRouter();
@@ -88,8 +90,8 @@ export default function ShopScreen() {
       try {
         const res = await purchase.mutateAsync({
           planId: plan.id,
-          successUrl: `${RETURN_URL}?status=success`,
-          cancelUrl: `${RETURN_URL}?status=cancelled`,
+          successUrl: paymentReturnUrl(RETURN_PATH, { status: 'success' }),
+          cancelUrl: paymentReturnUrl(RETURN_PATH, { status: 'cancelled' }),
         });
         const sub = res.data.subscription;
         const paymentPageUrl = res.data.paymentPageUrl;

@@ -39,3 +39,19 @@ function parseFeatureFlags(raw: string): Record<string, boolean> | undefined {
 export const featureFlagBootstrap = extra.featureFlags
   ? parseFeatureFlags(extra.featureFlags)
   : undefined;
+
+/**
+ * Payment providers reject non-web return URLs (Morning errors with 1103 on
+ * `fitkit://` links), so hosted-checkout return URLs go through the API's
+ * HTTPS bridge, which 302s back to `fitkit://<appPath>` with all params
+ * (these plus any the API/provider appended, e.g. `sub`). The bridge redirect
+ * is what closes `openAuthSessionAsync` — keep watching the `fitkit://` URL
+ * as its callback.
+ */
+export function paymentReturnUrl(
+  appPath: string,
+  params: Record<string, string>,
+): string {
+  const qs = new URLSearchParams({ to: appPath, ...params });
+  return `${apiUrl}/payments/app-return?${qs.toString()}`;
+}
