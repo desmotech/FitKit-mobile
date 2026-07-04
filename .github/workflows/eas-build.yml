@@ -42,6 +42,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      # 'all' fans out to one job per platform so a failure on one (e.g. a
+      # store submission misconfig) can't block the other from being queued.
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(github.event.inputs.platform == 'all' && '["ios", "android"]' || format('["{0}"]', github.event.inputs.platform)) }}
+    name: build (${{ matrix.platform }})
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -74,7 +81,7 @@ jobs:
         env:
           EAS_BUILD_AUTOSUBMIT: ${{ github.event.inputs.auto_submit == 'true' && github.event.inputs.profile == 'production' && '1' || '' }}
         run: |
-          ARGS="--profile ${{ github.event.inputs.profile }} --platform ${{ github.event.inputs.platform }} --non-interactive --no-wait"
+          ARGS="--profile ${{ github.event.inputs.profile }} --platform ${{ matrix.platform }} --non-interactive --no-wait"
           if [ -n "$EAS_BUILD_AUTOSUBMIT" ]; then
             ARGS="$ARGS --auto-submit"
           fi
