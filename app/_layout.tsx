@@ -11,11 +11,13 @@ import { Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ActiveOrgProvider } from '@/providers/active-org-provider';
 import { I18nProvider } from '@/providers/i18n-provider';
 import { QueryProvider } from '@/providers/query-provider';
 import { RealtimeProvider } from '@/providers/realtime-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
 import {
+  loadActiveOrgId,
   loadAnalyticsConsent,
   loadLocaleOverride,
   loadThemePreference,
@@ -104,6 +106,7 @@ function RootLayout() {
   const [settings, setSettings] = useState<{
     theme: ThemePreference;
     locale: Locale | null;
+    activeOrgId: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -112,10 +115,11 @@ function RootLayout() {
       loadThemePreference(),
       loadLocaleOverride(),
       loadAnalyticsConsent(),
-    ]).then(([theme, locale, analyticsConsent]) => {
+      loadActiveOrgId(),
+    ]).then(([theme, locale, analyticsConsent, activeOrgId]) => {
       if (!cancelled) {
         hydrateAnalyticsConsent(analyticsConsent);
-        setSettings({ theme, locale });
+        setSettings({ theme, locale, activeOrgId });
       }
     });
     return () => {
@@ -155,8 +159,9 @@ function RootLayout() {
           <KeyboardProvider>
             <I18nProvider initialOverride={settings.locale}>
               <ThemeProvider initialPreference={settings.theme}>
-                <QueryProvider>
-                  <RealtimeProvider>
+                <ActiveOrgProvider initialActiveOrgId={settings.activeOrgId}>
+                  <QueryProvider>
+                    <RealtimeProvider>
                     <PushBootstrap />
                     <StatusBar style="auto" />
                     <Stack screenOptions={{ headerShown: false }}>
@@ -190,8 +195,9 @@ function RootLayout() {
                       options={{ headerShown: true, title: 'Not found' }}
                     />
                     </Stack>
-                  </RealtimeProvider>
-                </QueryProvider>
+                    </RealtimeProvider>
+                  </QueryProvider>
+                </ActiveOrgProvider>
               </ThemeProvider>
             </I18nProvider>
           </KeyboardProvider>

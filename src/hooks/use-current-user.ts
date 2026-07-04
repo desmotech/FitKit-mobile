@@ -3,7 +3,36 @@ import type {
   MembershipResponse,
   UserWithMembershipsResponse,
 } from '@fitkit/shared';
+import { useActiveOrg } from '@/providers/active-org-provider';
 import { useApiQuery } from './use-api-query';
+
+const ROLE_ORDER: MembershipResponse['role'][] = [
+  'owner',
+  'admin',
+  'coach',
+  'member',
+];
+
+/**
+ * Resolves the user's active membership. An explicitly selected org (the
+ * switcher) wins when it still matches an active membership; otherwise falls
+ * back to the highest-privilege active membership. Mirrors
+ * apps/web/src/lib/active-org.ts in the web app.
+ */
+export function pickActiveMembership(
+  memberships: MembershipResponse[],
+  preferredOrgId?: string | null,
+): MembershipResponse | null {
+  const active = memberships.filter((m) => m.status === 'active');
+  if (!active.length) return null;
+  if (preferredOrgId) {
+    const preferred = active.find((m) => m.organizationId === preferredOrgId);
+    if (preferred) return preferred;
+  }
+  return active.reduce((best, m) =>
+    ROLE_ORDER.indexOf(m.role) < ROLE_ORDER.indexOf(best.role) ? m : best,
+  );
+}
 
 interface UserMeResponse {
   data: UserWithMembershipsResponse;
@@ -47,6 +76,7 @@ export function useCurrentUser(): CurrentUserContext {
     { path: '/users/me' },
   );
   const { isLoaded } = useClerkUser();
+  const { activeOrgId } = useActiveOrg();
 
   const user = data?.data ?? null;
   const memberships = user?.memberships ?? [];
@@ -55,15 +85,7 @@ export function useCurrentUser(): CurrentUserContext {
     (m) => m.status === 'pending_invitation' || m.status === 'invited',
   );
 
-  const roleOrder: MembershipRole[] = ['owner', 'admin', 'coach', 'member'];
-  const primaryMembership =
-    activeMemberships.length > 0
-      ? activeMemberships.reduce((best, m) => {
-          const bestIdx = roleOrder.indexOf(best.role);
-          const currIdx = roleOrder.indexOf(m.role);
-          return currIdx < bestIdx ? m : best;
-        })
-      : null;
+  const primaryMembership = pickActiveMembership(memberships, activeOrgId);
 
   const primaryRole = primaryMembership?.role ?? null;
   const isLoading = queryLoading || !isLoaded;

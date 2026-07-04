@@ -72,6 +72,7 @@ import { i18n, type Locale } from '@/i18n/config';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useProfileStrings } from '@/i18n/use-profile-strings';
 import { queryKeys } from '@/lib/query-keys';
+import { clearActiveOrgId } from '@/lib/settings-store';
 import { useI18n } from '@/providers/i18n-provider';
 import { useThemePreference } from '@/providers/theme-provider';
 import { RecentPRs } from '@/components/profile/recent-prs';
@@ -329,10 +330,11 @@ export default function ProfileScreen() {
           } catch {
             // Best-effort — server reaps dead tokens on next send anyway.
           }
-          // Clear cached server data so a sign-in as a different user
-          // starts with a clean slate.
+          // Clear cached server data (and the active-org selection) so a
+          // sign-in as a different user starts with a clean slate.
           try {
             queryClient.clear();
+            await clearActiveOrgId();
             const AsyncStorage = (
               await import('@react-native-async-storage/async-storage')
             ).default;

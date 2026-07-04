@@ -76,6 +76,39 @@ export async function clearLocaleOverride(): Promise<void> {
   }
 }
 
+const ACTIVE_ORG_KEY = 'fitkit:settings:activeOrg';
+
+/**
+ * The org the user explicitly selected in the org switcher, or `null` when
+ * they've never picked one. Consumers (use-current-user) treat a stale id —
+ * one that no longer matches an active membership — as "no selection" and
+ * fall back to the highest-privilege membership, so this never needs to be
+ * validated against the server here.
+ */
+export async function loadActiveOrgId(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(ACTIVE_ORG_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function saveActiveOrgId(orgId: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(ACTIVE_ORG_KEY, orgId);
+  } catch {
+    // Non-fatal — see saveThemePreference.
+  }
+}
+
+export async function clearActiveOrgId(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(ACTIVE_ORG_KEY);
+  } catch {
+    // Non-fatal — see saveThemePreference.
+  }
+}
+
 const ANALYTICS_KEY = 'fitkit:settings:analyticsConsent';
 
 /**
