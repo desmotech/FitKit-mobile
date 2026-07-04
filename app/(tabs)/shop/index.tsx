@@ -53,14 +53,35 @@ export default function ShopScreen() {
   const hasPaymentProvider = payQ.data?.data?.isActive === true;
   const subs = useMemo(() => subsQ.data?.data ?? [], [subsQ.data]);
 
-  const activeByPlanId = useMemo(() => {
+  // Recurring subscriptions are exclusive per plan: active AND paused both
+  // count as "current" (a paused sub must be resumed, not re-purchased —
+  // the API rejects the purchase either way).
+  const currentByPlanId = useMemo(() => {
     const m: Record<string, true> = {};
-    for (const s of subs) if (s.status === 'active') m[s.planId] = true;
+    for (const s of subs) {
+      if (s.status === 'active' || s.status === 'paused') m[s.planId] = true;
+    }
     return m;
   }, [subs]);
   const pendingByPlanId = useMemo(() => {
     const m: Record<string, true> = {};
     for (const s of subs) if (s.status === 'pending') m[s.planId] = true;
+    return m;
+  }, [subs]);
+  // Class packs / drop-ins are consumable: never "current", always
+  // re-purchasable. Show how many credits the member still holds (summed
+  // across stacked packs of the same plan).
+  const creditsByPlanId = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const s of subs) {
+      if (
+        s.status === 'active' &&
+        s.remainingCredits != null &&
+        s.remainingCredits > 0
+      ) {
+        m[s.planId] = (m[s.planId] ?? 0) + s.remainingCredits;
+      }
+    }
     return m;
   }, [subs]);
 
@@ -233,17 +254,29 @@ export default function ShopScreen() {
           </View>
         ) : (
           <View style={{ gap: 12, marginTop: 18 }}>
-            {plans.map((plan) => (
-              <PlanCard
-                key={plan.id}
-                plan={plan}
-                isCurrent={!!activeByPlanId[plan.id]}
-                isPending={!!pendingByPlanId[plan.id]}
-                hasPaymentProvider={hasPaymentProvider}
-                loading={pendingPlanId === plan.id}
-                onSelect={() => handleSelect(plan)}
-              />
-            ))}
+            {plans.map((plan) => {
+              const isConsumable =
+                plan.type === 'class_pack' || plan.type === 'drop_in';
+              return (
+                <PlanCard
+                  key={plan.id}
+                  plan={plan}
+                  // Only recurring subscriptions are exclusive — packs and
+                  // drop-ins stay purchasable regardless of what the member
+                  // already holds.
+                  isCurrent={
+                    plan.type === 'subscription' && !!currentByPlanId[plan.id]
+                  }
+                  creditsLeft={
+                    isConsumable ? (creditsByPlanId[plan.id] ?? null) : null
+                  }
+                  isPending={!!pendingByPlanId[plan.id]}
+                  hasPaymentProvider={hasPaymentProvider}
+                  loading={pendingPlanId === plan.id}
+                  onSelect={() => handleSelect(plan)}
+                />
+              );
+            })}
           </View>
         )}
       </ScrollView>

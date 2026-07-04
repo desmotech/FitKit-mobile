@@ -30,6 +30,7 @@ const INTERVAL_KEY: Record<PlanInterval, string> = {
 export function PlanCard({
   plan,
   isCurrent = false,
+  creditsLeft = null,
   isPending = false,
   hasPaymentProvider,
   loading = false,
@@ -37,6 +38,8 @@ export function PlanCard({
 }: {
   plan: PlanResponse;
   isCurrent?: boolean;
+  /** Credits the member still holds on this plan (packs / drop-ins). */
+  creditsLeft?: number | null;
   isPending?: boolean;
   hasPaymentProvider: boolean;
   loading?: boolean;
@@ -110,6 +113,13 @@ export function PlanCard({
         </Text>
         {isCurrent ? (
           <FKChip tone="success">{pc.currentPlan ?? 'Current Plan'}</FKChip>
+        ) : creditsLeft != null && creditsLeft > 0 ? (
+          <FKChip tone="primary">
+            {(pc.creditsLeft ?? '{count} credits left').replace(
+              '{count}',
+              String(creditsLeft),
+            )}
+          </FKChip>
         ) : null}
       </View>
 

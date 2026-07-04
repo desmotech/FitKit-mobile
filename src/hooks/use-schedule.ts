@@ -40,6 +40,39 @@ export interface ScheduleLocation {
 export type SessionStatus = 'draft' | 'published' | 'cancelled';
 export type MyBookingStatus = 'confirmed' | 'waitlisted' | 'attended';
 
+// ── Booking eligibility (mirrors BookingEligibility in scheduling.schema.ts) ──
+
+export type BookingBlockReason =
+  | 'no_credits'
+  | 'overlap'
+  | 'daily_limit'
+  | 'weekly_limit';
+
+export interface BookingPlanEntry {
+  subscriptionId: string;
+  planName: string;
+  planType: 'subscription' | 'class_pack' | 'drop_in' | 'course';
+  remainingCredits: number | null;
+  bookingsToday: number;
+  bookingsThisWeek: number;
+  maxPerDay: number | null;
+  maxPerWeek: number | null;
+  allowOverlapping: boolean;
+  hasOverlap: boolean;
+  blocked: boolean;
+  blockReason: BookingBlockReason | null;
+}
+
+export interface BookingEligibility {
+  status:
+    | 'eligible'
+    | 'staff'
+    | 'no_plan'
+    | 'membership_inactive'
+    | 'all_plans_blocked';
+  plans: BookingPlanEntry[];
+}
+
 export interface ClassSession {
   id: string;
   classTypeId: string;
@@ -65,6 +98,59 @@ export interface ClassSession {
   cancellationWindowHours: number;
   allowLateCancellation: boolean;
   isStaff?: boolean;
+  /** Per-plan booking eligibility computed by the server (null for staff-role
+   *  responses that predate it — treated as "proceed without a plan"). */
+  bookingEligibility?: BookingEligibility | null;
+}
+
+// ── Plan selection for booking ──────────────────────────────────────
+
+export type BookingPlanDecision =
+  /** Book now — with the given plan, or untracked when no plan applies. */
+  | { kind: 'proceed'; subscriptionId?: string }
+  /** Several usable plans — the member must choose one. */
+  | { kind: 'pick'; plans: BookingPlanEntry[] }
+  /** Booking is not possible; `reason` selects the explanatory copy. */
+  | {
+      kind: 'blocked';
+      reason: 'no_plan' | 'membership_inactive' | BookingBlockReason;
+      plan: BookingPlanEntry | null;
+    };
+
+/**
+ * Decide how a booking should proceed from the server-computed eligibility.
+ * ALWAYS returns an explicit subscriptionId when exactly one plan is usable
+ * so multi-plan members never fall into the server's auto-pick, and blocked
+ * members get told why locally instead of a server error round-trip.
+ */
+export function decideBookingPlan(session: ClassSession): BookingPlanDecision {
+  const eligibility = session.bookingEligibility;
+  if (!eligibility || eligibility.status === 'staff') {
+    return { kind: 'proceed' };
+  }
+  if (eligibility.status === 'no_plan') {
+    return { kind: 'blocked', reason: 'no_plan', plan: null };
+  }
+  if (eligibility.status === 'membership_inactive') {
+    return { kind: 'blocked', reason: 'membership_inactive', plan: null };
+  }
+  // Free-gym model: eligible with no plans — book without credit tracking.
+  if (eligibility.plans.length === 0) {
+    return { kind: 'proceed' };
+  }
+  const unblocked = eligibility.plans.filter((p) => !p.blocked);
+  if (eligibility.status === 'all_plans_blocked' || unblocked.length === 0) {
+    const first = eligibility.plans[0] ?? null;
+    return {
+      kind: 'blocked',
+      reason: first?.blockReason ?? 'no_credits',
+      plan: first,
+    };
+  }
+  if (unblocked.length === 1) {
+    return { kind: 'proceed', subscriptionId: unblocked[0].subscriptionId };
+  }
+  return { kind: 'pick', plans: unblocked };
 }
 
 /**
