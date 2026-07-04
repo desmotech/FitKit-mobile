@@ -12,6 +12,7 @@ import { Bell, MessageCircle, QrCode } from 'lucide-react-native';
 import { type ReactNode } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { OrgSwitcher } from '@/components/fk/org-switcher';
 import { Text } from '@/components/ui/text';
 import { useAnnouncementUnreadCount } from '@/hooks/use-announcements';
 import { useTotalUnread } from '@/hooks/use-conversations';
@@ -68,57 +69,71 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
           paddingVertical: 10,
         }}
       >
-        {/* Org identity */}
+        {/* Org identity — becomes a capsule switcher when the user has
+            several orgs. The outer view claims the flexible space so the
+            switcher hugs its content at the start edge and long org names
+            truncate instead of pushing the action buttons out. */}
         <View
           style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
-            gap: 10,
             flex: 1,
             minWidth: 0,
           }}
         >
+        <OrgSwitcher>
           <View
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 10,
-              borderCurve: 'continuous',
-              overflow: 'hidden',
+              flexDirection: isRTL ? 'row-reverse' : 'row',
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#0E8C8C',
-            }}
-          >
-            {orgLogo ? (
-              <Image
-                source={{ uri: orgLogo }}
-                style={{ width: 32, height: 32 }}
-                contentFit="cover"
-              />
-            ) : (
-              <Text
-                className="font-display"
-                style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}
-              >
-                {orgInitial}
-              </Text>
-            )}
-          </View>
-          <Text
-            className="font-display"
-            numberOfLines={1}
-            style={{
-              fontSize: 15,
-              fontWeight: '700',
-              color: colors.foreground,
-              letterSpacing: -0.2,
+              gap: 10,
               flexShrink: 1,
-              textAlign: isRTL ? 'right' : 'left',
+              minWidth: 0,
             }}
           >
-            {orgName}
-          </Text>
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                borderCurve: 'continuous',
+                overflow: 'hidden',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#0E8C8C',
+              }}
+            >
+              {orgLogo ? (
+                <Image
+                  source={{ uri: orgLogo }}
+                  style={{ width: 32, height: 32 }}
+                  contentFit="cover"
+                />
+              ) : (
+                <Text
+                  className="font-display"
+                  style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}
+                >
+                  {orgInitial}
+                </Text>
+              )}
+            </View>
+            <Text
+              className="font-display"
+              numberOfLines={1}
+              style={{
+                fontSize: 15,
+                fontWeight: '700',
+                color: colors.foreground,
+                letterSpacing: -0.2,
+                flexShrink: 1,
+                textAlign: isRTL ? 'right' : 'left',
+              }}
+            >
+              {orgName}
+            </Text>
+          </View>
+        </OrgSwitcher>
         </View>
 
         {/* Actions */}
