@@ -50,7 +50,7 @@ Notifications.setNotificationHandler({
 let currentToken: string | null = null;
 
 export function usePushNotifications() {
-  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const { isLoaded, isSignedIn, getToken, userId } = useAuth();
   // The app's active language (in-app override → device locale). Sent at
   // registration so the server can localize push copy to this device. A
   // re-render after the member switches language re-runs the effect and
@@ -65,6 +65,12 @@ export function usePushNotifications() {
   // (mounted in the tabs tree) owns the icon and keeps it on the true total.
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
+      // Sign-out revokes this device's token server-side. Clear the
+      // registration guard so the next sign-in — same user or a different one
+      // — always re-registers and un-deletes the token. Without this, signing
+      // back in matched the cached `token:lang` key and skipped registration,
+      // leaving the token revoked and push delivery dead until an app restart.
+      registeredFor.current = null;
       Notifications.setBadgeCountAsync(0).catch(() => undefined);
     }
   }, [isLoaded, isSignedIn]);
@@ -114,9 +120,13 @@ export function usePushNotifications() {
         if (cancelled || !token) return;
         currentToken = token;
 
-        // Avoid re-registering unless the token OR the active locale changed,
-        // so an in-app language switch updates the device's stored locale.
-        const registrationKey = `${token}:${lang}`;
+        // Avoid re-registering unless the user, token, OR active locale
+        // changed. The `userId` is essential: the device token is unique
+        // server-side and re-registration reassigns its owner, so a
+        // same-session account switch MUST re-register or the new user is left
+        // pointing at another user's (or a revoked) token and receives no
+        // pushes. Keying on `token:lang` alone silently skipped that.
+        const registrationKey = `${userId}:${token}:${lang}`;
         if (registeredFor.current === registrationKey) return;
         registeredFor.current = registrationKey;
 
@@ -170,7 +180,7 @@ export function usePushNotifications() {
       respSubRef.current?.remove();
       respSubRef.current = null;
     };
-  }, [isLoaded, isSignedIn, getToken, lang]);
+  }, [isLoaded, isSignedIn, getToken, lang, userId]);
 }
 
 /**

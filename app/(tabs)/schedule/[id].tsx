@@ -29,6 +29,7 @@ import {
   type ClassSession,
   canCancelBooking,
   classBookState,
+  decideBookingPlan,
   differenceInMinutes,
   extractApiErrorMessage,
   useBookSession,
@@ -37,6 +38,10 @@ import {
   useSelfCheckin,
   useSessionDetail,
 } from '@/hooks/use-schedule';
+import {
+  blockReasonText,
+  usePlanPicker,
+} from '@/components/schedule/plan-picker';
 import { getWeekStartDay, weekStartFor } from '@/hooks/use-workouts';
 import { useI18n } from '@/providers/i18n-provider';
 import { SessionInfoCard } from '@/components/schedule/session-info-card';
@@ -112,6 +117,8 @@ export default function SessionDetailScreen() {
   const sched = (dict.schedule ?? {}) as Record<string, unknown>;
   const mobile = (sched.mobile ?? {}) as Record<string, string>;
   const member = (sched.memberBooking ?? {}) as Record<string, string>;
+  const quota = ((sched.memberBooking as Record<string, unknown> | undefined)
+    ?.quota ?? {}) as Record<string, string>;
   const common = (dict.common ?? {}) as Record<string, string>;
   // Scoring labels live under the `workouts` (plural) namespace.
   const scoringT = ((dict.workouts as Record<string, unknown> | undefined)
@@ -171,7 +178,34 @@ export default function SessionDetailScreen() {
     openSettings:
       ((sched.scanner as Record<string, string> | undefined)?.openSettings ??
         'Open Settings') as string,
+    selectPlan: member.selectPlan ?? 'Select Plan',
+    creditsLeft: member.creditsLeft ?? '{count} credits left',
+    unlimited: member.unlimited ?? 'Unlimited',
+    noPlan: member.noPlanDesc ?? 'Purchase a plan to book classes',
+    membershipInactive:
+      member.membershipInactiveDesc ??
+      'Your membership is not active. Contact the gym for assistance.',
+    quotaNoCredits: quota.noCredits ?? 'No credits remaining',
+    quotaOverlap: quota.overlap ?? 'Overlaps with another booking',
+    quotaDailyLimit: quota.dailyLimit ?? 'Daily limit ({max}/day)',
+    quotaWeeklyLimit: quota.weeklyLimit ?? 'Weekly limit ({max}/week)',
   };
+
+  const blockLabels = {
+    noPlan: labels.noPlan,
+    membershipInactive: labels.membershipInactive,
+    noCredits: labels.quotaNoCredits,
+    overlap: labels.quotaOverlap,
+    dailyLimit: labels.quotaDailyLimit,
+    weeklyLimit: labels.quotaWeeklyLimit,
+  };
+
+  const { pickPlan, planPickerElement } = usePlanPicker({
+    title: labels.selectPlan,
+    cancel: labels.keepBooking,
+    creditsLeft: labels.creditsLeft,
+    unlimited: labels.unlimited,
+  });
 
   // Loading state — only when we have nothing to render.
   if (!session && (weekQuery.isLoading || detailQuery.isLoading)) {
@@ -215,12 +249,33 @@ export default function SessionDetailScreen() {
   const inCheckinWindow =
     isBooked && now >= startTime - CHECKIN_WINDOW_BEFORE_MS && now <= endTime;
 
+  // Which plan pays for this booking? Resolved from the server-computed
+  // eligibility so multi-plan members choose explicitly and blocked members
+  // see why without a server round-trip.
+  const planDecision = decideBookingPlan(session);
+  const bookBlockedText =
+    planDecision.kind === 'blocked'
+      ? blockReasonText(planDecision.reason, planDecision.plan, blockLabels)
+      : null;
+
   // ── Handlers ───────────────────────────────────────────────────────
-  const handleBook = () => {
+  const handleBook = async () => {
     haptics.tap();
+    if (planDecision.kind === 'blocked') return; // CTA is disabled anyway
+    let subscriptionId: string | undefined;
+    if (planDecision.kind === 'pick') {
+      const picked = await pickPlan(planDecision.plans);
+      if (!picked) return; // member cancelled the picker
+      subscriptionId = picked;
+    } else {
+      subscriptionId = planDecision.subscriptionId;
+    }
     setPending('book');
     bookMutation.mutate(
-      { sessionId: session.id },
+      {
+        sessionId: session.id,
+        body: subscriptionId ? { subscriptionId } : undefined,
+      },
       {
         onSuccess: () => haptics.success(),
         onError: (err) => {
@@ -458,6 +513,12 @@ export default function SessionDetailScreen() {
               case 'full':
                 return <DisabledCta text={labels.classFull} />;
               case 'waitlist':
+                // A plan-level block (no credits / limits / no plan) gates
+                // waitlist entry the same as booking — the server holds a
+                // credit for promotion.
+                if (bookBlockedText) {
+                  return <DisabledCta text={bookBlockedText} />;
+                }
                 return (
                   <PrimaryCta
                     label={labels.joinWaitlist}
@@ -467,6 +528,9 @@ export default function SessionDetailScreen() {
                   />
                 );
               case 'book':
+                if (bookBlockedText) {
+                  return <DisabledCta text={bookBlockedText} />;
+                }
                 return (
                   <PrimaryCta
                     label={labels.bookClass}
@@ -595,6 +659,7 @@ export default function SessionDetailScreen() {
         ) : null}
 
       </ScrollView>
+      {planPickerElement}
     </View>
   );
 }

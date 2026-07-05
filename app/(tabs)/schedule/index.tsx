@@ -23,11 +23,16 @@ import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
   type ClassSession,
   canCancelBooking,
+  decideBookingPlan,
   extractApiErrorMessage,
   useBookSession,
   useCancelBooking,
   useMyWeekSessions,
 } from '@/hooks/use-schedule';
+import {
+  blockReasonText,
+  usePlanPicker,
+} from '@/components/schedule/plan-picker';
 import {
   getWeekOrder,
   getWeekStartDay,
@@ -122,7 +127,31 @@ export default function ScheduleScreen() {
     keepBooking: common.cancel ?? 'Keep booking',
     bookFailed: member.bookFailed ?? 'Failed to book class',
     cancelFailed: member.cancelFailed ?? 'Failed to cancel booking',
+    selectPlan: member.selectPlan ?? 'Select Plan',
+    creditsLeft: member.creditsLeft ?? '{count} credits left',
+    unlimited: member.unlimited ?? 'Unlimited',
+    noPlan: member.noPlanDesc ?? 'Purchase a plan to book classes',
+    membershipInactive:
+      member.membershipInactiveDesc ??
+      'Your membership is not active. Contact the gym for assistance.',
   };
+  const quota = ((sched.memberBooking as Record<string, unknown> | undefined)
+    ?.quota ?? {}) as Record<string, string>;
+  const blockLabels = {
+    noPlan: labels.noPlan,
+    membershipInactive: labels.membershipInactive,
+    noCredits: quota.noCredits ?? 'No credits remaining',
+    overlap: quota.overlap ?? 'Overlaps with another booking',
+    dailyLimit: quota.dailyLimit ?? 'Daily limit ({max}/day)',
+    weeklyLimit: quota.weeklyLimit ?? 'Weekly limit ({max}/week)',
+  };
+
+  const { pickPlan, planPickerElement } = usePlanPicker({
+    title: labels.selectPlan,
+    cancel: labels.keepBooking,
+    creditsLeft: labels.creditsLeft,
+    unlimited: labels.unlimited,
+  });
 
   // ── Published sessions, bucketed by date ──────────────────────────
   const published = useMemo(
@@ -198,7 +227,7 @@ export default function ScheduleScreen() {
 
   // Inline per-card action: book / waitlist / cancel / leave. Cancellations
   // confirm first; the server is the source of truth (optimistic cache).
-  const handleSessionAction = (session: ClassSession) => {
+  const handleSessionAction = async (session: ClassSession) => {
     haptics.tap();
     const now = Date.now();
     const startsAt = new Date(session.startsAt).getTime();
@@ -247,9 +276,31 @@ export default function ScheduleScreen() {
       ]);
       return;
     }
+    // Which plan pays? Blocked members get the reason locally; multi-plan
+    // members choose explicitly so the booking always carries the intended
+    // subscriptionId.
+    const decision = decideBookingPlan(session);
+    if (decision.kind === 'blocked') {
+      Alert.alert(
+        labels.bookFailed,
+        blockReasonText(decision.reason, decision.plan, blockLabels),
+      );
+      return;
+    }
+    let subscriptionId: string | undefined;
+    if (decision.kind === 'pick') {
+      const picked = await pickPlan(decision.plans);
+      if (!picked) return; // member cancelled the picker
+      subscriptionId = picked;
+    } else {
+      subscriptionId = decision.subscriptionId;
+    }
     setPendingSessionId(session.id);
     bookMutation.mutate(
-      { sessionId: session.id },
+      {
+        sessionId: session.id,
+        body: subscriptionId ? { subscriptionId } : undefined,
+      },
       {
         onSuccess: () => haptics.success(),
         onError: (err) =>
@@ -420,6 +471,7 @@ export default function ScheduleScreen() {
           )}
         </View>
       </ScrollView>
+      {planPickerElement}
     </View>
   );
 }
