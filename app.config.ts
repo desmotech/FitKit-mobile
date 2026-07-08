@@ -13,11 +13,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   splash: {
     image: './assets/images/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#F6F8FA',
+    backgroundColor: '#F6F4EE',
     dark: {
       image: './assets/images/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#0A1628',
+      backgroundColor: '#050608',
     },
   },
   assetBundlePatterns: ['**/*'],
@@ -267,10 +267,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#F6F8FA',
-        dark: { backgroundColor: '#0A1628' },
+        // Cold-start splash: the brand globe centred on the FitKit splash
+        // background. Handled off to the animated <AnimatedSplash> overlay
+        // (src/components/animated-splash.tsx) — keep bg + imageWidth in
+        // sync with it so the native → animated transition is seamless.
+        backgroundColor: '#F6F4EE',
+        dark: { backgroundColor: '#050608' },
         image: './assets/images/splash.png',
-        imageWidth: 200,
+        imageWidth: 160,
       },
     ],
     [
