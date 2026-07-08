@@ -22,18 +22,14 @@
 import { useAuth, useClerk } from '@clerk/clerk-expo';
 import { Redirect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
+import { FKScreenLoader } from '@/components/fk/loading-bar';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useNeedsLegalConsent } from '@/hooks/use-needs-legal-consent';
 
 function LoadingScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-background">
-      <ActivityIndicator size="large" />
-    </View>
-  );
+  return <FKScreenLoader />;
 }
 
 export function AuthGate({ children }: { children: ReactNode }) {

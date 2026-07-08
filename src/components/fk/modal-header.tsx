@@ -13,8 +13,11 @@
  * - **title** — centered, single line, 17pt semibold. Optional —
  *   omit on detail screens where the body already provides context.
  *
- * SafeAreaView(edges=['top']): 0 inset on a real sheet, drops below the
- * status bar when the screen renders full-bleed.
+ * Top inset: iOS presents every host as a sheet (pageSheet/formSheet) that
+ * sits below the notch, so the inset is always 0 — but the *measured* inset
+ * is unreliable on first present (it briefly inherits the full-screen notch
+ * inset, leaving a gap above the title; correct on reopen). So it's pinned to
+ * 0 on iOS. Android renders these modals full-screen and keeps the real inset.
  *
  * RTL-aware: leading lands on the visual leading edge regardless of
  * locale, trailing on the trailing. The parent row uses `row-reverse`
@@ -22,7 +25,7 @@
  * a conditional physical margin.
  */
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -85,7 +88,10 @@ export function FKModalHeader({
   const slots = [leadingEl, spacerEl, trailingEl];
 
   return (
-    <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
+    <SafeAreaView
+      edges={Platform.OS === 'ios' ? [] : ['top']}
+      style={{ backgroundColor: colors.background }}
+    >
       <View
         style={{
           flexDirection: 'row',

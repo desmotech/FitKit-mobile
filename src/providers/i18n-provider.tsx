@@ -11,7 +11,7 @@ import { Alert, I18nManager, Platform } from 'react-native';
 import { useLocales } from 'expo-localization';
 import * as Updates from 'expo-updates';
 import { dictionaries, type Dictionary } from '@fitkit/shared';
-import { i18n, isLocale, localeConfig, type Locale } from '@/i18n/config';
+import { localeConfig, resolveDeviceLocale, type Locale } from '@/i18n/config';
 import { clearLocaleOverride, saveLocaleOverride } from '@/lib/settings-store';
 
 type I18nValue = {
@@ -26,19 +26,6 @@ type I18nValue = {
 };
 
 const I18nContext = createContext<I18nValue | null>(null);
-
-/**
- * Map the device's preferred languages (most-preferred first) onto a locale
- * we actually ship. Falls back to the app default when none match.
- */
-function deviceLocale(
-  locales: { languageCode: string | null }[] | undefined,
-): Locale {
-  for (const l of locales ?? []) {
-    if (isLocale(l.languageCode)) return l.languageCode;
-  }
-  return i18n.defaultLocale;
-}
 
 /**
  * Opt out of RN's automatic RTL flipping. We handle layout direction
@@ -88,7 +75,7 @@ export function I18nProvider({
   const locales = useLocales();
   const [override, setOverride] = useState<Locale | null>(initialOverride);
 
-  const lang = override ?? deviceLocale(locales);
+  const lang = override ?? resolveDeviceLocale(locales);
 
   // Disable RN's automatic RTL flip so toggling locale doesn't require a
   // reload. Layout direction is handled per-component via `useI18n().dir`.

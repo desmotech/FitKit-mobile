@@ -6,8 +6,9 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import { getLocales } from 'expo-localization';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Appearance, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -23,13 +24,14 @@ import {
   loadThemePreference,
   type ThemePreference,
 } from '@/lib/settings-store';
-import type { Locale } from '@/i18n/config';
+import { resolveDeviceLocale, type Locale } from '@/i18n/config';
 import { secureTokenCache } from '@/lib/secure-token-cache';
 import { apiUrl, clerkPublishableKey, sentryDsn } from '@/lib/api';
 import { hydrateAnalyticsConsent } from '@/lib/analytics';
 import { useAnalyticsIdentify } from '@/hooks/use-analytics-identify';
 import { useScreenTracking } from '@/hooks/use-screen-tracking';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
+import { AnimatedSplash } from '@/components/animated-splash';
 
 // Sentry — initialized once at module load, per the Expo manual-setup
 // guide (docs.sentry.io/platforms/react-native/manual-setup/expo/). The
@@ -127,6 +129,10 @@ function RootLayout() {
     };
   }, []);
 
+  // The animated splash (design port) overlays the app on top of the native
+  // splash once fonts + settings are ready, then fades itself out.
+  const [splashDone, setSplashDone] = useState(false);
+
   const ready = (fontsLoaded || fontError) && settings != null;
 
   useEffect(() => {
@@ -148,6 +154,17 @@ function RootLayout() {
     // error screen instead so the failure is diagnosable, never a hang.
     return <ConfigErrorScreen />;
   }
+
+  // Match the splash to the persisted theme so there's no light↔dark flash
+  // between the native splash and the app's first painted frame.
+  const resolvedDark =
+    settings.theme === 'dark' ||
+    (settings.theme === 'system' && Appearance.getColorScheme() === 'dark');
+
+  // The splash mounts outside I18nProvider, so resolve the locale the same
+  // way the provider does — persisted override, else device locale.
+  const splashLocale: Locale =
+    settings.locale ?? resolveDeviceLocale(getLocales());
 
   return (
     <ClerkProvider
@@ -201,6 +218,13 @@ function RootLayout() {
               </ThemeProvider>
             </I18nProvider>
           </KeyboardProvider>
+          {!splashDone && (
+            <AnimatedSplash
+              dark={resolvedDark}
+              locale={splashLocale}
+              onDone={() => setSplashDone(true)}
+            />
+          )}
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </ClerkProvider>
