@@ -17,9 +17,10 @@
  *   - Recent PRs → Profile owns them.
  *   - Stats grid → Profile owns it.
  *
- * Every string flows through `feed.*` in en/he/ru. The whole screen is
- * RTL-aware via `isRTL` flags on flexDirection — no `direction: dir`
- * wrappers (those break Yoga + flexDirection: row-reverse).
+ * Every string flows through the typed home table (src/i18n/home-strings.ts)
+ * in en/he/ru. The whole screen is RTL-aware via `isRTL` flags on
+ * flexDirection — no `direction: dir` wrappers (those break Yoga +
+ * flexDirection: row-reverse).
  */
 import { useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -66,6 +67,8 @@ import {
   weekStartFor,
 } from '@/hooks/use-workouts';
 import { ymd } from '@/lib/week';
+import { type HomeStrings } from '@/i18n/home-strings';
+import { useHomeStrings } from '@/i18n/use-home-strings';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -87,45 +90,11 @@ export default function HomeScreen() {
   const Chevron = isRTL ? ChevronLeft : ChevronRight;
 
   // ── Labels ────────────────────────────────────────────────────────
-  const dict = t as unknown as Record<string, Record<string, unknown>>;
-  const feedT = (dict.feed ?? {}) as Record<string, unknown>;
-  const goalsT = (dict.goals ?? {}) as Record<string, string>;
-  const bmTypes = ((dict.bodyMetrics?.types ?? {}) as Record<string, string>);
-  const commonT = (dict.common ?? {}) as Record<string, string>;
-  const greetingT = (feedT.greeting ?? {}) as Record<string, string>;
-  // Local Hebrew override — shared feed.subgreeting Hebrew was a literal
-  // mistranslation ("count" → לספור) and gendered; en/ru stay from the dict.
-  const subgreetingT =
-    lang === 'he'
-      ? HE_SUBGREETING
-      : ((feedT.subgreeting ?? {}) as Record<string, string>);
-
-  const labels = {
-    todayKicker: (feedT.todayKicker as string) ?? 'TODAY',
-    goalsTitle: (feedT.goalsTitle as string) ?? 'Goals',
-    addGoal: (feedT.addGoal as string) ?? 'Add goal',
-    viewAllGoals: (feedT.viewAllGoals as string) ?? 'View all',
-    restDayTitle: (feedT.restDayTitle as string) ?? 'Rest day',
-    restDaySubtitle:
-      (feedT.restDaySubtitle as string) ??
-      'Take it easy — recovery is training too.',
-    openDayTitle: (feedT.openDayTitle as string) ?? 'No workout on the board today',
-    openDaySubtitle:
-      (feedT.openDaySubtitle as string) ??
-      'Nothing programmed — get some easy movement in: a walk, mobility, or a light stretch.',
-    browseWeek: (feedT.browseWeek as string) ?? 'Browse this week',
-    booked: (feedT.bookedFor as string) ?? 'Booked',
-    waitlisted: (feedT.waitlistedFor as string) ?? 'Waitlist',
-    attended: (feedT.attendedFor as string) ?? 'Checked in',
-    coach: (feedT.coachLabel as string) ?? 'Coach',
-    noGoals: (feedT.noGoals as string) ?? 'Set your first fitness goal',
-    bodyMetric: goalsT.bodyMetric ?? 'Body Metric',
-    exercisePr: goalsT.exercisePr ?? 'Exercise PR',
-    achieved: goalsT.achieved ?? 'Achieved',
-    deadline: goalsT.deadline ?? 'Deadline',
-    noData: goalsT.noData ?? 'No data',
-    tryAgain: commonT.tryAgain ?? 'Try again',
-  };
+  const s = useHomeStrings();
+  // Body-metric type names still come from the shared runtime dictionary —
+  // the key set is defined server-side alongside the goal data.
+  const bmTypes = (((t as unknown as Record<string, Record<string, unknown>>)
+    .bodyMetrics?.types ?? {}) as Record<string, string>);
 
   // ── Data ──────────────────────────────────────────────────────────
   // "Today" refreshes when the tab regains focus after a day rollover —
@@ -196,12 +165,12 @@ export default function HomeScreen() {
 
   const firstName =
     user?.firstName ?? currentUser?.firstName ?? null;
-  const greeting = greetingForHour(today.getHours(), greetingT);
+  const greeting = greetingForHour(today.getHours(), s.greeting);
   const subgreeting = subGreetingFor({
     assignment: todayAssignment,
     sessionsCount: todaySessions.length,
     topGoalProgress: activeGoals[0]?.progressPercent ?? null,
-    subgreetingT,
+    subgreetingT: s.subgreeting,
   });
   const dateKicker = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(lang, {
@@ -320,7 +289,7 @@ export default function HomeScreen() {
             style={{ paddingHorizontal: 20, paddingTop: 18, gap: 10 }}
           >
             <SectionKicker
-              title={labels.todayKicker}
+              title={s.todayKicker}
               isRTL={isRTL}
               colors={colors}
             />
@@ -331,14 +300,14 @@ export default function HomeScreen() {
               <View style={{ gap: 10 }}>
                 {isAssignedRest ? (
                   <RestDayCard
-                    title={labels.restDayTitle}
-                    subtitle={labels.restDaySubtitle}
+                    title={s.restDayTitle}
+                    subtitle={s.restDaySubtitle}
                     isRTL={isRTL}
                   />
                 ) : (
                   <OpenDayCard
-                    title={labels.openDayTitle}
-                    subtitle={labels.openDaySubtitle}
+                    title={s.openDayTitle}
+                    subtitle={s.openDaySubtitle}
                     isRTL={isRTL}
                   />
                 )}
@@ -348,7 +317,7 @@ export default function HomeScreen() {
                     router.push('/(tabs)/schedule');
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={labels.browseWeek}
+                  accessibilityLabel={s.browseWeek}
                 >
                   {({ pressed }) => (
                     <View
@@ -382,7 +351,7 @@ export default function HomeScreen() {
                           letterSpacing: -0.1,
                         }}
                       >
-                        {labels.browseWeek}
+                        {s.browseWeek}
                       </Text>
                     </View>
                   )}
@@ -423,27 +392,27 @@ export default function HomeScreen() {
                   );
                 })}
 
-                {todaySessions.map((s, i) => (
+                {todaySessions.map((session, i) => (
                   <Animated.View
-                    key={s.id}
+                    key={session.id}
                     entering={FadeInDown.delay(
                       170 + i * 30,
                     ).duration(360).springify()}
                   >
                     <TodayClassCard
-                      session={s}
+                      session={session}
                       isRTL={isRTL}
                       labels={{
-                        booked: labels.booked,
-                        waitlisted: labels.waitlisted,
-                        attended: labels.attended,
-                        coach: labels.coach,
+                        booked: s.booked,
+                        waitlisted: s.waitlisted,
+                        attended: s.attended,
+                        coach: s.coach,
                       }}
                       onPress={() => {
                         haptics.tap();
                         router.push({
                           pathname: '/(tabs)/schedule/[id]',
-                          params: { id: s.id },
+                          params: { id: session.id },
                         });
                       }}
                     />
@@ -493,7 +462,7 @@ export default function HomeScreen() {
             >
               <QuickActionTile
                 icon={Target}
-                label={labels.addGoal}
+                label={s.addGoal}
                 accent={BRAND_TEAL}
                 isDark={colors.isDark}
                 fg={colors.foreground}
@@ -533,7 +502,7 @@ export default function HomeScreen() {
               }}
             >
               <SectionKicker
-                title={labels.goalsTitle}
+                title={s.goalsTitle}
                 isRTL={isRTL}
                 colors={colors}
               />
@@ -562,7 +531,7 @@ export default function HomeScreen() {
                           letterSpacing: -0.1,
                         }}
                       >
-                        {labels.viewAllGoals}
+                        {s.viewAllGoals}
                       </Text>
                       <Chevron
                         size={14}
@@ -584,7 +553,7 @@ export default function HomeScreen() {
                   router.push('/(tabs)/profile/goals/new');
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={labels.noGoals}
+                accessibilityLabel={s.noGoals}
               >
                 {({ pressed }) => (
                   <FKGlassPanel
@@ -622,7 +591,7 @@ export default function HomeScreen() {
                         textAlign: isRTL ? 'right' : 'left',
                       }}
                     >
-                      {labels.noGoals}
+                      {s.noGoals}
                     </Text>
                     <Chevron size={18} color={colors.mutedFg} strokeWidth={2.2} />
                   </FKGlassPanel>
@@ -641,11 +610,11 @@ export default function HomeScreen() {
                       goal={goal}
                       isRTL={isRTL}
                       labels={{
-                        bodyMetric: labels.bodyMetric,
-                        exercisePr: labels.exercisePr,
-                        achieved: labels.achieved,
-                        deadline: labels.deadline,
-                        noData: labels.noData,
+                        bodyMetric: s.bodyMetric,
+                        exercisePr: s.exercisePr,
+                        achieved: s.achieved,
+                        deadline: s.deadline,
+                        noData: s.noData,
                       }}
                       bmTypes={bmTypes}
                       variant="compact"
@@ -691,7 +660,7 @@ export default function HomeScreen() {
                   maxWidth: 280,
                 }}
               >
-                {commonT.loading ?? 'Loading…'}
+                {s.loading}
               </Text>
             </FKCard>
           </View>
@@ -814,24 +783,14 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 
-/** Natural, gender-neutral Hebrew sub-greetings (replaces the shared dict's
- *  literal/gendered Hebrew). EN/RU continue to come from feed.subgreeting. */
-const HE_SUBGREETING: Record<string, string> = {
-  fresh: 'יום חדש, הזדמנות חדשה.',
-  hot: 'ממשיכים ברצף!',
-  comeback: 'טוב שחזרת — ממשיכים מאיפה שעצרנו.',
-  rest: 'מנוחה היא חלק מהאימון.',
-  open: 'יום פנוי — קצת תנועה תמיד טובה.',
-};
-
 function greetingForHour(
   hour: number,
-  greetingT: Record<string, string>,
+  greetingT: HomeStrings['greeting'],
 ): string {
-  if (hour < 5) return greetingT.night ?? 'Late night, huh?';
-  if (hour < 12) return greetingT.morning ?? 'Good morning';
-  if (hour < 18) return greetingT.afternoon ?? 'Good afternoon';
-  return greetingT.evening ?? 'Good evening';
+  if (hour < 5) return greetingT.night;
+  if (hour < 12) return greetingT.morning;
+  if (hour < 18) return greetingT.afternoon;
+  return greetingT.evening;
 }
 
 /**
@@ -842,7 +801,7 @@ function greetingForHour(
  *
  * "Comeback" is intentionally not wired yet — we don't have an easy
  * "last activity" signal without another fetch, so we leave that line in
- * the dictionary for a future iteration.
+ * the home string table for a future iteration.
  */
 function subGreetingFor({
   assignment,
@@ -853,18 +812,18 @@ function subGreetingFor({
   assignment: { kind?: string | null } | null;
   sessionsCount: number;
   topGoalProgress: number | null;
-  subgreetingT: Record<string, string>;
+  subgreetingT: HomeStrings['subgreeting'];
 }): string {
   if (assignment?.kind === 'rest') {
-    return subgreetingT.rest ?? 'Recovery is part of the work.';
+    return subgreetingT.rest;
   }
   // Empty board — nothing programmed, nothing booked. Not rest; nudge
   // toward light movement rather than implying prescribed recovery.
   if (!assignment && sessionsCount === 0) {
-    return subgreetingT.open ?? 'Open day — move a little anyway.';
+    return subgreetingT.open;
   }
   if (topGoalProgress != null && topGoalProgress >= 70) {
-    return subgreetingT.hot ?? "You're on a roll.";
+    return subgreetingT.hot;
   }
-  return subgreetingT.fresh ?? "Let's make today count.";
+  return subgreetingT.fresh;
 }

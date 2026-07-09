@@ -44,6 +44,8 @@ import {
   useMyWeekAssignments,
   weekStartFor,
 } from '@/hooks/use-workouts';
+import { useScheduleStrings } from '@/i18n/use-schedule-strings';
+import { useWhiteboardStrings } from '@/i18n/use-whiteboard-strings';
 import { font } from '@/lib/type';
 import { monthRangeLabel, ymd } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
@@ -54,7 +56,7 @@ import { RestDayState } from '@/components/workout/rest-day-state';
 
 export default function WhiteboardScreen() {
   const router = useRouter();
-  const { dir, t } = useI18n();
+  const { dir, lang } = useI18n();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const isRTL = dir === 'rtl';
@@ -66,7 +68,6 @@ export default function WhiteboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Locale-aware week start: Sunday for Hebrew, Monday otherwise.
-  const lang = (useI18n() as unknown as { lang: string }).lang;
   const weekStartsOn = getWeekStartDay(lang);
   const weekOrder = useMemo(() => getWeekOrder(weekStartsOn), [weekStartsOn]);
 
@@ -92,61 +93,14 @@ export default function WhiteboardScreen() {
   const week = useMyWeekAssignments(orgId, weekStart);
   const all = useMemo(() => week.data?.data ?? [], [week.data]);
 
-  // ── Dictionary -----------------------------------------------------
-  const dict = t as unknown as Record<string, Record<string, unknown>>;
-  const wb = (dict.whiteboard ?? {}) as Record<string, string>;
-  const programDict = (dict.program ?? {}) as Record<string, unknown>;
-  const programEmpty = (programDict.empty ?? {}) as Record<string, string>;
-  const workoutDict = (dict.workout ?? {}) as Record<string, string>;
-  const scheduleDict = (dict.schedule ?? {}) as Record<string, unknown>;
-  const dayLabels = useMemo(() => {
-    const daysOfWeekShort = (scheduleDict.daysOfWeek ?? {}) as Record<
-      string,
-      string
-    >;
-    return weekOrder.map(
-      (k) => daysOfWeekShort[k] ?? k.slice(0, 3).toUpperCase(),
-    );
-  }, [weekOrder, scheduleDict.daysOfWeek]);
-  const labels = {
-    title: wb.title ?? 'Whiteboard',
-    coachNotes: wb.coachNotes ?? 'Coach notes',
-    dailyProgress: wb.dailyProgress ?? 'Daily progress',
-    keepGoing: wb.keepGoing ?? 'Keep going!',
-    completedAll: wb.completedAll ?? 'Crushed it',
-    log: wb.log ?? 'Log',
-    today: wb.today ?? 'Today',
-    week: wb.week ?? 'Week',
-    minutes: wb.minutes ?? '{count} min',
-    rounds: wb.rounds ?? '{count} rounds',
-    roundsOne: wb.rounds_one ?? '{count} round',
-    coachNote: workoutDict.coachNote ?? 'Coach Note',
-    emptyTitle: programEmpty.title ?? 'Rest day on {day}',
-    emptySubtitle:
-      programEmpty.subtitle ??
-      'No workout assigned. Take it easy or peek at what is lined up later this week.',
-    emptyJumpTo: programEmpty.jumpTo ?? 'Jump to {day}',
-    emptyToday: programEmpty.today ?? 'Today',
-    emptyNextWeek: programEmpty.nextWeek ?? 'Next week',
-    emptyComingUp: programEmpty.comingUp ?? 'Coming up this week',
-    emptyNoneThisWeek:
-      programEmpty.noWorkoutsThisWeek ?? 'No workouts assigned this week',
-    restDayTitle: (programDict.restDayTitle as string) ?? 'Rest day',
-    restDaySubtitle:
-      (programDict.restDaySubtitle as string) ??
-      'Recover today. Hydrate, stretch, and come back fresh.',
-    errorTitle:
-      ((programDict.error as Record<string, string> | undefined)?.title) ??
-      "Couldn't load your program",
-    errorSubtitle:
-      ((programDict.error as Record<string, string> | undefined)?.subtitle) ??
-      'Check your connection and try again.',
-    errorRetry:
-      ((programDict.error as Record<string, string> | undefined)?.retry) ??
-      'Retry',
-    coachNoteTitle:
-      (programDict.coachNoteTitle as string) ?? 'Note from your coach',
-  };
+  // ── Labels ──────────────────────────────────────────────────────────
+  const s = useWhiteboardStrings();
+  // Short weekday labels are shared with the Schedule tab's date rail.
+  const { daysOfWeek } = useScheduleStrings();
+  const dayLabels = useMemo(
+    () => weekOrder.map((k) => daysOfWeek[k]),
+    [weekOrder, daysOfWeek],
+  );
 
   // A day can carry several assignments (strength + metcon + accessory).
   // Group them per date rather than collapsing to one.
@@ -293,9 +247,9 @@ export default function WhiteboardScreen() {
             </View>
           ) : week.isError && !hasDayContent ? (
             <ProgramErrorState
-              title={labels.errorTitle}
-              subtitle={labels.errorSubtitle}
-              retry={labels.errorRetry}
+              title={s.errorTitle}
+              subtitle={s.errorSubtitle}
+              retry={s.errorRetry}
               isRTL={isRTL}
               onRetry={() => {
                 haptics.tap();
@@ -307,13 +261,13 @@ export default function WhiteboardScreen() {
               selectedDate={selectedDate}
               today={todayStr}
               labels={{
-                title: labels.emptyTitle,
-                subtitle: labels.emptySubtitle,
-                jumpTo: labels.emptyJumpTo,
-                today: labels.emptyToday,
-                nextWeek: labels.emptyNextWeek,
-                comingUp: labels.emptyComingUp,
-                noneThisWeek: labels.emptyNoneThisWeek,
+                title: s.emptyTitle,
+                subtitle: s.emptySubtitle,
+                jumpTo: s.emptyJumpTo,
+                today: s.emptyToday,
+                nextWeek: s.emptyNextWeek,
+                comingUp: s.emptyComingUp,
+                noneThisWeek: s.emptyNoneThisWeek,
               }}
               nextDate={nextDayWithWorkout}
               upcoming={upcomingThisWeek.slice(0, 3)}
@@ -348,8 +302,8 @@ export default function WhiteboardScreen() {
                   return (
                     <RestDayCard
                       key={a.id}
-                      title={labels.restDayTitle}
-                      subtitle={labels.restDaySubtitle}
+                      title={s.restDayTitle}
+                      subtitle={s.restDaySubtitle}
                       isRTL={isRTL}
                     />
                   );
@@ -358,7 +312,7 @@ export default function WhiteboardScreen() {
                   return (
                     <CoachNoteCard
                       key={a.id}
-                      title={labels.coachNoteTitle}
+                      title={s.coachNoteTitle}
                       body={a.note ?? ''}
                       isRTL={isRTL}
                     />
@@ -371,7 +325,7 @@ export default function WhiteboardScreen() {
                     {a.coachPreNote ? (
                       <CoachNotesBanner
                         text={a.coachPreNote}
-                        label={labels.coachNotes}
+                        label={s.coachNotes}
                         isRTL={isRTL}
                       />
                     ) : null}
@@ -398,7 +352,7 @@ export default function WhiteboardScreen() {
                     {a.coachPostNote ? (
                       <CoachNotesBanner
                         text={a.coachPostNote}
-                        label={labels.coachNotes}
+                        label={s.coachNotes}
                         isRTL={isRTL}
                       />
                     ) : null}
