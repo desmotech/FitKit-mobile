@@ -10,13 +10,16 @@
  *   6. Grouped settings cards (Account, Activity, Theme/Lang, Support)
  *   7. Sign-out button
  *   8. Footer legal links + version
+ *
+ * Labels live in `@/i18n/profile-strings` (dictionary-first via
+ * `useProfileStrings`); the avatar flow lives in
+ * `@/hooks/use-avatar-upload`.
  */
 import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import {
   Bell,
@@ -41,11 +44,11 @@ import {
   Trash2,
   Trophy,
   User as UserIcon,
+  type LucideIcon,
 } from 'lucide-react-native';
-import { useState } from 'react';
+import { Fragment } from 'react';
 import { useColorScheme } from 'nativewind';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
-import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   FKAmbientBackdrop,
@@ -56,6 +59,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { displayFamily } from '@/lib/type';
+import { useAvatarUpload } from '@/hooks/use-avatar-upload';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useMyPersonalRecords,
@@ -65,11 +69,9 @@ import {
 } from '@/hooks/use-feed-data';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { i18n, type Locale } from '@/i18n/config';
-import { useFormStrings } from '@/i18n/use-form-strings';
 import { useProfileStrings } from '@/i18n/use-profile-strings';
 import { queryKeys } from '@/lib/query-keys';
 import { clearActiveOrgId } from '@/lib/settings-store';
@@ -86,6 +88,18 @@ import {
   SettingsSectionHeader,
 } from '@/components/profile/settings';
 
+/** One tappable row in a settings group — see `renderRows` in the screen. */
+type SettingsRowConfig = {
+  key: string;
+  Icon: LucideIcon;
+  label: string;
+  sublabel?: string;
+  /** Per-row icon color (design's colorful icons). Falls back to muted. */
+  iconTint?: string;
+  badgeCount?: number;
+  onPress: () => void;
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { dir, lang, setLang, t } = useI18n();
@@ -93,8 +107,7 @@ export default function ProfileScreen() {
   const { signOut } = useClerk();
   const { getToken } = useAuth();
   const { user: clerkUser } = useUser();
-  const { requestCamera, requestLibrary } = useMediaPermissions();
-  const [avatarBusy, setAvatarBusy] = useState(false);
+  const { avatarBusy, onEditAvatar } = useAvatarUpload();
   const haptics = useHaptics();
   // `colorScheme` is the *resolved* scheme (used for `isDark` styling);
   // `preference` is the user's persisted choice (light/dark/system) that
@@ -104,8 +117,8 @@ export default function ProfileScreen() {
     useThemePreference();
   const colors = useFKColors();
   const bottomPad = useTabBarPadding(32);
-  const formS = useFormStrings();
-  const ps = useProfileStrings();
+  // All screen labels — dictionary-first with per-language static fallbacks.
+  const labels = useProfileStrings();
 
   const orgId = activeOrganization?.id;
   const incompleteForms = useIncompleteFormsCount(orgId);
@@ -115,88 +128,12 @@ export default function ProfileScreen() {
   const renew = useRenewSubscription(orgId);
   const queryClient = useQueryClient();
 
+  // The membership card's status labels stay on the raw dictionary — they
+  // are a pass-through map keyed by status, not individual labels.
   const dict = t as unknown as Record<string, Record<string, unknown>>;
   const profileT = (dict.profile ?? {}) as Record<string, unknown>;
-  const settingsT = (profileT.settings ?? {}) as Record<string, string>;
-  const valuesT = (profileT.values ?? {}) as Record<string, string>;
-  const membershipT = (profileT.membership ?? {}) as Record<string, string>;
-  const membershipStatusT =
-    ((membershipT as unknown as Record<string, unknown>).status ?? {}) as Record<string, string>;
-  const settingsAppT =
-    ((dict.settings as Record<string, unknown> | undefined)?.app ?? {}) as
-      Record<string, unknown>;
-  const themesT = (settingsAppT.themes ?? {}) as Record<string, string>;
-  const mobileTabsT = (dict.mobileTabs ?? {}) as Record<string, string>;
-  const feedT = (dict.feed ?? {}) as Record<string, unknown>;
-  const commonT = (dict.common ?? {}) as Record<string, string>;
-  const contactT = (profileT.contact ?? {}) as Record<string, string>;
-
-  const stat = (k: string, fallback: string) =>
-    typeof profileT[k] === 'string' ? (profileT[k] as string) : fallback;
-
-  // Localised stat labels — fall back to English shorts.
-  const streakT = (feedT.streak ?? {}) as Record<string, string>;
-  const labels = {
-    title: mobileTabsT.profile ?? 'Profile',
-    workouts: stat('workouts', 'Workouts'),
-    prs: stat('newPrs', 'PRs'),
-    streak: streakT.label ?? 'Days',
-    activeMembership: stat('active', 'Active'),
-    thisMonth: stat('classesMonth', 'This Month'),
-    newPrsLabel: stat('newPrs', 'New PRs'),
-    totalWods: stat('totalClasses', 'Total'),
-    memberPrefix: stat('memberSince', 'Member since'),
-    membershipTitle: membershipT.title ?? 'Membership',
-    noPlan: membershipT.noPlan ?? 'You have no active plan',
-    browsePlans: membershipT.browsePlans ?? 'Browse plans',
-    expires: membershipT.expires ?? 'Expires {date}',
-    renew: membershipT.renew ?? 'Renew',
-    renewing: membershipT.renewing ?? 'Renewing…',
-    managePlan: valuesT.managePlan ?? 'Manage plan',
-    settingPersonal: settingsT.personal ?? 'Personal Details',
-    settingPayment: settingsT.payment ?? 'Payments',
-    settingHistory: settingsT.history ?? 'Workout History',
-    settingGoals: settingsT.goals ?? 'Goals',
-    settingPrs: settingsT.prs ?? 'PR Board',
-    settingMetrics: settingsT.bodyMetrics ?? 'Body Metrics',
-    settingPhotos: settingsT.progressPhotos ?? 'Progress Photos',
-    settingForms: settingsT.forms ?? formS.listTitle,
-    settingNotifications: settingsT.notifications ?? 'Notifications',
-    settingHelp: settingsT.help ?? 'Help & Support',
-    settingDangerZone: settingsT.dangerZone ?? 'Account',
-    settingPrivacy: settingsT.privacy ?? 'Privacy & data',
-    settingSignOut: settingsT.signOut ?? 'Sign Out',
-    settingDeleteAccount:
-      ((profileT.deleteAccount as Record<string, string> | undefined)?.settingLabel) ??
-      'Delete account',
-    contactEmail: contactT.email ?? 'Email',
-    contactPhone: contactT.phone ?? 'Phone',
-    contactWebsite: contactT.website ?? 'Website',
-    orgSupportTitle: ps.orgSupportTitle,
-    orgSupportSubtitle: ps.orgSupportSubtitle,
-    fitkitSupportTitle: ps.fitkitSupportTitle,
-    fitkitSupportSubtitle: ps.fitkitSupportSubtitle,
-    fitkitFeedback: ps.fitkitFeedback,
-    fitkitContact: ps.fitkitContact,
-    fitkitWebsite: ps.fitkitWebsite,
-    themeLabel: typeof settingsAppT.theme === 'string'
-      ? (settingsAppT.theme as string) : 'Theme',
-    themeSystem: themesT.system ?? 'System',
-    themeLight: themesT.light ?? 'Light',
-    themeDark: themesT.dark ?? 'Dark',
-    language: stat('language', 'Language'),
-    memberSince: 'Member since {year}',
-    signOutTitle:
-      (profileT.signOutPrompt as string | undefined) ?? 'Sign out?',
-    signOutCancel: commonT.cancel ?? 'Cancel',
-    signOutConfirm: settingsT.signOut ?? 'Sign Out',
-    footerPrivacy:
-      ((profileT.footer as Record<string, string> | undefined)?.privacy) ??
-      'Privacy',
-    footerTerms:
-      ((profileT.footer as Record<string, string> | undefined)?.terms) ??
-      'Terms',
-  };
+  const membershipT = (profileT.membership ?? {}) as Record<string, unknown>;
+  const membershipStatusT = (membershipT.status ?? {}) as Record<string, string>;
 
   const initials =
     `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}` || '?';
@@ -217,103 +154,18 @@ export default function ProfileScreen() {
   const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
   const FITKIT_SUPPORT_EMAIL = 'support@fitkit.fit';
   const FITKIT_WEBSITE = 'https://fitkit.fit';
-  const hasOrgContact = Boolean(
-    activeOrganization?.contactEmail ||
-      activeOrganization?.contactPhone ||
-      activeOrganization?.website,
-  );
 
   // "Member since YYYY" — derive from user.createdAt if present, else fall
-  // back to the org name. `memberSince` template carries `{year}` for
+  // back to the org name. `labels.memberSince` template carries `{year}` for
   // locale-correct word order (Hebrew puts the year *after* the noun).
   const createdYear = (user as unknown as { createdAt?: string })?.createdAt
     ? new Date((user as unknown as { createdAt: string }).createdAt).getFullYear()
     : null;
-  const memberSinceTemplate =
-    typeof profileT.memberSince === 'string'
-      ? (profileT.memberSince as string)
-      : labels.memberSince;
   const memberSinceLine = createdYear
-    ? memberSinceTemplate.includes('{year}')
-      ? memberSinceTemplate.replace('{year}', String(createdYear))
+    ? labels.memberSince.includes('{year}')
+      ? labels.memberSince.replace('{year}', String(createdYear))
       : `${labels.memberPrefix} ${createdYear}`
     : (activeOrganization?.name ?? 'FitKit');
-
-  const progressPhotosT = (dict.progressPhotos ?? {}) as Record<string, string>;
-  const avatarLabels = {
-    cancel: commonT.cancel ?? 'Cancel',
-    camera: progressPhotosT.fromCamera ?? 'Take photo',
-    library: progressPhotosT.fromLibrary ?? 'Choose from library',
-    remove: (commonT.remove as string | undefined) ?? 'Remove photo',
-    error: (commonT.error as string | undefined) ?? 'Something went wrong',
-  };
-
-  // Run a Clerk avatar mutation with a shared busy/haptics/error envelope.
-  const applyAvatar = async (run: () => Promise<unknown>) => {
-    try {
-      setAvatarBusy(true);
-      await run();
-      await clerkUser?.reload();
-      haptics.success();
-    } catch (err) {
-      haptics.error();
-      Alert.alert('', err instanceof Error ? err.message : avatarLabels.error);
-    } finally {
-      setAvatarBusy(false);
-    }
-  };
-
-  const setAvatarFromSource = async (source: 'camera' | 'library') => {
-    const ok =
-      source === 'camera' ? await requestCamera() : await requestLibrary();
-    if (!ok) return;
-    const result =
-      source === 'camera'
-        ? await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.85,
-            base64: true,
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.85,
-            base64: true,
-          });
-    if (result.canceled || !result.assets?.[0]?.base64) return;
-    const a = result.assets[0];
-    await applyAvatar(() =>
-      clerkUser!.setProfileImage({
-        file: `data:${a.mimeType ?? 'image/jpeg'};base64,${a.base64}`,
-      }),
-    );
-  };
-
-  const onEditAvatar = () => {
-    haptics.tap();
-    if (avatarBusy || !clerkUser) return;
-    const hasImage = clerkUser.hasImage ?? false;
-    const options = hasImage
-      ? [avatarLabels.cancel, avatarLabels.camera, avatarLabels.library, avatarLabels.remove]
-      : [avatarLabels.cancel, avatarLabels.camera, avatarLabels.library];
-    showActionSheet(
-      {
-        options,
-        cancelButtonIndex: 0,
-        destructiveButtonIndex: hasImage ? 3 : undefined,
-      },
-      (i) => {
-        if (i === 1) setAvatarFromSource('camera');
-        else if (i === 2) setAvatarFromSource('library');
-        else if (i === 3 && hasImage) {
-          applyAvatar(() => clerkUser.setProfileImage({ file: null }));
-        }
-      },
-    );
-  };
 
   const handleSignOut = () =>
     Alert.alert(labels.signOutTitle, undefined, [
@@ -347,6 +199,149 @@ export default function ProfileScreen() {
         },
       },
     ]);
+
+  // ── Settings rows as data ─────────────────────────────────────────
+  // Each group renders one of these arrays via `renderRows`, which
+  // interleaves hairline dividers between rows — identical output to the
+  // previous hand-written row/divider JSX.
+  const accountRows: SettingsRowConfig[] = [
+    {
+      key: 'personal',
+      Icon: UserIcon,
+      iconTint: colors.primary,
+      label: labels.settingPersonal,
+      onPress: () => router.push('/(tabs)/profile/personal'),
+    },
+    {
+      key: 'goals',
+      Icon: Goal,
+      iconTint: '#E0552F',
+      label: labels.settingGoals,
+      onPress: () => router.push('/(tabs)/profile/goals'),
+    },
+    {
+      key: 'prs',
+      Icon: Trophy,
+      iconTint: '#B07D2A',
+      label: labels.settingPrs,
+      onPress: () => router.push('/(tabs)/profile/prs'),
+    },
+    {
+      key: 'metrics',
+      Icon: Scale,
+      iconTint: '#5E8A4E',
+      label: labels.settingMetrics,
+      onPress: () => router.push('/(tabs)/profile/metrics'),
+    },
+    {
+      key: 'photos',
+      Icon: Camera,
+      iconTint: '#B07D2A',
+      label: labels.settingPhotos,
+      onPress: () => router.push('/(tabs)/profile/photos'),
+    },
+    {
+      key: 'forms',
+      Icon: FileSignature,
+      iconTint: '#C0524A',
+      label: labels.settingForms,
+      badgeCount: incompleteForms,
+      onPress: () => router.push('/(tabs)/profile/forms'),
+    },
+  ];
+
+  const activityRows: SettingsRowConfig[] = [
+    {
+      key: 'history',
+      Icon: History,
+      iconTint: colors.primary,
+      label: labels.settingHistory,
+      onPress: () => router.push('/(tabs)/profile/history'),
+    },
+    {
+      key: 'payments',
+      Icon: CreditCard,
+      iconTint: '#B07D2A',
+      label: labels.settingPayment,
+      onPress: () => router.push('/(tabs)/profile/payments'),
+    },
+  ];
+
+  // Org contact rows — each is present only when the org has that field;
+  // the org name header renders whenever there's an active org.
+  const orgContactRows: SettingsRowConfig[] = [
+    ...(activeOrganization?.contactEmail
+      ? [
+          {
+            key: 'email',
+            Icon: Mail,
+            label: labels.contactEmail,
+            sublabel: activeOrganization.contactEmail,
+            onPress: () =>
+              Linking.openURL(`mailto:${activeOrganization.contactEmail}`),
+          },
+        ]
+      : []),
+    ...(activeOrganization?.contactPhone
+      ? [
+          {
+            key: 'phone',
+            Icon: Phone,
+            label: labels.contactPhone,
+            sublabel: activeOrganization.contactPhone,
+            onPress: () =>
+              Linking.openURL(`tel:${activeOrganization.contactPhone}`),
+          },
+        ]
+      : []),
+    ...(activeOrganization?.website
+      ? [
+          {
+            key: 'website',
+            Icon: Globe,
+            label: labels.contactWebsite,
+            sublabel: activeOrganization.website,
+            onPress: () => Linking.openURL(activeOrganization.website ?? ''),
+          },
+        ]
+      : []),
+  ];
+
+  const fitkitRows: SettingsRowConfig[] = [
+    {
+      key: 'feedback',
+      Icon: MessageSquare,
+      label: labels.fitkitFeedback,
+      onPress: () => router.push('/(tabs)/profile/feedback'),
+    },
+    {
+      key: 'contact',
+      Icon: LifeBuoy,
+      label: labels.fitkitContact,
+      sublabel: FITKIT_SUPPORT_EMAIL,
+      onPress: () =>
+        Linking.openURL(
+          `mailto:${FITKIT_SUPPORT_EMAIL}?subject=${encodeURIComponent(
+            `FitKit support — v${appVersion}`,
+          )}`,
+        ),
+    },
+    {
+      key: 'website',
+      Icon: Globe,
+      label: labels.fitkitWebsite,
+      sublabel: 'fitkit.fit',
+      onPress: () => Linking.openURL(FITKIT_WEBSITE),
+    },
+  ];
+
+  const renderRows = (rows: SettingsRowConfig[]) =>
+    rows.map(({ key, ...row }, index) => (
+      <Fragment key={key}>
+        {index > 0 && <RowDivider isDark={isDark} />}
+        <SettingsRow {...row} isRTL={isRTL} colors={colors} isDark={isDark} />
+      </Fragment>
+    ));
 
   return (
     // No `direction: dir` style — RN double-flips when both `direction` and
@@ -601,8 +596,8 @@ export default function ProfileScreen() {
           {recentPRRecords.length > 0 ? (
             <RecentPRs
               records={recentPRRecords}
-              title={stat('personalRecords', 'Personal Records')}
-              newLabel={commonT.new ?? 'New'}
+              title={labels.recentPrsTitle}
+              newLabel={labels.newBadge}
               isRTL={isRTL}
               colors={colors}
               lang={lang}
@@ -676,88 +671,11 @@ export default function ProfileScreen() {
 
           {/* ── Settings groups ────────────────────────────────── */}
           <SettingsGroup colors={colors} isRTL={isRTL}>
-            <SettingsRow
-              Icon={UserIcon}
-              iconTint={colors.primary}
-              label={labels.settingPersonal}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/personal')}
-            />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={Goal}
-              iconTint="#E0552F"
-              label={labels.settingGoals}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/goals')}
-            />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={Trophy}
-              iconTint="#B07D2A"
-              label={labels.settingPrs}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/prs')}
-            />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={Scale}
-              iconTint="#5E8A4E"
-              label={labels.settingMetrics}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/metrics')}
-            />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={Camera}
-              iconTint="#B07D2A"
-              label={labels.settingPhotos}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/photos')}
-            />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={FileSignature}
-              iconTint="#C0524A"
-              label={labels.settingForms}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              badgeCount={incompleteForms}
-              onPress={() => router.push('/(tabs)/profile/forms')}
-            />
+            {renderRows(accountRows)}
           </SettingsGroup>
 
           <SettingsGroup colors={colors} isRTL={isRTL}>
-            <SettingsRow
-              Icon={History}
-              iconTint={colors.primary}
-              label={labels.settingHistory}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/history')}
-            />
-            <RowDivider isDark={isDark} />
-            <SettingsRow
-              Icon={CreditCard}
-              iconTint="#B07D2A"
-              label={labels.settingPayment}
-              isRTL={isRTL}
-              colors={colors}
-              isDark={isDark}
-              onPress={() => router.push('/(tabs)/profile/payments')}
-            />
+            {renderRows(activityRows)}
           </SettingsGroup>
 
 
@@ -904,56 +822,8 @@ export default function ProfileScreen() {
                   </View>
                 </View>
 
-                {hasOrgContact && <RowDivider isDark={isDark} />}
-
-                {activeOrganization?.contactEmail && (
-                  <SettingsRow
-                    Icon={Mail}
-                    label={labels.contactEmail}
-                    sublabel={activeOrganization.contactEmail}
-                    isRTL={isRTL}
-                    colors={colors}
-                    isDark={isDark}
-                    onPress={() =>
-                      Linking.openURL(`mailto:${activeOrganization.contactEmail}`)
-                    }
-                  />
-                )}
-                {activeOrganization?.contactPhone && (
-                  <>
-                    {activeOrganization?.contactEmail && <RowDivider isDark={isDark} />}
-                    <SettingsRow
-                      Icon={Phone}
-                      label={labels.contactPhone}
-                      sublabel={activeOrganization.contactPhone}
-                      isRTL={isRTL}
-                      colors={colors}
-                      isDark={isDark}
-                      onPress={() =>
-                        Linking.openURL(`tel:${activeOrganization.contactPhone}`)
-                      }
-                    />
-                  </>
-                )}
-                {activeOrganization?.website && (
-                  <>
-                    {(activeOrganization?.contactEmail ||
-                      activeOrganization?.contactPhone) && (
-                      <RowDivider isDark={isDark} />
-                    )}
-                    <SettingsRow
-                      Icon={Globe}
-                      label={labels.contactWebsite}
-                      sublabel={activeOrganization.website}
-                      isRTL={isRTL}
-                      colors={colors}
-                      isDark={isDark}
-                      onPress={() =>
-                        Linking.openURL(activeOrganization.website ?? '')
-                      }
-                    />
-                  </>
-                )}
+                {orgContactRows.length > 0 && <RowDivider isDark={isDark} />}
+                {renderRows(orgContactRows)}
               </SettingsGroup>
             </View>
           )}
@@ -967,40 +837,7 @@ export default function ProfileScreen() {
               colors={colors}
             />
             <SettingsGroup colors={colors} isRTL={isRTL}>
-              <SettingsRow
-                Icon={MessageSquare}
-                label={labels.fitkitFeedback}
-                isRTL={isRTL}
-                colors={colors}
-                isDark={isDark}
-                onPress={() => router.push('/(tabs)/profile/feedback')}
-              />
-              <RowDivider isDark={isDark} />
-              <SettingsRow
-                Icon={LifeBuoy}
-                label={labels.fitkitContact}
-                sublabel={FITKIT_SUPPORT_EMAIL}
-                isRTL={isRTL}
-                colors={colors}
-                isDark={isDark}
-                onPress={() =>
-                  Linking.openURL(
-                    `mailto:${FITKIT_SUPPORT_EMAIL}?subject=${encodeURIComponent(
-                      `FitKit support — v${appVersion}`,
-                    )}`,
-                  )
-                }
-              />
-              <RowDivider isDark={isDark} />
-              <SettingsRow
-                Icon={Globe}
-                label={labels.fitkitWebsite}
-                sublabel="fitkit.fit"
-                isRTL={isRTL}
-                colors={colors}
-                isDark={isDark}
-                onPress={() => Linking.openURL(FITKIT_WEBSITE)}
-              />
+              {renderRows(fitkitRows)}
             </SettingsGroup>
           </View>
 
