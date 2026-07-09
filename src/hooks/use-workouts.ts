@@ -6,6 +6,7 @@ import type {
 import { parseYmdLocal } from '@/lib/week';
 import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
+import { queryKeys } from '@/lib/query-keys';
 
 // ── Types (mirror what /assignments/my-week returns) ─────────────────
 
@@ -126,7 +127,7 @@ export function useMyProgramEnrollments(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<ProgramEnrollment[]>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'programs', 'my-enrollments']
+      ? queryKeys.programs.myEnrollments(orgId)
       : ['/programs/my-enrollments', 'noop'],
     queryOptions: { enabled: !!orgId },
   });
@@ -152,7 +153,7 @@ export function useOrgPrograms(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<AssignmentProgramLite[]>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'programs']
+      ? queryKeys.programs.all(orgId)
       : ['/programs', 'noop'],
     queryOptions: { enabled: !!orgId },
   });
@@ -184,7 +185,7 @@ export function useMyWeekAssignments(
   return useApiQuery<ApiEnvelope<AssignmentDay[]>>({
     path,
     queryKey: orgId && weekStart
-      ? ['/organizations', orgId, 'assignments', 'my-week', weekStart]
+      ? queryKeys.assignments.myWeek(orgId, weekStart)
       : ['/assignments/my-week', 'noop'],
     queryOptions: { enabled: !!orgId && !!weekStart },
   });
@@ -214,7 +215,7 @@ export function useWorkoutAssignment(
     path,
     queryKey:
       orgId && assignmentId
-        ? ['/organizations', orgId, 'assignments', assignmentId]
+        ? queryKeys.assignments.byId(orgId, assignmentId)
         : ['/assignments/:id', 'noop'],
     queryOptions: { enabled: !!orgId && !!assignmentId },
   });
@@ -261,7 +262,7 @@ export function useLatestResult(
     path,
     queryKey:
       orgId && workoutId
-        ? ['/organizations', orgId, 'workouts', workoutId, 'results', 'me', 'latest']
+        ? queryKeys.results.latestForWorkout(orgId, workoutId)
         : ['/results/me/latest', 'noop'],
     queryOptions: { enabled: !!orgId && !!workoutId },
   });
@@ -288,7 +289,7 @@ export function useMyResults(
   return useApiQuery<ApiEnvelope<WorkoutResult[]>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'results', 'me']
+      ? queryKeys.results.mine(orgId)
       : ['/results/me', 'noop'],
     queryOptions: { enabled: !!orgId && !!workoutId },
   });
@@ -313,7 +314,7 @@ export function useWorkoutHistory(
     path,
     queryKey:
       orgId && workoutId
-        ? ['/organizations', orgId, 'workouts', workoutId, 'results']
+        ? queryKeys.results.workoutHistory(orgId, workoutId)
         : ['/workouts/results', 'noop'],
     queryOptions: { enabled: !!orgId && !!workoutId },
   });
@@ -431,7 +432,7 @@ export function useExerciseHistory(
     path,
     queryKey:
       orgId && exerciseId
-        ? ['/organizations', orgId, 'exercises', exerciseId, 'history', 'me']
+        ? queryKeys.exercises.historyMe(orgId, exerciseId)
         : ['/exercise-history', 'noop'],
     queryOptions: { enabled: !!orgId && !!exerciseId },
   });

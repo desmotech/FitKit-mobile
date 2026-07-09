@@ -25,6 +25,7 @@ import type {
 } from '@fitkit/shared';
 import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
+import { queryKeys } from '@/lib/query-keys';
 
 type ListPage = AnnouncementsListResponse;
 type InfiniteData = { pages: { data: ListPage }[]; pageParams: unknown[] };
@@ -35,7 +36,7 @@ export function useAnnouncementsList(orgId: string | undefined | null) {
   const { fetchWithAuth } = useApi();
   const { isLoaded, isSignedIn } = useAuth();
   const enabled = !!orgId && isLoaded && isSignedIn === true;
-  const queryKey = ['announcements', orgId] as const;
+  const queryKey = queryKeys.announcements.list(orgId ?? 'noop');
 
   return useInfiniteQuery<{ data: ListPage }>({
     queryKey,
@@ -59,9 +60,7 @@ export function useAnnouncementUnreadCount(
 ) {
   return useApiQuery<{ data: { count: number } }>({
     path: orgId ? `/organizations/${orgId}/announcements/unread-count` : '',
-    queryKey: orgId
-      ? ['announcements-unread-count', orgId]
-      : ['announcements-unread-count', 'noop'],
+    queryKey: queryKeys.announcements.unreadCount(orgId ?? 'noop'),
     queryOptions: { enabled: !!orgId, staleTime: 30_000 },
   });
 }
@@ -71,8 +70,8 @@ export function useAnnouncementUnreadCount(
 export function useMarkAnnouncementRead(orgId: string | undefined | null) {
   const { fetchWithAuth } = useApi();
   const queryClient = useQueryClient();
-  const listKey = ['announcements', orgId] as const;
-  const countKey = ['announcements-unread-count', orgId] as const;
+  const listKey = queryKeys.announcements.list(orgId ?? 'noop');
+  const countKey = queryKeys.announcements.unreadCount(orgId ?? 'noop');
 
   return useMutation<void, Error, string>({
     mutationFn: (announcementId) =>

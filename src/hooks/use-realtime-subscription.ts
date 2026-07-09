@@ -10,6 +10,7 @@ import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRealtime } from '@/providers/realtime-provider';
 import { useCurrentUser } from './use-current-user';
+import { queryKeys } from '@/lib/query-keys';
 
 export function useRealtimeSubscription() {
   const { activeOrganization, primaryMembership } = useCurrentUser();
@@ -31,9 +32,9 @@ export function useRealtimeSubscription() {
     if (!orgId) return;
     const invalidateInbox = () => {
       queryClient.invalidateQueries({
-        queryKey: [`/organizations/${orgId}/conversations?limit=50`],
+        queryKey: queryKeys.conversations.list(orgId),
       });
-      queryClient.invalidateQueries({ queryKey: ['badge-total', orgId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.badge.total(orgId) });
     };
     const offMessage = onMessage(invalidateInbox);
     const offUnread = onUnreadUpdated(invalidateInbox);
@@ -50,9 +51,11 @@ export function useRealtimeSubscription() {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
       queryClient.invalidateQueries({
-        queryKey: [`/organizations/${orgId}/conversations?limit=50`],
+        queryKey: queryKeys.conversations.list(orgId),
       });
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.messageThreads.all(),
+      });
     });
     return () => sub.remove();
   }, [orgId, queryClient]);

@@ -21,6 +21,7 @@ import type {
 } from '@fitkit/shared';
 import { analytics } from '@/lib/analytics';
 import { useApi } from './use-api';
+import { queryKeys } from '@/lib/query-keys';
 
 export function useExerciseComments(
   orgId: string | undefined | null,
@@ -38,12 +39,7 @@ export function useExerciseComments(
     isLoaded &&
     isSignedIn === true;
 
-  const queryKey = [
-    'exercise-comments',
-    orgId,
-    workoutId,
-    movementId,
-  ] as const;
+  const queryKey = queryKeys.exercises.comments(orgId, workoutId, movementId);
 
   const query = useQuery<{ data: ExerciseCommentDto[] }>({
     queryKey,

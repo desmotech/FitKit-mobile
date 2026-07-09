@@ -228,6 +228,12 @@ export default function LogWorkoutResultScreen() {
     const payload: LogResultInput = {
       scoreValue: serialized.scoreValue,
       scoreUnit: serialized.scoreUnit,
+      // LIMITATION: the server DTO only carries rx/scaled booleans, so a
+      // "Modified" selection can't be persisted yet (it saves with neither
+      // flag, indistinguishable from unanswered). Needs a `modified` field
+      // on CreateWorkoutResultDto; the analytics event below records the
+      // full selection in the meantime. Do NOT send an unknown field —
+      // DTO validation may reject the whole request.
       rx: perf === 'rx' || undefined,
       scaled: perf === 'scaled' || undefined,
       notes: notes.trim() || undefined,
@@ -247,6 +253,8 @@ export default function LogWorkoutResultScreen() {
           workout_id: workoutId,
           rx: perf === 'rx',
           scaled: perf === 'scaled',
+          // Full tri-state incl. 'modified', which the API can't persist yet.
+          performance: perf ?? null,
           has_sets: setResults.length > 0,
           has_distance: setResults.some((s) => !!s.distance),
           platform: 'mobile',

@@ -18,10 +18,10 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -91,8 +91,6 @@ export function WorkoutChat({
   const comments = useWorkoutComments(orgId, assignmentId, membershipId);
   const uploads = useMessageUploads(orgId);
   const [draft, setDraft] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
-  const didInitialScroll = useRef(false);
 
   const labels = {
     placeholder: dict(t, 'messages.typePlaceholder') ?? 'Message your coach…',
@@ -119,8 +117,11 @@ export function WorkoutChat({
     });
   }, [comments.unreadCount, markReadMutate]);
 
-  // Build chronological list (oldest → newest) with date separators. The
-  // cache stores newest-first, so reverse.
+  // Build a chronological view (oldest → newest) with a date separator above
+  // each day, then reverse the whole thing. `allComments` is newest-first and
+  // the FlatList is `inverted` (index 0 renders at the bottom), so reversing
+  // keeps the newest message pinned to the composer with separators above
+  // their day's group.
   const items = useMemo<ChatItem[]>(() => {
     const chronological = [...comments.allComments].reverse();
     const out: ChatItem[] = [];
@@ -133,6 +134,7 @@ export function WorkoutChat({
       }
       out.push({ type: 'message', message: msg });
     }
+    out.reverse();
     return out;
   }, [comments.allComments]);
 
@@ -153,9 +155,6 @@ export function WorkoutChat({
       setDraft('');
       uploads.clearAll();
       haptics.success();
-      requestAnimationFrame(() =>
-        scrollRef.current?.scrollToEnd({ animated: true }),
-      );
     } catch {
       haptics.error();
     }
@@ -226,6 +225,48 @@ export function WorkoutChat({
     ],
   );
 
+  // Stable identity so the memoized <MessageBubble> rows skip re-rendering
+  // on every composer keystroke.
+  const renderItem = useCallback(
+    ({ item }: { item: ChatItem }) => {
+      if (item.type === 'date') {
+        return (
+          <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+            <Text
+              style={{
+                fontFamily: 'Assistant-Medium',
+                fontSize: 10,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: ink.faint,
+              }}
+            >
+              {item.date.toLocaleDateString(lang, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </Text>
+          </View>
+        );
+      }
+      const isOwn = item.message.senderMembershipId === membershipId;
+      return (
+        <MessageBubble
+          message={item.message}
+          isOwn={isOwn}
+          isRTL={isRTL}
+          isDark={isDark}
+          lang={lang}
+          colors={colors}
+          ink={ink}
+          onLongPress={handleLongPress}
+        />
+      );
+    },
+    [ink, lang, membershipId, isRTL, isDark, colors, handleLongPress],
+  );
+
   const canSend =
     (draft.trim().length > 0 || uploads.getReadyUploadIds().length > 0) &&
     !isSending &&
@@ -239,104 +280,72 @@ export function WorkoutChat({
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
       style={{ flex: 1 }}
     >
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          padding: 14,
-          paddingBottom: 18,
-          gap: 4,
-          flexGrow: 1,
-        }}
-        onContentSizeChange={() => {
-          if (didInitialScroll.current || items.length === 0) return;
-          didInitialScroll.current = true;
-          scrollRef.current?.scrollToEnd({ animated: false });
-        }}
-      >
-        {hasMore && !comments.query.isLoading ? (
-          <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-            <Pressable
-              onPress={() => comments.query.fetchNextPage()}
-              disabled={comments.query.isFetchingNextPage}
-              style={({ pressed }) => [
-                {
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor: isDark
-                    ? 'rgba(255,255,255,0.06)'
-                    : 'rgba(15,23,42,0.06)',
-                },
-                pressed && { opacity: 0.6 },
-              ]}
-            >
-              {comments.query.isFetchingNextPage ? (
-                <ActivityIndicator size="small" color={ink.muted} />
-              ) : (
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.foreground }}>
-                  {labels.loadEarlier}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        ) : null}
-
+      <View style={{ flex: 1 }}>
         {comments.query.isLoading ? (
-          <View style={{ padding: 4, gap: 10 }}>
+          <View style={{ padding: 18, gap: 10 }}>
             <Skeleton style={{ height: 30, width: '60%', borderRadius: 14, alignSelf: 'flex-start' }} />
             <Skeleton style={{ height: 30, width: '50%', borderRadius: 14, alignSelf: 'flex-end' }} />
             <Skeleton style={{ height: 30, width: '44%', borderRadius: 14, alignSelf: 'flex-start' }} />
           </View>
         ) : items.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
             <Text style={{ fontSize: 14, color: ink.muted, textAlign: 'center' }}>
               {labels.empty}
             </Text>
           </View>
         ) : (
-          items.map((item, idx) => {
-            if (item.type === 'date') {
-              return (
-                <View
-                  key={`d-${item.date.toISOString()}-${idx}`}
-                  style={{ alignItems: 'center', paddingVertical: 10 }}
-                >
-                  <Text
-                    style={{
-                      fontFamily: 'Assistant-Medium',
-                      fontSize: 10,
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
-                      color: ink.faint,
-                    }}
-                  >
-                    {item.date.toLocaleDateString(lang, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                </View>
-              );
+          <FlatList
+            data={items}
+            inverted
+            keyExtractor={(item, idx) =>
+              item.type === 'date'
+                ? `d-${item.date.toISOString()}-${idx}`
+                : item.message.id
             }
-            const isOwn = item.message.senderMembershipId === membershipId;
-            return (
-              <MessageBubble
-                key={item.message.id}
-                message={item.message}
-                isOwn={isOwn}
-                isRTL={isRTL}
-                isDark={isDark}
-                lang={lang}
-                colors={colors}
-                ink={ink}
-                onLongPress={handleLongPress}
-              />
-            );
-          })
+            // Inverted: contentContainer paddingTop/Bottom are visually
+            // swapped, so this keeps 14pt at the visual top and 18pt at the
+            // visual bottom (above the composer), matching the old ScrollView.
+            contentContainerStyle={{
+              paddingHorizontal: 14,
+              paddingTop: 18,
+              paddingBottom: 14,
+              gap: 4,
+            }}
+            showsVerticalScrollIndicator={false}
+            renderItem={renderItem}
+            ListFooterComponent={
+              // Inverted: ListFooter is at the visual top.
+              hasMore ? (
+                <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+                  <Pressable
+                    onPress={() => comments.query.fetchNextPage()}
+                    disabled={comments.query.isFetchingNextPage}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: 14,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        backgroundColor: isDark
+                          ? 'rgba(255,255,255,0.06)'
+                          : 'rgba(15,23,42,0.06)',
+                      },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    {comments.query.isFetchingNextPage ? (
+                      <ActivityIndicator size="small" color={ink.muted} />
+                    ) : (
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.foreground }}>
+                        {labels.loadEarlier}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              ) : null
+            }
+          />
         )}
-      </ScrollView>
+      </View>
 
       {/* Composer. */}
       {uploads.uploads.length > 0 ? (

@@ -26,6 +26,7 @@ import type {
 } from '@fitkit/shared';
 import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
+import { queryKeys } from '@/lib/query-keys';
 
 // ── Summary (latest + trend per type) ──────────────────────────────
 
@@ -33,7 +34,7 @@ export function useMyMetricsSummary(orgId: string | undefined | null) {
   return useApiQuery<{ data: BodyMetricSummaryResponse[] }>({
     path: orgId ? `/organizations/${orgId}/metrics/me` : '',
     queryKey: orgId
-      ? ['/organizations', orgId, 'metrics', 'me']
+      ? queryKeys.metrics.summary(orgId)
       : ['/metrics/me', 'noop'],
     queryOptions: { enabled: !!orgId, staleTime: 30_000 },
   });
@@ -53,7 +54,7 @@ export function useMetricHistory(
         : '',
     queryKey:
       orgId && membershipId && metricType
-        ? ['metrics-history', orgId, membershipId, metricType]
+        ? queryKeys.metrics.history(orgId, membershipId, metricType)
         : ['metrics-history', 'noop'],
     queryOptions: {
       enabled: !!orgId && !!membershipId && !!metricType,

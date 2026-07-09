@@ -29,6 +29,7 @@ import type {
 } from '@fitkit/shared';
 import { analytics } from '@/lib/analytics';
 import { useApi } from './use-api';
+import { queryKeys } from '@/lib/query-keys';
 
 type CommentsPage = MessagesListResponse;
 type InfiniteData = { pages: { data: CommentsPage }[]; pageParams: unknown[] };
@@ -49,7 +50,7 @@ export function useWorkoutComments(
     isLoaded &&
     isSignedIn === true;
 
-  const queryKey = ['workout-comments', orgId, workoutAssignmentId] as const;
+  const queryKey = queryKeys.workoutComments.thread(orgId, workoutAssignmentId);
 
   const query = useInfiniteQuery<{ data: CommentsPage }>({
     queryKey,
@@ -168,8 +169,10 @@ export function useWorkoutComments(
       // Match the mobile cache-key shapes — the previous predicate used
       // the web app's URL-string keys ('/workout-comments/…') and matched
       // nothing here, leaving day-strip unread badges stale.
-      queryClient.invalidateQueries({ queryKey: ['workout-comments', orgId] });
-      queryClient.invalidateQueries({ queryKey: ['badge-total', orgId] });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.workoutComments.all(orgId),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.badge.total(orgId ?? 'noop') });
       queryClient.invalidateQueries({
         predicate: (q) =>
           q.queryKey[0] === '/organizations' &&
