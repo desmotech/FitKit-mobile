@@ -15,7 +15,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
 import { bodyFamily } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 export function FKActionBar({ children }: { children: ReactNode }) {
   const colors = useFKColors();

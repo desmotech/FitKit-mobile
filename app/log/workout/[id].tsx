@@ -70,6 +70,7 @@ import {
   secondsToClock,
   serializeScore,
 } from '@/lib/score';
+import { ymd, ymdToInstantISO } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
 
 export default function LogWorkoutResultScreen() {
@@ -120,7 +121,7 @@ export default function LogWorkoutResultScreen() {
 
   const [perf, setPerf] = useState<Performance | null>(null);
   const [notes, setNotes] = useState('');
-  const [performedAt, setPerformedAt] = useState<string>(() => isoDate());
+  const [performedAt, setPerformedAt] = useState<string>(() => ymd(new Date()));
   const [setRows, setSetRows] = useState<Record<string, SetRowValue[]>>({});
 
   // A per-movement factory that seeds a set row from the prescription so the
@@ -215,7 +216,11 @@ export default function LogWorkoutResultScreen() {
           distance: row.distance || undefined,
           distanceUnit: row.distance ? row.distanceUnit : undefined,
           duration: row.duration || undefined,
-          rpe: row.rpe ? Number.parseInt(row.rpe, 10) : undefined,
+          // parseFloat, not parseInt: the focused-mode stepper produces
+          // half-point RPEs ("7.5") which parseInt would truncate to 7.
+          rpe: row.rpe
+            ? Number.parseFloat(row.rpe.replace(',', '.'))
+            : undefined,
         });
       });
     }
@@ -226,7 +231,7 @@ export default function LogWorkoutResultScreen() {
       rx: perf === 'rx' || undefined,
       scaled: perf === 'scaled' || undefined,
       notes: notes.trim() || undefined,
-      performedAt: new Date(performedAt).toISOString(),
+      performedAt: ymdToInstantISO(performedAt),
       // Anchor to the assignment so the server forks its snapshot (FIT-152)
       // instead of writing against the mutable library workout.
       assignmentId: id,
@@ -353,7 +358,11 @@ export default function LogWorkoutResultScreen() {
                         movement={m}
                         columns={deriveColumns(m, caps)}
                         rows={setRows[m.id] ?? []}
-                        prevSetsByNumber={pickPrevSetsByNumber(lastResult, m.id)}
+                        prevSetsByNumber={pickPrevSetsByNumber(
+                          lastResult,
+                          m.id,
+                          m.exercise.id,
+                        )}
                         oneRMKg={oneRMKg[m.exercise.id] ?? null}
                         targetSets={
                           defaultRowFactories[m.id]?.targetSets ??
@@ -571,13 +580,6 @@ function MovementBlock({
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function isoDate(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
 function buildLastHint({
   scoring,
   lastResult,
@@ -609,20 +611,38 @@ function buildLastHint({
   return when ? `${label}: ${summary} · ${when}` : `${label}: ${summary}`;
 }
 
+const KG_PER_LB = 0.45359237;
+
 function pickPrevSetsByNumber(
   lastResult: { setResults?: SetResultLite[] } | null,
   workoutMovementId: string,
+  exerciseId: string,
 ): Record<number, SetRowLast> {
   const out: Record<number, SetRowLast> = {};
   const sets = lastResult?.setResults ?? [];
   for (const s of sets) {
-    if (s.workoutMovementId && s.workoutMovementId !== workoutMovementId)
+    // Match by movement id when the set has one; unlinked/legacy sets
+    // (null movement id) must at least match the exercise, or every
+    // movement in the workout would inherit the same placeholders.
+    if (s.workoutMovementId) {
+      if (s.workoutMovementId !== workoutMovementId) continue;
+    } else if (s.exerciseId !== exerciseId) {
       continue;
+    }
+    // The API sends canonical kg + the entered display unit. Convert the
+    // kg value back into that unit so the placeholder (and the stepper
+    // that seeds from it) agrees with the unit toggle it renders next to.
+    const displayLb =
+      s.weightDisplayUnit === 'lb' || s.weightDisplayUnit === 'lbs';
+    const weightVal =
+      s.weightKg == null
+        ? null
+        : displayLb
+          ? Math.round((s.weightKg / KG_PER_LB) * 100) / 100
+          : s.weightKg;
     out[s.setNumber] = {
       reps: s.reps,
-      // The API sends canonical kg + the entered display unit, not the old
-      // weight/weightUnit the prefill used to (wrongly) read.
-      weight: s.weightKg != null ? String(s.weightKg) : null,
+      weight: weightVal != null ? String(weightVal) : null,
       weightUnit: s.weightDisplayUnit,
       distanceM: s.distanceM,
       distanceDisplayUnit: s.distanceDisplayUnit,

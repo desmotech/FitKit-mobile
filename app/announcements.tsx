@@ -23,7 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -100,11 +100,17 @@ export default function AnnouncementsScreen() {
     ? announcements.find((a) => a.id === selectedId) ?? null
     : null;
 
-  // Auto mark-as-read on detail expand (mirrors web).
+  // Auto mark-as-read on detail expand (mirrors web). Depends on the stable
+  // `mutate` fn, not the mutation object (new identity every render), and
+  // latches per-announcement so a failing endpoint isn't retried in a loop.
+  const markReadMutate = markRead.mutate;
+  const markReadAttempted = useRef<string | null>(null);
   useEffect(() => {
-    if (!selected || selected.readAt || markRead.isPending) return;
-    markRead.mutate(selected.id);
-  }, [selected, markRead]);
+    if (!selected || selected.readAt) return;
+    if (markReadAttempted.current === selected.id) return;
+    markReadAttempted.current = selected.id;
+    markReadMutate(selected.id);
+  }, [selected, markReadMutate]);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -180,7 +186,12 @@ export default function AnnouncementsScreen() {
           }
           renderItem={({ item, index }) => (
             <Animated.View
-              entering={FadeInDown.delay(30 + index * 25).duration(260)}
+              // Cap the stagger to the first screenful: rows mounted while
+              // scrolling or paging in would otherwise wait `index * 25`ms
+              // (seconds, deep in the list) and appear as blank gaps.
+              entering={FadeInDown.delay(
+                30 + Math.min(index, 8) * 25,
+              ).duration(260)}
             >
               <AnnouncementRow
                 announcement={item}

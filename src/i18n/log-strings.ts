@@ -29,8 +29,6 @@ export interface LogStrings {
   liftExercise: string;
   liftResult: string;
   liftWhen: string;
-  liftNotes: string;
-  liftNotesPlaceholder: string;
   liftFailed: string;
   liftPrTitle: string;
   liftPrSubtitle: string;
@@ -183,8 +181,6 @@ const en: LogStrings = {
   liftExercise: 'Exercise',
   liftResult: 'Result',
   liftWhen: 'When',
-  liftNotes: 'Notes',
-  liftNotesPlaceholder: 'Any notes?',
   liftFailed: "Couldn't save. Try again.",
   liftPrTitle: 'PR logged!',
   liftPrSubtitle: 'Tracked to your personal records.',
@@ -314,8 +310,6 @@ const he: LogStrings = {
   liftExercise: 'תרגיל',
   liftResult: 'תוצאה',
   liftWhen: 'מתי',
-  liftNotes: 'הערות',
-  liftNotesPlaceholder: 'הערות?',
   liftFailed: 'השמירה נכשלה. נסה שוב.',
   liftPrTitle: 'שיא חדש!',
   liftPrSubtitle: 'נשמר בשיאים האישיים שלך.',
@@ -445,8 +439,6 @@ const ru: LogStrings = {
   liftExercise: 'Упражнение',
   liftResult: 'Результат',
   liftWhen: 'Когда',
-  liftNotes: 'Заметки',
-  liftNotesPlaceholder: 'Заметки?',
   liftFailed: 'Не удалось сохранить. Попробуйте ещё.',
   liftPrTitle: 'Рекорд записан!',
   liftPrSubtitle: 'Добавлено в личные рекорды.',

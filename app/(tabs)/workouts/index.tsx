@@ -17,12 +17,8 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  LinearTransition,
-  runOnJS,
-} from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
   FKAmbientBackdrop,
@@ -39,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useWeekStrip } from '@/hooks/use-week-strip';
 import {
   type AssignmentDay,
   getWeekOrder,
@@ -93,7 +90,7 @@ export default function WhiteboardScreen() {
   // section per assignment (set when assignment changes).
 
   const week = useMyWeekAssignments(orgId, weekStart);
-  const all = week.data?.data ?? [];
+  const all = useMemo(() => week.data?.data ?? [], [week.data]);
 
   // ── Dictionary -----------------------------------------------------
   const dict = t as unknown as Record<string, Record<string, unknown>>;
@@ -102,14 +99,15 @@ export default function WhiteboardScreen() {
   const programEmpty = (programDict.empty ?? {}) as Record<string, string>;
   const workoutDict = (dict.workout ?? {}) as Record<string, string>;
   const scheduleDict = (dict.schedule ?? {}) as Record<string, unknown>;
-  const daysOfWeekShort = (scheduleDict.daysOfWeek ?? {}) as Record<
-    string,
-    string
-  >;
-  const dayLabels = useMemo(
-    () => weekOrder.map((k) => daysOfWeekShort[k] ?? k.slice(0, 3).toUpperCase()),
-    [weekOrder, daysOfWeekShort],
-  );
+  const dayLabels = useMemo(() => {
+    const daysOfWeekShort = (scheduleDict.daysOfWeek ?? {}) as Record<
+      string,
+      string
+    >;
+    return weekOrder.map(
+      (k) => daysOfWeekShort[k] ?? k.slice(0, 3).toUpperCase(),
+    );
+  }, [weekOrder, scheduleDict.daysOfWeek]);
   const labels = {
     title: wb.title ?? 'Whiteboard',
     coachNotes: wb.coachNotes ?? 'Coach notes',
@@ -162,14 +160,11 @@ export default function WhiteboardScreen() {
     return m;
   }, [all]);
 
-  const weekDays = useMemo(() => {
-    const start = new Date(weekStart);
-    return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-  }, [weekStart]);
+  const { weekDays, goPrev, goNext, weekSwipeGesture } = useWeekStrip({
+    weekStart,
+    setWeekStart,
+    isRTL,
+  });
 
   const dayAssignments = useMemo(
     () => byDate.get(selectedDate) ?? [],
@@ -191,39 +186,6 @@ export default function WhiteboardScreen() {
 
   const ChevronStart = isRTL ? ChevronRight : ChevronLeft;
   const ChevronEnd = isRTL ? ChevronLeft : ChevronRight;
-
-  const goPrev = () => {
-    haptics.tap();
-    setWeekStart((w) => shiftWeek(w, -1));
-  };
-  const goNext = () => {
-    haptics.tap();
-    setWeekStart((w) => shiftWeek(w, 1));
-  };
-
-  // Horizontal swipe on the day strip → prev/next week. RTL flips: in
-  // Hebrew the future is on the leading edge (right), so a right-swipe
-  // means "next" rather than "previous".
-  const SWIPE_DISTANCE = 40;
-  const SWIPE_VELOCITY = 400;
-  const weekSwipeGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-12, 12])
-    .onEnd((e) => {
-      'worklet';
-      const goRight =
-        e.translationX > SWIPE_DISTANCE || e.velocityX > SWIPE_VELOCITY;
-      const goLeft =
-        e.translationX < -SWIPE_DISTANCE || e.velocityX < -SWIPE_VELOCITY;
-      if (!goRight && !goLeft) return;
-      if (goRight) {
-        if (isRTL) runOnJS(goNext)();
-        else runOnJS(goPrev)();
-      } else if (goLeft) {
-        if (isRTL) runOnJS(goPrev)();
-        else runOnJS(goNext)();
-      }
-    });
 
   return (
     <View className="flex-1">

@@ -6,7 +6,7 @@
  */
 import { type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useFKColors } from '@/components/fk';
+import { useFKColors } from './colors';
 import { useHaptics } from '@/hooks/use-haptics';
 
 export function FKNavButton({

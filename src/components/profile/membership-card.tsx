@@ -6,7 +6,8 @@ import { useFKColors } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
-import { type ColorTokens } from './color-tokens';
+
+type ColorTokens = ReturnType<typeof useFKColors>;
 
 /** Brand-tinted membership card — plan name, status chip, renewal period, and
  *  a manage/renew CTA whose label tracks the subscription status. */

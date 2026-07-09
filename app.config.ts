@@ -10,16 +10,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
-  splash: {
-    image: './assets/images/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#F6F4EE',
-    dark: {
-      image: './assets/images/splash.png',
-      resizeMode: 'contain',
-      backgroundColor: '#050608',
-    },
-  },
+  // Splash config lives solely in the expo-splash-screen plugin below —
+  // the plugin is authoritative on SDK 52+, and a second top-level `splash`
+  // block was one more place for the colors to drift out of sync.
   assetBundlePatterns: ['**/*'],
   ios: {
     bundleIdentifier: 'fit.fitkit.app',

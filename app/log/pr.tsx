@@ -43,6 +43,7 @@ import {
   isScoreComplete,
   serializeScore,
 } from '@/lib/score';
+import { ymd, ymdToInstantISO } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
 
 type Kind = 'exercise' | 'workout';
@@ -150,7 +151,7 @@ export default function LogPRScreen() {
         : inferScoringFromUnit(workoutRow?.unit);
 
   const [score, setScore] = useState<Score>(() => emptyScore(scoring));
-  const [achievedAt, setAchievedAt] = useState<string>(() => isoDate());
+  const [achievedAt, setAchievedAt] = useState<string>(() => ymd(new Date()));
   const [celebration, setCelebration] = useState<null | {
     target: string;
     summary: string;
@@ -172,13 +173,13 @@ export default function LogPRScreen() {
     const serialized = serializeScore(score);
     const prevBest =
       kind === 'exercise'
-        ? bestForExercise(prs.data?.data ?? [], exercise?.id)
+        ? bestForExercise(prs.data?.data ?? [], exercise?.id, scoring)
         : workoutRow?.value ?? null;
 
     const payload: LogPRInput = {
       value: serialized.scoreValue,
       unit: serialized.scoreUnit ?? FALLBACK_UNIT[scoring],
-      achievedAt: new Date(achievedAt).toISOString(),
+      achievedAt: ymdToInstantISO(achievedAt),
       ...(kind === 'exercise'
         ? { exerciseId: exercise?.id }
         : { workoutId: workoutId ?? undefined }),
@@ -392,7 +393,8 @@ export default function LogPRScreen() {
 
 function inferScoringFromUnit(unit: string | null | undefined): WorkoutScoring {
   const u = (unit ?? '').toLowerCase();
-  if (u === 's' || u === 'sec' || u === 'time') return 'time';
+  if (u === 'kg' || u === 'lb' || u === 'lbs') return 'weight';
+  if (u === 's' || u === 'sec' || u === 'time' || u === 'mm:ss') return 'time';
   if (u === 'rounds+reps') return 'rounds_reps';
   if (u === 'reps') return 'reps';
   if (u === 'm' || u === 'km' || u === 'mi') return 'distance';
@@ -402,17 +404,19 @@ function inferScoringFromUnit(unit: string | null | undefined): WorkoutScoring {
 }
 
 function bestForExercise(
-  rows: { exerciseId: string | null; value: string }[],
+  rows: { exerciseId: string | null; value: string; unit: string }[],
   exerciseId: string | undefined,
+  scoring: WorkoutScoring,
 ): string | null {
   if (!exerciseId) return null;
-  const row = rows.find((r) => r.exerciseId === exerciseId);
+  // Match the metric family, not just the exercise — an exercise can hold
+  // both a load PR and a time PR, and showing "100 kg" as the previous best
+  // under a mm:ss entry is nonsense.
+  const row = rows.find(
+    (r) =>
+      r.exerciseId === exerciseId &&
+      inferScoringFromUnit(r.unit) === scoring,
+  );
   return row?.value ?? null;
 }
 
-function isoDate(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}

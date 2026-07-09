@@ -12,7 +12,7 @@
  * optimistic cache writes, plus realtime: incoming messages prepend to the
  * open thread and read receipts flip the sent-message ticks live.
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -239,8 +239,13 @@ export function useMessages(
     },
   });
 
-  const allMessages =
-    query.data?.pages.flatMap((p) => p.data.messages) ?? [];
+  // Memoized: an unstable array identity here cascades into the thread
+  // screen's items/unread memos on every render (incl. each keystroke).
+  const pages = query.data?.pages;
+  const allMessages = useMemo(
+    () => pages?.flatMap((p) => p.data.messages) ?? [],
+    [pages],
+  );
 
   return { query, allMessages, sendMessage, markRead, deleteMessage };
 }

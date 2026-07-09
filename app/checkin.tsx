@@ -22,7 +22,7 @@
 import { useAuth } from '@clerk/clerk-expo';
 import { Redirect, useRouter, useLocalSearchParams } from 'expo-router';
 import { CalendarDays, CheckCircle2, XCircle } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -53,27 +53,29 @@ export default function CheckInScreen() {
   }>();
 
   // ── Labels ────────────────────────────────────────────────────────
-  const t = dict as unknown as {
-    schedule?: { checkinPage?: Record<string, string> };
-    common?: Record<string, string>;
-  };
-  const pageT = t.schedule?.checkinPage ?? {};
-  const commonT = t.common ?? {};
-  const labels = {
-    checking: pageT.checking ?? 'Checking you in…',
-    pleaseWait: pageT.pleaseWait ?? 'Please wait',
-    success: pageT.success ?? "You're checked in!",
-    successDesc: pageT.successDesc ?? 'Your attendance has been recorded.',
-    errorTitle: pageT.errorTitle ?? 'Check-in failed',
-    failed: pageT.failed ?? 'Check-in failed. Please try again.',
-    invalidLink:
-      pageT.invalidLink ?? 'Invalid check-in link. Please scan the QR again.',
-    expired:
-      pageT.expired ??
-      'This check-in link has expired. Ask the gym for a fresh code.',
-    backToSchedule: pageT.backToSchedule ?? 'Back to Schedule',
-    tryAgain: commonT.tryAgain ?? 'Try again',
-  };
+  const labels = useMemo(() => {
+    const t = dict as unknown as {
+      schedule?: { checkinPage?: Record<string, string> };
+      common?: Record<string, string>;
+    };
+    const pageT = t.schedule?.checkinPage ?? {};
+    const commonT = t.common ?? {};
+    return {
+      checking: pageT.checking ?? 'Checking you in…',
+      pleaseWait: pageT.pleaseWait ?? 'Please wait',
+      success: pageT.success ?? "You're checked in!",
+      successDesc: pageT.successDesc ?? 'Your attendance has been recorded.',
+      errorTitle: pageT.errorTitle ?? 'Check-in failed',
+      failed: pageT.failed ?? 'Check-in failed. Please try again.',
+      invalidLink:
+        pageT.invalidLink ?? 'Invalid check-in link. Please scan the QR again.',
+      expired:
+        pageT.expired ??
+        'This check-in link has expired. Ask the gym for a fresh code.',
+      backToSchedule: pageT.backToSchedule ?? 'Back to Schedule',
+      tryAgain: commonT.tryAgain ?? 'Try again',
+    };
+  }, [dict]);
 
   // The schedule mutation invalidates by week. We don't know the
   // session's week here (we'd need to fetch the session first), so we
@@ -90,13 +92,13 @@ export default function CheckInScreen() {
   const [errorMessage, setErrorMessage] = useState('');
   const fired = useRef(false);
 
+  const { s: sessionId, t: token, e: exp } = params;
   useEffect(() => {
     // Wait for Clerk to load + a valid org context before firing.
     if (!isLoaded || !isSignedIn) return;
     if (fired.current) return;
     if (!targetOrgId) return;
 
-    const { s: sessionId, t: token, e: exp } = params;
     if (!sessionId || !token || !exp) {
       fired.current = true;
       setState('error');
@@ -128,9 +130,20 @@ export default function CheckInScreen() {
         },
       },
     );
-    // Stable: `checkin` / `haptics` / `router` are hook refs; we want
-    // to fire once per param set.
-  }, [isLoaded, isSignedIn, targetOrgId, params.s, params.t, params.e]);
+    // `fired` guards against re-fires when unstable deps (labels, the
+    // mutation object) change identity across renders.
+  }, [
+    isLoaded,
+    isSignedIn,
+    targetOrgId,
+    sessionId,
+    token,
+    exp,
+    checkin,
+    haptics,
+    labels,
+    router,
+  ]);
 
   // Auth gate: if Clerk reports signed-out, push the user through the
   // sign-in flow. After auth they'll land back on this URL via the

@@ -15,6 +15,8 @@ import {
   Pressable,
   RefreshControl,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { FKSubScreen, useFKColors } from '@/components/fk';
@@ -72,12 +74,30 @@ export default function PhotosScreen() {
   const isLoading = photosQuery.isLoading;
   const isRefreshing = photosQuery.isRefetching && !isLoading;
 
+  // The API pages at 50 photos; fetch the next page as the grid nears the
+  // end — without this, photos beyond page 1 were unreachable.
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const nearEnd =
+      contentOffset.y + layoutMeasurement.height >=
+      contentSize.height - TILE * 4;
+    if (
+      nearEnd &&
+      photosQuery.hasNextPage &&
+      !photosQuery.isFetchingNextPage
+    ) {
+      photosQuery.fetchNextPage();
+    }
+  };
+
   return (
     <FKSubScreen
       title={labels.title}
       onAdd={handleAdd}
       addLabel={labels.add}
       contentStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
+      onScroll={handleScroll}
+      scrollEventThrottle={64}
       refreshControl={
         <RefreshControl
           refreshing={isRefreshing}
@@ -120,7 +140,11 @@ export default function PhotosScreen() {
             {photos.map((photo, idx) => (
               <Animated.View
                 key={photo.id}
-                entering={FadeInDown.delay(idx * 20).duration(220)}
+                // Cap the stagger to the first few rows; tiles paged in
+                // later shouldn't wait idx*20ms to appear.
+                entering={FadeInDown.delay(
+                  Math.min(idx, 12) * 20,
+                ).duration(220)}
               >
                 <Pressable
                   onPress={() => {

@@ -18,7 +18,7 @@ import Animated, {
 import { useHaptics } from '@/hooks/use-haptics';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 /**
  * Day status — drives the bar under the date (one consistent semantic across

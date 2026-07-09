@@ -30,7 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 const BRAND_TEAL = '#0E8C8C';
 const DESTRUCTIVE = '#B84A40';

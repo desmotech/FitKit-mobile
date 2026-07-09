@@ -164,7 +164,6 @@ export function SignatureFieldRenderer({
       }
 
       if (__DEV__) {
-        // eslint-disable-next-line no-console
         console.log('[signature] saved', { fileUri, size: info.size });
       }
 
@@ -174,7 +173,6 @@ export function SignatureFieldRenderer({
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Save failed.';
       if (__DEV__) {
-        // eslint-disable-next-line no-console
         console.error('[signature] commit failed:', message, err);
       }
       haptics.error();

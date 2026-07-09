@@ -1,3 +1,5 @@
+> **Archived 2026-07-09 — historical.** Everything in the "Outstanding mobile work" list below has shipped. The My Forms list lives at `app/(tabs)/profile/forms/index.tsx` and the authenticated signing screen at `app/(tabs)/profile/forms/[instanceId].tsx` (NOT the `app/forms/instances/[instanceId].tsx` path this doc prescribes). The signature placeholder it says to replace is long gone (`src/components/forms/fields/signature-field.tsx`). Kept for design rationale only — do not build from it.
+
 # Forms (FIT-176 / FIT-178) — Mobile Handover
 
 **Date written:** 2026-05-27

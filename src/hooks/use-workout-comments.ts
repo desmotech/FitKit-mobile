@@ -20,6 +20,7 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useAuth } from '@clerk/clerk-expo';
 import type {
   CreateWorkoutCommentInput,
@@ -164,16 +165,16 @@ export function useWorkoutComments(
     onSuccess: () => {
       // Refresh sibling surfaces that derive unread state from these same
       // workout-tagged messages (Feed badges, Whiteboard day strip).
+      // Match the mobile cache-key shapes — the previous predicate used
+      // the web app's URL-string keys ('/workout-comments/…') and matched
+      // nothing here, leaving day-strip unread badges stale.
+      queryClient.invalidateQueries({ queryKey: ['workout-comments', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['badge-total', orgId] });
       queryClient.invalidateQueries({
-        predicate: (q) => {
-          const key = q.queryKey[0];
-          if (typeof key !== 'string') return false;
-          return (
-            key.includes('/workout-comments/') ||
-            key.includes('/assignments/my-week') ||
-            (key.includes('/programs/') && key.includes('/week-grid'))
-          );
-        },
+        predicate: (q) =>
+          q.queryKey[0] === '/organizations' &&
+          q.queryKey[1] === orgId &&
+          q.queryKey.includes('assignments'),
       });
     },
   });
@@ -203,18 +204,27 @@ export function useWorkoutComments(
     },
   });
 
-  const allComments =
-    query.data?.pages.flatMap((p) => p.data.messages) ?? [];
+  // Memoized: an unstable array identity here cascades into the chat's
+  // items memo on every render (incl. each composer keystroke).
+  const pages = query.data?.pages;
+  const allComments = useMemo(
+    () => pages?.flatMap((p) => p.data.messages) ?? [],
+    [pages],
+  );
 
-  const unreadCount = currentMembershipId
-    ? allComments.reduce(
-        (n, m) =>
-          m.recipientMembershipId === currentMembershipId && !m.readAt
-            ? n + 1
-            : n,
-        0,
-      )
-    : 0;
+  const unreadCount = useMemo(
+    () =>
+      currentMembershipId
+        ? allComments.reduce(
+            (n, m) =>
+              m.recipientMembershipId === currentMembershipId && !m.readAt
+                ? n + 1
+                : n,
+            0,
+          )
+        : 0,
+    [allComments, currentMembershipId],
+  );
 
   return { query, allComments, sendComment, markRead, deleteComment, unreadCount };
 }

@@ -65,7 +65,7 @@ export default function MyFormsScreen() {
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const query = useMyForms(orgId);
-  const entries = query.data?.data ?? [];
+  const entries = useMemo(() => query.data?.data ?? [], [query.data]);
 
   // Group: actionable (pending/sent/scheduled) → done (signed/answered/reviewed)
   // → archived. Sort each group by recency.

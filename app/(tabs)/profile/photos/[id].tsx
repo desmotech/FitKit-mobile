@@ -29,7 +29,6 @@ function get(dict: any, path: string): string | null {
 
 export default function PhotoDetailScreen() {
   const colors = useFKColors();
-  const isDark = colors.isDark;
   const haptics = useHaptics();
   const insets = useSafeAreaInsets();
   const { dir, t, lang } = useI18n();

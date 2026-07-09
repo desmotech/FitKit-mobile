@@ -6,8 +6,7 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
-import { runOnJS } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -33,10 +32,10 @@ import {
   blockReasonText,
   usePlanPicker,
 } from '@/components/schedule/plan-picker';
+import { useWeekStrip } from '@/hooks/use-week-strip';
 import {
   getWeekOrder,
   getWeekStartDay,
-  shiftWeek,
   weekStartFor,
 } from '@/hooks/use-workouts';
 import { displayFamily, font } from '@/lib/type';
@@ -72,13 +71,14 @@ export default function ScheduleScreen() {
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const sessionsQuery = useMyWeekSessions(orgId, weekStart);
-  const all = sessionsQuery.data?.data ?? [];
+  const all = useMemo(() => sessionsQuery.data?.data ?? [], [sessionsQuery.data]);
 
   const bookMutation = useBookSession(orgId, weekStart);
   const cancelMutation = useCancelBooking(orgId, weekStart);
   // Per-session pending flag so one card's action spinner doesn't disable
   // the whole list.
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Lang-aware formatters for the selected-day header ("WED · Jun 3").
   const monthDayFmt = useMemo(
@@ -95,14 +95,12 @@ export default function ScheduleScreen() {
   const sched = (dict.schedule ?? {}) as Record<string, unknown>;
   const mobile = (sched.mobile ?? {}) as Record<string, string>;
   const member = (sched.memberBooking ?? {}) as Record<string, string>;
-  const daysOfWeekShort = (sched.daysOfWeek ?? {}) as Record<string, string>;
   const whiteboard = (dict.whiteboard ?? {}) as Record<string, string>;
   const common = (dict.common ?? {}) as Record<string, string>;
-  const dayLabels = useMemo(
-    () =>
-      weekOrder.map((k) => daysOfWeekShort[k] ?? k.slice(0, 3).toUpperCase()),
-    [weekOrder, daysOfWeekShort],
-  );
+  const dayLabels = useMemo(() => {
+    const daysOfWeekShort = (sched.daysOfWeek ?? {}) as Record<string, string>;
+    return weekOrder.map((k) => daysOfWeekShort[k] ?? k.slice(0, 3).toUpperCase());
+  }, [weekOrder, sched.daysOfWeek]);
   const labels = {
     noClassesToday: mobile.noClassesToday ?? 'No classes scheduled',
     minSuffix: mobile.min ?? 'min',
@@ -175,47 +173,13 @@ export default function ScheduleScreen() {
     return map;
   }, [published]);
 
-  const weekDays = useMemo(() => {
-    const start = new Date(weekStart);
-    return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-  }, [weekStart]);
+  const { weekDays, goPrev, goNext, weekSwipeGesture } = useWeekStrip({
+    weekStart,
+    setWeekStart,
+    isRTL,
+  });
 
   const daysSessions = byDate.get(selectedDate) ?? [];
-
-  // ── Week navigation ────────────────────────────────────────────────
-  const goPrev = () => {
-    haptics.tap();
-    setWeekStart((w) => shiftWeek(w, -1));
-  };
-  const goNext = () => {
-    haptics.tap();
-    setWeekStart((w) => shiftWeek(w, 1));
-  };
-
-  const SWIPE_DISTANCE = 40;
-  const SWIPE_VELOCITY = 400;
-  const weekSwipeGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-12, 12])
-    .onEnd((e) => {
-      'worklet';
-      const goRight =
-        e.translationX > SWIPE_DISTANCE || e.velocityX > SWIPE_VELOCITY;
-      const goLeft =
-        e.translationX < -SWIPE_DISTANCE || e.velocityX < -SWIPE_VELOCITY;
-      if (!goRight && !goLeft) return;
-      if (goRight) {
-        if (isRTL) runOnJS(goNext)();
-        else runOnJS(goPrev)();
-      } else if (goLeft) {
-        if (isRTL) runOnJS(goPrev)();
-        else runOnJS(goNext)();
-      }
-    });
 
   const handleCardPress = (session: ClassSession) => {
     haptics.tap();
@@ -330,10 +294,13 @@ export default function ScheduleScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
         refreshControl={
           <RefreshControl
-            refreshing={sessionsQuery.isFetching}
+            // Local state, not `isFetching`: background refetches (focus,
+            // booking invalidations) would yank the spinner down uninvited.
+            refreshing={refreshing}
             onRefresh={() => {
               haptics.tap();
-              sessionsQuery.refetch();
+              setRefreshing(true);
+              sessionsQuery.refetch().finally(() => setRefreshing(false));
             }}
             tintColor="#0E8C8C"
           />

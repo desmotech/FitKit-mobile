@@ -14,7 +14,7 @@
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { AlertCircle, ArrowUp, Paperclip, X } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -104,13 +104,20 @@ export function WorkoutChat({
     library: dict(t, 'progressPhotos.fromLibrary') ?? 'Choose from Library',
   };
 
-  // Mark the thread read whenever there's pending unread. Gated on
-  // unreadCount + isPending so it fires once, not in a loop.
+  // Mark the thread read whenever there's pending unread. Depends on the
+  // stable `mutate` fn (the mutation object is a new identity every render);
+  // the optimistic readAt update zeroes unreadCount synchronously, and the
+  // error latch stops a rollback→refire loop when the endpoint is failing.
+  const markReadMutate = comments.markRead.mutate;
+  const markReadFailed = useRef(false);
   useEffect(() => {
-    if (!comments.unreadCount) return;
-    if (comments.markRead.isPending) return;
-    comments.markRead.mutate();
-  }, [comments.unreadCount, comments.markRead]);
+    if (!comments.unreadCount || markReadFailed.current) return;
+    markReadMutate(undefined, {
+      onError: () => {
+        markReadFailed.current = true;
+      },
+    });
+  }, [comments.unreadCount, markReadMutate]);
 
   // Build chronological list (oldest → newest) with date separators. The
   // cache stores newest-first, so reverse.
@@ -194,18 +201,30 @@ export function WorkoutChat({
     );
   };
 
-  const handleLongPress = (msg: MessageResponse) => {
-    if (msg.senderMembershipId !== membershipId) return;
-    haptics.tap();
-    Alert.alert(labels.delete, undefined, [
-      { text: labels.cancel, style: 'cancel' },
-      {
-        text: labels.delete,
-        style: 'destructive',
-        onPress: () => comments.deleteComment.mutate(msg.id),
-      },
-    ]);
-  };
+  // Stable identity so the memoized <MessageBubble> rows skip re-rendering
+  // on every composer keystroke.
+  const deleteCommentMutate = comments.deleteComment.mutate;
+  const handleLongPress = useCallback(
+    (msg: MessageResponse) => {
+      if (msg.senderMembershipId !== membershipId) return;
+      haptics.tap();
+      Alert.alert(labels.delete, undefined, [
+        { text: labels.cancel, style: 'cancel' },
+        {
+          text: labels.delete,
+          style: 'destructive',
+          onPress: () => deleteCommentMutate(msg.id),
+        },
+      ]);
+    },
+    [
+      membershipId,
+      haptics,
+      labels.delete,
+      labels.cancel,
+      deleteCommentMutate,
+    ],
+  );
 
   const canSend =
     (draft.trim().length > 0 || uploads.getReadyUploadIds().length > 0) &&
@@ -312,7 +331,7 @@ export function WorkoutChat({
                 lang={lang}
                 colors={colors}
                 ink={ink}
-                onLongPress={() => handleLongPress(item.message)}
+                onLongPress={handleLongPress}
               />
             );
           })
@@ -446,7 +465,9 @@ export function WorkoutChat({
 
 // ── Message bubble ───────────────────────────────────────────────────
 
-function MessageBubble({
+// Memoized: the thread re-renders on every composer keystroke; without memo
+// every visible bubble (and its attachment images) re-renders per character.
+const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   isRTL,
@@ -463,7 +484,7 @@ function MessageBubble({
   lang: string;
   colors: ReturnType<typeof useFKColors>;
   ink: ReturnType<typeof programSheetInk>;
-  onLongPress: () => void;
+  onLongPress: (message: MessageResponse) => void;
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
   const coachBg = isDark ? 'rgba(78,92,100,0.46)' : 'rgba(255,255,255,0.72)';
@@ -493,7 +514,7 @@ function MessageBubble({
           {message.senderName}
         </Text>
       ) : null}
-      <Pressable onLongPress={onLongPress} delayLongPress={400}>
+      <Pressable onLongPress={() => onLongPress(message)} delayLongPress={400}>
         {({ pressed }) => (
           <View
             style={{
@@ -553,7 +574,7 @@ function MessageBubble({
       </Pressable>
     </View>
   );
-}
+});
 
 function BubbleAttachments({ attachments }: { attachments: AttachmentResponse[] }) {
   const visible = attachments.slice(0, 4);

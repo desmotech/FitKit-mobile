@@ -1,3 +1,5 @@
+> **Archived 2026-07-09 — historical.** The P1 scope specced here (app/log/pr.tsx, profile PR screens) has shipped, and the `LOGGING_SPEC.md` this doc supersedes no longer exists in the repo. Kept for product rationale only — do not build from it.
+
 # Personal Records — Product + Scope Spec
 
 **Status:** decisions locked · **Owner:** Saar · **Date:** 2026-06-03

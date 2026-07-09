@@ -628,6 +628,7 @@ export default function ProfileScreen() {
               </Text>
               <Pressable
                 onPressIn={haptics.tap}
+                onPress={() => router.push('/(tabs)/shop')}
                 style={({ pressed }) => [
                   {
                     paddingHorizontal: 18,

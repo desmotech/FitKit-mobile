@@ -9,7 +9,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle2, X } from 'lucide-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -40,29 +40,31 @@ export default function ScanScreen() {
   const isRTL = dir === 'rtl';
   const weekStart = weekStartFor(new Date(), getWeekStartDay(lang));
 
-  const t = (dict as unknown as {
-    schedule?: { scanner?: Record<string, string> };
-    common?: Record<string, string>;
-  });
-  const scanT = t.schedule?.scanner ?? {};
-  const commonT = t.common ?? {};
-  const labels = {
-    hint: scanT.hint ?? 'Point your camera at the gym QR',
-    busy: scanT.busy ?? 'Checking you in…',
-    success: scanT.success ?? "You're in!",
-    invalidQr: scanT.invalidQr ?? 'Invalid QR code',
-    expiredQr: scanT.expiredQr ?? 'This QR code has expired',
-    unreadable: scanT.unreadable ?? 'Could not read QR code',
-    failed: scanT.failed ?? 'Check-in failed',
-    cameraNeeded: scanT.cameraNeeded ?? 'Camera access needed',
-    cameraDesc:
-      scanT.cameraDesc ??
-      'FitKit uses the camera to scan check-in QR codes at your gym.',
-    allowCamera: scanT.allowCamera ?? 'Allow camera',
-    openSettings: scanT.openSettings ?? 'Open Settings',
-    cancel: commonT.cancel ?? 'Cancel',
-    tryAgain: commonT.tryAgain ?? 'Try again',
-  };
+  const labels = useMemo(() => {
+    const t = (dict as unknown as {
+      schedule?: { scanner?: Record<string, string> };
+      common?: Record<string, string>;
+    });
+    const scanT = t.schedule?.scanner ?? {};
+    const commonT = t.common ?? {};
+    return {
+      hint: scanT.hint ?? 'Point your camera at the gym QR',
+      busy: scanT.busy ?? 'Checking you in…',
+      success: scanT.success ?? "You're in!",
+      invalidQr: scanT.invalidQr ?? 'Invalid QR code',
+      expiredQr: scanT.expiredQr ?? 'This QR code has expired',
+      unreadable: scanT.unreadable ?? 'Could not read QR code',
+      failed: scanT.failed ?? 'Check-in failed',
+      cameraNeeded: scanT.cameraNeeded ?? 'Camera access needed',
+      cameraDesc:
+        scanT.cameraDesc ??
+        'FitKit uses the camera to scan check-in QR codes at your gym.',
+      allowCamera: scanT.allowCamera ?? 'Allow camera',
+      openSettings: scanT.openSettings ?? 'Open Settings',
+      cancel: commonT.cancel ?? 'Cancel',
+      tryAgain: commonT.tryAgain ?? 'Try again',
+    };
+  }, [dict]);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);

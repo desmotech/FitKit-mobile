@@ -32,7 +32,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { FKActionBar } from './action-bar';
 import { FKAmbientBackdrop } from './ambient-backdrop';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 import { FKScreenHeader } from './screen-header';
 
 export function FKSubScreen({
@@ -46,6 +46,8 @@ export function FKSubScreen({
   scroll = true,
   keyboardAvoiding = false,
   refreshControl,
+  onScroll,
+  scrollEventThrottle,
   contentStyle,
   children,
 }: {
@@ -67,6 +69,9 @@ export function FKSubScreen({
   keyboardAvoiding?: boolean;
   /** Pull-to-refresh for list screens. */
   refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
+  /** Scroll passthrough — lets paged list screens fetch near the end. */
+  onScroll?: ComponentProps<typeof ScrollView>['onScroll'];
+  scrollEventThrottle?: number;
   contentStyle?: ViewStyle;
   children: ReactNode;
 }) {
@@ -116,6 +121,8 @@ export function FKSubScreen({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={refreshControl}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
           contentContainerStyle={[
             { padding: 20, paddingBottom: scrollPad, gap: 16 },
             contentStyle,

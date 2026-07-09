@@ -3,6 +3,7 @@ import type {
   WorkoutResultResponse,
   WorkoutSetResultResponse,
 } from '@fitkit/shared';
+import { parseYmdLocal } from '@/lib/week';
 import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
 
@@ -221,68 +222,17 @@ export function useWorkoutAssignment(
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-/** Day keys in week order (Sun-anchored, used for Hebrew). */
-export const WEEK_ORDER_SUNDAY = [
-  'sunday',
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-] as const;
-
-/** Day keys in week order (Mon-anchored, used for EN/RU). */
-export const WEEK_ORDER_MONDAY = [
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday',
-] as const;
-
-export type DayKey = (typeof WEEK_ORDER_SUNDAY)[number];
-
-/** Returns the locale-specific week-start day (0 = Sunday, 1 = Monday). */
-export function getWeekStartDay(lang: string): 0 | 1 {
-  return lang === 'he' ? 0 : 1;
-}
-
-/** Day-key order array starting from the locale's week-start day. */
-export function getWeekOrder(weekStartsOn: 0 | 1): readonly DayKey[] {
-  return weekStartsOn === 0 ? WEEK_ORDER_SUNDAY : WEEK_ORDER_MONDAY;
-}
-
-/** ISO YYYY-MM-DD for the start of `d`'s local week. */
-export function weekStartFor(d: Date, weekStartsOn: 0 | 1): string {
-  const date = new Date(d);
-  const day = date.getDay(); // 0=Sun, 1=Mon, …
-  const diff =
-    weekStartsOn === 0
-      ? -day // back to Sunday
-      : day === 0
-        ? -6
-        : 1 - day; // back to Monday
-  date.setDate(date.getDate() + diff);
-  return date.toISOString().split('T')[0];
-}
-
-/**
- * @deprecated Use `weekStartFor(date, weekStartsOn)` instead.
- * Kept as a Mon-anchored alias for back-compat with hooks that aren't
- * yet locale-aware.
- */
-export function mondayOfWeek(d: Date): string {
-  return weekStartFor(d, 1);
-}
-
-export function shiftWeek(weekStart: string, weeks: number): string {
-  const d = new Date(weekStart);
-  d.setDate(d.getDate() + weeks * 7);
-  return d.toISOString().split('T')[0];
-}
+// Pure week/date helpers live in @/lib/week; re-exported here so the many
+// existing `from '@/hooks/use-workouts'` importers keep working.
+export {
+  WEEK_ORDER_SUNDAY,
+  WEEK_ORDER_MONDAY,
+  type DayKey,
+  getWeekStartDay,
+  getWeekOrder,
+  weekStartFor,
+  shiftWeek,
+} from '@/lib/week';
 
 // ── Hook: latest result for a workout (for "Last:" hint) ────────────
 
@@ -542,7 +492,10 @@ export function useUncompleteAssignment(
 export type AssignmentState = 'today' | 'done' | 'missed' | 'upcoming';
 
 export function getAssignmentState(day: AssignmentDay, now = new Date()): AssignmentState {
-  const dayDate = new Date(day.date);
+  // Date-only strings must parse as local midnight — `new Date('YYYY-MM-DD')`
+  // is UTC midnight, which shifts the day for UTC- timezones.
+  const dayDate =
+    day.date.length === 10 ? parseYmdLocal(day.date) : new Date(day.date);
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
   dayDate.setHours(0, 0, 0, 0);

@@ -39,7 +39,12 @@ export function useApi() {
       ) {
         return tokenRef.current.value;
       }
-      const token = await getToken();
+      // On the 401-recovery path, bypass Clerk's own JWT cache too —
+      // otherwise the "refreshed" retry resends the identical rejected
+      // token (Clerk caches for ~60s) and the second 401 is guaranteed.
+      const token = await getToken(
+        forceRefresh ? { skipCache: true } : undefined,
+      );
       tokenRef.current = { value: token, expiresAt: now + TOKEN_CACHE_TTL };
       return token;
     },

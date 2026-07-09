@@ -31,8 +31,8 @@ export function useMyOneRMByExercise(orgId: string | undefined | null): {
   isLoading: boolean;
 } {
   const prs = useMyPersonalRecords(orgId);
-  const rows = prs.data?.data ?? [];
-  const oneRMKg = useMemo(() => bestOneRMByExercise(rows), [rows]);
+  const data = prs.data?.data;
+  const oneRMKg = useMemo(() => bestOneRMByExercise(data ?? []), [data]);
   return { oneRMKg, isLoading: prs.isLoading };
 }
 
@@ -44,8 +44,9 @@ export function useRecentExercises(
   limit = 5,
 ): ExerciseSearchResult[] {
   const prs = useMyPersonalRecords(orgId);
-  const rows = prs.data?.data ?? [];
+  const data = prs.data?.data;
   return useMemo(() => {
+    const rows = data ?? [];
     const seen = new Set<string>();
     const out: ExerciseSearchResult[] = [];
     const sorted = [...rows].sort((a, b) =>
@@ -59,7 +60,7 @@ export function useRecentExercises(
       if (out.length >= limit) break;
     }
     return out;
-  }, [rows, limit]);
+  }, [data, limit]);
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────

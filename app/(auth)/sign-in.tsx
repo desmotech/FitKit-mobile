@@ -515,9 +515,7 @@ export default function SignInScreen() {
                   autoComplete={
                     factor?.strategy === 'phone_code'
                       ? 'sms-otp'
-                      : factor?.strategy === 'email_code'
-                        ? 'email'
-                        : 'one-time-code'
+                      : 'one-time-code'
                   }
                   keyboardType={
                     factor?.strategy === 'backup_code' ? 'default' : 'number-pad'

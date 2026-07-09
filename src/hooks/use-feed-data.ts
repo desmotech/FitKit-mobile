@@ -55,14 +55,14 @@ export interface TodayClassSession {
   organization: { name: string; logoUrl: string | null };
   location: { id: string; name: string } | null;
   myBookingStatus: 'confirmed' | 'waitlisted' | 'attended' | null;
-  workouts: Array<{
+  workouts: {
     id: string;
     title: string | null;
     displayName: string;
     description: string | null;
     scoring: string;
     timeCap: number | null;
-  }>;
+  }[];
 }
 
 export function useTodayClassSessions(orgId: string | undefined | null) {

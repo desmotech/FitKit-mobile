@@ -31,7 +31,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import type { Locale } from '@/i18n/config';
 import { useActiveOrg } from '@/providers/active-org-provider';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 type OrgSwitcherStrings = {
   switchOrganization: string;

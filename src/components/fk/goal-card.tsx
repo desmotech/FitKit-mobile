@@ -22,7 +22,9 @@ import { Pressable, View } from 'react-native';
 import type { GoalResponse } from '@fitkit/shared';
 import { Text } from '@/components/ui/text';
 import { font } from '@/lib/type';
-import { FKGlassPanel, FKRing, useFKColors } from './index';
+import { useFKColors } from './colors';
+import { FKGlassPanel } from './glass-panel';
+import { FKRing } from './ring';
 
 export type GoalCardVariant = 'full' | 'compact';
 

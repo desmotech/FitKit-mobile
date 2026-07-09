@@ -148,7 +148,11 @@ export default function HistoryScreen() {
           bookings.map((booking, i) => (
             <Animated.View
               key={booking.id}
-              entering={FadeInDown.delay(40 + i * 30).duration(260)}
+              // Cap the stagger to the first screenful — with a long booking
+              // history, row N would otherwise wait N*30ms to appear.
+              entering={FadeInDown.delay(
+                40 + Math.min(i, 8) * 30,
+              ).duration(260)}
             >
               <BookingCard
                 booking={booking}

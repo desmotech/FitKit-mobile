@@ -258,9 +258,12 @@ function SetGroups({
   const groups = useMemo(() => {
     const m = new Map<string, { name: string; sets: WorkoutResultSet[] }>();
     for (const s of sets) {
-      const g = m.get(s.exerciseId) ?? { name: s.exercise?.name ?? '—', sets: [] };
+      let g = m.get(s.exerciseId);
+      if (!g) {
+        g = { name: s.exercise?.name ?? '—', sets: [] };
+        m.set(s.exerciseId, g);
+      }
       g.sets.push(s);
-      m.set(s.exerciseId, g);
     }
     return Array.from(m.values());
   }, [sets]);
@@ -336,14 +339,27 @@ function SetGroups({
   );
 }
 
+const KG_PER_LB = 0.45359237;
+
 function primaryMetric(s: WorkoutResultSet): string {
+  // Values arrive canonical (kg / metres) alongside the unit the athlete
+  // entered them in — convert back before pairing value with unit label,
+  // or "100 lb" logged renders as "45.4 lb" and a 5 km row as "5000 km".
   if (s.weightKg != null) {
     const unit = s.weightDisplayUnit ?? 'kg';
-    return `${round1(s.weightKg)} ${unit} × ${s.reps ?? 0}`;
+    const value =
+      unit === 'lb' || unit === 'lbs' ? s.weightKg / KG_PER_LB : s.weightKg;
+    return `${round1(value)} ${unit} × ${s.reps ?? 0}`;
   }
   if (s.distanceM != null) {
     const unit = s.distanceDisplayUnit ?? 'm';
-    return `${round1(s.distanceM)} ${unit}`;
+    const value =
+      unit === 'km'
+        ? s.distanceM / 1000
+        : unit === 'mi'
+          ? s.distanceM / 1609.344
+          : s.distanceM;
+    return `${round1(value)} ${unit}`;
   }
   if (s.durationSeconds != null) return secondsToClock(s.durationSeconds);
   if (s.reps != null) return `${s.reps} reps`;

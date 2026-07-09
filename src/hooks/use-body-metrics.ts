@@ -132,7 +132,10 @@ export function useDeleteMetric(
           const first = key[0] as string | undefined;
           return (
             (typeof first === 'string' && first.includes('/metrics/me')) ||
-            key[0] === 'metrics-history'
+            key[0] === 'metrics-history' ||
+            (typeof first === 'string' &&
+              first === '/organizations' &&
+              key.includes('metrics'))
           );
         },
       });

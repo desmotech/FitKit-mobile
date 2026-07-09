@@ -10,6 +10,7 @@
  */
 import { Image as ExpoImage } from 'expo-image';
 import { Check, CheckCheck } from 'lucide-react-native';
+import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
 import type { useFKColors } from '@/components/fk';
@@ -18,7 +19,10 @@ import { bodyFamily, eyebrow } from '@/lib/type';
 
 const BRAND_TEAL = '#0E8C8C';
 
-export function MessageBubble({
+// Memoized: the thread re-renders on every composer keystroke; without memo
+// every visible bubble re-renders per character. `onLongPress` receives the
+// message (instead of a per-row closure) so callers can pass stable handlers.
+export const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   isRTL,
@@ -34,7 +38,7 @@ export function MessageBubble({
   isDark: boolean;
   lang: string;
   colors: ReturnType<typeof useFKColors>;
-  onLongPress: () => void;
+  onLongPress: (message: MessageResponse) => void;
   onPressAttachment: (url: string) => void;
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
@@ -74,7 +78,7 @@ export function MessageBubble({
       {/* Children-as-function + static View: this RN build drops styles passed
           via Pressable's style-as-function, which left the bubble with no
           background/padding (text floating on the screen). */}
-      <Pressable onLongPress={onLongPress} delayLongPress={400}>
+      <Pressable onLongPress={() => onLongPress(message)} delayLongPress={400}>
         {({ pressed }) => (
           <View
             style={{
@@ -148,7 +152,7 @@ export function MessageBubble({
       </Pressable>
     </View>
   );
-}
+});
 
 function BubbleAttachments({
   attachments,

@@ -21,9 +21,9 @@
  * RTL-aware via `isRTL` flags on flexDirection — no `direction: dir`
  * wrappers (those break Yoga + flexDirection: row-reverse).
  */
-import { useAuth } from '@clerk/clerk-expo';
+import { useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ChevronLeft,
   ChevronRight,
@@ -65,6 +65,7 @@ import {
   useMyWeekAssignments,
   weekStartFor,
 } from '@/hooks/use-workouts';
+import { ymd } from '@/lib/week';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -75,9 +76,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const haptics = useHaptics();
-  const { user } = useAuth() as unknown as {
-    user: { firstName?: string | null } | null;
-  };
+  const { user } = useUser();
   const { activeOrganization, user: currentUser } = useCurrentUser();
   const { dir, t, lang } = useI18n();
   const colors = useFKColors();
@@ -129,7 +128,15 @@ export default function HomeScreen() {
   };
 
   // ── Data ──────────────────────────────────────────────────────────
-  const today = useMemo(() => new Date(), []);
+  // "Today" refreshes when the tab regains focus after a day rollover —
+  // a plain `new Date()` frozen at mount kept yesterday's greeting and
+  // TODAY highlight on a screen left alive across midnight.
+  const [today, setToday] = useState(() => new Date());
+  useFocusEffect(
+    useCallback(() => {
+      setToday((prev) => (ymd(prev) === ymd(new Date()) ? prev : new Date()));
+    }, []),
+  );
   const weekStart = useMemo(
     () => weekStartFor(today, getWeekStartDay(lang)),
     [today, lang],
@@ -176,16 +183,15 @@ export default function HomeScreen() {
       ),
     [weekSessions.data, todayYMD],
   );
-  const goals = goalsQuery.data?.data ?? [];
   const activeGoals = useMemo(
     () =>
-      goals
+      (goalsQuery.data?.data ?? [])
         .filter((g) => g.status === 'active')
         .sort(
           (a, b) => (b.progressPercent ?? 0) - (a.progressPercent ?? 0),
         )
         .slice(0, 3),
-    [goals],
+    [goalsQuery.data],
   );
 
   const firstName =
@@ -807,12 +813,6 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function ymd(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 /** Natural, gender-neutral Hebrew sub-greetings (replaces the shared dict's
  *  literal/gendered Hebrew). EN/RU continue to come from feed.subgreeting. */

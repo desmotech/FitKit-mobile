@@ -18,7 +18,7 @@ import DateTimePicker, {
 import { Platform, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 function parseISO(s: string | null | undefined): Date | null {
   if (!s) return null;

@@ -1,5 +1,6 @@
 import {
   QueryClient,
+  focusManager,
   keepPreviousData,
   onlineManager,
 } from '@tanstack/react-query';
@@ -29,23 +30,28 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             gcTime: THIRTY_MINUTES,
             placeholderData: keepPreviousData,
             retry: 1,
-            refetchOnWindowFocus: false,
+            // Paired with the focusManager wiring below: stale queries
+            // refetch when the app foregrounds, fresh ones don't.
+            refetchOnWindowFocus: true,
           },
         },
       }),
   );
 
-  // Refetch when app returns to foreground.
+  // Map app foregrounding to react-query focus so *stale* queries refetch
+  // on resume. The previous blanket `queryClient.invalidateQueries()` here
+  // refetched every active query on every foreground regardless of
+  // staleTime — a network/battery burst duplicated by the scoped
+  // foreground listeners in use-badge and use-realtime-subscription,
+  // which still force-refresh the counts that must always be live.
   useEffect(() => {
     const onChange = (state: AppStateStatus) => {
-      if (state === 'active') {
-        onlineManager.setOnline(true);
-        queryClient.invalidateQueries();
-      }
+      if (state === 'active') onlineManager.setOnline(true);
+      focusManager.setFocused(state === 'active');
     };
     const sub = AppState.addEventListener('change', onChange);
     return () => sub.remove();
-  }, [queryClient]);
+  }, []);
 
   return (
     <PersistQueryClientProvider

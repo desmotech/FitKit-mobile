@@ -258,7 +258,10 @@ export function useUpload(orgId: string | undefined | null, opts: UseUploadOptio
     [uploads],
   );
 
-  const hasPendingUploads = uploads.some((u) => !u.uploadId && !u.error);
+  // Pending until the binary PUT completes (progress 100), not merely until
+  // the presign response sets `uploadId` — the PUT is the long part, and
+  // callers gate Send on this flag (sending mid-PUT drops the attachment).
+  const hasPendingUploads = uploads.some((u) => !u.error && u.progress < 100);
 
   return {
     uploads,
