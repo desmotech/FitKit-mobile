@@ -1,30 +1,30 @@
 /**
  * FKNavButton — the 44pt rounded icon affordance used by week-strip
  * headers (Schedule, Program) to page backward/forward. Theme-aware
- * surface + hairline border, haptic tap on press-in. Pass an RTL-aware
- * chevron as `Icon`.
+ * surface + hairline border. No haptic — HIG keeps system-style
+ * navigation silent. Pass an RTL-aware chevron as `Icon`.
  */
 import { type LucideIcon } from 'lucide-react-native';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useFKColors } from './colors';
-import { useHaptics } from '@/hooks/use-haptics';
 
 export function FKNavButton({
   onPress,
   Icon,
+  accessibilityLabel,
 }: {
   onPress: () => void;
   Icon: LucideIcon;
+  accessibilityLabel?: string;
 }) {
-  const haptics = useHaptics();
   const colors = useFKColors();
   const isDark = colors.isDark;
   return (
     <Pressable
-      onPressIn={haptics.tap}
       onPress={onPress}
       hitSlop={6}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
     >
       {({ pressed }) => (
         <View

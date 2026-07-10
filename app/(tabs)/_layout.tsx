@@ -59,16 +59,19 @@ export default function TabsLayout() {
   const navLabels =
     (t as unknown as Record<string, Record<string, string>>).nav ?? {};
   const tint = isDark ? PRIMARY_DARK : PRIMARY_LIGHT;
+  // Unselected icon/label ink — the light-mode slate reads ~3.9:1 on the dark
+  // background, so dark mode uses iOS systemGray instead.
+  const inactive = isDark ? 'rgb(142,142,147)' : 'rgb(94,112,130)';
 
   return (
     <AuthGate>
       <View style={{ flex: 1 }} className="bg-background">
         <NativeTabs
-          iconColor={'rgb(94,112,130)' as never}
+          iconColor={inactive as never}
           labelStyle={{
             fontSize: 11,
             fontWeight: '600',
-            color: 'rgb(94,112,130)',
+            color: inactive,
           }}
           tintColor={tint}>
           <NativeTabs.Trigger name="index">

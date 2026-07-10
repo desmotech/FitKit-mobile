@@ -231,7 +231,11 @@ export function OrgSwitcher({ children }: { children: ReactNode }) {
                   <Pressable
                     key={membership.id}
                     onPress={() => selectOrg(membership)}
-                    android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                    android_ripple={{
+                      color: isDark
+                        ? 'rgba(255,255,255,0.08)'
+                        : 'rgba(0,0,0,0.06)',
+                    }}
                     style={{ paddingHorizontal: 20, paddingVertical: 14 }}
                     testID={`org-switcher-item-${membership.organizationId}`}
                   >

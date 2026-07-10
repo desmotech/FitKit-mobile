@@ -54,6 +54,9 @@ export default function GoalsScreen() {
     archiveConfirm: 'Archive this goal?',
     archive: 'Archive',
     cancel: commonT.cancel ?? 'Cancel',
+    // VoiceOver labels for the GoalCard's icon-only edit/archive buttons.
+    editA11y: goalsT.editGoal ?? 'Edit goal',
+    archiveA11y: goalsT.archiveGoal ?? 'Archive goal',
   };
 
   const goalsPath = orgId ? `/organizations/${orgId}/goals/me` : '';

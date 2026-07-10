@@ -31,6 +31,7 @@ export const MessageBubble = memo(function MessageBubble({
   colors,
   onLongPress,
   onPressAttachment,
+  attachmentA11yLabel = 'Photo attachment',
 }: {
   message: MessageResponse;
   isOwn: boolean;
@@ -40,6 +41,8 @@ export const MessageBubble = memo(function MessageBubble({
   colors: ReturnType<typeof useFKColors>;
   onLongPress: (message: MessageResponse) => void;
   onPressAttachment: (url: string) => void;
+  /** VoiceOver label for tappable attachment thumbnails. */
+  attachmentA11yLabel?: string;
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
   // Received bubbles use the same frosted-glass card as the in-workout chat;
@@ -100,6 +103,7 @@ export const MessageBubble = memo(function MessageBubble({
               <BubbleAttachments
                 attachments={message.attachments}
                 onPress={onPressAttachment}
+                a11yLabel={attachmentA11yLabel}
               />
             ) : null}
             {hasContent ? (
@@ -157,9 +161,11 @@ export const MessageBubble = memo(function MessageBubble({
 function BubbleAttachments({
   attachments,
   onPress,
+  a11yLabel,
 }: {
   attachments: AttachmentResponse[];
   onPress: (url: string) => void;
+  a11yLabel: string;
 }) {
   const visible = attachments.slice(0, 4);
   const overflow = attachments.length - visible.length;
@@ -178,6 +184,8 @@ function BubbleAttachments({
         <Pressable
           key={a.id}
           onPress={() => onPress(a.url)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={a11yLabel}
           style={{
             width: single ? 220 : 104,
             height: single ? 220 : 104,

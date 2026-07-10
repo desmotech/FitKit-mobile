@@ -13,7 +13,14 @@
  */
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { AlertCircle, ArrowUp, Paperclip, X } from 'lucide-react-native';
+import {
+  AlertCircle,
+  ArrowUp,
+  Check,
+  CheckCheck,
+  Paperclip,
+  X,
+} from 'lucide-react-native';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -499,7 +506,7 @@ const MessageBubble = memo(function MessageBubble({
   const coachBg = isDark ? 'rgba(78,92,100,0.46)' : 'rgba(255,255,255,0.72)';
   const bubbleBg = isOwn ? BRAND_TEAL : coachBg;
   const bubbleFg = isOwn ? '#fff' : colors.foreground;
-  const metaFg = isOwn ? 'rgba(255,255,255,0.72)' : ink.faint;
+  const metaFg = isOwn ? 'rgba(255,255,255,0.85)' : ink.faint;
   const hasAttachments = !!message.attachments && message.attachments.length > 0;
   const timeStr = new Date(message.createdAt).toLocaleTimeString(lang, {
     hour: '2-digit',
@@ -555,9 +562,12 @@ const MessageBubble = memo(function MessageBubble({
                 {message.content}
               </Text>
             ) : null}
+            {/* Meta hugs the bubble's trailing-bottom corner — mirrored in
+                RTL, with the time→tick order matching the DM thread's
+                message-bubble. */}
             <View
               style={{
-                flexDirection: 'row',
+                flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 marginTop: 2,
@@ -567,15 +577,19 @@ const MessageBubble = memo(function MessageBubble({
               <Text
                 style={{
                   fontFamily: 'Assistant-Medium',
-                  fontSize: 9.5,
+                  fontSize: 11,
                   color: metaFg,
                   fontVariant: ['tabular-nums'],
                 }}
               >
                 {timeStr}
               </Text>
-              {isOwn && message.readAt ? (
-                <Text style={{ fontSize: 10, color: metaFg, fontWeight: '700' }}>✓✓</Text>
+              {isOwn ? (
+                message.readAt ? (
+                  <CheckCheck size={14} color="#fff" strokeWidth={2.4} />
+                ) : (
+                  <Check size={14} color={metaFg} strokeWidth={2.4} />
+                )
               ) : null}
             </View>
           </View>

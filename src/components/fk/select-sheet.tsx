@@ -83,7 +83,13 @@ export function FKSelectSheet<T extends string>({
 
   return (
     <>
-      <Pressable onPress={openPicker} hitSlop={6}>
+      <Pressable
+        onPress={openPicker}
+        hitSlop={6}
+        accessibilityRole="button"
+        accessibilityLabel={title ?? placeholder}
+        accessibilityValue={selected ? { text: selected.label } : undefined}
+      >
         {({ pressed }) => (
           <View
             style={{
@@ -111,7 +117,12 @@ export function FKSelectSheet<T extends string>({
               style={{
                 flex: 1,
                 fontSize: 14,
-                color: selected ? colors.foreground : 'rgba(94,112,130,0.55)',
+                // Placeholder ink ≥3:1 in both themes (0.55 was ~2:1).
+                color: selected
+                  ? colors.foreground
+                  : isDark
+                    ? 'rgba(200,195,184,0.85)'
+                    : 'rgba(94,112,130,0.85)',
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >
@@ -181,7 +192,11 @@ export function FKSelectSheet<T extends string>({
                       onChange(opt.value);
                       setAndroidOpen(false);
                     }}
-                    android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                    android_ripple={{
+                      color: isDark
+                        ? 'rgba(255,255,255,0.08)'
+                        : 'rgba(0,0,0,0.06)',
+                    }}
                     style={{
                       paddingHorizontal: 20,
                       paddingVertical: 16,
@@ -212,7 +227,9 @@ export function FKSelectSheet<T extends string>({
                 />
                 <Pressable
                   onPress={() => setAndroidOpen(false)}
-                  android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                  android_ripple={{
+                    color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                  }}
                   style={{ paddingVertical: 16, alignItems: 'center' }}
                 >
                   <Text

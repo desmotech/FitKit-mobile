@@ -17,7 +17,6 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import { Text } from '@/components/ui/text';
-import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
@@ -34,7 +33,6 @@ export function FKBackButton({
 }) {
   const { dir, t } = useI18n();
   const router = useRouter();
-  const haptics = useHaptics();
   const isRTL = dir === 'rtl';
   const Chevron = isRTL ? ChevronRight : ChevronLeft;
 
@@ -43,7 +41,8 @@ export function FKBackButton({
 
   return (
     <Pressable
-      onPressIn={haptics.tap}
+      // No haptic — HIG keeps system navigation silent; the pressed
+      // opacity below is the feedback.
       onPress={() => {
         if (onPress) onPress();
         else router.back();

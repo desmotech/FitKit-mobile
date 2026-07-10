@@ -94,9 +94,12 @@ export function FKDateField({
       {!value && placeholder ? (
         <Text
           style={{
-            marginLeft: 8,
+            // Gap sits between the chip and the label — mirror in RTL.
+            ...(isRTL ? { marginRight: 8 } : { marginLeft: 8 }),
             fontSize: 13,
-            color: 'rgba(60,60,67,0.45)',
+            // Theme-aware muted ink (the old literal was light-only).
+            color: colors.mutedFg,
+            opacity: 0.8,
           }}
         >
           {placeholder}

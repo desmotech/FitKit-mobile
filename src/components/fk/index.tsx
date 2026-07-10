@@ -26,7 +26,11 @@ export { FK_DARK, FK_LIGHT, useFKColors } from './colors';
 export { FKAmbientBackdrop } from './ambient-backdrop';
 export { FKGlassPanel } from './glass-panel';
 export { FKRing } from './ring';
-export { FKDateRail, type FKDateRailDay } from './date-rail';
+export {
+  FKDateRail,
+  type FKDateRailDay,
+  type FKDateRailStateLabels,
+} from './date-rail';
 export { FKActionBar, FKBtn } from './action-bar';
 export { FKSubScreen } from './sub-screen';
 export { FKBrandMark } from './brand-mark';
@@ -128,6 +132,36 @@ const CHIP_BORDER: Record<ChipTone, string> = {
   primary: 'rgba(14,140,140,0.3)',
 };
 
+// Dark-mode chip inks — the light-mode foregrounds above are deep inks
+// that fall to ~2:1 on dark cards. These are brightened for ≥4.5:1 on
+// the dark card surface (#141417), with slightly stronger fills/borders.
+const CHIP_BG_DARK: Record<ChipTone, string> = {
+  warm: 'rgba(217,168,92,0.18)',
+  success: 'rgba(169,191,126,0.18)',
+  info: 'rgba(143,180,217,0.16)',
+  danger: 'rgba(224,128,120,0.16)',
+  muted: 'rgba(155,168,181,0.14)',
+  primary: 'rgba(42,184,184,0.16)',
+};
+
+const CHIP_FG_DARK: Record<ChipTone, string> = {
+  warm: '#D9A85C',
+  success: '#A9BF7E',
+  info: '#8FB4D9',
+  danger: '#E08078',
+  muted: '#9BA8B5',
+  primary: '#2AB8B8',
+};
+
+const CHIP_BORDER_DARK: Record<ChipTone, string> = {
+  warm: 'rgba(217,168,92,0.34)',
+  success: 'rgba(169,191,126,0.32)',
+  info: 'rgba(143,180,217,0.32)',
+  danger: 'rgba(224,128,120,0.32)',
+  muted: 'transparent',
+  primary: 'rgba(42,184,184,0.34)',
+};
+
 export function FKChip({
   tone = 'muted',
   children,
@@ -137,6 +171,10 @@ export function FKChip({
   children: ReactNode;
   leading?: ReactNode;
 }) {
+  const { isDark } = useFKColors();
+  const bg = isDark ? CHIP_BG_DARK : CHIP_BG;
+  const fg = isDark ? CHIP_FG_DARK : CHIP_FG;
+  const border = isDark ? CHIP_BORDER_DARK : CHIP_BORDER;
   return (
     <View
       style={{
@@ -146,13 +184,13 @@ export function FKChip({
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 999,
-        backgroundColor: CHIP_BG[tone],
+        backgroundColor: bg[tone],
         borderWidth: tone === 'muted' ? 0 : 1,
-        borderColor: CHIP_BORDER[tone],
+        borderColor: border[tone],
       }}
     >
       {leading}
-      <Text style={{ fontSize: 11, fontWeight: '600', color: CHIP_FG[tone] }}>
+      <Text style={{ fontSize: 11, fontWeight: '600', color: fg[tone] }}>
         {children}
       </Text>
     </View>
@@ -174,6 +212,7 @@ export function FKButton({
   disabled,
   className,
   style,
+  accessibilityLabel,
 }: {
   label?: string;
   variant?: BtnVariant;
@@ -185,6 +224,8 @@ export function FKButton({
   disabled?: boolean;
   className?: string;
   style?: ViewStyle | ViewStyle[];
+  /** Override for icon-only buttons; defaults to `label` when set. */
+  accessibilityLabel?: string;
 }) {
   const haptics = useHaptics();
   const scale = useSharedValue(1);
@@ -192,12 +233,30 @@ export function FKButton({
     transform: [{ scale: scale.value }],
   }));
 
+  // minHeight, not height: the label scales with Dynamic Type, and a fixed
+  // slab clips it at accessibility sizes. Vertical padding keeps the
+  // default look identical while letting the button grow.
   const sizeStyle =
     size === 'lg'
-      ? { height: 56, paddingHorizontal: 20, borderRadius: 18 }
+      ? {
+          minHeight: 56,
+          paddingVertical: 8,
+          paddingHorizontal: 20,
+          borderRadius: 18,
+        }
       : size === 'sm'
-        ? { height: 36, paddingHorizontal: 14, borderRadius: 12 }
-        : { height: 44, paddingHorizontal: 18, borderRadius: 14 };
+        ? {
+            minHeight: 36,
+            paddingVertical: 6,
+            paddingHorizontal: 14,
+            borderRadius: 12,
+          }
+        : {
+            minHeight: 44,
+            paddingVertical: 8,
+            paddingHorizontal: 18,
+            borderRadius: 14,
+          };
 
   const fontSize = size === 'lg' ? 16 : size === 'sm' ? 13 : 14;
   const fontWeight: '700' | '800' = size === 'lg' ? '800' : '700';
@@ -247,6 +306,9 @@ export function FKButton({
   return (
     <AnimatedPressable
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      accessibilityLabel={accessibilityLabel ?? label}
       onPressIn={() => {
         if (!disabled) haptics.tap();
         scale.value = withSpring(0.97, { mass: 0.4, damping: 12 });
@@ -268,6 +330,9 @@ export function FKButton({
       {label != null ? (
         <Text
           className={size === 'lg' ? 'font-display' : ''}
+          // Cap Dynamic Type growth: the button grows via minHeight, but
+          // unbounded scaling would wrap CTA labels into multi-line slabs.
+          maxFontSizeMultiplier={1.4}
           style={{
             fontSize,
             fontWeight,

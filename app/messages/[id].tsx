@@ -523,7 +523,7 @@ export default function ChatScreen() {
                 paddingHorizontal: 12,
                 paddingTop: 10,
                 borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: 'rgba(60,60,67,0.18)',
+                borderTopColor: colors.border,
               }}
             >
               {uploads.uploads.map((u) => (
@@ -544,7 +544,7 @@ export default function ChatScreen() {
               padding: 10,
               borderTopWidth:
                 uploads.uploads.length > 0 ? 0 : StyleSheet.hairlineWidth,
-              borderTopColor: 'rgba(60,60,67,0.18)',
+              borderTopColor: colors.border,
             }}
           >
             <Pressable
@@ -584,7 +584,7 @@ export default function ChatScreen() {
                 borderCurve: 'continuous',
                 backgroundColor: colors.card,
                 borderWidth: 1,
-                borderColor: 'rgba(94,112,130,0.18)',
+                borderColor: colors.border,
                 justifyContent: 'center',
               }}
             >
