@@ -173,7 +173,7 @@ function FieldContainer({ children }: { children: React.ReactNode }) {
     <View
       style={{
         flexDirection: 'row',
-        height: 48,
+        minHeight: 48,
         borderRadius: 12,
         borderCurve: 'continuous',
         backgroundColor: isDark
@@ -453,7 +453,7 @@ function InlineUnitSegments({
         key={opt}
         style={{
           minWidth: 48,
-          height: 48,
+          minHeight: 48,
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 2,

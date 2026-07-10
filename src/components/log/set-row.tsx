@@ -25,6 +25,8 @@ import { useLogStrings } from '@/i18n/use-log-strings';
 import { secondsToClock } from '@/lib/score';
 import { useI18n } from '@/providers/i18n-provider';
 
+// Minimum, not fixed: rows must grow when Dynamic Type scales the inputs,
+// or large accessibility text clips inside the 48pt slab.
 const ROW_HEIGHT = 48;
 
 export type DistanceUnit = 'm' | 'km' | 'mi';
@@ -350,7 +352,7 @@ export function SetRow({
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        height: ROW_HEIGHT,
+        minHeight: ROW_HEIGHT,
         paddingHorizontal: 12,
         gap: 8,
         borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
@@ -379,7 +381,7 @@ function UnitToggle({
     <View
       style={{
         width: 44,
-        height: 36,
+        minHeight: 36,
         borderRadius: 10,
         borderCurve: 'continuous',
         borderWidth: 2,
@@ -472,9 +474,10 @@ function CellInput({
       }
       keyboardType={keyboardType}
       maxLength={maxLength}
+      maxFontSizeMultiplier={1.4}
       style={{
         flex,
-        height: 36,
+        minHeight: 36,
         paddingHorizontal: 8,
         borderRadius: 8,
         borderCurve: 'continuous',
