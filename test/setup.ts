@@ -31,9 +31,14 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('react-native-worklets', () =>
   require('react-native-worklets/src/mock'),
 );
-jest.mock('react-native-reanimated', () =>
-  require('react-native-reanimated/mock'),
-);
+jest.mock('react-native-reanimated', () => {
+  const mock = require('react-native-reanimated/mock');
+  // The official mock doesn't ship useReducedMotion (FKLoadingBar uses it);
+  // reduced motion also keeps loaders static under test.
+  return Object.assign(mock, {
+    useReducedMotion: mock.useReducedMotion ?? (() => true),
+  });
+});
 
 // Clerk: importing the real SDK starts background work that holds the Jest
 // event loop open, and tests must never talk to Clerk anyway. Hook results
