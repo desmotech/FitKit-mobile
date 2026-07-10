@@ -1,0 +1,127 @@
+/**
+ * Global test setup (jest.config.js `setupFilesAfterEnv`).
+ *
+ * Mock policy: mock at the app's edges only — native modules that cannot run
+ * in Node (mmkv, haptics) and third-party SDKs (Clerk, Sentry, PostHog,
+ * sockets). Never mock app code (hooks, components, lib): tests must exercise
+ * the same code paths users do, so refactors that keep behavior keep tests
+ * green.
+ */
+/* eslint-disable @typescript-eslint/no-require-imports -- jest.mock
+   factories run before imports are hoisted; require() is the only option. */
+import type React from 'react';
+import { server } from './msw';
+
+// Fail loudly on any request a test didn't stage a handler for.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+// Official in-memory mock: insets are zero, which is fine for behavior tests.
+// It exposes everything on `default`, so spread it up for named imports.
+jest.mock('react-native-safe-area-context', () => {
+  const mock = require('react-native-safe-area-context/jest/mock');
+  return { ...(mock.default ?? mock) };
+});
+
+// Reanimated's official mock — animations resolve instantly; the real module
+// initializes native worklets at import time and crashes under Jest. The
+// worklets runtime must be mocked first: even reanimated's own mock imports
+// it transitively.
+jest.mock('react-native-worklets', () =>
+  require('react-native-worklets/src/mock'),
+);
+jest.mock('react-native-reanimated', () =>
+  require('react-native-reanimated/mock'),
+);
+
+// Clerk: importing the real SDK starts background work that holds the Jest
+// event loop open, and tests must never talk to Clerk anyway. Hook results
+// are driven by the mutable state in test/mocks/clerk.ts.
+jest.mock('@clerk/clerk-expo', () => {
+  const { mockAuthState, mockUserState, mockSignIn } =
+    require('./mocks/clerk') as typeof import('./mocks/clerk');
+  return {
+    ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
+    ClerkLoaded: ({ children }: { children: React.ReactNode }) => children,
+    useAuth: () => mockAuthState,
+    useUser: () => ({
+      isLoaded: true,
+      isSignedIn: mockAuthState.isSignedIn,
+      user: mockUserState.user,
+    }),
+    useSignIn: () => mockSignIn,
+    useClerk: () => ({ signOut: mockAuthState.signOut }),
+  };
+});
+
+afterEach(() => {
+  const { resetClerkMocks } = require('./mocks/clerk') as typeof import('./mocks/clerk');
+  resetClerkMocks();
+});
+
+// AsyncStorage backs the query persister and settings-store; use the
+// official in-memory mock.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
+// react-native-mmkv is a JSI module; back it with an in-memory Map.
+jest.mock('react-native-mmkv', () => {
+  class MMKV {
+    private store = new Map<string, string | number | boolean>();
+    set(key: string, value: string | number | boolean) {
+      this.store.set(key, value);
+    }
+    getString(key: string) {
+      const v = this.store.get(key);
+      return typeof v === 'string' ? v : undefined;
+    }
+    getNumber(key: string) {
+      const v = this.store.get(key);
+      return typeof v === 'number' ? v : undefined;
+    }
+    getBoolean(key: string) {
+      const v = this.store.get(key);
+      return typeof v === 'boolean' ? v : undefined;
+    }
+    contains(key: string) {
+      return this.store.has(key);
+    }
+    delete(key: string) {
+      this.store.delete(key);
+    }
+    getAllKeys() {
+      return [...this.store.keys()];
+    }
+    clearAll() {
+      this.store.clear();
+    }
+  }
+  return { MMKV, useMMKVString: jest.fn(), useMMKVBoolean: jest.fn() };
+});
+
+// Crash/analytics SDKs phone home; tests never should.
+jest.mock('@sentry/react-native', () => ({
+  init: jest.fn(),
+  captureException: jest.fn(),
+  captureMessage: jest.fn(),
+  addBreadcrumb: jest.fn(),
+  wrap: (component: unknown) => component,
+}));
+
+jest.mock('posthog-react-native', () => {
+  const client = {
+    capture: jest.fn(),
+    identify: jest.fn(),
+    reset: jest.fn(),
+    optIn: jest.fn(),
+    optOut: jest.fn(),
+    screen: jest.fn(),
+  };
+  return {
+    PostHog: jest.fn(() => client),
+    PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
+    usePostHog: () => client,
+  };
+});
