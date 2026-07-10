@@ -36,6 +36,10 @@ export interface HomeStrings {
   deadline: string;
   noData: string;
 
+  // ── Read-path errors ──────────────────────────────────────────────
+  loadFailedTitle: string;
+  loadFailedSubtitle: string;
+
   tryAgain: string;
   loading: string;
 
@@ -81,6 +85,9 @@ const HE: HomeStrings = {
   achieved: 'הושג',
   deadline: 'תאריך יעד',
   noData: 'אין נתונים',
+
+  loadFailedTitle: 'לא הצלחנו לטעון את הנתונים',
+  loadFailedSubtitle: 'בדוק את החיבור לאינטרנט ונסה שוב.',
 
   tryAgain: 'נסה שוב',
   loading: 'טוען…',
@@ -129,6 +136,9 @@ const EN: HomeStrings = {
   deadline: 'Deadline',
   noData: 'No data',
 
+  loadFailedTitle: "Couldn't load your data",
+  loadFailedSubtitle: 'Check your connection and try again.',
+
   tryAgain: 'Try again',
   loading: 'Loading…',
 
@@ -172,6 +182,9 @@ const RU: HomeStrings = {
   achieved: 'Достигнута',
   deadline: 'Срок',
   noData: 'Нет данных',
+
+  loadFailedTitle: 'Не удалось загрузить данные',
+  loadFailedSubtitle: 'Проверьте подключение и попробуйте снова.',
 
   tryAgain: 'Попробовать снова',
   loading: 'Загрузка…',

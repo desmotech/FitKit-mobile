@@ -22,6 +22,11 @@ export interface ScheduleStrings {
   minSuffix: string;
   today: string;
 
+  // ── Read-path errors ──────────────────────────────────────────────
+  loadFailedTitle: string;
+  loadFailedSubtitle: string;
+  tryAgain: string;
+
   // ── Session-row status stamps ─────────────────────────────────────
   open: string;
   spotsLeft: string;
@@ -78,6 +83,10 @@ const HE: ScheduleStrings = {
   minSuffix: 'דק׳',
   today: 'היום',
 
+  loadFailedTitle: 'לא הצלחנו לטעון את לוח השיעורים',
+  loadFailedSubtitle: 'בדוק את החיבור לאינטרנט ונסה שוב.',
+  tryAgain: 'נסה שוב',
+
   open: 'פתוח',
   spotsLeft: 'מקומות פנויים',
   classFull: 'השיעור מלא',
@@ -124,6 +133,10 @@ const EN: ScheduleStrings = {
   noClassesToday: 'No classes scheduled',
   minSuffix: 'min',
   today: 'Today',
+
+  loadFailedTitle: "Couldn't load the schedule",
+  loadFailedSubtitle: 'Check your connection and try again.',
+  tryAgain: 'Try again',
 
   open: 'Open',
   spotsLeft: 'spots left',
@@ -172,6 +185,10 @@ const RU: ScheduleStrings = {
   noClassesToday: 'Занятий не запланировано',
   minSuffix: 'мин',
   today: 'Сегодня',
+
+  loadFailedTitle: 'Не удалось загрузить расписание',
+  loadFailedSubtitle: 'Проверьте подключение и попробуйте снова.',
+  tryAgain: 'Попробовать снова',
 
   open: 'Есть места',
   spotsLeft: 'мест свободно',

@@ -45,6 +45,7 @@ import {
   MemberHeader,
   useFKColors,
 } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
 import {
   OpenDayCard,
   RestDayCard,
@@ -197,6 +198,12 @@ export default function HomeScreen() {
   const hasOrg = !!orgId;
   const isLoadingToday =
     hasOrg && (weekAssignments.isLoading || weekSessions.isLoading);
+  // Read-path failure with nothing cached — rendering the open-day /
+  // rest branch here would actively mislead ("no workout today" on a
+  // network error). Cached data + background error keeps showing data.
+  const todayLoadError =
+    (weekAssignments.isError && !weekAssignments.data) ||
+    (weekSessions.isError && !weekSessions.data);
   const hasWorkoutsToday = todayWorkouts.length > 0;
   // Coach-assigned rest (kind: 'rest') is real recovery → sage "Rest day".
   // An empty board (nothing programmed, nothing booked) is an *open* day,
@@ -296,6 +303,16 @@ export default function HomeScreen() {
 
             {isLoadingToday ? (
               <Skeleton style={{ height: 132, borderRadius: 20 }} />
+            ) : todayLoadError ? (
+              <QueryErrorState
+                title={s.loadFailedTitle}
+                subtitle={s.loadFailedSubtitle}
+                retryLabel={s.tryAgain}
+                onRetry={() => {
+                  weekAssignments.refetch();
+                  weekSessions.refetch();
+                }}
+              />
             ) : isAssignedRest || isOpenDay ? (
               <View style={{ gap: 10 }}>
                 {isAssignedRest ? (
@@ -429,9 +446,12 @@ export default function HomeScreen() {
             entering={FadeInDown.delay(120).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 22, gap: 10 }}
           >
+            {/* On a read failure with no cache, an all-empty week rail would
+                mislead just like the open-day card — the error card in the
+                Today section above already explains, so skip the rail. */}
             {weekAssignments.isLoading || weekSessions.isLoading ? (
               <Skeleton style={{ height: 78, borderRadius: 16 }} />
-            ) : (
+            ) : todayLoadError ? null : (
               <WeekGlance
                 weekStart={weekStart}
                 todayYMD={todayYMD}
@@ -546,6 +566,13 @@ export default function HomeScreen() {
 
             {goalsQuery.isLoading ? (
               <Skeleton style={{ height: 132, borderRadius: 18 }} />
+            ) : goalsQuery.isError && !goalsQuery.data ? (
+              <QueryErrorState
+                title={s.loadFailedTitle}
+                subtitle={s.loadFailedSubtitle}
+                retryLabel={s.tryAgain}
+                onRetry={() => goalsQuery.refetch()}
+              />
             ) : activeGoals.length === 0 ? (
               <Pressable
                 onPress={() => {

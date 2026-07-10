@@ -149,6 +149,10 @@ export interface LogStrings {
   resultDeleteCta: string;
   resultSetsReadonly: string;
 
+  // PR board read-path error
+  prLoadFailedTitle: string;
+  prLoadFailedBody: string;
+
   // Generic
   retry: string;
 
@@ -282,6 +286,10 @@ const en: LogStrings = {
   resultDeleteMsg: 'Delete this logged result? This cannot be undone.',
   resultDeleteCta: 'Delete',
   resultSetsReadonly: 'Logged sets',
+
+  prLoadFailedTitle: "Couldn't load your PRs",
+  prLoadFailedBody: 'Check your connection and try again.',
+
   retry: 'Retry',
 
   a11yClose: 'Close',
@@ -411,6 +419,10 @@ const he: LogStrings = {
   resultDeleteMsg: 'למחוק את התוצאה שתועדה? לא ניתן לבטל.',
   resultDeleteCta: 'מחק',
   resultSetsReadonly: 'סטים שתועדו',
+
+  prLoadFailedTitle: 'לא הצלחנו לטעון את השיאים שלך',
+  prLoadFailedBody: 'בדוק את החיבור לאינטרנט ונסה שוב.',
+
   retry: 'נסה שוב',
 
   a11yClose: 'סגור',
@@ -540,6 +552,10 @@ const ru: LogStrings = {
   resultDeleteMsg: 'Удалить этот результат? Действие необратимо.',
   resultDeleteCta: 'Удалить',
   resultSetsReadonly: 'Записанные подходы',
+
+  prLoadFailedTitle: 'Не удалось загрузить ваши рекорды',
+  prLoadFailedBody: 'Проверьте подключение и попробуйте снова.',
+
   retry: 'Повторить',
 
   a11yClose: 'Закрыть',

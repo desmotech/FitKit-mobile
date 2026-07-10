@@ -12,6 +12,7 @@ import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { PersonalRecordResponse } from '@fitkit/shared';
+import { QueryErrorState } from '@/components/error-state';
 import { FKSubScreen } from '@/components/fk';
 import { Kicker, MONO, glass, useWB } from '@/components/log/whiteboard';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,6 +50,15 @@ export default function PRBoardScreen() {
           <Skeleton style={{ height: 20, width: '40%', borderRadius: 6 }} />
           <Skeleton style={{ height: 220, borderRadius: 16 }} />
         </View>
+      ) : prs.isError && !prs.data ? (
+        // Fetch failed with nothing cached — the "no PRs yet" empty
+        // state would mislead here.
+        <QueryErrorState
+          title={L.prLoadFailedTitle}
+          subtitle={L.prLoadFailedBody}
+          retryLabel={L.retry}
+          onRetry={() => prs.refetch()}
+        />
       ) : isEmpty ? (
         <EmptyState
           t={t}

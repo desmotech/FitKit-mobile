@@ -39,6 +39,7 @@ import {
   FKModalHeader,
   useFKColors,
 } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -71,6 +72,10 @@ export default function AnnouncementsScreen() {
     priority: annT.priority ?? 'Priority',
     backToList: commonT.back ?? 'Back',
     done: commonT.done ?? 'Done',
+    loadFailed: annT.loadFailed ?? "Couldn't load announcements",
+    loadFailedHint:
+      annT.loadFailedHint ?? 'Check your connection and try again.',
+    tryAgain: commonT.tryAgain ?? 'Try again',
   };
 
   const dateFmt = useMemo(
@@ -154,6 +159,17 @@ export default function AnnouncementsScreen() {
           <Skeleton style={{ height: 92, borderRadius: 16 }} />
           <Skeleton style={{ height: 92, borderRadius: 16 }} />
           <Skeleton style={{ height: 92, borderRadius: 16 }} />
+        </View>
+      ) : listQuery.isError && announcements.length === 0 ? (
+        // Fetch failed with nothing cached — "no announcements yet"
+        // would mislead. Cached pages keep rendering below.
+        <View style={{ padding: 18 }}>
+          <QueryErrorState
+            title={labels.loadFailed}
+            subtitle={labels.loadFailedHint}
+            retryLabel={labels.tryAgain}
+            onRetry={() => listQuery.refetch()}
+          />
         </View>
       ) : announcements.length === 0 ? (
         <EmptyState

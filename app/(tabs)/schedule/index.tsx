@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -365,6 +366,15 @@ export default function ScheduleScreen() {
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
             </View>
+          ) : sessionsQuery.isError && !sessionsQuery.data ? (
+            // Fetch failed with nothing cached — "no classes scheduled"
+            // here would be a lie. Cached weeks keep rendering below.
+            <QueryErrorState
+              title={s.loadFailedTitle}
+              subtitle={s.loadFailedSubtitle}
+              retryLabel={s.tryAgain}
+              onRetry={() => sessionsQuery.refetch()}
+            />
           ) : daysSessions.length === 0 ? (
             <ScheduleEmptyState message={s.noClassesToday} />
           ) : (
