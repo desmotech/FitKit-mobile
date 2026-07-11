@@ -57,6 +57,3 @@ LOGGING_SPEC.md
 
 # Google Play service account key (eas submit) — never commit
 google-service-account.json
-
-# Firebase Android config — supplied locally / via EAS file secret, not VCS
-google-services.json
