@@ -32,4 +32,14 @@ module.exports = {
     '!**/*.d.ts',
   ],
   coverageReporters: ['text-summary', 'lcov'],
+  // Ratchet: pinned just below the achieved numbers so coverage can only
+  // go up. When you add tests that raise a metric, raise its floor too.
+  coverageThreshold: {
+    global: {
+      statements: 38,
+      branches: 29,
+      functions: 35,
+      lines: 39,
+    },
+  },
 };

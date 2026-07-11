@@ -106,6 +106,22 @@ jest.mock('react-native-mmkv', () => {
   return { MMKV, useMMKVString: jest.fn(), useMMKVBoolean: jest.fn() };
 });
 
+// expo-notifications pulls an untransformed ESM polyfill (abort-controller)
+// and talks to native push infra; tests exercise the flows around it.
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn(),
+  getPermissionsAsync: jest.fn(async () => ({ status: 'undetermined' })),
+  requestPermissionsAsync: jest.fn(async () => ({ status: 'denied' })),
+  getExpoPushTokenAsync: jest.fn(async () => ({ data: null })),
+  getLastNotificationResponseAsync: jest.fn(async () => null),
+  addNotificationResponseReceivedListener: jest.fn(() => ({
+    remove: jest.fn(),
+  })),
+  setBadgeCountAsync: jest.fn(async () => undefined),
+  AndroidImportance: { HIGH: 4, DEFAULT: 3 },
+}));
+
 // Crash/analytics SDKs phone home; tests never should.
 jest.mock('@sentry/react-native', () => ({
   init: jest.fn(),

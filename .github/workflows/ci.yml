@@ -80,4 +80,5 @@ jobs:
       - name: Test
         env:
           TZ: ${{ matrix.tz }}
-        run: pnpm test --ci
+        # --coverage enforces the coverageThreshold ratchet in jest.config.js
+        run: pnpm test:coverage --ci

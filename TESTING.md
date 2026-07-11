@@ -118,15 +118,27 @@ Screens (member drives the real UI; only the network is staged):
 - **Onboarding** — complete-profile hydration, per-field validation, exact
   PATCH payload (E.164 phone normalization), failure handling;
   accept-terms consent flow.
+- **Messages thread** — bubbles render, exact send POST body + composer
+  clear, send failure keeps the draft (no ghost bubble), cursor pagination,
+  mark-read-on-open fires exactly once.
+- **Profile hub** — name/stats, recent PRs, membership card + no-plan
+  state, sign-out (Alert confirm → Clerk signOut → cache clear → sign-in).
+- **Workout detail** — content renders, complete/uncomplete POSTs, rest
+  and note assignment kinds, error state.
+- **Whiteboard** — today's card, all-rest week, program error state.
 - **QueryErrorState** — copy, retry, screen-reader name.
+
+CI enforces a **coverage ratchet** (`coverageThreshold` in jest.config.js,
+run via `pnpm test:coverage`): floors pinned just below achieved coverage —
+raise them as coverage grows, never lower them.
 
 ## Remaining roadmap
 
-1. Messages thread screen (inverted list + pagination, composer,
-   send-failure alert; uploads stay out of scope).
-2. Profile hub + subscreens (history, PRs, metrics, goals CRUD, photos,
-   notification prefs, sign-out clears caches).
-3. Workout detail (complete/uncomplete, unread chat badge) + whiteboard
-   week paging; workout chat; session detail CTA screen.
-4. **Coverage ratchet** — add `coverageThreshold` to jest.config.js at the
-   then-current numbers so coverage only goes up.
+1. Workout chat + exercise comment threads (realtime-adjacent screens).
+2. Profile subscreens: metrics, goals CRUD, photos (upload flows are
+   native-heavy — cover the list/detail states), notification prefs,
+   personal-info edit.
+3. Session detail screen ([id] CTA rendering; the CTA state machine itself
+   is already covered at the hook layer).
+4. Attachments/uploads (picker → resize → presigned PUT) if ever feasible
+   under Jest — currently out of scope by design.
