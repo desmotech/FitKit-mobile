@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "729065358952",
+    "project_id": "fitkit-7b46b",
+    "storage_bucket": "fitkit-7b46b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:729065358952:android:2172746745805a03995ddd",
+        "android_client_info": {
+          "package_name": "fit.fitkit.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVI40-jvlJzU3DLeoJO-5EKa7p_MfedDM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

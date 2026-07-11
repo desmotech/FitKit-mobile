@@ -107,18 +107,26 @@ Screens (member drives the real UI; only the network is staged):
   weekStart actually requested.
 - **Lift + metric logging** — Save gating, exact POST bodies (local-noon
   timestamps), PR celebration, failure copy.
+- **Schedule list** — staged sessions render, empty day, error state,
+  booked-vs-open row affordances.
+- **QR scanner** — permission-denied → Settings copy, valid QR posts the
+  exact self-checkin body and celebrates, invalid/unreadable QR never posts.
+- **Check-in deep link** — valid params auto-fire the POST, bad params
+  error without posting, server failure recovers.
+- **Messages inbox** — conversations render, empty state, retry card,
+  staff-only filtering.
+- **Onboarding** — complete-profile hydration, per-field validation, exact
+  PATCH payload (E.164 phone normalization), failure handling;
+  accept-terms consent flow.
 - **QueryErrorState** — copy, retry, screen-reader name.
 
 ## Remaining roadmap
 
-1. Schedule screens (list day-rail + session detail CTA rendering; the
-   scan/checkin QR+GPS screens with camera/location permission states).
-2. Messages screens (inbox states, thread inverted list + pagination,
-   composer disabled-while-uploading).
-3. Profile hub + subscreens (history, PRs, metrics, goals CRUD, photos,
+1. Messages thread screen (inverted list + pagination, composer,
+   send-failure alert; uploads stay out of scope).
+2. Profile hub + subscreens (history, PRs, metrics, goals CRUD, photos,
    notification prefs, sign-out clears caches).
-4. Onboarding (complete-profile validation per field, accept-terms).
-5. Workout detail (complete/uncomplete, unread chat badge) + whiteboard
-   week paging; workout chat.
-6. **Coverage ratchet** — add `coverageThreshold` to jest.config.js at the
+3. Workout detail (complete/uncomplete, unread chat badge) + whiteboard
+   week paging; workout chat; session detail CTA screen.
+4. **Coverage ratchet** — add `coverageThreshold` to jest.config.js at the
    then-current numbers so coverage only goes up.

@@ -294,7 +294,9 @@ export default function ScanScreen() {
               letterSpacing: -0.1,
             }}
           >
-            {busy ? labels.busy : success ? labels.success : labels.hint}
+            {/* success wins over busy: onSuccess leaves `busy` true while
+                the 900ms return-to-schedule timer runs. */}
+            {success ? labels.success : busy ? labels.busy : labels.hint}
           </Text>
         </View>
       </View>

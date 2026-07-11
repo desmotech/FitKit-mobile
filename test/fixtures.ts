@@ -4,6 +4,7 @@
  */
 import type {
   AnnouncementResponse,
+  ConversationResponse,
   MembershipResponse,
   UserWithMembershipsResponse,
 } from '@fitkit/shared';
@@ -49,6 +50,25 @@ export function stageSignedInMember(
   server.use(
     http.get(api('/users/me'), () => HttpResponse.json({ data: user })),
   );
+}
+
+let conversationSeq = 0;
+
+/** DM inbox row — a staff (coach) participant by default. */
+export function conversation(
+  overrides: Partial<ConversationResponse> = {},
+): ConversationResponse {
+  conversationSeq += 1;
+  return {
+    participantMembershipId: `mem_participant_${conversationSeq}`,
+    participantName: `Participant ${conversationSeq}`,
+    participantRole: 'coach',
+    participantAvatar: null,
+    lastMessage: `Last message ${conversationSeq}`,
+    lastMessageAt: '2026-07-09T10:00:00.000Z',
+    unreadCount: 0,
+    ...overrides,
+  };
 }
 
 let announcementSeq = 0;
