@@ -135,8 +135,10 @@ describe('Whiteboard — week states', () => {
     const dayName = new Intl.DateTimeFormat('he', { weekday: 'long' }).format(
       new Date(TODAY),
     );
-    // Re-query inside waitFor: the found node detaches if a sibling query
-    // (header badge) settles between find and assert and remounts the row.
+    // Both assertions re-query inside waitFor: the screen can flash back to
+    // its skeleton for a frame while sibling header queries settle, so
+    // asserting the final state — not a transient frame — is what matches
+    // the member's experience.
     await waitFor(() =>
       expect(
         screen.getByText(W.emptyTitle.replace('{day}', dayName)),
@@ -144,7 +146,9 @@ describe('Whiteboard — week states', () => {
     );
     // With no workouts anywhere this week, the subtitle is the
     // none-this-week variant.
-    expect(screen.getByText(W.emptyNoneThisWeek)).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(screen.getByText(W.emptyNoneThisWeek)).toBeOnTheScreen(),
+    );
     expect(screen.queryByText(W.errorTitle)).not.toBeOnTheScreen();
   });
 
