@@ -10,7 +10,13 @@
 /* eslint-disable @typescript-eslint/no-require-imports -- jest.mock
    factories run before imports are hoisted; require() is the only option. */
 import type React from 'react';
+import { configure } from '@testing-library/react-native';
 import { server } from './msw';
+
+// findBy*/waitFor default to 1s — too tight for CI runners where a screen
+// chains two fetches (users/me → data) before its first meaningful paint.
+// 5s changes nothing when green; it only buys headroom under load.
+configure({ asyncUtilTimeout: 5000 });
 
 // Fail loudly on any request a test didn't stage a handler for.
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

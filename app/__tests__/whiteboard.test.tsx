@@ -135,9 +135,13 @@ describe('Whiteboard — week states', () => {
     const dayName = new Intl.DateTimeFormat('he', { weekday: 'long' }).format(
       new Date(TODAY),
     );
-    expect(
-      await screen.findByText(W.emptyTitle.replace('{day}', dayName)),
-    ).toBeOnTheScreen();
+    // Re-query inside waitFor: the found node detaches if a sibling query
+    // (header badge) settles between find and assert and remounts the row.
+    await waitFor(() =>
+      expect(
+        screen.getByText(W.emptyTitle.replace('{day}', dayName)),
+      ).toBeOnTheScreen(),
+    );
     // With no workouts anywhere this week, the subtitle is the
     // none-this-week variant.
     expect(screen.getByText(W.emptyNoneThisWeek)).toBeOnTheScreen();
