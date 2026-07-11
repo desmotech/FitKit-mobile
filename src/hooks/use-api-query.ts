@@ -28,15 +28,22 @@ export function useApiQuery<T = unknown>(options: {
     (options.queryOptions?.enabled ?? true) && isLoaded && isSignedIn === true;
 
   return useQuery<T>({
+    ...options.queryOptions,
     queryKey: options.queryKey ?? [options.path],
     queryFn: () => fetchWithAuth(options.path) as Promise<T>,
+    // Must come after the spread: the caller's `enabled` is already folded
+    // into `queryEnabled`, and letting the spread win would drop the
+    // Clerk auth gate (cold start with a persisted cache would fire
+    // requests before a token exists).
     enabled: queryEnabled,
     // A 401 won't recover (fetchWithAuth already refreshed the token once),
     // so don't retry it — fail fast to the AuthGate error screen instead of
     // hammering the API with backoff. Other errors keep the default retries.
-    retry: (failureCount, error) =>
-      !(error instanceof ApiError && error.status === 401) && failureCount < 3,
-    ...options.queryOptions,
+    retry:
+      options.queryOptions?.retry ??
+      ((failureCount, error) =>
+        !(error instanceof ApiError && error.status === 401) &&
+        failureCount < 3),
   });
 }
 

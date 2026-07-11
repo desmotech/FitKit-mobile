@@ -58,6 +58,7 @@ export function usePushNotifications() {
   const { lang } = useI18n();
   const respSubRef = useRef<Notifications.Subscription | null>(null);
   const registeredFor = useRef<string | null>(null);
+  const coldStartHandled = useRef(false);
 
   // A signed-out app should show no badge. We deliberately do NOT clear the
   // badge on every foreground anymore — that wiped a legitimate unread count
@@ -80,7 +81,6 @@ export function usePushNotifications() {
     if (!PROJECT_ID) {
       // Without an EAS project id Expo can't mint a push token. Surface
       // the misconfig in dev logs but don't crash the app.
-      // eslint-disable-next-line no-console
       console.warn('[push] EAS projectId missing — skipping registration');
       return;
     }
@@ -128,13 +128,12 @@ export function usePushNotifications() {
         // pushes. Keying on `token:lang` alone silently skipped that.
         const registrationKey = `${userId}:${token}:${lang}`;
         if (registeredFor.current === registrationKey) return;
-        registeredFor.current = registrationKey;
 
         const jwt = await getToken();
         if (!jwt) return;
         const platform: 'ios' | 'android' =
           Platform.OS === 'ios' ? 'ios' : 'android';
-        await fetch(`${apiUrl}/devices/register`, {
+        const res = await fetch(`${apiUrl}/devices/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -142,8 +141,13 @@ export function usePushNotifications() {
           },
           body: JSON.stringify({ expoPushToken: token, platform, locale: lang }),
         });
+        // Only latch the guard on confirmed success. Latching before the
+        // request (or on a failed response) silently killed push delivery
+        // for the install until the user/token/locale changed.
+        if (res.ok) {
+          registeredFor.current = registrationKey;
+        }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.warn(
           '[push] registration failed:',
           err instanceof Error ? err.message : err,
@@ -151,29 +155,43 @@ export function usePushNotifications() {
       }
     })();
 
+    const routeFromResponse = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as
+        | { route?: string }
+        | undefined;
+      if (data?.route && typeof data.route === 'string') {
+        // Messages moved out of the (tabs) group to a root-level route, but
+        // the API still deep-links to the legacy /(tabs)/messages/... path.
+        // Rewrite just that prefix so message taps land on the real screen.
+        const route = data.route.replace(
+          /^\/\(tabs\)\/messages/,
+          '/messages',
+        );
+        try {
+          router.push(route as never);
+        } catch {
+          // Bad route — ignore; the app will at least open.
+        }
+      }
+    };
+
     // Tap → deep-link
     const sub = Notifications.addNotificationResponseReceivedListener(
-      (response) => {
-        const data = response.notification.request.content.data as
-          | { route?: string }
-          | undefined;
-        if (data?.route && typeof data.route === 'string') {
-          // Messages moved out of the (tabs) group to a root-level route, but
-          // the API still deep-links to the legacy /(tabs)/messages/... path.
-          // Rewrite just that prefix so message taps land on the real screen.
-          const route = data.route.replace(
-            /^\/\(tabs\)\/messages/,
-            '/messages',
-          );
-          try {
-            router.push(route as never);
-          } catch {
-            // Bad route — ignore; the app will at least open.
-          }
-        }
-      },
+      routeFromResponse,
     );
     respSubRef.current = sub;
+
+    // Cold start: a tap that *launched* the killed app fired before this
+    // listener existed (Clerk resolves asynchronously), so the deep link
+    // was dropped and the app just opened on Home. Replay it once.
+    if (!coldStartHandled.current) {
+      coldStartHandled.current = true;
+      Notifications.getLastNotificationResponseAsync()
+        .then((response) => {
+          if (response) routeFromResponse(response);
+        })
+        .catch(() => undefined);
+    }
 
     return () => {
       cancelled = true;

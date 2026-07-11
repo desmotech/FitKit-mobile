@@ -10,7 +10,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 // Indeterminate brand loader ported from the splash (fkLoad sweep). A teal
 // bead slides across a faint track. Colors default to the active theme;

@@ -37,6 +37,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { continuousCorners } from '@/lib/utils';
 import { useLogStrings } from '@/i18n/use-log-strings';
+import { ymd, ymdToInstantISO } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
 
 const TYPE_ORDER: BodyMetricType[] = [
@@ -91,8 +92,6 @@ export default function LogMetricScreen() {
 
   const dict = t as unknown as Record<string, Record<string, unknown>>;
   const bmT = (dict.bodyMetrics ?? {}) as Record<string, unknown>;
-  const typesT = (bmT.types ?? {}) as Record<string, string>;
-  const unitsT = (bmT.units ?? {}) as Record<string, string>;
   const L = useLogStrings();
 
   const initialType: BodyMetricType = isBodyMetricType(params.type)
@@ -101,7 +100,7 @@ export default function LogMetricScreen() {
   const [type, setType] = useState<BodyMetricType>(initialType);
   const [unit, setUnit] = useState<BodyMetricUnit>(DEFAULT_UNIT_FOR[initialType]);
   const [valueText, setValueText] = useState('');
-  const [recordedAt, setRecordedAt] = useState<string>(() => isoDate());
+  const [recordedAt, setRecordedAt] = useState<string>(() => ymd(new Date()));
   const [notes, setNotes] = useState('');
 
   const onChangeType = (next: BodyMetricType) => {
@@ -121,7 +120,7 @@ export default function LogMetricScreen() {
       metricType: type,
       value: numericValue,
       unit,
-      recordedAt: new Date(recordedAt).toISOString(),
+      recordedAt: ymdToInstantISO(recordedAt),
       notes: notes.trim() || undefined,
     };
     mutation.mutate(payload, {
@@ -133,22 +132,20 @@ export default function LogMetricScreen() {
     });
   };
 
-  const typeOptions = useMemo(
-    () =>
-      TYPE_ORDER.map((v) => ({
-        value: v,
-        label: typesT[v] ?? v,
-      })),
-    [typesT],
-  );
-  const unitOptions = useMemo(
-    () =>
-      UNITS_FOR[type].map((u) => ({
-        value: u,
-        label: unitsT[u] ?? u,
-      })),
-    [type, unitsT],
-  );
+  const typeOptions = useMemo(() => {
+    const typesT = (bmT.types ?? {}) as Record<string, string>;
+    return TYPE_ORDER.map((v) => ({
+      value: v,
+      label: typesT[v] ?? v,
+    }));
+  }, [bmT.types]);
+  const unitOptions = useMemo(() => {
+    const unitsT = (bmT.units ?? {}) as Record<string, string>;
+    return UNITS_FOR[type].map((u) => ({
+      value: u,
+      label: unitsT[u] ?? u,
+    }));
+  }, [type, bmT.units]);
 
   const placeholderColor = isDark
     ? 'rgba(235,235,245,0.3)'
@@ -342,9 +339,3 @@ function SectionLabel({
   );
 }
 
-function isoDate(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}

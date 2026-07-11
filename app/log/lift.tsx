@@ -16,13 +16,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TextInput,
   View,
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
-import { FKAmbientBackdrop, FKScreenHeader, useFKColors } from '@/components/fk';
+import { FKAmbientBackdrop, FKScreenHeader } from '@/components/fk';
 import {
   DatePresetField,
   ExerciseSearchInput,
@@ -50,6 +49,7 @@ import {
   isScoreComplete,
   serializeScore,
 } from '@/lib/score';
+import { ymd, ymdToInstantISO } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
 
 export default function LogLiftScreen() {
@@ -61,7 +61,6 @@ export default function LogLiftScreen() {
   const { colorScheme } = useColorScheme();
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
-  const colors = useFKColors();
   const insets = useSafeAreaInsets();
   const orgId = activeOrganization?.id;
   const L = useLogStrings();
@@ -77,8 +76,7 @@ export default function LogLiftScreen() {
     [selected],
   );
   const [score, setScore] = useState<Score>(() => emptyScore(scoring));
-  const [achievedAt, setAchievedAt] = useState<string>(() => isoDate());
-  const [notes, setNotes] = useState('');
+  const [achievedAt, setAchievedAt] = useState<string>(() => ymd(new Date()));
   const [success, setSuccess] = useState<null | { summary: string }>(null);
 
   useEffect(() => {
@@ -107,7 +105,7 @@ export default function LogLiftScreen() {
         exerciseId: selected.id,
         value: serialized.scoreValue,
         unit: serialized.scoreUnit ?? fallbackUnit[scoring],
-        achievedAt: new Date(achievedAt).toISOString(),
+        achievedAt: ymdToInstantISO(achievedAt),
       },
       {
         onSuccess: () => {
@@ -201,30 +199,8 @@ export default function LogLiftScreen() {
             </LogSectionCard>
           </Animated.View>
 
-          <Animated.View entering={FadeInDown.delay(160).duration(280)}>
-            <LogSectionCard label={L.liftNotes}>
-              <TextInput
-                accessibilityLabel={L.liftNotes}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder={L.liftNotesPlaceholder}
-                placeholderTextColor={
-                  isDark
-                    ? 'rgba(235,235,245,0.3)'
-                    : 'rgba(60,60,67,0.3)'
-                }
-                multiline
-                style={{
-                  minHeight: 72,
-                  fontSize: 15,
-                  color: colors.foreground,
-                  textAlign: isRTL ? 'right' : 'left',
-                  textAlignVertical: 'top',
-                  padding: 0,
-                }}
-              />
-            </LogSectionCard>
-          </Animated.View>
+          {/* No Notes field: the manual-PR endpoint (LogPRInput) has no
+              notes member, so a notes box here silently discarded input. */}
 
           {mutation.error && (
             <Animated.View
@@ -256,9 +232,3 @@ export default function LogLiftScreen() {
   );
 }
 
-function isoDate(d = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}

@@ -11,7 +11,8 @@
  */
 import { useRouter } from 'expo-router';
 import { MessageCircle, SquarePen } from 'lucide-react-native';
-import { FlatList, Pressable, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ConversationResponse } from '@fitkit/shared';
 import {
@@ -20,6 +21,7 @@ import {
   FKButton,
   useFKColors,
 } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
 import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -43,15 +45,23 @@ export default function MessagesListScreen() {
 
   const messagesT = (t as unknown as Record<string, Record<string, string>>).messages ?? {};
   const mobileTabsT = (t as unknown as Record<string, Record<string, string>>).mobileTabs ?? {};
+  const commonT = (t as unknown as Record<string, Record<string, string>>).common ?? {};
 
   const labels = {
     title: mobileTabsT.messages ?? 'Messages',
     empty: messagesT.noConversations ?? 'No conversations yet',
     emptyHint: 'Message a coach to get started.',
     newMessage: messagesT.newMessage ?? 'New message',
+    loadFailed: messagesT.loadFailed ?? "Couldn't load conversations",
+    loadFailedHint:
+      messagesT.loadFailedHint ?? 'Check your connection and try again.',
+    tryAgain: commonT.tryAgain ?? 'Try again',
   };
 
-  const { data, isLoading } = useConversations(orgId);
+  const { data, isLoading, isError, refetch } = useConversations(orgId);
+  // Local state, not `isFetching`: background refetches (focus, realtime
+  // invalidations) would yank the spinner down uninvited.
+  const [refreshing, setRefreshing] = useState(false);
   const online = usePresence();
   const conversations = (data?.conversations ?? []).filter((c) =>
     STAFF_ROLES.has(c.participantRole),
@@ -123,6 +133,19 @@ export default function MessagesListScreen() {
             <Skeleton key={i} style={{ height: 72, borderRadius: 16 }} />
           ))}
         </View>
+      ) : isError && !data ? (
+        // Fetch failed with nothing cached — the "no conversations yet"
+        // empty state would mislead here.
+        <View
+          style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 20 }}
+        >
+          <QueryErrorState
+            title={labels.loadFailed}
+            subtitle={labels.loadFailedHint}
+            retryLabel={labels.tryAgain}
+            onRetry={() => refetch()}
+          />
+        </View>
       ) : conversations.length === 0 ? (
         <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
           <View
@@ -185,6 +208,17 @@ export default function MessagesListScreen() {
             paddingHorizontal: 16,
             paddingBottom: insets.bottom + 24,
           }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                haptics.tap();
+                setRefreshing(true);
+                refetch().finally(() => setRefreshing(false));
+              }}
+              tintColor="#0E8C8C"
+            />
+          }
           renderItem={({ item }) => (
             <ConversationRow
               conversation={item}

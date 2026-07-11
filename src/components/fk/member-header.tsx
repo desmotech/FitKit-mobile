@@ -19,7 +19,7 @@ import { useTotalUnread } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 interface MemberHeaderProps {
   /** Optional QR scan tap handler — when set, renders the QR button. */

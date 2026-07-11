@@ -21,10 +21,10 @@ import * as Notifications from 'expo-notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApiQuery } from './use-api-query';
 import { useIncompleteFormsCount } from './use-forms';
+import { queryKeys } from '@/lib/query-keys';
 
-const badgeKey = (orgId: string) => ['badge-total', orgId] as const;
-const myFormsKey = (orgId: string) =>
-  ['/organizations', orgId, 'forms', 'mine'] as const;
+const badgeKey = queryKeys.badge.total;
+const myFormsKey = queryKeys.forms.mine;
 
 /**
  * Server-resolved unified unread total for the member in this org

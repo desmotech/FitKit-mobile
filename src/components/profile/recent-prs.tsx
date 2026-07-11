@@ -3,7 +3,9 @@ import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { FKGlassPanel } from '@/components/fk';
 import { displayFamily, eyebrow } from '@/lib/type';
-import { type ColorTokens } from './color-tokens';
+import type { useFKColors } from '@/components/fk/colors';
+
+type ColorTokens = ReturnType<typeof useFKColors>;
 
 /** 2-up recent personal-record cards, each flagged NEW within ~3 weeks. */
 export function RecentPRs({

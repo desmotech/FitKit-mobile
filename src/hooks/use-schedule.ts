@@ -7,6 +7,7 @@ import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
 import type { WorkoutLite } from './use-workouts';
+import { queryKeys } from '@/lib/query-keys';
 
 // Mirrors the canonical `ClassSessionResponse` from
 // libs/shared/src/lib/schemas/scheduling.schema.ts. Kept loose to avoid a
@@ -169,7 +170,7 @@ export function useSessionDetail(
     path,
     queryKey:
       orgId && sessionId
-        ? ['/organizations', orgId, 'sessions', sessionId]
+        ? queryKeys.sessions.byId(orgId, sessionId)
         : ['/sessions/:id', 'noop'],
     queryOptions: { enabled: !!orgId && !!sessionId },
   });
@@ -192,7 +193,7 @@ export function useMyWeekSessions(
     path,
     queryKey:
       orgId && weekStart
-        ? ['/organizations', orgId, 'sessions', weekStart]
+        ? queryKeys.sessions.week(orgId, weekStart)
         : ['/sessions', 'noop'],
     queryOptions: { enabled: !!orgId && !!weekStart },
   });
@@ -296,7 +297,7 @@ export function useBookSession(
   const queryClient = useQueryClient();
   const queryKey =
     orgId && weekStart
-      ? (['/organizations', orgId, 'sessions', weekStart] as const)
+      ? queryKeys.sessions.week(orgId, weekStart)
       : (['/sessions', 'noop'] as const);
 
   return useMutation<
@@ -369,7 +370,7 @@ export function useCancelBooking(
   const queryClient = useQueryClient();
   const queryKey =
     orgId && weekStart
-      ? (['/organizations', orgId, 'sessions', weekStart] as const)
+      ? queryKeys.sessions.week(orgId, weekStart)
       : (['/sessions', 'noop'] as const);
 
   return useMutation<
@@ -457,7 +458,7 @@ export function useSelfCheckin(
   const queryClient = useQueryClient();
   const queryKey =
     orgId && weekStart
-      ? (['/organizations', orgId, 'sessions', weekStart] as const)
+      ? queryKeys.sessions.week(orgId, weekStart)
       : (['/sessions', 'noop'] as const);
 
   return useMutation<

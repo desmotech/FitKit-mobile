@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
+import { ymd } from '@/lib/week';
 
 export interface DatePresetFieldProps {
   /** ISO `YYYY-MM-DD`. Empty string treated as unset (defaults today). */
@@ -36,9 +37,9 @@ export function DatePresetField({
   const L = useLogStrings();
   const [customOpen, setCustomOpen] = useState(false);
 
-  const today = useMemo(() => isoDate(new Date()), []);
+  const today = useMemo(() => ymd(new Date()), []);
   const yesterday = useMemo(
-    () => isoDate(new Date(Date.now() - 24 * 60 * 60 * 1000)),
+    () => ymd(new Date(Date.now() - 24 * 60 * 60 * 1000)),
     [],
   );
   const minDate =
@@ -157,9 +158,3 @@ export function DatePresetField({
   );
 }
 
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}

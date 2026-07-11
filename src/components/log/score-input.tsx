@@ -173,7 +173,7 @@ function FieldContainer({ children }: { children: React.ReactNode }) {
     <View
       style={{
         flexDirection: 'row',
-        height: 48,
+        minHeight: 48,
         borderRadius: 12,
         borderCurve: 'continuous',
         backgroundColor: isDark
@@ -446,15 +446,14 @@ function InlineUnitSegments({
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const BRAND_TEAL = '#0E8C8C';
-  const chips = options.map((opt, idx) => {
+  const chips = options.map((opt) => {
     const active = value === opt;
     return (
       <View
         key={opt}
         style={{
           minWidth: 48,
-          height: 48,
-          marginLeft: idx === 0 ? 0 : 8,
+          minHeight: 48,
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 2,
@@ -499,9 +498,12 @@ function InlineUnitSegments({
   return (
     <View
       accessibilityRole="radiogroup"
+      // `gap` instead of per-chip marginLeft: the old margin scheme broke
+      // once the row was reversed for RTL (leading gap, touching chips).
       style={{
         flexDirection: 'row',
         alignSelf: 'center',
+        gap: 8,
       }}
     >
       {isRTL ? chips.slice().reverse() : chips}

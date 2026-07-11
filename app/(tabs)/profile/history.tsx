@@ -13,6 +13,7 @@ import {
   FKSubScreen,
   useFKColors,
 } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Text } from '@/components/ui/text';
@@ -66,6 +67,8 @@ export default function HistoryScreen() {
   const isRTL = dir === 'rtl';
 
   const profileT = (t as unknown as Record<string, Record<string, unknown>>).profile ?? {};
+  const commonT = ((t as unknown as Record<string, Record<string, unknown>>)
+    .common ?? {}) as Record<string, string>;
   const settingsT = (profileT.settings ?? {}) as Record<string, string>;
   const bhT = (profileT.bookingHistory ?? {}) as Record<string, unknown>;
   const statusT = (bhT.status ?? {}) as Record<BookingStatus, string>;
@@ -76,6 +79,10 @@ export default function HistoryScreen() {
     past: (bhT.past as string) ?? 'Past',
     emptyUpcoming: (bhT.emptyUpcoming as string) ?? 'No upcoming bookings',
     emptyPast: (bhT.emptyPast as string) ?? 'No past bookings',
+    loadFailed: (bhT.loadFailed as string) ?? "Couldn't load your bookings",
+    loadFailedHint:
+      (bhT.loadFailedHint as string) ?? 'Check your connection and try again.',
+    tryAgain: commonT.tryAgain ?? 'Try again',
   };
 
   const [tab, setTab] = useState<Tab>('upcoming');
@@ -86,7 +93,7 @@ export default function HistoryScreen() {
       ? `/bookings/my?status=confirmed,waitlisted&from=${nowRef.current}`
       : `/bookings/my?status=confirmed,attended,cancelled,no_show&to=${nowRef.current}`;
 
-  const { data, isLoading } = useApiQuery<BookingsResponse>({
+  const { data, isLoading, isError, refetch } = useApiQuery<BookingsResponse>({
     path,
     queryKey: ['/bookings/my', tab],
   });
@@ -117,6 +124,15 @@ export default function HistoryScreen() {
               <Skeleton key={i} style={{ height: 96, borderRadius: 16 }} />
             ))}
           </View>
+        ) : isError && !data ? (
+          // Fetch failed with nothing cached — "no bookings" would
+          // mislead here.
+          <QueryErrorState
+            title={labels.loadFailed}
+            subtitle={labels.loadFailedHint}
+            retryLabel={labels.tryAgain}
+            onRetry={() => refetch()}
+          />
         ) : bookings.length === 0 ? (
           <FKGlassPanel
             radius={20}
@@ -148,7 +164,11 @@ export default function HistoryScreen() {
           bookings.map((booking, i) => (
             <Animated.View
               key={booking.id}
-              entering={FadeInDown.delay(40 + i * 30).duration(260)}
+              // Cap the stagger to the first screenful — with a long booking
+              // history, row N would otherwise wait N*30ms to appear.
+              entering={FadeInDown.delay(
+                40 + Math.min(i, 8) * 30,
+              ).duration(260)}
             >
               <BookingCard
                 booking={booking}

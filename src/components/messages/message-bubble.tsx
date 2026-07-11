@@ -10,6 +10,7 @@
  */
 import { Image as ExpoImage } from 'expo-image';
 import { Check, CheckCheck } from 'lucide-react-native';
+import { memo } from 'react';
 import { Pressable, View } from 'react-native';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
 import type { useFKColors } from '@/components/fk';
@@ -18,7 +19,10 @@ import { bodyFamily, eyebrow } from '@/lib/type';
 
 const BRAND_TEAL = '#0E8C8C';
 
-export function MessageBubble({
+// Memoized: the thread re-renders on every composer keystroke; without memo
+// every visible bubble re-renders per character. `onLongPress` receives the
+// message (instead of a per-row closure) so callers can pass stable handlers.
+export const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   isRTL,
@@ -27,6 +31,7 @@ export function MessageBubble({
   colors,
   onLongPress,
   onPressAttachment,
+  attachmentA11yLabel = 'Photo attachment',
 }: {
   message: MessageResponse;
   isOwn: boolean;
@@ -34,8 +39,10 @@ export function MessageBubble({
   isDark: boolean;
   lang: string;
   colors: ReturnType<typeof useFKColors>;
-  onLongPress: () => void;
+  onLongPress: (message: MessageResponse) => void;
   onPressAttachment: (url: string) => void;
+  /** VoiceOver label for tappable attachment thumbnails. */
+  attachmentA11yLabel?: string;
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
   // Received bubbles use the same frosted-glass card as the in-workout chat;
@@ -74,7 +81,7 @@ export function MessageBubble({
       {/* Children-as-function + static View: this RN build drops styles passed
           via Pressable's style-as-function, which left the bubble with no
           background/padding (text floating on the screen). */}
-      <Pressable onLongPress={onLongPress} delayLongPress={400}>
+      <Pressable onLongPress={() => onLongPress(message)} delayLongPress={400}>
         {({ pressed }) => (
           <View
             style={{
@@ -96,6 +103,7 @@ export function MessageBubble({
               <BubbleAttachments
                 attachments={message.attachments}
                 onPress={onPressAttachment}
+                a11yLabel={attachmentA11yLabel}
               />
             ) : null}
             {hasContent ? (
@@ -148,14 +156,16 @@ export function MessageBubble({
       </Pressable>
     </View>
   );
-}
+});
 
 function BubbleAttachments({
   attachments,
   onPress,
+  a11yLabel,
 }: {
   attachments: AttachmentResponse[];
   onPress: (url: string) => void;
+  a11yLabel: string;
 }) {
   const visible = attachments.slice(0, 4);
   const overflow = attachments.length - visible.length;
@@ -174,6 +184,8 @@ function BubbleAttachments({
         <Pressable
           key={a.id}
           onPress={() => onPress(a.url)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={a11yLabel}
           style={{
             width: single ? 220 : 104,
             height: single ? 220 : 104,

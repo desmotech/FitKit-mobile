@@ -12,7 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import { Paperclip, Send } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -196,11 +196,20 @@ export default function ChatScreen() {
     [allMessages, currentMembershipId],
   );
 
+  // Depend on the stable `mutate` fn, not the mutation object (new identity
+  // every render). The optimistic readAt update zeroes `unreadCount`
+  // synchronously, and the error latch stops a rollback→refire loop from
+  // hammering the API when the endpoint is failing.
+  const markReadMutate = thread.markRead.mutate;
+  const markReadFailed = useRef(false);
   useEffect(() => {
-    if (!unreadCount) return;
-    if (thread.markRead.isPending) return;
-    thread.markRead.mutate();
-  }, [unreadCount, thread.markRead]);
+    if (!unreadCount || markReadFailed.current) return;
+    markReadMutate(undefined, {
+      onError: () => {
+        markReadFailed.current = true;
+      },
+    });
+  }, [unreadCount, markReadMutate]);
 
   const [draft, setDraft] = useState('');
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -277,18 +286,30 @@ export default function ChatScreen() {
     );
   };
 
-  const handleLongPress = (msg: MessageResponse) => {
-    if (msg.senderMembershipId !== currentMembershipId) return;
-    haptics.tap();
-    Alert.alert(labels.delete, undefined, [
-      { text: labels.cancel, style: 'cancel' },
-      {
-        text: labels.delete,
-        style: 'destructive',
-        onPress: () => thread.deleteMessage.mutate(msg.id),
-      },
-    ]);
-  };
+  // Stable identity so the memoized <MessageBubble> rows skip re-rendering
+  // on every composer keystroke.
+  const deleteMessageMutate = thread.deleteMessage.mutate;
+  const handleLongPress = useCallback(
+    (msg: MessageResponse) => {
+      if (msg.senderMembershipId !== currentMembershipId) return;
+      haptics.tap();
+      Alert.alert(labels.delete, undefined, [
+        { text: labels.cancel, style: 'cancel' },
+        {
+          text: labels.delete,
+          style: 'destructive',
+          onPress: () => deleteMessageMutate(msg.id),
+        },
+      ]);
+    },
+    [
+      currentMembershipId,
+      haptics,
+      labels.delete,
+      labels.cancel,
+      deleteMessageMutate,
+    ],
+  );
 
   const subtitle = participantTyping ? labels.typing : roleLabel(participantRole, t);
 
@@ -443,7 +464,7 @@ export default function ChatScreen() {
                     isDark={isDark}
                     lang={lang}
                     colors={colors}
-                    onLongPress={() => handleLongPress(item.message)}
+                    onLongPress={handleLongPress}
                     onPressAttachment={setLightbox}
                   />
                 );
@@ -502,7 +523,7 @@ export default function ChatScreen() {
                 paddingHorizontal: 12,
                 paddingTop: 10,
                 borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: 'rgba(60,60,67,0.18)',
+                borderTopColor: colors.border,
               }}
             >
               {uploads.uploads.map((u) => (
@@ -523,7 +544,7 @@ export default function ChatScreen() {
               padding: 10,
               borderTopWidth:
                 uploads.uploads.length > 0 ? 0 : StyleSheet.hairlineWidth,
-              borderTopColor: 'rgba(60,60,67,0.18)',
+              borderTopColor: colors.border,
             }}
           >
             <Pressable
@@ -563,7 +584,7 @@ export default function ChatScreen() {
                 borderCurve: 'continuous',
                 backgroundColor: colors.card,
                 borderWidth: 1,
-                borderColor: 'rgba(94,112,130,0.18)',
+                borderColor: colors.border,
                 justifyContent: 'center',
               }}
             >

@@ -45,6 +45,7 @@ import { bodyFamily, displayFamily, eyebrow } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
+import { ymd } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
 import { SessionMeter } from '@/components/workout/session-meter';
 import { LastResultFooter } from '@/components/workout/last-result-footer';
@@ -332,7 +333,9 @@ export default function WorkoutDetailScreen() {
   // workout + its scoring — the only entry path for a first-time workout PR.
   const canLogWorkoutPr = !!workout.scoring && workout.scoring !== 'none';
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Local calendar day — toISOString() is UTC and mislabels the TODAY badge
+  // near midnight (evening for UTC- users, small hours for UTC+).
+  const todayStr = ymd(new Date());
   const isToday = assignment.date === todayStr;
 
   // Hero scoreboard columns. Plain `row` + data reversed for RTL (not a

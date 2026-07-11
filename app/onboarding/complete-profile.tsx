@@ -295,6 +295,8 @@ export default function CompleteProfileScreen() {
                   value={form.firstName}
                   onChangeText={(v) => update('firstName', v)}
                   autoCapitalize="words"
+                  autoComplete="given-name"
+                  textContentType="givenName"
                   style={{ textAlign: isRTL ? 'right' : 'left' }}
                 />
               </Field>
@@ -307,6 +309,8 @@ export default function CompleteProfileScreen() {
                   value={form.lastName}
                   onChangeText={(v) => update('lastName', v)}
                   autoCapitalize="words"
+                  autoComplete="family-name"
+                  textContentType="familyName"
                   style={{ textAlign: isRTL ? 'right' : 'left' }}
                 />
               </Field>
@@ -318,6 +322,8 @@ export default function CompleteProfileScreen() {
                 onChangeText={(v) => update('phone', v)}
                 onBlur={() => handleBlur('phone')}
                 keyboardType="phone-pad"
+                autoComplete="tel"
+                textContentType="telephoneNumber"
                 placeholder={labels.phonePlaceholder}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
               />

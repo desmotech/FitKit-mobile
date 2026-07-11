@@ -144,7 +144,9 @@ export function usePlanPicker(labels: PlanPickerLabels) {
               <Pressable
                 key={plan.subscriptionId}
                 onPress={() => settle(plan.subscriptionId)}
-                android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                android_ripple={{
+                  color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                }}
                 style={{ paddingHorizontal: 20, paddingVertical: 16 }}
               >
                 <Text
@@ -171,7 +173,9 @@ export function usePlanPicker(labels: PlanPickerLabels) {
               />
               <Pressable
                 onPress={() => settle(null)}
-                android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                android_ripple={{
+                  color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                }}
                 style={{ paddingVertical: 16, alignItems: 'center' }}
               >
                 <Text

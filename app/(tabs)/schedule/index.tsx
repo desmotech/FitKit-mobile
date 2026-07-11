@@ -6,8 +6,8 @@ import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
-import { runOnJS } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -33,12 +33,13 @@ import {
   blockReasonText,
   usePlanPicker,
 } from '@/components/schedule/plan-picker';
+import { useWeekStrip } from '@/hooks/use-week-strip';
 import {
   getWeekOrder,
   getWeekStartDay,
-  shiftWeek,
   weekStartFor,
 } from '@/hooks/use-workouts';
+import { useScheduleStrings } from '@/i18n/use-schedule-strings';
 import { displayFamily, font } from '@/lib/type';
 import { monthRangeLabel, ymd } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
@@ -48,12 +49,7 @@ import { ScheduleEmptyState } from '@/components/schedule/schedule-empty-state';
 
 export default function ScheduleScreen() {
   const router = useRouter();
-  const i18n = useI18n() as unknown as {
-    dir: 'ltr' | 'rtl';
-    lang: string;
-    t: Record<string, unknown>;
-  };
-  const { dir, lang, t } = i18n;
+  const { dir, lang } = useI18n();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const isRTL = dir === 'rtl';
@@ -72,13 +68,14 @@ export default function ScheduleScreen() {
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const sessionsQuery = useMyWeekSessions(orgId, weekStart);
-  const all = sessionsQuery.data?.data ?? [];
+  const all = useMemo(() => sessionsQuery.data?.data ?? [], [sessionsQuery.data]);
 
   const bookMutation = useBookSession(orgId, weekStart);
   const cancelMutation = useCancelBooking(orgId, weekStart);
   // Per-session pending flag so one card's action spinner doesn't disable
   // the whole list.
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Lang-aware formatters for the selected-day header ("WED · Jun 3").
   const monthDayFmt = useMemo(
@@ -91,66 +88,17 @@ export default function ScheduleScreen() {
   );
 
   // ── Labels ─────────────────────────────────────────────────────────
-  const dict = t as unknown as Record<string, Record<string, unknown>>;
-  const sched = (dict.schedule ?? {}) as Record<string, unknown>;
-  const mobile = (sched.mobile ?? {}) as Record<string, string>;
-  const member = (sched.memberBooking ?? {}) as Record<string, string>;
-  const daysOfWeekShort = (sched.daysOfWeek ?? {}) as Record<string, string>;
-  const whiteboard = (dict.whiteboard ?? {}) as Record<string, string>;
-  const common = (dict.common ?? {}) as Record<string, string>;
+  const s = useScheduleStrings();
   const dayLabels = useMemo(
-    () =>
-      weekOrder.map((k) => daysOfWeekShort[k] ?? k.slice(0, 3).toUpperCase()),
-    [weekOrder, daysOfWeekShort],
+    () => weekOrder.map((k) => s.daysOfWeek[k]),
+    [weekOrder, s.daysOfWeek],
   );
-  const labels = {
-    noClassesToday: mobile.noClassesToday ?? 'No classes scheduled',
-    minSuffix: mobile.min ?? 'min',
-    open: member.open ?? 'Open',
-    spotsLeft: member.spotsLeft ?? 'spots left',
-    classFull: member.classFull ?? 'Class Full',
-    booked: member.booked ?? 'Booked',
-    waitlisted: member.waitlisted ?? 'Waitlisted',
-    checkedIn: member.checkedIn ?? 'Checked in',
-    today: whiteboard.today ?? 'Today',
-    bookClass: member.bookClass ?? 'Book',
-    joinWaitlist: member.joinWaitlist ?? 'Join Waitlist',
-    cancelBooking: member.cancelBooking ?? 'Cancel',
-    leaveWaitlist: member.leaveWaitlist ?? 'Leave',
-    closed: lang === 'he' ? 'נסגר' : lang === 'ru' ? 'Закрыто' : 'Closed',
-    classStarted: member.classStarted ?? 'Class has already started',
-    cancellationWindowClosed:
-      member.cancellationWindowClosed ?? 'Cancellation window closed',
-    cancelPolicy:
-      member.cancelPolicy ??
-      'You may cancel up to {hours} hour(s) before class start.',
-    keepBooking: common.cancel ?? 'Keep booking',
-    bookFailed: member.bookFailed ?? 'Failed to book class',
-    cancelFailed: member.cancelFailed ?? 'Failed to cancel booking',
-    selectPlan: member.selectPlan ?? 'Select Plan',
-    creditsLeft: member.creditsLeft ?? '{count} credits left',
-    unlimited: member.unlimited ?? 'Unlimited',
-    noPlan: member.noPlanDesc ?? 'Purchase a plan to book classes',
-    membershipInactive:
-      member.membershipInactiveDesc ??
-      'Your membership is not active. Contact the gym for assistance.',
-  };
-  const quota = ((sched.memberBooking as Record<string, unknown> | undefined)
-    ?.quota ?? {}) as Record<string, string>;
-  const blockLabels = {
-    noPlan: labels.noPlan,
-    membershipInactive: labels.membershipInactive,
-    noCredits: quota.noCredits ?? 'No credits remaining',
-    overlap: quota.overlap ?? 'Overlaps with another booking',
-    dailyLimit: quota.dailyLimit ?? 'Daily limit ({max}/day)',
-    weeklyLimit: quota.weeklyLimit ?? 'Weekly limit ({max}/week)',
-  };
 
   const { pickPlan, planPickerElement } = usePlanPicker({
-    title: labels.selectPlan,
-    cancel: labels.keepBooking,
-    creditsLeft: labels.creditsLeft,
-    unlimited: labels.unlimited,
+    title: s.selectPlan,
+    cancel: s.keepBooking,
+    creditsLeft: s.creditsLeft,
+    unlimited: s.unlimited,
   });
 
   // ── Published sessions, bucketed by date ──────────────────────────
@@ -175,47 +123,13 @@ export default function ScheduleScreen() {
     return map;
   }, [published]);
 
-  const weekDays = useMemo(() => {
-    const start = new Date(weekStart);
-    return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-  }, [weekStart]);
+  const { weekDays, goPrev, goNext, weekSwipeGesture } = useWeekStrip({
+    weekStart,
+    setWeekStart,
+    isRTL,
+  });
 
   const daysSessions = byDate.get(selectedDate) ?? [];
-
-  // ── Week navigation ────────────────────────────────────────────────
-  const goPrev = () => {
-    haptics.tap();
-    setWeekStart((w) => shiftWeek(w, -1));
-  };
-  const goNext = () => {
-    haptics.tap();
-    setWeekStart((w) => shiftWeek(w, 1));
-  };
-
-  const SWIPE_DISTANCE = 40;
-  const SWIPE_VELOCITY = 400;
-  const weekSwipeGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-12, 12])
-    .onEnd((e) => {
-      'worklet';
-      const goRight =
-        e.translationX > SWIPE_DISTANCE || e.velocityX > SWIPE_VELOCITY;
-      const goLeft =
-        e.translationX < -SWIPE_DISTANCE || e.velocityX < -SWIPE_VELOCITY;
-      if (!goRight && !goLeft) return;
-      if (goRight) {
-        if (isRTL) runOnJS(goNext)();
-        else runOnJS(goPrev)();
-      } else if (goLeft) {
-        if (isRTL) runOnJS(goPrev)();
-        else runOnJS(goNext)();
-      }
-    });
 
   const handleCardPress = (session: ClassSession) => {
     haptics.tap();
@@ -238,24 +152,24 @@ export default function ScheduleScreen() {
     const hasMyBooking = isBooked || isWaitlisted;
     if (isCheckedIn) return;
     if (!hasMyBooking && startsAt < now) {
-      Alert.alert(labels.classStarted);
+      Alert.alert(s.classStarted);
       return;
     }
     if (hasMyBooking) {
       // The cancellation window only binds confirmed bookings — leaving a
       // waitlist is always allowed.
       if (isBooked && !canCancelBooking(session, now)) {
-        Alert.alert(labels.cancellationWindowClosed);
+        Alert.alert(s.cancellationWindowClosed);
         return;
       }
-      const policyMsg = labels.cancelPolicy.replace(
+      const policyMsg = s.cancelPolicy.replace(
         '{hours}',
         String(session.cancellationWindowHours),
       );
-      Alert.alert(labels.cancelBooking, policyMsg, [
-        { text: labels.keepBooking, style: 'cancel' },
+      Alert.alert(s.cancelBooking, policyMsg, [
+        { text: s.keepBooking, style: 'cancel' },
         {
-          text: labels.cancelBooking,
+          text: s.cancelBooking,
           style: 'destructive',
           onPress: () => {
             setPendingSessionId(session.id);
@@ -265,8 +179,8 @@ export default function ScheduleScreen() {
                 onSuccess: () => haptics.success(),
                 onError: (err) =>
                   Alert.alert(
-                    labels.cancelFailed,
-                    extractApiErrorMessage(err, labels.cancelFailed),
+                    s.cancelFailed,
+                    extractApiErrorMessage(err, s.cancelFailed),
                   ),
                 onSettled: () => setPendingSessionId(null),
               },
@@ -282,8 +196,8 @@ export default function ScheduleScreen() {
     const decision = decideBookingPlan(session);
     if (decision.kind === 'blocked') {
       Alert.alert(
-        labels.bookFailed,
-        blockReasonText(decision.reason, decision.plan, blockLabels),
+        s.bookFailed,
+        blockReasonText(decision.reason, decision.plan, s),
       );
       return;
     }
@@ -305,8 +219,8 @@ export default function ScheduleScreen() {
         onSuccess: () => haptics.success(),
         onError: (err) =>
           Alert.alert(
-            labels.bookFailed,
-            extractApiErrorMessage(err, labels.bookFailed),
+            s.bookFailed,
+            extractApiErrorMessage(err, s.bookFailed),
           ),
         onSettled: () => setPendingSessionId(null),
       },
@@ -330,10 +244,13 @@ export default function ScheduleScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
         refreshControl={
           <RefreshControl
-            refreshing={sessionsQuery.isFetching}
+            // Local state, not `isFetching`: background refetches (focus,
+            // booking invalidations) would yank the spinner down uninvited.
+            refreshing={refreshing}
             onRefresh={() => {
               haptics.tap();
-              sessionsQuery.refetch();
+              setRefreshing(true);
+              sessionsQuery.refetch().finally(() => setRefreshing(false));
             }}
             tintColor="#0E8C8C"
           />
@@ -439,7 +356,7 @@ export default function ScheduleScreen() {
               {selectedHeader}
             </Text>
             {selectedDate === todayStr ? (
-              <TodayStamp label={labels.today} colors={colors} lang={lang} />
+              <TodayStamp label={s.today} colors={colors} lang={lang} />
             ) : null}
           </View>
 
@@ -449,22 +366,31 @@ export default function ScheduleScreen() {
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
             </View>
+          ) : sessionsQuery.isError && !sessionsQuery.data ? (
+            // Fetch failed with nothing cached — "no classes scheduled"
+            // here would be a lie. Cached weeks keep rendering below.
+            <QueryErrorState
+              title={s.loadFailedTitle}
+              subtitle={s.loadFailedSubtitle}
+              retryLabel={s.tryAgain}
+              onRetry={() => sessionsQuery.refetch()}
+            />
           ) : daysSessions.length === 0 ? (
-            <ScheduleEmptyState message={labels.noClassesToday} />
+            <ScheduleEmptyState message={s.noClassesToday} />
           ) : (
             <View style={{ gap: 12 }}>
-              {daysSessions.map((s, i) => (
+              {daysSessions.map((session, i) => (
                 <SessionRow
-                  key={s.id}
-                  session={s}
+                  key={session.id}
+                  session={session}
                   index={i}
                   isRTL={isRTL}
                   lang={lang}
-                  labels={labels}
+                  labels={s}
                   colors={colors}
-                  pending={pendingSessionId === s.id}
-                  onPress={() => handleCardPress(s)}
-                  onPressBook={() => handleSessionAction(s)}
+                  pending={pendingSessionId === session.id}
+                  onPress={() => handleCardPress(session)}
+                  onPressBook={() => handleSessionAction(session)}
                 />
               ))}
             </View>

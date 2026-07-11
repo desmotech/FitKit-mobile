@@ -13,15 +13,22 @@
  */
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { AlertCircle, ArrowUp, Paperclip, X } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  AlertCircle,
+  ArrowUp,
+  Check,
+  CheckCheck,
+  Paperclip,
+  X,
+} from 'lucide-react-native';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   TextInput,
   View,
@@ -91,8 +98,6 @@ export function WorkoutChat({
   const comments = useWorkoutComments(orgId, assignmentId, membershipId);
   const uploads = useMessageUploads(orgId);
   const [draft, setDraft] = useState('');
-  const scrollRef = useRef<ScrollView>(null);
-  const didInitialScroll = useRef(false);
 
   const labels = {
     placeholder: dict(t, 'messages.typePlaceholder') ?? 'Message your coach…',
@@ -104,16 +109,26 @@ export function WorkoutChat({
     library: dict(t, 'progressPhotos.fromLibrary') ?? 'Choose from Library',
   };
 
-  // Mark the thread read whenever there's pending unread. Gated on
-  // unreadCount + isPending so it fires once, not in a loop.
+  // Mark the thread read whenever there's pending unread. Depends on the
+  // stable `mutate` fn (the mutation object is a new identity every render);
+  // the optimistic readAt update zeroes unreadCount synchronously, and the
+  // error latch stops a rollback→refire loop when the endpoint is failing.
+  const markReadMutate = comments.markRead.mutate;
+  const markReadFailed = useRef(false);
   useEffect(() => {
-    if (!comments.unreadCount) return;
-    if (comments.markRead.isPending) return;
-    comments.markRead.mutate();
-  }, [comments.unreadCount, comments.markRead]);
+    if (!comments.unreadCount || markReadFailed.current) return;
+    markReadMutate(undefined, {
+      onError: () => {
+        markReadFailed.current = true;
+      },
+    });
+  }, [comments.unreadCount, markReadMutate]);
 
-  // Build chronological list (oldest → newest) with date separators. The
-  // cache stores newest-first, so reverse.
+  // Build a chronological view (oldest → newest) with a date separator above
+  // each day, then reverse the whole thing. `allComments` is newest-first and
+  // the FlatList is `inverted` (index 0 renders at the bottom), so reversing
+  // keeps the newest message pinned to the composer with separators above
+  // their day's group.
   const items = useMemo<ChatItem[]>(() => {
     const chronological = [...comments.allComments].reverse();
     const out: ChatItem[] = [];
@@ -126,6 +141,7 @@ export function WorkoutChat({
       }
       out.push({ type: 'message', message: msg });
     }
+    out.reverse();
     return out;
   }, [comments.allComments]);
 
@@ -146,9 +162,6 @@ export function WorkoutChat({
       setDraft('');
       uploads.clearAll();
       haptics.success();
-      requestAnimationFrame(() =>
-        scrollRef.current?.scrollToEnd({ animated: true }),
-      );
     } catch {
       haptics.error();
     }
@@ -194,18 +207,72 @@ export function WorkoutChat({
     );
   };
 
-  const handleLongPress = (msg: MessageResponse) => {
-    if (msg.senderMembershipId !== membershipId) return;
-    haptics.tap();
-    Alert.alert(labels.delete, undefined, [
-      { text: labels.cancel, style: 'cancel' },
-      {
-        text: labels.delete,
-        style: 'destructive',
-        onPress: () => comments.deleteComment.mutate(msg.id),
-      },
-    ]);
-  };
+  // Stable identity so the memoized <MessageBubble> rows skip re-rendering
+  // on every composer keystroke.
+  const deleteCommentMutate = comments.deleteComment.mutate;
+  const handleLongPress = useCallback(
+    (msg: MessageResponse) => {
+      if (msg.senderMembershipId !== membershipId) return;
+      haptics.tap();
+      Alert.alert(labels.delete, undefined, [
+        { text: labels.cancel, style: 'cancel' },
+        {
+          text: labels.delete,
+          style: 'destructive',
+          onPress: () => deleteCommentMutate(msg.id),
+        },
+      ]);
+    },
+    [
+      membershipId,
+      haptics,
+      labels.delete,
+      labels.cancel,
+      deleteCommentMutate,
+    ],
+  );
+
+  // Stable identity so the memoized <MessageBubble> rows skip re-rendering
+  // on every composer keystroke.
+  const renderItem = useCallback(
+    ({ item }: { item: ChatItem }) => {
+      if (item.type === 'date') {
+        return (
+          <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+            <Text
+              style={{
+                fontFamily: 'Assistant-Medium',
+                fontSize: 10,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                color: ink.faint,
+              }}
+            >
+              {item.date.toLocaleDateString(lang, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </Text>
+          </View>
+        );
+      }
+      const isOwn = item.message.senderMembershipId === membershipId;
+      return (
+        <MessageBubble
+          message={item.message}
+          isOwn={isOwn}
+          isRTL={isRTL}
+          isDark={isDark}
+          lang={lang}
+          colors={colors}
+          ink={ink}
+          onLongPress={handleLongPress}
+        />
+      );
+    },
+    [ink, lang, membershipId, isRTL, isDark, colors, handleLongPress],
+  );
 
   const canSend =
     (draft.trim().length > 0 || uploads.getReadyUploadIds().length > 0) &&
@@ -220,104 +287,72 @@ export function WorkoutChat({
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
       style={{ flex: 1 }}
     >
-      <ScrollView
-        ref={scrollRef}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          padding: 14,
-          paddingBottom: 18,
-          gap: 4,
-          flexGrow: 1,
-        }}
-        onContentSizeChange={() => {
-          if (didInitialScroll.current || items.length === 0) return;
-          didInitialScroll.current = true;
-          scrollRef.current?.scrollToEnd({ animated: false });
-        }}
-      >
-        {hasMore && !comments.query.isLoading ? (
-          <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-            <Pressable
-              onPress={() => comments.query.fetchNextPage()}
-              disabled={comments.query.isFetchingNextPage}
-              style={({ pressed }) => [
-                {
-                  paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  borderRadius: 999,
-                  backgroundColor: isDark
-                    ? 'rgba(255,255,255,0.06)'
-                    : 'rgba(15,23,42,0.06)',
-                },
-                pressed && { opacity: 0.6 },
-              ]}
-            >
-              {comments.query.isFetchingNextPage ? (
-                <ActivityIndicator size="small" color={ink.muted} />
-              ) : (
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.foreground }}>
-                  {labels.loadEarlier}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        ) : null}
-
+      <View style={{ flex: 1 }}>
         {comments.query.isLoading ? (
-          <View style={{ padding: 4, gap: 10 }}>
+          <View style={{ padding: 18, gap: 10 }}>
             <Skeleton style={{ height: 30, width: '60%', borderRadius: 14, alignSelf: 'flex-start' }} />
             <Skeleton style={{ height: 30, width: '50%', borderRadius: 14, alignSelf: 'flex-end' }} />
             <Skeleton style={{ height: 30, width: '44%', borderRadius: 14, alignSelf: 'flex-start' }} />
           </View>
         ) : items.length === 0 ? (
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
             <Text style={{ fontSize: 14, color: ink.muted, textAlign: 'center' }}>
               {labels.empty}
             </Text>
           </View>
         ) : (
-          items.map((item, idx) => {
-            if (item.type === 'date') {
-              return (
-                <View
-                  key={`d-${item.date.toISOString()}-${idx}`}
-                  style={{ alignItems: 'center', paddingVertical: 10 }}
-                >
-                  <Text
-                    style={{
-                      fontFamily: 'Assistant-Medium',
-                      fontSize: 10,
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
-                      color: ink.faint,
-                    }}
-                  >
-                    {item.date.toLocaleDateString(lang, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                </View>
-              );
+          <FlatList
+            data={items}
+            inverted
+            keyExtractor={(item, idx) =>
+              item.type === 'date'
+                ? `d-${item.date.toISOString()}-${idx}`
+                : item.message.id
             }
-            const isOwn = item.message.senderMembershipId === membershipId;
-            return (
-              <MessageBubble
-                key={item.message.id}
-                message={item.message}
-                isOwn={isOwn}
-                isRTL={isRTL}
-                isDark={isDark}
-                lang={lang}
-                colors={colors}
-                ink={ink}
-                onLongPress={() => handleLongPress(item.message)}
-              />
-            );
-          })
+            // Inverted: contentContainer paddingTop/Bottom are visually
+            // swapped, so this keeps 14pt at the visual top and 18pt at the
+            // visual bottom (above the composer), matching the old ScrollView.
+            contentContainerStyle={{
+              paddingHorizontal: 14,
+              paddingTop: 18,
+              paddingBottom: 14,
+              gap: 4,
+            }}
+            showsVerticalScrollIndicator={false}
+            renderItem={renderItem}
+            ListFooterComponent={
+              // Inverted: ListFooter is at the visual top.
+              hasMore ? (
+                <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+                  <Pressable
+                    onPress={() => comments.query.fetchNextPage()}
+                    disabled={comments.query.isFetchingNextPage}
+                    style={({ pressed }) => [
+                      {
+                        paddingHorizontal: 14,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        backgroundColor: isDark
+                          ? 'rgba(255,255,255,0.06)'
+                          : 'rgba(15,23,42,0.06)',
+                      },
+                      pressed && { opacity: 0.6 },
+                    ]}
+                  >
+                    {comments.query.isFetchingNextPage ? (
+                      <ActivityIndicator size="small" color={ink.muted} />
+                    ) : (
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.foreground }}>
+                        {labels.loadEarlier}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+              ) : null
+            }
+          />
         )}
-      </ScrollView>
+      </View>
 
       {/* Composer. */}
       {uploads.uploads.length > 0 ? (
@@ -446,7 +481,9 @@ export function WorkoutChat({
 
 // ── Message bubble ───────────────────────────────────────────────────
 
-function MessageBubble({
+// Memoized: the thread re-renders on every composer keystroke; without memo
+// every visible bubble (and its attachment images) re-renders per character.
+const MessageBubble = memo(function MessageBubble({
   message,
   isOwn,
   isRTL,
@@ -463,13 +500,13 @@ function MessageBubble({
   lang: string;
   colors: ReturnType<typeof useFKColors>;
   ink: ReturnType<typeof programSheetInk>;
-  onLongPress: () => void;
+  onLongPress: (message: MessageResponse) => void;
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
   const coachBg = isDark ? 'rgba(78,92,100,0.46)' : 'rgba(255,255,255,0.72)';
   const bubbleBg = isOwn ? BRAND_TEAL : coachBg;
   const bubbleFg = isOwn ? '#fff' : colors.foreground;
-  const metaFg = isOwn ? 'rgba(255,255,255,0.72)' : ink.faint;
+  const metaFg = isOwn ? 'rgba(255,255,255,0.85)' : ink.faint;
   const hasAttachments = !!message.attachments && message.attachments.length > 0;
   const timeStr = new Date(message.createdAt).toLocaleTimeString(lang, {
     hour: '2-digit',
@@ -493,7 +530,7 @@ function MessageBubble({
           {message.senderName}
         </Text>
       ) : null}
-      <Pressable onLongPress={onLongPress} delayLongPress={400}>
+      <Pressable onLongPress={() => onLongPress(message)} delayLongPress={400}>
         {({ pressed }) => (
           <View
             style={{
@@ -525,9 +562,12 @@ function MessageBubble({
                 {message.content}
               </Text>
             ) : null}
+            {/* Meta hugs the bubble's trailing-bottom corner — mirrored in
+                RTL, with the time→tick order matching the DM thread's
+                message-bubble. */}
             <View
               style={{
-                flexDirection: 'row',
+                flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 marginTop: 2,
@@ -537,15 +577,19 @@ function MessageBubble({
               <Text
                 style={{
                   fontFamily: 'Assistant-Medium',
-                  fontSize: 9.5,
+                  fontSize: 11,
                   color: metaFg,
                   fontVariant: ['tabular-nums'],
                 }}
               >
                 {timeStr}
               </Text>
-              {isOwn && message.readAt ? (
-                <Text style={{ fontSize: 10, color: metaFg, fontWeight: '700' }}>✓✓</Text>
+              {isOwn ? (
+                message.readAt ? (
+                  <CheckCheck size={14} color="#fff" strokeWidth={2.4} />
+                ) : (
+                  <Check size={14} color={metaFg} strokeWidth={2.4} />
+                )
               ) : null}
             </View>
           </View>
@@ -553,7 +597,7 @@ function MessageBubble({
       </Pressable>
     </View>
   );
-}
+});
 
 function BubbleAttachments({ attachments }: { attachments: AttachmentResponse[] }) {
   const visible = attachments.slice(0, 4);

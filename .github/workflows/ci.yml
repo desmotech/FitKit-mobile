@@ -43,3 +43,42 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # The date/week logic must hold for members in any timezone; UTC,
+        # UTC+3 (Israel, the primary market), and UTC-5 flush out
+        # local-vs-UTC calendar-day bugs that pass on a dev machine.
+        tz: ['UTC', 'Asia/Jerusalem', 'America/New_York']
+    name: test (${{ matrix.tz }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.30.3
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://npm.pkg.github.com
+          scope: '@desmotech'
+
+      - name: Install dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        env:
+          TZ: ${{ matrix.tz }}
+        # --coverage enforces the coverageThreshold ratchet in jest.config.js
+        run: pnpm test:coverage --ci

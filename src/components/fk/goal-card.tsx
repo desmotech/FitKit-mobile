@@ -22,7 +22,9 @@ import { Pressable, View } from 'react-native';
 import type { GoalResponse } from '@fitkit/shared';
 import { Text } from '@/components/ui/text';
 import { font } from '@/lib/type';
-import { FKGlassPanel, FKRing, useFKColors } from './index';
+import { useFKColors } from './colors';
+import { FKGlassPanel } from './glass-panel';
+import { FKRing } from './ring';
 
 export type GoalCardVariant = 'full' | 'compact';
 
@@ -32,6 +34,10 @@ export interface GoalCardLabels {
   achieved: string;
   deadline: string;
   noData: string;
+  /** Accessibility label for the pencil icon (default: 'Edit goal'). */
+  editA11y?: string;
+  /** Accessibility label for the trash icon (default: 'Archive goal'). */
+  archiveA11y?: string;
 }
 
 export interface GoalCardProps {
@@ -199,12 +205,20 @@ export function GoalCard({
             }}
           >
             {onEdit ? (
-              <IconButton onPress={onEdit} colors={colors}>
+              <IconButton
+                onPress={onEdit}
+                colors={colors}
+                accessibilityLabel={labels.editA11y ?? 'Edit goal'}
+              >
                 <Pencil size={15} color={colors.mutedFg} strokeWidth={2.2} />
               </IconButton>
             ) : null}
             {onArchive ? (
-              <IconButton onPress={onArchive} colors={colors}>
+              <IconButton
+                onPress={onArchive}
+                colors={colors}
+                accessibilityLabel={labels.archiveA11y ?? 'Archive goal'}
+              >
                 <Trash2 size={15} color={colors.mutedFg} strokeWidth={2.2} />
               </IconButton>
             ) : null}

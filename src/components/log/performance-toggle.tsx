@@ -43,7 +43,7 @@ export function PerformanceToggle({
     modified: L.perfModified,
   };
 
-  const chips = ORDER.map((key, idx) => {
+  const chips = ORDER.map((key) => {
     const active = value === key;
     const tone = TONES[key];
     const label = labels?.[key] ?? DEFAULT_LABELS[key];
@@ -52,7 +52,6 @@ export function PerformanceToggle({
         key={key}
         style={{
           flex: 1,
-          marginLeft: idx === 0 ? 0 : 10,
           height: 40,
           borderRadius: 14,
           borderCurve: 'continuous',
@@ -94,7 +93,9 @@ export function PerformanceToggle({
   return (
     <View
       accessibilityRole="radiogroup"
-      style={{ flexDirection: 'row' }}
+      // `gap` instead of per-chip marginLeft: the old margin scheme broke
+      // once the row was reversed for RTL (leading gap, touching chips).
+      style={{ flexDirection: 'row', gap: 10 }}
     >
       {isRTL ? chips.slice().reverse() : chips}
     </View>

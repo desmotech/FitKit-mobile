@@ -35,6 +35,7 @@ import type {
   FormInstanceResponse,
   SubmitFormAnswersDto,
 } from '@/types/forms';
+import { queryKeys } from '@/lib/query-keys';
 
 interface ApiEnvelope<T> {
   data: T;
@@ -46,7 +47,7 @@ export function useMyForms(orgId: string | undefined | null) {
   const path = orgId ? `/organizations/${orgId}/forms/mine` : '';
   return useApiQuery<ApiEnvelope<MyFormEntry[]>>({
     path,
-    queryKey: orgId ? ['/organizations', orgId, 'forms', 'mine'] : ['/forms/mine', 'noop'],
+    queryKey: orgId ? queryKeys.forms.mine(orgId) : ['/forms/mine', 'noop'],
     queryOptions: { enabled: !!orgId },
   });
 }
@@ -81,7 +82,7 @@ export function useFormInstance(
 
   return useQuery<MyFormEntry>({
     queryKey: orgId && instanceId
-      ? ['/organizations', orgId, 'forms', 'instances', instanceId]
+      ? queryKeys.forms.instance(orgId, instanceId)
       : ['/forms/instance', 'noop'],
     enabled,
     queryFn: async () => {
@@ -94,7 +95,7 @@ export function useFormInstance(
         // there yet. We refetch /mine on demand to handle a cold sign
         // screen (e.g. notification deep link).
         const cached = queryClient.getQueryData<ApiEnvelope<MyFormEntry[]>>(
-          ['/organizations', orgId, 'forms', 'mine'],
+          queryKeys.forms.mine(orgId ?? 'noop'),
         );
         const fromCache = cached?.data.find((e) => e.instance.id === instanceId);
         if (fromCache) return fromCache;
@@ -132,11 +133,11 @@ export function useSubmitFormInstance(
       // Signed group right away.
       if (orgId) {
         await queryClient.invalidateQueries({
-          queryKey: ['/organizations', orgId, 'forms', 'mine'],
+          queryKey: queryKeys.forms.mine(orgId),
         });
         if (instanceId) {
           await queryClient.invalidateQueries({
-            queryKey: ['/organizations', orgId, 'forms', 'instances', instanceId],
+            queryKey: queryKeys.forms.instance(orgId, instanceId),
           });
         }
       }
@@ -169,11 +170,11 @@ export function useSubmitCheckInAnswers(
     onSuccess: async () => {
       if (orgId) {
         await queryClient.invalidateQueries({
-          queryKey: ['/organizations', orgId, 'forms', 'mine'],
+          queryKey: queryKeys.forms.mine(orgId),
         });
         if (instanceId) {
           await queryClient.invalidateQueries({
-            queryKey: ['/organizations', orgId, 'forms', 'instances', instanceId],
+            queryKey: queryKeys.forms.instance(orgId, instanceId),
           });
         }
       }

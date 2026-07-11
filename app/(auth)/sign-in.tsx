@@ -39,6 +39,7 @@ import {
 } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useAuthStrings } from '@/i18n/use-auth-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 type Stage = 'credentials' | 'second-factor' | 'reset-request' | 'reset-verify';
@@ -60,7 +61,7 @@ const BRAND_TEAL = '#0E8C8C';
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
-  const { dir, t } = useI18n();
+  const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const colors = useFKColors();
   const { colorScheme } = useColorScheme();
@@ -77,70 +78,20 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const auth = (t as Record<string, unknown>).auth as
-    | Record<string, string>
-    | undefined;
-
-  const labels = {
-    welcome: auth?.welcomeBack ?? 'Welcome back',
-    subtitle: auth?.signInSubtitle ?? 'Sign in to continue your training',
-    email: auth?.email ?? 'Email',
-    emailPlaceholder: auth?.emailPlaceholder ?? 'you@example.com',
-    password: auth?.password ?? 'Password',
-    passwordPlaceholder: auth?.passwordPlaceholder ?? '••••••••',
-    showPassword: auth?.showPassword ?? 'Show password',
-    hidePassword: auth?.hidePassword ?? 'Hide password',
-    forgot: auth?.forgotPassword ?? 'Forgot password?',
-    submit: auth?.signIn ?? 'Sign in',
-    submitting: auth?.signingIn ?? 'Signing in…',
-    invitedFooter:
-      auth?.invitedFooter ??
-      'New here? Ask your gym to send you an invite link.',
-    mfaTitle: auth?.mfaTitle ?? 'Verify your account',
-    mfaSubtitle:
-      auth?.mfaSubtitle ?? 'One more step to keep your account safe.',
-    mfaCodeLabel: auth?.mfaCodeLabel ?? 'Verification code',
-    mfaCodePlaceholder: '------',
-    mfaSubmit: auth?.mfaSubmit ?? 'Verify',
-    mfaSubmitting: auth?.mfaSubmitting ?? 'Verifying…',
-    mfaBack: auth?.mfaBack ?? 'Use a different account',
-    mfaTotpDesc:
-      auth?.mfaTotpDesc ??
-      'Enter the 6-digit code from your authenticator app.',
-    mfaPhoneDesc:
-      auth?.mfaPhoneDesc ?? 'Enter the code we just texted you.',
-    mfaEmailDesc:
-      auth?.mfaEmailDesc ?? 'Enter the code we just emailed you.',
-    mfaBackupDesc:
-      auth?.mfaBackupDesc ?? 'Enter one of your backup codes.',
-    resetTitle: auth?.resetTitle ?? 'Reset your password',
-    resetRequestDesc:
-      auth?.resetRequestDesc ??
-      "Enter your email and we'll send you a reset code.",
-    resetVerifyDesc:
-      auth?.resetVerifyDesc ??
-      'Enter the code we emailed you and choose a new password.',
-    resetSend: auth?.resetSend ?? 'Send reset code',
-    resetSending: auth?.resetSending ?? 'Sending…',
-    resetCodeLabel: auth?.resetCodeLabel ?? 'Reset code',
-    newPassword: auth?.newPassword ?? 'New password',
-    resetSubmit: auth?.resetSubmit ?? 'Reset password',
-    resetSubmitting: auth?.resetSubmitting ?? 'Resetting…',
-    resetBack: auth?.resetBack ?? 'Back to sign in',
-  };
+  const s = useAuthStrings();
 
   const factorDescription = (() => {
-    if (!factor) return labels.mfaSubtitle;
-    if (factor.strategy === 'totp') return labels.mfaTotpDesc;
+    if (!factor) return s.mfaSubtitle;
+    if (factor.strategy === 'totp') return s.mfaTotpDesc;
     if (factor.strategy === 'phone_code') {
       const tail = factor.safeIdentifier ? ` (${factor.safeIdentifier})` : '';
-      return labels.mfaPhoneDesc + tail;
+      return s.mfaPhoneDesc + tail;
     }
     if (factor.strategy === 'email_code') {
       const tail = factor.safeIdentifier ? ` (${factor.safeIdentifier})` : '';
-      return labels.mfaEmailDesc + tail;
+      return s.mfaEmailDesc + tail;
     }
-    return labels.mfaBackupDesc;
+    return s.mfaBackupDesc;
   })();
 
   const resetToCredentials = () => {
@@ -226,9 +177,9 @@ export default function SignInScreen() {
       // Surface a friendlier message for the common case (wrong password).
       let detail = clerkError?.longMessage ?? clerkError?.message ?? 'Sign-in failed.';
       if (clerkError?.code === 'form_password_incorrect') {
-        detail = auth?.wrongCredentials ?? 'Incorrect email or password.';
+        detail = s.wrongCredentials;
       } else if (clerkError?.code === 'form_identifier_not_found') {
-        detail = auth?.accountNotFound ?? "We couldn't find that account.";
+        detail = s.accountNotFound;
       }
       setError(detail);
       haptics.error();
@@ -297,7 +248,7 @@ export default function SignInScreen() {
       let detail =
         clerkError?.longMessage ?? clerkError?.message ?? 'Could not send reset code.';
       if (clerkError?.code === 'form_identifier_not_found') {
-        detail = auth?.accountNotFound ?? "We couldn't find that account.";
+        detail = s.accountNotFound;
       }
       setError(detail);
       haptics.error();
@@ -340,9 +291,7 @@ export default function SignInScreen() {
         ? `${clerkError.longMessage ?? clerkError.message}`
         : 'Password reset failed.';
       if (clerkError?.code === 'form_password_pwned') {
-        detail =
-          auth?.passwordPwned ??
-          'This password has appeared in a data breach. Please choose a different one.';
+        detail = s.passwordPwned;
       }
       setError(detail);
       haptics.error();
@@ -402,10 +351,10 @@ export default function SignInScreen() {
                 }}
               >
                 {stage === 'credentials'
-                  ? labels.welcome
+                  ? s.welcome
                   : stage === 'second-factor'
-                    ? labels.mfaTitle
-                    : labels.resetTitle}
+                    ? s.mfaTitle
+                    : s.resetTitle}
               </Text>
               <Text
                 style={{
@@ -420,23 +369,23 @@ export default function SignInScreen() {
                 numberOfLines={2}
               >
                 {stage === 'credentials'
-                  ? labels.subtitle
+                  ? s.subtitle
                   : stage === 'second-factor'
                     ? factorDescription
                     : stage === 'reset-request'
-                      ? labels.resetRequestDesc
-                      : labels.resetVerifyDesc}
+                      ? s.resetRequestDesc
+                      : s.resetVerifyDesc}
               </Text>
             </View>
           </View>
 
           {stage === 'credentials' ? (
             <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
-              <Field label={labels.email} isRTL={isRTL}>
+              <Field label={s.email} isRTL={isRTL}>
                 <BigTextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder={labels.emailPlaceholder}
+                  placeholder={s.emailPlaceholder}
                   autoCapitalize="none"
                   autoComplete="email"
                   autoCorrect={false}
@@ -449,11 +398,11 @@ export default function SignInScreen() {
                 />
               </Field>
 
-              <Field label={labels.password} isRTL={isRTL}>
+              <Field label={s.password} isRTL={isRTL}>
                 <PasswordInput
                   value={password}
                   onChangeText={setPassword}
-                  placeholder={labels.passwordPlaceholder}
+                  placeholder={s.passwordPlaceholder}
                   visible={showPassword}
                   onToggleVisibility={() => {
                     haptics.select();
@@ -462,8 +411,8 @@ export default function SignInScreen() {
                   isDark={isDark}
                   isRTL={isRTL}
                   fg={colors.foreground}
-                  showLabel={labels.showPassword}
-                  hideLabel={labels.hidePassword}
+                  showLabel={s.showPassword}
+                  hideLabel={s.hidePassword}
                   onSubmit={handleSignIn}
                 />
               </Field>
@@ -477,7 +426,7 @@ export default function SignInScreen() {
               >
                 <Pressable
                   accessibilityRole="link"
-                  accessibilityLabel={labels.forgot}
+                  accessibilityLabel={s.forgot}
                   hitSlop={8}
                   onPress={openForgotPassword}
                 >
@@ -488,7 +437,7 @@ export default function SignInScreen() {
                       color: BRAND_TEAL,
                     }}
                   >
-                    {labels.forgot}
+                    {s.forgot}
                   </Text>
                 </Pressable>
               </View>
@@ -496,7 +445,7 @@ export default function SignInScreen() {
               {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
 
               <FKButton
-                label={submitting ? labels.submitting : labels.submit}
+                label={submitting ? s.submitting : s.submit}
                 variant="primary"
                 size="lg"
                 fullWidth
@@ -506,18 +455,16 @@ export default function SignInScreen() {
             </FKGlassPanel>
           ) : stage === 'second-factor' ? (
             <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
-              <Field label={labels.mfaCodeLabel} isRTL={isRTL}>
+              <Field label={s.mfaCodeLabel} isRTL={isRTL}>
                 <BigTextInput
                   value={code}
                   onChangeText={setCode}
-                  placeholder={labels.mfaCodePlaceholder}
+                  placeholder={s.mfaCodePlaceholder}
                   autoCapitalize="none"
                   autoComplete={
                     factor?.strategy === 'phone_code'
                       ? 'sms-otp'
-                      : factor?.strategy === 'email_code'
-                        ? 'email'
-                        : 'one-time-code'
+                      : 'one-time-code'
                   }
                   keyboardType={
                     factor?.strategy === 'backup_code' ? 'default' : 'number-pad'
@@ -534,7 +481,7 @@ export default function SignInScreen() {
               {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
 
               <FKButton
-                label={submitting ? labels.mfaSubmitting : labels.mfaSubmit}
+                label={submitting ? s.mfaSubmitting : s.mfaSubmit}
                 variant="primary"
                 size="lg"
                 fullWidth
@@ -543,7 +490,7 @@ export default function SignInScreen() {
               />
 
               <FKButton
-                label={labels.mfaBack}
+                label={s.mfaBack}
                 variant="ghost"
                 size="md"
                 fullWidth
@@ -552,11 +499,11 @@ export default function SignInScreen() {
             </FKGlassPanel>
           ) : stage === 'reset-request' ? (
             <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
-              <Field label={labels.email} isRTL={isRTL}>
+              <Field label={s.email} isRTL={isRTL}>
                 <BigTextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder={labels.emailPlaceholder}
+                  placeholder={s.emailPlaceholder}
                   autoCapitalize="none"
                   autoComplete="email"
                   autoCorrect={false}
@@ -573,7 +520,7 @@ export default function SignInScreen() {
               {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
 
               <FKButton
-                label={submitting ? labels.resetSending : labels.resetSend}
+                label={submitting ? s.resetSending : s.resetSend}
                 variant="primary"
                 size="lg"
                 fullWidth
@@ -582,7 +529,7 @@ export default function SignInScreen() {
               />
 
               <FKButton
-                label={labels.resetBack}
+                label={s.resetBack}
                 variant="ghost"
                 size="md"
                 fullWidth
@@ -591,7 +538,7 @@ export default function SignInScreen() {
             </FKGlassPanel>
           ) : (
             <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
-              <Field label={labels.resetCodeLabel} isRTL={isRTL}>
+              <Field label={s.resetCodeLabel} isRTL={isRTL}>
                 <BigTextInput
                   value={code}
                   onChangeText={setCode}
@@ -608,11 +555,11 @@ export default function SignInScreen() {
                 />
               </Field>
 
-              <Field label={labels.newPassword} isRTL={isRTL}>
+              <Field label={s.newPassword} isRTL={isRTL}>
                 <PasswordInput
                   value={newPassword}
                   onChangeText={setNewPassword}
-                  placeholder={labels.passwordPlaceholder}
+                  placeholder={s.passwordPlaceholder}
                   visible={showNewPassword}
                   onToggleVisibility={() => {
                     haptics.select();
@@ -621,8 +568,8 @@ export default function SignInScreen() {
                   isDark={isDark}
                   isRTL={isRTL}
                   fg={colors.foreground}
-                  showLabel={labels.showPassword}
-                  hideLabel={labels.hidePassword}
+                  showLabel={s.showPassword}
+                  hideLabel={s.hidePassword}
                   onSubmit={handleResetPassword}
                   isNewPassword
                 />
@@ -631,7 +578,7 @@ export default function SignInScreen() {
               {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
 
               <FKButton
-                label={submitting ? labels.resetSubmitting : labels.resetSubmit}
+                label={submitting ? s.resetSubmitting : s.resetSubmit}
                 variant="primary"
                 size="lg"
                 fullWidth
@@ -640,7 +587,7 @@ export default function SignInScreen() {
               />
 
               <FKButton
-                label={labels.resetBack}
+                label={s.resetBack}
                 variant="ghost"
                 size="md"
                 fullWidth
@@ -664,7 +611,7 @@ export default function SignInScreen() {
               }}
               numberOfLines={2}
             >
-              {labels.invitedFooter}
+              {s.invitedFooter}
             </Text>
           ) : null}
         </ScrollView>

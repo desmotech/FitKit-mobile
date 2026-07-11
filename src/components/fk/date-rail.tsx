@@ -18,7 +18,7 @@ import Animated, {
 import { useHaptics } from '@/hooks/use-haptics';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 /**
  * Day status — drives the bar under the date (one consistent semantic across
@@ -44,14 +44,34 @@ export interface FKDateRailDay {
 
 const PILL_SPRING = { damping: 20, stiffness: 220, mass: 0.7 } as const;
 
+/**
+ * Spoken words for each day state (+ "today"), used only for the cells'
+ * accessibility labels. Callers pass localized words; defaults are English.
+ */
+export type FKDateRailStateLabels = Partial<
+  Record<DayState | 'today', string>
+>;
+
+const DEFAULT_STATE_LABELS: Record<DayState | 'today', string> = {
+  none: '',
+  has: 'booked',
+  done: 'done',
+  missed: 'missed',
+  rest: 'rest day',
+  today: 'today',
+};
+
 export function FKDateRail({
   days,
   selectedKey,
   onSelect,
+  stateLabels,
 }: {
   days: FKDateRailDay[];
   selectedKey: string;
   onSelect: (key: string) => void;
+  /** Localized state words for accessibility labels (defaults to English). */
+  stateLabels?: FKDateRailStateLabels;
 }) {
   const colors = useFKColors();
   const { dir } = useI18n();
@@ -122,6 +142,7 @@ export function FKDateRail({
           key={d.key}
           day={d}
           selected={i === selIndex}
+          stateLabels={stateLabels}
           colors={colors}
           onPress={() => onSelect(d.key)}
           onMeasure={(x, w) =>
@@ -140,18 +161,32 @@ export function FKDateRail({
 function RailCell({
   day,
   selected,
+  stateLabels,
   colors,
   onPress,
   onMeasure,
 }: {
   day: FKDateRailDay;
   selected: boolean;
+  stateLabels?: FKDateRailStateLabels;
   colors: ReturnType<typeof useFKColors>;
   onPress: () => void;
   onMeasure: (x: number, w: number) => void;
 }) {
-  const { lang } = useI18n();
+  const { lang, dir } = useI18n();
+  const isRTL = dir === 'rtl';
   const haptics = useHaptics();
+
+  // Spoken label: "Mon 12, today, booked" — parts joined only when present.
+  const words = { ...DEFAULT_STATE_LABELS, ...stateLabels };
+  const stateWord = day.state ? words[day.state] : '';
+  const a11yLabel = [
+    `${day.dow} ${day.dom}`,
+    day.isToday ? words.today : '',
+    stateWord,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
   const rust = colors.isDark ? '#E0685C' : '#C0524A';
@@ -177,6 +212,9 @@ function RailCell({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: !!selected }}
+      accessibilityLabel={a11yLabel}
       onPress={() => {
         haptics.select();
         onPress();
@@ -201,7 +239,9 @@ function RailCell({
           style={{
             position: 'absolute',
             top: 6,
-            right: 7,
+            // Top *leading-opposite* corner — mirror for RTL (the app
+            // hand-rolls direction; RN has no inline-end inset here).
+            ...(isRTL ? { left: 7 } : { right: 7 }),
             width: 6,
             height: 6,
             borderRadius: 999,

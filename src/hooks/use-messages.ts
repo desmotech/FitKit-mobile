@@ -12,7 +12,7 @@
  * optimistic cache writes, plus realtime: incoming messages prepend to the
  * open thread and read receipts flip the sent-message ticks live.
  */
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -26,6 +26,7 @@ import type {
 } from '@fitkit/shared';
 import { useRealtime } from '@/providers/realtime-provider';
 import { useApi } from './use-api';
+import { queryKeys } from '@/lib/query-keys';
 
 type Page = MessagesListResponse;
 type InfiniteData = { pages: { data: Page }[]; pageParams: unknown[] };
@@ -47,7 +48,7 @@ export function useMessages(
     isLoaded &&
     isSignedIn === true;
 
-  const queryKey = ['messages', orgId, participantMembershipId] as const;
+  const queryKey = queryKeys.messageThreads.thread(orgId, participantMembershipId);
 
   const query = useInfiniteQuery<{ data: Page }>({
     queryKey,
@@ -178,7 +179,7 @@ export function useMessages(
       // Bump the list so the new message + lastMessageAt appear in the
       // conversation row immediately.
       queryClient.invalidateQueries({
-        queryKey: [`/organizations/${orgId}/conversations?limit=50`],
+        queryKey: queryKeys.conversations.list(orgId ?? 'noop'),
       });
     },
   });
@@ -209,7 +210,7 @@ export function useMessages(
         };
       });
       queryClient.invalidateQueries({
-        queryKey: [`/organizations/${orgId}/conversations?limit=50`],
+        queryKey: queryKeys.conversations.list(orgId ?? 'noop'),
       });
     },
   });
@@ -239,8 +240,13 @@ export function useMessages(
     },
   });
 
-  const allMessages =
-    query.data?.pages.flatMap((p) => p.data.messages) ?? [];
+  // Memoized: an unstable array identity here cascades into the thread
+  // screen's items/unread memos on every render (incl. each keystroke).
+  const pages = query.data?.pages;
+  const allMessages = useMemo(
+    () => pages?.flatMap((p) => p.data.messages) ?? [],
+    [pages],
+  );
 
   return { query, allMessages, sendMessage, markRead, deleteMessage };
 }

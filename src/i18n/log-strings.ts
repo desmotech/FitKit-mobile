@@ -29,8 +29,6 @@ export interface LogStrings {
   liftExercise: string;
   liftResult: string;
   liftWhen: string;
-  liftNotes: string;
-  liftNotesPlaceholder: string;
   liftFailed: string;
   liftPrTitle: string;
   liftPrSubtitle: string;
@@ -151,6 +149,10 @@ export interface LogStrings {
   resultDeleteCta: string;
   resultSetsReadonly: string;
 
+  // PR board read-path error
+  prLoadFailedTitle: string;
+  prLoadFailedBody: string;
+
   // Generic
   retry: string;
 
@@ -183,8 +185,6 @@ const en: LogStrings = {
   liftExercise: 'Exercise',
   liftResult: 'Result',
   liftWhen: 'When',
-  liftNotes: 'Notes',
-  liftNotesPlaceholder: 'Any notes?',
   liftFailed: "Couldn't save. Try again.",
   liftPrTitle: 'PR logged!',
   liftPrSubtitle: 'Tracked to your personal records.',
@@ -286,6 +286,10 @@ const en: LogStrings = {
   resultDeleteMsg: 'Delete this logged result? This cannot be undone.',
   resultDeleteCta: 'Delete',
   resultSetsReadonly: 'Logged sets',
+
+  prLoadFailedTitle: "Couldn't load your PRs",
+  prLoadFailedBody: 'Check your connection and try again.',
+
   retry: 'Retry',
 
   a11yClose: 'Close',
@@ -314,8 +318,6 @@ const he: LogStrings = {
   liftExercise: 'תרגיל',
   liftResult: 'תוצאה',
   liftWhen: 'מתי',
-  liftNotes: 'הערות',
-  liftNotesPlaceholder: 'הערות?',
   liftFailed: 'השמירה נכשלה. נסה שוב.',
   liftPrTitle: 'שיא חדש!',
   liftPrSubtitle: 'נשמר בשיאים האישיים שלך.',
@@ -417,6 +419,10 @@ const he: LogStrings = {
   resultDeleteMsg: 'למחוק את התוצאה שתועדה? לא ניתן לבטל.',
   resultDeleteCta: 'מחק',
   resultSetsReadonly: 'סטים שתועדו',
+
+  prLoadFailedTitle: 'לא הצלחנו לטעון את השיאים שלך',
+  prLoadFailedBody: 'בדוק את החיבור לאינטרנט ונסה שוב.',
+
   retry: 'נסה שוב',
 
   a11yClose: 'סגור',
@@ -445,8 +451,6 @@ const ru: LogStrings = {
   liftExercise: 'Упражнение',
   liftResult: 'Результат',
   liftWhen: 'Когда',
-  liftNotes: 'Заметки',
-  liftNotesPlaceholder: 'Заметки?',
   liftFailed: 'Не удалось сохранить. Попробуйте ещё.',
   liftPrTitle: 'Рекорд записан!',
   liftPrSubtitle: 'Добавлено в личные рекорды.',
@@ -548,6 +552,10 @@ const ru: LogStrings = {
   resultDeleteMsg: 'Удалить этот результат? Действие необратимо.',
   resultDeleteCta: 'Удалить',
   resultSetsReadonly: 'Записанные подходы',
+
+  prLoadFailedTitle: 'Не удалось загрузить ваши рекорды',
+  prLoadFailedBody: 'Проверьте подключение и попробуйте снова.',
+
   retry: 'Повторить',
 
   a11yClose: 'Закрыть',

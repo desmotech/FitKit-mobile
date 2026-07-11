@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export function useHaptics() {
   const select = useCallback(() => {
@@ -24,5 +24,8 @@ export function useHaptics() {
     );
   }, []);
 
-  return { select, tap, success, error };
+  return useMemo(
+    () => ({ select, tap, success, error }),
+    [select, tap, success, error],
+  );
 }

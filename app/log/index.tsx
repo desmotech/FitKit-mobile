@@ -39,6 +39,7 @@ import {
 } from '@/hooks/use-workouts';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
+import { ymd } from '@/lib/week';
 
 export default function LogHubScreen() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function LogHubScreen() {
     [lang],
   );
   const week = useMyWeekAssignments(orgId, weekStart);
-  const today = isoDate(new Date());
+  const today = ymd(new Date());
   const todayAssignment = useMemo(
     () =>
       (week.data?.data ?? []).find(
@@ -284,9 +285,3 @@ function BranchRow({
   );
 }
 
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}

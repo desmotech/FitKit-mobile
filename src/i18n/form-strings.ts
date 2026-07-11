@@ -115,7 +115,7 @@ const HE: FormStrings = {
   statusArchived: 'בארכיון',
   kindCheckIn: 'הענות תקופתית',
   expiresToday: 'פג היום',
-  expiresInDays: (n) => `פג בעוד ${n} ימים`,
+  expiresInDays: (n) => (n === 1 ? 'פג מחר' : `פג בעוד ${n} ימים`),
 
   loadingTitle: 'פותח את הטופס…',
   loadingSubtitle: 'רגע — מאמתים את הקישור.',
@@ -126,7 +126,7 @@ const HE: FormStrings = {
   expiredTitle: 'הקישור פג תוקף',
   expiredSubtitle: 'הקישור לחתימה אינו תקף יותר. בקש מהמועדון לשלוח חדש.',
   invalidTitle: 'קישור לא תקין',
-  invalidSubtitle: 'הקישור לחתימה אינו תקף. פתח את הקישור העדכני שנשלח ממך.',
+  invalidSubtitle: 'הקישור לחתימה אינו תקף. פתח את הקישור העדכני שנשלח אליך.',
   readyTitle: 'מוכן לחתימה',
   readySubtitle: 'מלא את הטופס למטה. התשובות נשלחות באופן מאובטח למועדון.',
   validationFailed: 'חלק מהתשובות אינן עוברות אימות. אנא בדוק את הטופס.',
@@ -193,7 +193,7 @@ const EN: FormStrings = {
   statusArchived: 'Archived',
   kindCheckIn: 'Check-in',
   expiresToday: 'Expires today',
-  expiresInDays: (n) => `Expires in ${n} days`,
+  expiresInDays: (n) => (n === 1 ? 'Expires tomorrow' : `Expires in ${n} days`),
 
   loadingTitle: 'Opening your form…',
   loadingSubtitle: 'Just a moment — verifying your link.',
@@ -277,7 +277,7 @@ const RU: FormStrings = {
   statusArchived: 'В архиве',
   kindCheckIn: 'Чек-ин',
   expiresToday: 'Истекает сегодня',
-  expiresInDays: (n) => `Истекает через ${n} дн.`,
+  expiresInDays: (n) => (n === 1 ? 'Истекает завтра' : `Истекает через ${n} дн.`),
 
   loadingTitle: 'Открываем вашу форму…',
   loadingSubtitle: 'Минутку — проверяем ссылку.',

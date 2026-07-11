@@ -23,7 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -39,6 +39,7 @@ import {
   FKModalHeader,
   useFKColors,
 } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import {
@@ -71,6 +72,10 @@ export default function AnnouncementsScreen() {
     priority: annT.priority ?? 'Priority',
     backToList: commonT.back ?? 'Back',
     done: commonT.done ?? 'Done',
+    loadFailed: annT.loadFailed ?? "Couldn't load announcements",
+    loadFailedHint:
+      annT.loadFailedHint ?? 'Check your connection and try again.',
+    tryAgain: commonT.tryAgain ?? 'Try again',
   };
 
   const dateFmt = useMemo(
@@ -100,11 +105,17 @@ export default function AnnouncementsScreen() {
     ? announcements.find((a) => a.id === selectedId) ?? null
     : null;
 
-  // Auto mark-as-read on detail expand (mirrors web).
+  // Auto mark-as-read on detail expand (mirrors web). Depends on the stable
+  // `mutate` fn, not the mutation object (new identity every render), and
+  // latches per-announcement so a failing endpoint isn't retried in a loop.
+  const markReadMutate = markRead.mutate;
+  const markReadAttempted = useRef<string | null>(null);
   useEffect(() => {
-    if (!selected || selected.readAt || markRead.isPending) return;
-    markRead.mutate(selected.id);
-  }, [selected, markRead]);
+    if (!selected || selected.readAt) return;
+    if (markReadAttempted.current === selected.id) return;
+    markReadAttempted.current = selected.id;
+    markReadMutate(selected.id);
+  }, [selected, markReadMutate]);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = async () => {
@@ -149,6 +160,17 @@ export default function AnnouncementsScreen() {
           <Skeleton style={{ height: 92, borderRadius: 16 }} />
           <Skeleton style={{ height: 92, borderRadius: 16 }} />
         </View>
+      ) : listQuery.isError && announcements.length === 0 ? (
+        // Fetch failed with nothing cached — "no announcements yet"
+        // would mislead. Cached pages keep rendering below.
+        <View style={{ padding: 18 }}>
+          <QueryErrorState
+            title={labels.loadFailed}
+            subtitle={labels.loadFailedHint}
+            retryLabel={labels.tryAgain}
+            onRetry={() => listQuery.refetch()}
+          />
+        </View>
       ) : announcements.length === 0 ? (
         <EmptyState
           title={labels.empty}
@@ -180,7 +202,12 @@ export default function AnnouncementsScreen() {
           }
           renderItem={({ item, index }) => (
             <Animated.View
-              entering={FadeInDown.delay(30 + index * 25).duration(260)}
+              // Cap the stagger to the first screenful: rows mounted while
+              // scrolling or paging in would otherwise wait `index * 25`ms
+              // (seconds, deep in the list) and appear as blank gaps.
+              entering={FadeInDown.delay(
+                30 + Math.min(index, 8) * 25,
+              ).duration(260)}
             >
               <AnnouncementRow
                 announcement={item}

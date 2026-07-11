@@ -55,14 +55,14 @@ export interface TodayClassSession {
   organization: { name: string; logoUrl: string | null };
   location: { id: string; name: string } | null;
   myBookingStatus: 'confirmed' | 'waitlisted' | 'attended' | null;
-  workouts: Array<{
+  workouts: {
     id: string;
     title: string | null;
     displayName: string;
     description: string | null;
     scoring: string;
     timeCap: number | null;
-  }>;
+  }[];
 }
 
 export function useTodayClassSessions(orgId: string | undefined | null) {
@@ -72,7 +72,7 @@ export function useTodayClassSessions(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<TodayClassSession[]>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'sessions', 'today-workouts']
+      ? queryKeys.sessions.todayWorkouts(orgId)
       : ['/sessions/today-workouts', 'noop'],
     queryOptions: { enabled: !!orgId },
   });
@@ -90,7 +90,7 @@ export function useMyStats(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<MyStats>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'members', 'me', 'stats']
+      ? queryKeys.members.myStats(orgId)
       : ['/members/me/stats', 'noop'],
     queryOptions: { enabled: !!orgId },
   });
@@ -140,7 +140,7 @@ export function useMyBodyMetricsSummary(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<BodyMetricSummaryResponse[]>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'metrics', 'me']
+      ? queryKeys.metrics.summary(orgId)
       : ['/metrics/me', 'noop'],
     queryOptions: { enabled: !!orgId },
   });
@@ -175,7 +175,7 @@ export function useExerciseSearch(
   const path = query ? `/exercises/search?${params.toString()}` : '';
   return useApiQuery<ApiEnvelope<ExerciseSearchResult[]>>({
     path,
-    queryKey: ['/exercises/search', { orgId, q: query }],
+    queryKey: queryKeys.exercises.search(orgId, query),
     queryOptions: { enabled: query.length >= 2 },
   });
 }
@@ -202,7 +202,7 @@ export function useMyPersonalRecords(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<PersonalRecordResponse[]>>({
     path,
     queryKey: orgId
-      ? ['/organizations', orgId, 'personal-records', 'me']
+      ? queryKeys.personalRecords.mine(orgId)
       : ['/personal-records/me', 'noop'],
     queryOptions: { enabled: !!orgId },
   });

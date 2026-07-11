@@ -119,8 +119,16 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    if (isSignedIn) connectIfNeeded();
-    else socket.disconnect();
+    if (isSignedIn) {
+      connectIfNeeded();
+    } else {
+      // Drop the cached room subscription on sign-out — the connect
+      // handler replays it on reconnect, and a different user signing in
+      // on this device must not resubscribe to the previous user's
+      // org/membership before their own /users/me resolves.
+      currentSubRef.current = null;
+      socket.disconnect();
+    }
 
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') connectIfNeeded();

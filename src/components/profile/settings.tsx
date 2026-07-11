@@ -4,7 +4,9 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { FKGlassPanel } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
-import { type ColorTokens } from './color-tokens';
+import type { useFKColors } from '@/components/fk/colors';
+
+type ColorTokens = ReturnType<typeof useFKColors>;
 
 const ROW_DIVIDER_COLOR = 'rgba(255,255,255,0.05)';
 const ROW_DIVIDER_COLOR_LIGHT = 'rgba(15,23,42,0.06)';

@@ -24,7 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
 import { FKBackButton } from './back-button';
-import { useFKColors } from './index';
+import { useFKColors } from './colors';
 
 export function FKScreenHeader({
   title,

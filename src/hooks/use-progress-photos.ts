@@ -18,6 +18,7 @@ import type {
   ProgressPhotoListResponseDto,
 } from '@fitkit/shared';
 import { useApi } from './use-api';
+import { queryKeys } from '@/lib/query-keys';
 
 type InfiniteData = {
   pages: { data: ProgressPhotoListResponseDto }[];
@@ -29,7 +30,7 @@ export function useMyProgressPhotos(orgId: string | undefined | null) {
   const { isLoaded, isSignedIn } = useAuth();
 
   const enabled = !!orgId && isLoaded && isSignedIn === true;
-  const queryKey = ['progress-photos', orgId, 'me'] as const;
+  const queryKey = queryKeys.progressPhotos.mine(orgId);
 
   return useInfiniteQuery<{ data: ProgressPhotoListResponseDto }>({
     queryKey,
@@ -49,7 +50,7 @@ export function useMyProgressPhotos(orgId: string | undefined | null) {
 export function useUploadProgressPhoto(orgId: string | undefined | null) {
   const { fetchWithAuth } = useApi();
   const qc = useQueryClient();
-  const queryKey = ['progress-photos', orgId, 'me'] as const;
+  const queryKey = queryKeys.progressPhotos.mine(orgId);
 
   return useMutation<
     { data: ProgressPhotoDto },
@@ -95,7 +96,7 @@ export function useUploadProgressPhoto(orgId: string | undefined | null) {
 export function useDeleteProgressPhoto(orgId: string | undefined | null) {
   const { fetchWithAuth } = useApi();
   const qc = useQueryClient();
-  const queryKey = ['progress-photos', orgId, 'me'] as const;
+  const queryKey = queryKeys.progressPhotos.mine(orgId);
 
   return useMutation<{ data: { id: string } }, Error, string>({
     mutationFn: (photoId) =>
