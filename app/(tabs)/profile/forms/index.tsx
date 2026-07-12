@@ -275,7 +275,8 @@ function FormRow({
       ),
     );
     if (days <= 30) {
-      expiresIn = days <= 1 ? s.expiresToday : s.expiresInDays(days);
+      // 0 = expires today; 1 maps to "expires tomorrow" inside expiresInDays.
+      expiresIn = days === 0 ? s.expiresToday : s.expiresInDays(days);
     }
   }
 
