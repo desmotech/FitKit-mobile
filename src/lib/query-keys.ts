@@ -162,4 +162,14 @@ export const queryKeys = {
     mine: (orgId: string | undefined | null) =>
       ['progress-photos', orgId, 'me'] as const,
   },
+  // Courses are USER-scoped, not org-scoped — entitlements follow the human
+  // across orgs (`/me/courses` ignores org context by design), so no orgId
+  // in these keys. Invalidating the `['/me/courses']` prefix refreshes both
+  // the library list and every open player.
+  courses: {
+    mine: () => ['/me/courses'] as const,
+    byId: (programId: string) => ['/me/courses', programId] as const,
+    workout: (programId: string, workoutId: string) =>
+      ['/me/courses', programId, 'workouts', workoutId] as const,
+  },
 } as const;

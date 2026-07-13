@@ -36,10 +36,10 @@ module.exports = {
   // go up. When you add tests that raise a metric, raise its floor too.
   coverageThreshold: {
     global: {
-      statements: 38,
-      branches: 29,
-      functions: 35,
-      lines: 39,
+      statements: 40,
+      branches: 31,
+      functions: 37,
+      lines: 41,
     },
   },
 };

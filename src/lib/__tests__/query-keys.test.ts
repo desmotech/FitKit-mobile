@@ -134,8 +134,28 @@ describe('queryKeys shapes are frozen (persisted-cache contract)', () => {
       queryKeys.progressPhotos.mine(ORG),
       ['progress-photos', ORG, 'me'],
     ],
+    // Courses are user-scoped — no orgId in any key, by design.
+    ['courses.mine', queryKeys.courses.mine(), ['/me/courses']],
+    [
+      'courses.byId',
+      queryKeys.courses.byId('prog_1'),
+      ['/me/courses', 'prog_1'],
+    ],
+    [
+      'courses.workout',
+      queryKeys.courses.workout('prog_1', 'w_1'),
+      ['/me/courses', 'prog_1', 'workouts', 'w_1'],
+    ],
   ])('%s', (_name, actual, expected) => {
     expect(actual).toEqual(expected);
+  });
+
+  it('courses.mine is a prefix of byId and workout keys (invalidation pairing)', () => {
+    const mine = queryKeys.courses.mine();
+    const byId = queryKeys.courses.byId('prog_1');
+    const workout = queryKeys.courses.workout('prog_1', 'w_1');
+    expect(byId.slice(0, mine.length)).toEqual([...mine]);
+    expect(workout.slice(0, mine.length)).toEqual([...mine]);
   });
 
   it('workoutComments.all is a prefix of thread keys (invalidation pairing)', () => {

@@ -12,6 +12,12 @@ import type {
 } from '@fitkit/shared';
 import { api, http, HttpResponse, server } from './msw';
 import { TEST_ORG } from './render';
+import type {
+  CourseDay,
+  CourseEntitlement,
+  CourseSession,
+  CourseWorkoutDetail,
+} from '@/types/courses';
 
 export function membership(
   overrides: Partial<MembershipResponse> = {},
@@ -138,6 +144,129 @@ export function subscriptionWithPlan(
     },
     ...overrides,
   } as SubscriptionWithPlan;
+}
+
+/** A two-day curriculum: day 0 has one workout, day 1 is rest. */
+export function courseDays(): CourseDay[] {
+  return [
+    {
+      dayOffset: 0,
+      isRest: false,
+      workouts: [
+        {
+          id: 'cw_1',
+          workoutId: 'w_course_1',
+          isRest: false,
+          sortOrder: 0,
+          workout: {
+            id: 'w_course_1',
+            title: 'Foundations A',
+            description: 'Technique focus',
+          },
+        },
+      ],
+    },
+    { dayOffset: 1, isRest: true, workouts: [] },
+  ];
+}
+
+/** An upcoming, bookable course meeting. */
+export function courseSession(
+  overrides: Partial<CourseSession> = {},
+): CourseSession {
+  return {
+    id: 'cs_1',
+    programId: 'prog_course_1',
+    title: 'Kickoff meetup',
+    description: null,
+    // Far future so "upcoming" stays true without faking timers.
+    startsAt: '2030-01-01T10:00:00.000Z',
+    endsAt: null,
+    locationId: null,
+    locationName: null,
+    locationText: 'Main studio',
+    capacity: 10,
+    status: 'published',
+    createdAt: '2026-07-01T00:00:00.000Z',
+    updatedAt: '2026-07-01T00:00:00.000Z',
+    bookedCount: 3,
+    myRsvpStatus: null,
+    ...overrides,
+  };
+}
+
+/** An owned course as `/me/courses/:id` returns it (player payload —
+ *  started, day 0 current, nothing completed). */
+export function courseEntitlement(
+  overrides: Partial<CourseEntitlement> = {},
+): CourseEntitlement {
+  return {
+    id: 'ent_1',
+    programId: 'prog_course_1',
+    startDate: '2026-07-13',
+    completedAt: null,
+    restartCount: 0,
+    accessRevokedAt: null,
+    createdAt: '2026-07-01T00:00:00.000Z',
+    course: {
+      id: 'prog_course_1',
+      name: 'Kettlebell Foundations',
+      description: 'Six weeks of kettlebell basics',
+      imageUrl: null,
+      durationDays: 2,
+    },
+    organization: {
+      id: TEST_ORG,
+      name: 'Test Gym',
+      slug: 'test-gym',
+      logoUrl: null,
+    },
+    days: courseDays(),
+    completedCourseWorkoutIds: [],
+    currentDayOffset: 0,
+    totalCompletedDays: 0,
+    sessions: [],
+    materials: [],
+    ...overrides,
+  };
+}
+
+/** GET /me/courses/:id/workouts/:workoutId payload. */
+export function courseWorkoutDetail(
+  overrides: Partial<CourseWorkoutDetail> = {},
+): CourseWorkoutDetail {
+  return {
+    id: 'w_course_1',
+    title: 'Foundations A',
+    description: null,
+    sections: [
+      {
+        id: 'cw_sec_1',
+        type: 'strength',
+        title: null,
+        description: null,
+        shape: null,
+        config: null,
+        sortOrder: 0,
+        movements: [
+          {
+            id: 'cw_mv_1',
+            sortOrder: 0,
+            label: null,
+            supersetGroup: null,
+            prescription: null,
+            notes: null,
+            exercise: {
+              id: 'ex_kb_swing',
+              name: 'Kettlebell Swing',
+              slug: 'kettlebell-swing',
+            },
+          },
+        ],
+      },
+    ],
+    ...overrides,
+  };
 }
 
 let announcementSeq = 0;

@@ -46,9 +46,10 @@ export default function ShopScreen() {
   const subsQ = useMySubscription(orgId);
   const purchase = usePurchasePlan(orgId);
 
-  // TODO(FIT-203): course-type plans need the dedicated course checkout +
-  // a library player that mobile doesn't have yet — hide them until
-  // courses GA on mobile.
+  // Course-type plans are hidden DELIBERATELY (FIT-203): course checkout
+  // stays on the web storefront (selling digital content in-app triggers
+  // store IAP rules, and the API blocks course plans on the generic
+  // purchase path anyway). Owned courses render in the Courses tab.
   const plans = (plansQ.data?.data ?? []).filter((p) => p.type !== 'course');
   const hasPaymentProvider = payQ.data?.data?.isActive === true;
   const subs = useMemo(() => subsQ.data?.data ?? [], [subsQ.data]);

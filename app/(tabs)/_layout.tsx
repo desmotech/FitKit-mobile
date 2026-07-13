@@ -12,6 +12,8 @@ import {
   useOrgPrograms,
 } from '@/hooks/use-workouts';
 import { usePaymentConfig, usePlans } from '@/hooks/use-shop';
+import { useMyCourses } from '@/hooks/use-courses';
+import { useCoursesStrings } from '@/i18n/use-courses-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const Label = NativeTabs.Trigger.Label;
@@ -38,9 +40,10 @@ export default function TabsLayout() {
   const orgPrograms = useOrgPrograms(orgId);
   const showSchedule = hasScheduleProgram(orgPrograms.data?.data);
   // Shop tab: only when the org has an active payment provider AND ≥1
-  // shoppable plan. TODO(FIT-203): course-type plans are excluded — mobile
-  // can't fulfill them yet, so an org with only course plans shouldn't
-  // surface an (empty) Shop tab.
+  // shoppable plan. Course-type plans are excluded DELIBERATELY (FIT-203):
+  // course checkout is web-storefront-only (in-app sale of digital content
+  // triggers store IAP rules), so an org with only course plans shouldn't
+  // surface an (empty) Shop tab. Owned courses surface via the Courses tab.
   const plans = usePlans(orgId);
   const paymentConfig = usePaymentConfig(orgId);
   const shoppablePlanCount = (plans.data?.data ?? []).filter(
@@ -48,6 +51,15 @@ export default function TabsLayout() {
   ).length;
   const shouldShowShop =
     paymentConfig.data?.data?.isActive === true && shoppablePlanCount > 0;
+  // Courses tab: only when the member OWNS ≥1 course (entitlements are
+  // user-scoped and cross-org — `/me/courses` ignores the active org).
+  // Consumption only: purchasing stays on the web storefront, so a member
+  // with no entitlements never sees the tab.
+  const myCourses = useMyCourses();
+  const coursesStrings = useCoursesStrings();
+  const hasCourses = (myCourses.data?.data ?? []).some(
+    (e) => !e.accessRevokedAt,
+  );
   const incompleteForms = useIncompleteFormsCount(activeOrganization?.id);
   // Single owner of the native app-icon badge: server unread total + forms.
   useAppIconBadge(activeOrganization?.id);
@@ -96,6 +108,15 @@ export default function TabsLayout() {
               <Icon
                 sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
                 drawable="ic_menu_compass"
+              />
+            </NativeTabs.Trigger>
+          ) : null}
+          {hasCourses ? (
+            <NativeTabs.Trigger name="courses">
+              <Label>{coursesStrings.tabLabel}</Label>
+              <Icon
+                sf={{ default: 'book', selected: 'book.fill' }}
+                drawable="ic_menu_slideshow"
               />
             </NativeTabs.Trigger>
           ) : null}
