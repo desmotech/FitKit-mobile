@@ -18,7 +18,6 @@
  */
 import { useRouter } from 'expo-router';
 import {
-  AlertCircle,
   Bell,
   ChevronLeft,
   ChevronRight,
@@ -69,7 +68,6 @@ export default function AnnouncementsScreen() {
     empty: annT.empty ?? 'No announcements yet',
     emptyHint:
       annT.emptyHint ?? 'Announcements from your studio will appear here.',
-    priority: annT.priority ?? 'Priority',
     backToList: commonT.back ?? 'Back',
     done: commonT.done ?? 'Done',
     loadFailed: annT.loadFailed ?? "Couldn't load announcements",
@@ -151,7 +149,6 @@ export default function AnnouncementsScreen() {
           announcement={selected}
           isRTL={isRTL}
           dateFmt={dateFmt}
-          priorityLabel={labels.priority}
           colors={colors}
         />
       ) : listQuery.isLoading ? (
@@ -213,7 +210,6 @@ export default function AnnouncementsScreen() {
                 announcement={item}
                 isRTL={isRTL}
                 dateFmt={dateFmt}
-                priorityLabel={labels.priority}
                 onPress={() => {
                   haptics.tap();
                   setSelectedId(item.id);
@@ -233,13 +229,11 @@ function AnnouncementRow({
   announcement,
   isRTL,
   dateFmt,
-  priorityLabel,
   onPress,
 }: {
   announcement: AnnouncementResponse;
   isRTL: boolean;
   dateFmt: Intl.DateTimeFormat;
-  priorityLabel: string;
   onPress: () => void;
 }) {
   const colors = useFKColors();
@@ -291,38 +285,6 @@ function AnnouncementRow({
                   gap: 8,
                 }}
               >
-                {announcement.priority ? (
-                  <View
-                    style={{
-                      paddingHorizontal: 6,
-                      paddingVertical: 2,
-                      borderRadius: 6,
-                      backgroundColor: 'rgba(184,74,64,0.10)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(184,74,64,0.32)',
-                      flexDirection: isRTL ? 'row-reverse' : 'row',
-                      alignItems: 'center',
-                      gap: 3,
-                    }}
-                  >
-                    <AlertCircle
-                      size={10}
-                      color="#B84A40"
-                      strokeWidth={2.4}
-                    />
-                    <Text
-                      style={{
-                        fontSize: 9,
-                        fontWeight: '800',
-                        color: '#B84A40',
-                        letterSpacing: 0.4,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {priorityLabel}
-                    </Text>
-                  </View>
-                ) : null}
                 <Text
                   className="font-display"
                   numberOfLines={1}
@@ -402,48 +364,16 @@ function AnnouncementDetail({
   announcement,
   isRTL,
   dateFmt,
-  priorityLabel,
   colors,
 }: {
   announcement: AnnouncementResponse;
   isRTL: boolean;
   dateFmt: Intl.DateTimeFormat;
-  priorityLabel: string;
   colors: ReturnType<typeof useFKColors>;
 }) {
   return (
     <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
       <Animated.View entering={FadeIn.duration(220)} style={{ gap: 14 }}>
-        {announcement.priority ? (
-          <View
-            style={{
-              alignSelf: isRTL ? 'flex-end' : 'flex-start',
-              paddingHorizontal: 8,
-              paddingVertical: 3,
-              borderRadius: 8,
-              backgroundColor: 'rgba(184,74,64,0.10)',
-              borderWidth: 1,
-              borderColor: 'rgba(184,74,64,0.32)',
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <AlertCircle size={12} color="#B84A40" strokeWidth={2.4} />
-            <Text
-              style={{
-                fontSize: 10,
-                fontWeight: '800',
-                color: '#B84A40',
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              {priorityLabel}
-            </Text>
-          </View>
-        ) : null}
-
         <Text
           className="font-display"
           style={{

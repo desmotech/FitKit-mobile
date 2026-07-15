@@ -154,7 +154,6 @@ export function announcement(
     authorRole: 'coach',
     title: `Announcement ${announcementSeq}`,
     content: 'Body text',
-    priority: false,
     createdAt: '2026-07-01T10:00:00.000Z',
     readAt: null,
     readCount: 0,
