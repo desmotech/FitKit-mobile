@@ -11,6 +11,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
 import { bodyFamily } from '@/lib/type';
@@ -23,6 +24,9 @@ export function FKActionBar({ children }: { children: ReactNode }) {
   // pad enough to sit just above it (not behind it). A near-opaque warm
   // chrome (no BlurView — its native layer washes out child button fills).
   const dockTop = useTabBarTop();
+  // An open keyboard covers the dock, so reserving space for it would strand
+  // the buttons in a dead band above the keys. Hug the keyboard instead.
+  const keyboardVisible = useKeyboardState((s) => s.isVisible);
   return (
     <View
       style={{
@@ -30,7 +34,7 @@ export function FKActionBar({ children }: { children: ReactNode }) {
         gap: 10,
         paddingHorizontal: 18,
         paddingTop: 14,
-        paddingBottom: dockTop + 8,
+        paddingBottom: (keyboardVisible ? 0 : dockTop) + 8,
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: colors.border,
         backgroundColor: colors.isDark
