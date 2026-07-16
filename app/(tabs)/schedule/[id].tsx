@@ -66,7 +66,7 @@ export default function SessionDetailScreen() {
     t: Record<string, unknown>;
   };
   const { dir, lang, t } = i18n;
-  const { activeOrganization } = useCurrentUser();
+  const { activeOrganization, isOwner, isAdmin, isCoach } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
@@ -238,6 +238,9 @@ export default function SessionDetailScreen() {
   const isWaitlisted = session.myBookingStatus === 'waitlisted';
   const isFull =
     session.capacity != null && session.capacityRemaining === 0;
+  // Members see only their booking state — never a raw count. With waitlist
+  // now unlimited-when-on, the count is misleading (FIT-243). Staff keep it.
+  const isStaffViewer = session.isStaff === true || isOwner || isAdmin || isCoach;
   const isCheckedIn = !!session.myCheckedInAt;
   const duration = differenceInMinutes(session.startsAt, session.endsAt);
   const coachName = session.coach
@@ -458,7 +461,7 @@ export default function SessionDetailScreen() {
               isFull={isFull}
               labels={labels}
             />
-            {session.capacity != null ? (
+            {isStaffViewer && session.capacity != null ? (
               <Text
                 className="text-muted-foreground"
                 style={{ fontSize: 12, fontFamily: 'Assistant-Medium' }}
