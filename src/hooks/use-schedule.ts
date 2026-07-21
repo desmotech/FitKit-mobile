@@ -20,10 +20,13 @@ export interface ScheduleAttendee {
 }
 
 export interface ScheduleCoach {
-  id: string;
+  /** Membership id for an org-member coach; null for a one-time external
+   *  (guest) coach, whose display name arrives in firstName. */
+  id: string | null;
   firstName: string | null;
   lastName: string | null;
   imageUrl: string | null;
+  isExternal?: boolean;
 }
 
 export interface ScheduleClassType {
