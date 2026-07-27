@@ -19,15 +19,12 @@
  *   </FKSubScreen>
  */
 import { Plus } from 'lucide-react-native';
-import type { ComponentProps, ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { Pressable, ScrollView, View, type ViewStyle } from 'react-native';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  View,
-  type ViewStyle,
-} from 'react-native';
+  KeyboardAwareScrollView,
+  KeyboardStickyView,
+} from 'react-native-keyboard-controller';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { FKActionBar } from './action-bar';
@@ -65,7 +62,8 @@ export function FKSubScreen({
   actions?: ReactNode;
   /** Plain flex body instead of a ScrollView (forms that manage their own scroll). */
   scroll?: boolean;
-  /** Wrap the body + ActionBar in KeyboardAvoidingView (forms with inputs). */
+  /** Forms with inputs: scroll the focused field above the keyboard and let
+   *  the ActionBar ride on top of it (instead of shrinking the whole body). */
   keyboardAvoiding?: boolean;
   /** Pull-to-refresh for list screens. */
   refreshControl?: ComponentProps<typeof ScrollView>['refreshControl'];
@@ -81,6 +79,10 @@ export function FKSubScreen({
   const onPrimary = colors.isDark ? '#04201E' : '#FFFFFF';
   // With an ActionBar the bar clears the dock; without one the scroll must.
   const scrollPad = actions ? 16 : dockPad;
+  // The sticky ActionBar rides above the keyboard and overlaps the scroll, so
+  // the focused field has to clear both. Measured — the bar's height changes
+  // with the keyboard (it drops its dock reservation when the keys are up).
+  const [actionsHeight, setActionsHeight] = useState(0);
 
   const trailing =
     headerTrailing ??
@@ -114,28 +116,10 @@ export function FKSubScreen({
       </Pressable>
     ) : undefined);
 
-  const body = (
-    <>
-      {scroll ? (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={refreshControl}
-          onScroll={onScroll}
-          scrollEventThrottle={scrollEventThrottle}
-          contentContainerStyle={[
-            { padding: 20, paddingBottom: scrollPad, gap: 16 },
-            contentStyle,
-          ]}
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[{ flex: 1, padding: 20 }, contentStyle]}>{children}</View>
-      )}
-      {actions ? <FKActionBar>{actions}</FKActionBar> : null}
-    </>
-  );
+  // Forms scroll the focused input clear of the keyboard; everything else is a
+  // plain ScrollView. Never a KeyboardAvoidingView: padding the body shrinks
+  // the form into a sliver and strands the ActionBar mid-screen.
+  const Scroller = keyboardAvoiding ? KeyboardAwareScrollView : ScrollView;
 
   return (
     <View style={{ flex: 1 }}>
@@ -146,16 +130,34 @@ export function FKSubScreen({
         backLabel={backLabel ?? null}
         trailing={trailing}
       />
-      {keyboardAvoiding ? (
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ flex: 1 }}
+      {scroll ? (
+        <Scroller
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          {...(keyboardAvoiding
+            ? { bottomOffset: actionsHeight + 12 }
+            : null)}
+          refreshControl={refreshControl}
+          onScroll={onScroll}
+          scrollEventThrottle={scrollEventThrottle}
+          contentContainerStyle={[
+            { padding: 20, paddingBottom: scrollPad, gap: 16 },
+            contentStyle,
+          ]}
         >
-          {body}
-        </KeyboardAvoidingView>
+          {children}
+        </Scroller>
       ) : (
-        body
+        <View style={[{ flex: 1, padding: 20 }, contentStyle]}>{children}</View>
       )}
+      {actions ? (
+        <KeyboardStickyView
+          enabled={keyboardAvoiding}
+          onLayout={(e) => setActionsHeight(e.nativeEvent.layout.height)}
+        >
+          <FKActionBar>{actions}</FKActionBar>
+        </KeyboardStickyView>
+      ) : null}
     </View>
   );
 }

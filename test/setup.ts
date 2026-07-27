@@ -71,6 +71,12 @@ afterEach(() => {
   resetClerkMocks();
 });
 
+// react-native-keyboard-controller binds native keyboard events at import
+// time; its official mock stands in for the native module under Jest.
+jest.mock('react-native-keyboard-controller', () =>
+  require('react-native-keyboard-controller/jest'),
+);
+
 // AsyncStorage backs the query persister and settings-store; use the
 // official in-memory mock.
 jest.mock('@react-native-async-storage/async-storage', () =>

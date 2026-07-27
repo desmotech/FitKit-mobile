@@ -112,6 +112,10 @@ export default function GoalCreateScreen() {
 
   const search = useExerciseSearch(orgId, exercise ? '' : debouncedQuery);
   const results = search.data?.data ?? [];
+  // Until the debounce catches up the query hasn't run yet — without this the
+  // list flashes "no matches" at every keystroke.
+  const isSearching =
+    search.isLoading || exerciseQuery.trim() !== debouncedQuery;
 
   const mutation = useApiSend<unknown, unknown>({
     path: orgId ? `/organizations/${orgId}/goals/me` : '',
@@ -306,9 +310,9 @@ export default function GoalCreateScreen() {
                   }}
                 />
               </View>
-              {exerciseQuery.length >= 2 && (
+              {exerciseQuery.trim().length >= 2 && (
                 <View style={{ gap: 6 }}>
-                  {search.isLoading ? (
+                  {isSearching ? (
                     <Skeleton className="h-12 w-full rounded-xl" />
                   ) : results.length === 0 ? (
                     <Text
