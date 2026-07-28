@@ -27,6 +27,31 @@ const INTERVAL_KEY: Record<PlanInterval, string> = {
   yearly: 'perYear',
 };
 
+/**
+ * `shop.planCard.classCredits` / `creditsLeft` are plain `{count}` template
+ * strings in older @fitkit/shared releases but pluralization objects
+ * (`{one, two, other}`) in newer ones — accept both so a dictionary bump
+ * can't crash the card.
+ */
+function pluralized(value: unknown, count: number, fallback: string): string {
+  const template =
+    typeof value === 'string'
+      ? value
+      : value && typeof value === 'object'
+        ? (() => {
+            const forms = value as Record<string, unknown>;
+            const form =
+              count === 1
+                ? (forms.one ?? forms.other)
+                : count === 2
+                  ? (forms.two ?? forms.other)
+                  : forms.other;
+            return typeof form === 'string' ? form : undefined;
+          })()
+        : undefined;
+  return (template ?? fallback).replace('{count}', String(count));
+}
+
 export function PlanCard({
   plan,
   isCurrent = false,
@@ -35,6 +60,8 @@ export function PlanCard({
   hasPaymentProvider,
   loading = false,
   onSelect,
+  switchMode = false,
+  switchLabel,
 }: {
   plan: PlanResponse;
   isCurrent?: boolean;
@@ -44,6 +71,12 @@ export function PlanCard({
   hasPaymentProvider: boolean;
   loading?: boolean;
   onSelect?: () => void;
+  /** FIT-271: the member already holds another recurring subscription, so
+   *  the CTA becomes "Switch to this plan" (plan change) instead of a fresh
+   *  purchase. Stays tappable even without an active payment provider — a
+   *  downgrade schedules without any charge. */
+  switchMode?: boolean;
+  switchLabel?: string;
 }) {
   const { t, lang, dir } = useI18n();
   const colors = useFKColors();
@@ -60,23 +93,24 @@ export function PlanCard({
         pc.perMonth ??
         `/${plan.interval}`)
       : plan.type === 'class_pack' && plan.classCredits
-        ? (pc.classCredits ?? '{count} classes').replace(
-            '{count}',
-            String(plan.classCredits),
-          )
+        ? pluralized(pc.classCredits, plan.classCredits, '{count} classes')
         : (pc.dropIn ?? 'Single visit');
 
   const price = formatPrice(plan.priceInCents, plan.currency, lang);
 
   const isPaidWithoutProvider = plan.priceInCents > 0 && !hasPaymentProvider;
-  const disabled = loading || isCurrent || isPaidWithoutProvider;
-  const ctaLabel = isCurrent
-    ? (pc.currentPlan ?? 'Current Plan')
-    : isPending
-      ? (pc.resumePayment ?? 'Resume Payment')
-      : isPaidWithoutProvider
-        ? (pc.paymentUnavailable ?? 'Payment Unavailable')
-        : (pc.purchase ?? 'Purchase');
+  const disabled = switchMode
+    ? loading
+    : loading || isCurrent || isPaidWithoutProvider;
+  const ctaLabel = switchMode
+    ? (switchLabel ?? 'Switch to this plan')
+    : isCurrent
+      ? (pc.currentPlan ?? 'Current Plan')
+      : isPending
+        ? (pc.resumePayment ?? 'Resume Payment')
+        : isPaidWithoutProvider
+          ? (pc.paymentUnavailable ?? 'Payment Unavailable')
+          : (pc.purchase ?? 'Purchase');
 
   return (
     <FKCard
@@ -115,10 +149,7 @@ export function PlanCard({
           <FKChip tone="success">{pc.currentPlan ?? 'Current Plan'}</FKChip>
         ) : creditsLeft != null && creditsLeft > 0 ? (
           <FKChip tone="primary">
-            {(pc.creditsLeft ?? '{count} credits left').replace(
-              '{count}',
-              String(creditsLeft),
-            )}
+            {pluralized(pc.creditsLeft, creditsLeft, '{count} credits left')}
           </FKChip>
         ) : null}
       </View>

@@ -23,6 +23,31 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
+// jest-expo's expo-constants carries no `extra` (app.config's env mapping
+// doesn't run under jest), so give the analytics singleton a PostHog key
+// here — without one the (mocked) PostHog client never constructs and
+// feature flags could never be staged. Must live in THIS file: ./msw's
+// import chain loads @/lib/api, which snapshots expo-constants at load.
+// Harmless otherwise — analytics stays consent-gated (off by default).
+jest.mock('expo-constants', () => {
+  const actual = jest.requireActual('expo-constants');
+  const base = actual.default ?? actual;
+  return {
+    __esModule: true,
+    ...actual,
+    default: {
+      ...base,
+      expoConfig: {
+        ...(base.expoConfig ?? {}),
+        extra: {
+          ...(base.expoConfig?.extra ?? {}),
+          posthogKey: 'phc_test',
+        },
+      },
+    },
+  };
+});
+
 // Official in-memory mock: insets are zero, which is fine for behavior tests.
 // It exposes everything on `default`, so spread it up for named imports.
 jest.mock('react-native-safe-area-context', () => {
@@ -151,9 +176,22 @@ jest.mock('posthog-react-native', () => {
     optIn: jest.fn(),
     optOut: jest.fn(),
     screen: jest.fn(),
+    group: jest.fn(),
+    register: jest.fn(),
+    getSessionId: jest.fn(),
+    // Feature flags (use-feature-flag.ts): default = flag undecided/off.
+    // Specs override getFeatureFlag's return to stage a flag ON.
+    getFeatureFlag: jest.fn(),
+    onFeatureFlags: jest.fn(() => () => {}),
+    reloadFeatureFlags: jest.fn(),
   };
+  const PostHogCtor = jest.fn(() => client);
   return {
-    PostHog: jest.fn(() => client),
+    __esModule: true,
+    // src/lib/analytics.ts constructs via the DEFAULT export; specs stage
+    // flags through the named one — both must be the same jest.fn.
+    default: PostHogCtor,
+    PostHog: PostHogCtor,
     PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
     usePostHog: () => client,
   };

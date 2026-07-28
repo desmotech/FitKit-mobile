@@ -10,11 +10,14 @@ const TOKEN_CACHE_TTL = 10_000;
 const REQUEST_TIMEOUT_MS = 20_000;
 
 /** Error thrown when the API responds with a non-2xx status. `status`
- *  lets callers (react-query retry logic, AuthGate) branch on 401. */
+ *  lets callers (react-query retry logic, AuthGate) branch on 401; `code`
+ *  carries the API's structured error code (e.g. `outstanding_balance`)
+ *  when the body includes one, so screens can map it to localized copy. */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -90,6 +93,7 @@ export function useApi() {
         // that races react-query retries and bypasses the AuthGate error
         // screen, which now owns the retry/sign-out UX.
         let message = `API error: ${res.status}`;
+        let code: string | undefined;
         try {
           const body = await res.json();
           if (body?.message) {
@@ -97,10 +101,11 @@ export function useApi() {
               ? body.message.join(', ')
               : String(body.message);
           }
+          if (typeof body?.code === 'string') code = body.code;
         } catch {
           // keep generic message
         }
-        throw new ApiError(message, res.status);
+        throw new ApiError(message, res.status, code);
       }
 
       return res.json();

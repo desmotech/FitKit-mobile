@@ -48,6 +48,19 @@ export const queryKeys = {
   subscriptions: {
     all: (orgId: string, filters?: Record<string, unknown>) =>
       ['/organizations', orgId, 'subscriptions', filters] as const,
+    changePlanPreview: (
+      orgId: string,
+      subscriptionId: string,
+      newPlanId: string,
+    ) =>
+      [
+        '/organizations',
+        orgId,
+        'subscriptions',
+        subscriptionId,
+        'change-plan-preview',
+        newPlanId,
+      ] as const,
   },
 
   // ── Member-app keys ────────────────────────────────────────────────

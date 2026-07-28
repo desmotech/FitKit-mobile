@@ -41,8 +41,13 @@ import {
   useRenewSubscription,
   useResumeCancellation,
 } from '@/hooks/use-feed-data';
+import { useGatedFeature } from '@/hooks/use-feature-flag';
 import { useHaptics } from '@/hooks/use-haptics';
+import { usePlans } from '@/hooks/use-shop';
+import { ScheduledPlanChangeBanner } from '@/components/profile/scheduled-plan-change-banner';
+import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
 import { paymentReturnUrl } from '@/lib/api';
+import { MEMBER_PLAN_CHANGE_FLAG, getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -144,12 +149,43 @@ export default function PaymentsScreen() {
   });
   const activeMethod = methodsData?.data?.find((m) => m.isActive);
 
-  const activeSub = subs.data?.data?.find(
-    (s) =>
-      s.status === 'active' ||
-      s.status === 'past_due' ||
-      (s as unknown as { status: string }).status === 'debt',
+  // The "Membership" card anchors on the member's recurring subscription.
+  // Members can also hold consumables (class packs / drop-ins) at the same
+  // time — those are never the "current plan", so a live subscription-type
+  // sub wins over them regardless of list order; consumables only fill the
+  // card when no recurring subscription exists at all.
+  const liveSubs =
+    subs.data?.data?.filter(
+      (s) =>
+        s.status === 'active' ||
+        s.status === 'past_due' ||
+        (s as unknown as { status: string }).status === 'debt',
+    ) ?? [];
+  const activeSub =
+    liveSubs.find((s) => s.plan.type === 'subscription') ?? liveSubs[0];
+
+  // Member plan-change (FIT-271) — same PostHog per-org gate as web
+  // (fail-closed; entry points render nothing until the flag resolves true).
+  const { enabled: changePlanEnabled } = useGatedFeature(
+    MEMBER_PLAN_CHANGE_FLAG,
   );
+  const plansQ = usePlans(orgId);
+  const orgPlans = plansQ.data?.data ?? [];
+  const changePlanStrings = usePlanChangeStrings();
+  const showChangePlan =
+    changePlanEnabled &&
+    activeSub?.status === 'active' &&
+    activeSub.plan.type === 'subscription';
+  const hasScheduledChange = !!(activeSub && getPlanChangeSchedule(activeSub));
+
+  const handleChangePlan = () => {
+    if (!activeSub) return;
+    haptics.tap();
+    router.push({
+      pathname: '/change-plan',
+      params: { sub: activeSub.id },
+    });
+  };
 
   const transactions = txnData?.data ?? [];
   const isDebt = (activeSub?.status as unknown as string) === 'debt';
@@ -316,21 +352,39 @@ export default function PaymentsScreen() {
         {subs.isLoading ? (
           <Skeleton style={{ height: 160, borderRadius: 20 }} />
         ) : activeSub ? (
-          <SubscriptionCard
-            sub={activeSub}
-            isRTL={isRTL}
-            colors={colors}
-            labels={labels}
-            statusLabels={membershipStatus}
-            onRenew={handleRenew}
-            isRenewing={renew.isPending && renew.variables === activeSub.id}
-            onCancel={handleCancel}
-            onResume={handleResume}
-            isResuming={resume.isPending}
-            intervalLabel={intervalLabel}
-            formatAmount={formatAmount}
-            lang={lang}
-          />
+          <>
+            <SubscriptionCard
+              sub={activeSub}
+              isRTL={isRTL}
+              colors={colors}
+              labels={labels}
+              statusLabels={membershipStatus}
+              onRenew={handleRenew}
+              isRenewing={renew.isPending && renew.variables === activeSub.id}
+              onCancel={handleCancel}
+              onResume={handleResume}
+              isResuming={resume.isPending}
+              intervalLabel={intervalLabel}
+              formatAmount={formatAmount}
+              lang={lang}
+              onChangePlan={showChangePlan ? handleChangePlan : null}
+              changePlanLabel={changePlanStrings.changePlanButton}
+            />
+            {/* Pending scheduled plan change — the scheduled-cancel banner
+                (inside the card) wins when both could apply; the API's
+                one-pending-action invariant means they can't truly coexist. */}
+            {orgId &&
+            changePlanEnabled &&
+            hasScheduledChange &&
+            !(activeSub as unknown as { cancelAtPeriodEnd?: boolean })
+              .cancelAtPeriodEnd ? (
+              <ScheduledPlanChangeBanner
+                orgId={orgId}
+                subscription={activeSub}
+                plans={orgPlans}
+              />
+            ) : null}
+          </>
         ) : null}
 
         {/* ── Payment method — only shown when a card is on file.
@@ -460,6 +514,8 @@ function SubscriptionCard({
   intervalLabel,
   formatAmount,
   lang,
+  onChangePlan,
+  changePlanLabel,
 }: {
   sub: SubscriptionLite | SubscriptionWithPlan;
   isRTL: boolean;
@@ -483,6 +539,10 @@ function SubscriptionCard({
   intervalLabel: string;
   formatAmount: (cents: number, currency: string) => string;
   lang: string;
+  /** Member plan-change entry (FIT-271) — null hides the action (flag off
+   *  or the sub isn't an active recurring subscription). */
+  onChangePlan?: (() => void) | null;
+  changePlanLabel?: string;
 }) {
   const status = sub.status;
   const showRenew = status === 'past_due' || status === 'cancelled';
@@ -673,20 +733,44 @@ function SubscriptionCard({
         />
       )}
 
-      {showCancel && !scheduledToCancel && (
-        <Pressable
-          onPress={onCancel}
-          hitSlop={8}
+      {(onChangePlan || (showCancel && !scheduledToCancel)) && (
+        <View
           style={{
-            alignSelf: isRTL ? 'flex-start' : 'flex-end',
-            paddingVertical: 6,
-            paddingHorizontal: 4,
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}>
-            {labels.cancelAction}
-          </Text>
-        </Pressable>
+          {onChangePlan ? (
+            <Pressable
+              onPress={onChangePlan}
+              hitSlop={8}
+              testID="change-plan-btn"
+              style={{ paddingVertical: 6, paddingHorizontal: 4 }}
+            >
+              <Text
+                style={{ fontSize: 13, fontWeight: '700', color: '#0E8C8C' }}
+              >
+                {changePlanLabel}
+              </Text>
+            </Pressable>
+          ) : (
+            <View />
+          )}
+          {showCancel && !scheduledToCancel ? (
+            <Pressable
+              onPress={onCancel}
+              hitSlop={8}
+              style={{ paddingVertical: 6, paddingHorizontal: 4 }}
+            >
+              <Text
+                style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}
+              >
+                {labels.cancelAction}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       )}
     </FKGlassPanel>
   );
