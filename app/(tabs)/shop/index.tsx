@@ -11,15 +11,19 @@ import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import type { PlanResponse } from '@fitkit/shared';
 import { FKAmbientBackdrop, MemberHeader, useFKColors } from '@/components/fk';
 import { PlanCard } from '@/components/shop/plan-card';
+import { SwitchPlanPicker } from '@/components/shop/switch-plan-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import { usePaymentConfig, usePlans, usePurchasePlan } from '@/hooks/use-shop';
 import { paymentReturnUrl } from '@/lib/api';
+import { MEMBER_PLAN_CHANGE_FLAG } from '@/lib/plan-change';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import * as analytics from '@/lib/analytics';
 import { displayFamily } from '@/lib/type';
+import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const RETURN_PATH = 'shop/payment-return';
@@ -87,6 +91,35 @@ export default function ShopScreen() {
 
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ── Switch-to-this-plan (FIT-271, flag `member-plan-change`) ────────
+  // Fail-closed: until PostHog affirms the flag, cards keep the plain
+  // purchase CTA. Switching is only offered on subscription-type target
+  // plans, to members already holding ≥1 active recurring subscription.
+  const switchPlanEnabled = useFeatureFlag(MEMBER_PLAN_CHANGE_FLAG);
+  const planChangeStrings = usePlanChangeStrings();
+  const [pickerPlanId, setPickerPlanId] = useState<string | null>(null);
+  const activeSubscriptionSubs = useMemo(
+    () =>
+      subs.filter(
+        (s) => s.status === 'active' && s.plan?.type === 'subscription',
+      ),
+    [subs],
+  );
+
+  const handleSwitchClick = useCallback(
+    (planId: string) => {
+      if (activeSubscriptionSubs.length === 1) {
+        router.push({
+          pathname: '/change-plan',
+          params: { sub: activeSubscriptionSubs[0].id, plan: planId },
+        });
+      } else if (activeSubscriptionSubs.length > 1) {
+        setPickerPlanId(planId);
+      }
+    },
+    [activeSubscriptionSubs, router],
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -257,6 +290,16 @@ export default function ShopScreen() {
             {plans.map((plan) => {
               const isConsumable =
                 plan.type === 'class_pack' || plan.type === 'drop_in';
+              // "Switch to this plan" (FIT-271): a different subscription-type
+              // plan, while the member holds ≥1 active recurring sub and has
+              // nothing pending on this plan. Consumables never switch —
+              // they're bought alongside, not moved onto.
+              const canSwitch =
+                switchPlanEnabled &&
+                plan.type === 'subscription' &&
+                !currentByPlanId[plan.id] &&
+                !pendingByPlanId[plan.id] &&
+                activeSubscriptionSubs.length > 0;
               return (
                 <PlanCard
                   key={plan.id}
@@ -273,13 +316,35 @@ export default function ShopScreen() {
                   isPending={!!pendingByPlanId[plan.id]}
                   hasPaymentProvider={hasPaymentProvider}
                   loading={pendingPlanId === plan.id}
-                  onSelect={() => handleSelect(plan)}
+                  switchMode={canSwitch}
+                  switchLabel={planChangeStrings.switchToThisPlan}
+                  onSelect={() =>
+                    canSwitch ? handleSwitchClick(plan.id) : handleSelect(plan)
+                  }
                 />
               );
             })}
           </View>
         )}
       </ScrollView>
+
+      {/* Which subscription to move — only reachable with >1 active
+          recurring sub; a single sub goes straight to the sheet. */}
+      <SwitchPlanPicker
+        open={pickerPlanId !== null}
+        subscriptions={activeSubscriptionSubs}
+        onClose={() => setPickerPlanId(null)}
+        onSelect={(sub) => {
+          const targetPlanId = pickerPlanId;
+          setPickerPlanId(null);
+          if (targetPlanId) {
+            router.push({
+              pathname: '/change-plan',
+              params: { sub: sub.id, plan: targetPlanId },
+            });
+          }
+        }}
+      />
     </View>
   );
 }

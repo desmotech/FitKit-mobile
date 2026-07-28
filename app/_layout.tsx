@@ -207,6 +207,13 @@ function RootLayout() {
                       name="announcements"
                       options={{ presentation: 'pageSheet' }}
                     />
+                    {/* Member plan-change sheet (FIT-271). Root-level so
+                        both entry points can present it: Profile → Payments
+                        ("Change plan") and Shop ("Switch to this plan"). */}
+                    <Stack.Screen
+                      name="change-plan"
+                      options={{ presentation: 'pageSheet' }}
+                    />
                     <Stack.Screen
                       name="+not-found"
                       options={{ headerShown: true, title: 'Not found' }}

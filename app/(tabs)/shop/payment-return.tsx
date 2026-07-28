@@ -12,6 +12,7 @@ import { FKAmbientBackdrop, FKButton, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
 import * as analytics from '@/lib/analytics';
 import { queryKeys } from '@/lib/query-keys';
 import { displayFamily } from '@/lib/type';
@@ -30,15 +31,29 @@ export default function PaymentReturnScreen() {
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
-  const params = useLocalSearchParams<{ status?: string; sub?: string }>();
+  const params = useLocalSearchParams<{
+    status?: string;
+    sub?: string;
+    planChange?: string;
+    plan?: string;
+  }>();
   const isSuccess = params.status === 'success';
   const subId = typeof params.sub === 'string' ? params.sub : undefined;
+  // Plan-change checkout (FIT-271): an upgrade REPLACES the subscription
+  // row, so there's no stable sub id to poll for — we watch for an active
+  // sub on the TARGET plan instead (mirrors web's payment-return).
+  const isPlanChange = params.planChange === '1';
+  const targetPlanId = typeof params.plan === 'string' ? params.plan : undefined;
 
   const prT = ((t as unknown as Record<string, Record<string, unknown>>).shop
     ?.paymentReturn ?? {}) as Record<string, string>;
+  const planChangeStrings = usePlanChangeStrings();
 
   const [state, setState] = useState<VerifyState>(
     isSuccess ? 'verifying' : 'cancelled',
+  );
+  const [confirmedPlanName, setConfirmedPlanName] = useState<string | null>(
+    null,
   );
 
   // fetchWithAuth has an unstable identity (Clerk getToken) — keep it in a
@@ -74,10 +89,17 @@ export default function PaymentReturnScreen() {
           `/organizations/${orgId}/subscriptions/my`,
         )) as { data: SubscriptionWithPlan[] };
         const list = res?.data ?? [];
-        const activated = subId
-          ? list.some((s) => s.id === subId && s.status === 'active')
-          : list.some((s) => s.status === 'active');
+        const match =
+          isPlanChange && targetPlanId
+            ? list.find(
+                (s) => s.planId === targetPlanId && s.status === 'active',
+              )
+            : subId
+              ? list.find((s) => s.id === subId && s.status === 'active')
+              : list.find((s) => s.status === 'active');
+        const activated = !!match;
         if (activated) {
+          if (isPlanChange) setConfirmedPlanName(match.plan?.name ?? null);
           invalidate();
           analytics.track('member_payment_return_success', {
             org_id: orgId,
@@ -107,7 +129,7 @@ export default function PaymentReturnScreen() {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [isSuccess, orgId, subId, queryClient]);
+  }, [isSuccess, orgId, subId, isPlanChange, targetPlanId, queryClient]);
 
   const view =
     state === 'verifying'
@@ -119,8 +141,15 @@ export default function PaymentReturnScreen() {
       : state === 'confirmed'
         ? {
             icon: <CheckCircle2 size={56} color="#7A8A5C" strokeWidth={1.8} />,
-            title: prT.successTitle ?? 'Payment Successful!',
-            desc: prT.successDesc ?? 'Your subscription has been activated.',
+            title: isPlanChange
+              ? planChangeStrings.returnSuccessTitle.replace(
+                  '{plan}',
+                  confirmedPlanName ?? '—',
+                )
+              : (prT.successTitle ?? 'Payment Successful!'),
+            desc: isPlanChange
+              ? planChangeStrings.returnSuccessDesc
+              : (prT.successDesc ?? 'Your subscription has been activated.'),
           }
         : state === 'pending'
           ? {
@@ -133,9 +162,10 @@ export default function PaymentReturnScreen() {
           : {
               icon: <XCircle size={56} color={colors.mutedFg} strokeWidth={1.8} />,
               title: prT.cancelledTitle ?? 'Payment Cancelled',
-              desc:
-                prT.cancelledDesc ??
-                'No payment was made. You can try again from the shop.',
+              desc: isPlanChange
+                ? planChangeStrings.returnCancelledDesc
+                : (prT.cancelledDesc ??
+                  'No payment was made. You can try again from the shop.'),
             };
 
   return (
