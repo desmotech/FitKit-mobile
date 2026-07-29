@@ -26,6 +26,11 @@ import { useWatchExerciseDemo } from '@/hooks/use-exercise-demo';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import {
+  paymentErrorMessage,
+  usePaymentErrorStrings,
+} from '@/i18n/use-payment-error-strings';
+import { ApiError } from '@/hooks/use-api';
+import {
   type ClassSession,
   canCancelBooking,
   classBookState,
@@ -73,6 +78,7 @@ export default function SessionDetailScreen() {
   const watchDemo = useWatchExerciseDemo();
   const colors = useFKColors();
   const ps = useProgramSheetStrings();
+  const errorStrings = usePaymentErrorStrings();
   const scrollBottomPad = useTabBarPadding(100);
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -282,9 +288,14 @@ export default function SessionDetailScreen() {
       {
         onSuccess: () => haptics.success(),
         onError: (err) => {
+          // Structured codes (e.g. C3's booking-beyond-subscription-end
+          // guard) get localized copy; anything else falls back to the
+          // server message as before (FIT-272).
           Alert.alert(
             labels.bookFailed,
-            extractApiErrorMessage(err, labels.bookFailed),
+            err instanceof ApiError && err.code
+              ? paymentErrorMessage(errorStrings, err, lang)
+              : extractApiErrorMessage(err, labels.bookFailed),
           );
         },
         onSettled: () => setPending(null),

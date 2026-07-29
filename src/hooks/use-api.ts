@@ -12,12 +12,16 @@ const REQUEST_TIMEOUT_MS = 20_000;
 /** Error thrown when the API responds with a non-2xx status. `status`
  *  lets callers (react-query retry logic, AuthGate) branch on 401; `code`
  *  carries the API's structured error code (e.g. `outstanding_balance`)
- *  when the body includes one, so screens can map it to localized copy. */
+ *  when the body includes one, so screens can map it to localized copy;
+ *  `details` holds any other structured body fields some codes ship
+ *  alongside (e.g. `endsAt` on `booking_beyond_subscription_end`) —
+ *  mirrors web's fetchWithAuth, which spreads them onto the thrown error. */
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
     readonly code?: string,
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -94,6 +98,7 @@ export function useApi() {
         // screen, which now owns the retry/sign-out UX.
         let message = `API error: ${res.status}`;
         let code: string | undefined;
+        let details: Record<string, unknown> | undefined;
         try {
           const body = await res.json();
           if (body?.message) {
@@ -102,10 +107,14 @@ export function useApi() {
               : String(body.message);
           }
           if (typeof body?.code === 'string') code = body.code;
+          if (body && typeof body === 'object') {
+            const { message: _m, statusCode: _s, code: _c, ...rest } = body;
+            if (Object.keys(rest).length > 0) details = rest;
+          }
         } catch {
           // keep generic message
         }
-        throw new ApiError(message, res.status, code);
+        throw new ApiError(message, res.status, code, details);
       }
 
       return res.json();

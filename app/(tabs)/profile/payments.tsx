@@ -6,9 +6,11 @@
  *   2. Payment method on file (read-only)
  *   3. Transaction history (filtered list)
  *
- * Card update + cancel-with-reason are web-only for now (both flows
- * require a hosted-page redirect or multi-field input). Renew is wired
- * via `useRenewSubscription` from use-feed-data.
+ * Card add/update opens the provider's hosted registration page (FIT-272)
+ * — reachable from the payment-method panel, the no-card affordance, the
+ * debt banner, and the renew no-card alert. Cancel-with-reason lives in
+ * the cancel-subscription pageSheet. Renew is wired via
+ * `useRenewSubscription` from use-feed-data.
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -46,6 +48,11 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { usePlans } from '@/hooks/use-shop';
 import { ScheduledPlanChangeBanner } from '@/components/profile/scheduled-plan-change-banner';
 import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
+import {
+  paymentErrorMessage,
+  usePaymentErrorStrings,
+} from '@/i18n/use-payment-error-strings';
+import { ApiError } from '@/hooks/use-api';
 import { paymentReturnUrl } from '@/lib/api';
 import { MEMBER_PLAN_CHANGE_FLAG, getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
@@ -143,11 +150,14 @@ export default function PaymentsScreen() {
   const registerCard = useRegisterPaymentMethod(orgId);
   const [resolving, setResolving] = useState(false);
 
-  const { data: methodsData } = useApiQuery<{ data: PaymentMethodResponse[] }>({
+  const { data: methodsData, isLoading: methodsLoading } = useApiQuery<{
+    data: PaymentMethodResponse[];
+  }>({
     path: orgId ? `/organizations/${orgId}/payment-methods/my` : '',
     queryOptions: { enabled: !!orgId },
   });
   const activeMethod = methodsData?.data?.find((m) => m.isActive);
+  const errorStrings = usePaymentErrorStrings();
 
   // The "Membership" card anchors on the member's recurring subscription.
   // Members can also hold consumables (class packs / drop-ins) at the same
@@ -218,7 +228,24 @@ export default function PaymentsScreen() {
           queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
         });
       },
-      onError: () => haptics.error(),
+      // C1 (FIT-254) renew fails cleanly with structured codes — surface
+      // them; a member with no card on file gets a straight path to the
+      // hosted registration page instead of a dead end (FIT-272).
+      onError: (err) => {
+        haptics.error();
+        const message = paymentErrorMessage(errorStrings, err, lang);
+        if (
+          err instanceof ApiError &&
+          err.code === 'no_active_payment_method'
+        ) {
+          Alert.alert('', message, [
+            { text: errorStrings.cancel, style: 'cancel' },
+            { text: errorStrings.addCard, onPress: handleUpdateCard },
+          ]);
+        } else {
+          Alert.alert('', message);
+        }
+      },
     });
   };
 
@@ -387,10 +414,10 @@ export default function PaymentsScreen() {
           </>
         ) : null}
 
-        {/* ── Payment method — only shown when a card is on file.
-            Members can't add a card here (registration happens during
-            checkout / debt resolution), so an empty placeholder is just
-            noise. ── */}
+        {/* ── Payment method. Card on file → details + "Update card";
+            no card → an "Add card" affordance. Both open the provider's
+            hosted registration page (FIT-272 — previously the flow was
+            only reachable from the debt banner). ── */}
         {activeMethod ? (
           <FKGlassPanel radius={20} style={{ padding: 16 }}>
             <View
@@ -438,6 +465,61 @@ export default function PaymentsScreen() {
                   </Text>
                 ) : null}
               </View>
+              <Pressable
+                onPress={handleUpdateCard}
+                disabled={cardBusy}
+                hitSlop={8}
+                testID="update-card-btn"
+                style={{ paddingVertical: 6, paddingHorizontal: 4 }}
+              >
+                {cardBusy ? (
+                  <ActivityIndicator size="small" color="#0E8C8C" />
+                ) : (
+                  <Text
+                    style={{ fontSize: 13, fontWeight: '700', color: '#0E8C8C' }}
+                  >
+                    {errorStrings.updateCard}
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </FKGlassPanel>
+        ) : !methodsLoading && orgId ? (
+          <FKGlassPanel radius={20} style={{ padding: 16 }}>
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(120,120,128,0.10)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(120,120,128,0.24)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <CreditCard size={18} color={colors.mutedFg} strokeWidth={2.2} />
+              </View>
+              <View style={{ flex: 1 }} />
+              <FKButton
+                label={errorStrings.addCard}
+                variant="outline"
+                size="sm"
+                onPress={handleUpdateCard}
+                disabled={cardBusy}
+                trailing={
+                  cardBusy ? (
+                    <ActivityIndicator size="small" color="#0E8C8C" />
+                  ) : undefined
+                }
+              />
             </View>
           </FKGlassPanel>
         ) : null}

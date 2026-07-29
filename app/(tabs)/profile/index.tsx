@@ -73,6 +73,11 @@ import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { i18n, type Locale } from '@/i18n/config';
 import { useProfileStrings } from '@/i18n/use-profile-strings';
+import {
+  paymentErrorMessage,
+  usePaymentErrorStrings,
+} from '@/i18n/use-payment-error-strings';
+import { ApiError } from '@/hooks/use-api';
 import { queryKeys } from '@/lib/query-keys';
 import { clearActiveOrgId } from '@/lib/settings-store';
 import { useI18n } from '@/providers/i18n-provider';
@@ -119,6 +124,7 @@ export default function ProfileScreen() {
   const bottomPad = useTabBarPadding(32);
   // All screen labels — dictionary-first with per-language static fallbacks.
   const labels = useProfileStrings();
+  const errorStrings = usePaymentErrorStrings();
 
   const orgId = activeOrganization?.id;
   const incompleteForms = useIncompleteFormsCount(orgId);
@@ -663,7 +669,27 @@ export default function ProfileScreen() {
                     });
                     haptics.success();
                   },
-                  onError: () => haptics.error(),
+                  // Surface C1's structured failures; the no-card case
+                  // routes to Payments, where card registration lives.
+                  onError: (err) => {
+                    haptics.error();
+                    const message = paymentErrorMessage(errorStrings, err, lang);
+                    if (
+                      err instanceof ApiError &&
+                      err.code === 'no_active_payment_method'
+                    ) {
+                      Alert.alert('', message, [
+                        { text: errorStrings.cancel, style: 'cancel' },
+                        {
+                          text: errorStrings.addCard,
+                          onPress: () =>
+                            router.push('/(tabs)/profile/payments'),
+                        },
+                      ]);
+                    } else {
+                      Alert.alert('', message);
+                    }
+                  },
                 });
               }}
             />

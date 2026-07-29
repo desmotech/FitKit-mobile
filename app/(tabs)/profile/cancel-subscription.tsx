@@ -23,7 +23,12 @@ import {
 } from 'react-native';
 import { FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
+import { ApiError } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import {
+  paymentErrorMessage,
+  usePaymentErrorStrings,
+} from '@/i18n/use-payment-error-strings';
 import {
   useCancelAtPeriodEnd,
   useRequestCancellation,
@@ -61,6 +66,7 @@ export default function CancelSubscriptionScreen() {
 
   const cancelMut = useCancelAtPeriodEnd(orgId);
   const requestMut = useRequestCancellation(orgId);
+  const errorStrings = usePaymentErrorStrings();
 
   const [kind, setKind] = useState<CancellationKind>('period_end');
   const [reason, setReason] = useState('');
@@ -148,7 +154,16 @@ export default function CancelSubscriptionScreen() {
       router.back();
     } catch (e) {
       haptics.error();
-      Alert.alert('', e instanceof Error ? e.message : L.error);
+      // A scheduled plan change blocks cancel-at-period-end (B5a mutual
+      // exclusion) — map the structured 409 to localized copy (FIT-272).
+      Alert.alert(
+        '',
+        e instanceof ApiError && e.code
+          ? paymentErrorMessage(errorStrings, e, lang)
+          : e instanceof Error
+            ? e.message
+            : L.error,
+      );
     }
   };
 
