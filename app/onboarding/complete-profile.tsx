@@ -24,12 +24,17 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import {
-  completeProfileSchema,
-  type Gender,
-  type Relationship,
-  relationshipValues,
-} from '@fitkit/shared';
+import { completeProfileSchema, type Gender } from '@fitkit/shared';
+
+// The published @fitkit/shared still marks the emergency-contact fields as
+// required in completeProfileSchema; the form no longer collects them, so
+// validate against the schema without those keys. Once the dependency picks
+// up the release where they became optional, this omit is a harmless no-op.
+const profileGateSchema = completeProfileSchema.omit({
+  emergencyContactName: true,
+  emergencyContactPhone: true,
+  emergencyContactRelationship: true,
+});
 import {
   FKBrandMark,
   FKButton,
@@ -75,18 +80,6 @@ export default function CompleteProfileScreen() {
       non_binary: 'Non-binary',
       prefer_not_to_say: 'Prefer not to say',
     };
-  const emergencyT =
-    (cpT.emergency as Record<string, unknown> | undefined) ?? {};
-  const relT =
-    (emergencyT.relationshipOptions as Record<Relationship, string> | undefined) ?? {
-      parent: 'Parent',
-      spouse: 'Spouse',
-      sibling: 'Sibling',
-      child: 'Child',
-      friend: 'Friend',
-      other: 'Other',
-    };
-
   const labels = {
     title: (cpT.title as string) ?? 'Complete Your Profile',
     description:
@@ -103,13 +96,6 @@ export default function CompleteProfileScreen() {
     birthDatePlaceholder: 'YYYY-MM-DD',
     gender: (cpT.gender as string) ?? 'Gender',
     selectGender: (cpT.selectGender as string) ?? 'Select gender',
-    emergencyTitle: (emergencyT.title as string) ?? 'Emergency Contact',
-    emergencyName: (emergencyT.name as string) ?? 'Contact Name',
-    emergencyPhone: (emergencyT.phone as string) ?? 'Contact Phone',
-    emergencyRelationship:
-      (emergencyT.relationship as string) ?? 'Relationship',
-    selectRelationship:
-      (emergencyT.selectRelationship as string) ?? 'Select',
     save: commonT.save ?? 'Save',
     saving: (cpT.submitting as string) ?? 'Saving…',
     cancel: commonT.cancel ?? 'Cancel',
@@ -123,9 +109,6 @@ export default function CompleteProfileScreen() {
     nationalId: '',
     birthDate: '',
     gender: '' as '' | Gender,
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    emergencyContactRelationship: '' as '' | Relationship,
   });
   const [hydrated, setHydrated] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -144,10 +127,6 @@ export default function CompleteProfileScreen() {
       nationalId: '',
       birthDate: user.birthDate ?? '',
       gender: (user.gender ?? '') as '' | Gender,
-      emergencyContactName: user.emergencyContactName ?? '',
-      emergencyContactPhone: user.emergencyContactPhone ?? '',
-      emergencyContactRelationship: (user.emergencyContactRelationship ??
-        '') as '' | Relationship,
     });
     setHydrated(true);
   }, [user, hydrated]);
@@ -185,7 +164,7 @@ export default function CompleteProfileScreen() {
       if (trimmed) data[k] = trimmed;
     }
 
-    const result = completeProfileSchema.safeParse(data);
+    const result = profileGateSchema.safeParse(data);
     if (!result.success) {
       setErrors(extractFieldErrors(result.error, validationT));
       setSubmitError(formErrorSummary(lang));
@@ -380,71 +359,6 @@ export default function CompleteProfileScreen() {
                   invalid={!!errors.gender}
                   onChange={(v) => update('gender', v)}
                   options={genderOptions}
-                />
-              </Field>
-            </Row>
-          </FKGlassPanel>
-
-          <FKGlassPanel radius={20} style={{ padding: 16, gap: 14 }}>
-            <Text
-              className="text-muted-foreground"
-              style={{
-                fontSize: 11,
-                fontWeight: '700',
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {labels.emergencyTitle}
-            </Text>
-
-            <Field
-              label={labels.emergencyName}
-              error={errors.emergencyContactName}
-              isRTL={isRTL}
-            >
-              <Input
-                value={form.emergencyContactName}
-                onChangeText={(v) => update('emergencyContactName', v)}
-                autoCapitalize="words"
-                style={{ textAlign: isRTL ? 'right' : 'left' }}
-              />
-            </Field>
-
-            <Row isRTL={isRTL}>
-              <Field
-                label={labels.emergencyPhone}
-                error={errors.emergencyContactPhone}
-                isRTL={isRTL}
-              >
-                <Input
-                  value={form.emergencyContactPhone}
-                  onChangeText={(v) => update('emergencyContactPhone', v)}
-                  onBlur={() => handleBlur('emergencyContactPhone')}
-                  keyboardType="phone-pad"
-                  placeholder={labels.phonePlaceholder}
-                  style={{ textAlign: isRTL ? 'right' : 'left' }}
-                />
-              </Field>
-              <Field
-                label={labels.emergencyRelationship}
-                error={errors.emergencyContactRelationship}
-                isRTL={isRTL}
-              >
-                <FKSelectSheet
-                  value={form.emergencyContactRelationship}
-                  placeholder={labels.selectRelationship}
-                  title={labels.emergencyRelationship}
-                  cancelLabel={labels.cancel}
-                  invalid={!!errors.emergencyContactRelationship}
-                  onChange={(v) =>
-                    update('emergencyContactRelationship', v)
-                  }
-                  options={relationshipValues.map((r) => ({
-                    value: r,
-                    label: relT[r] ?? r,
-                  }))}
                 />
               </Field>
             </Row>

@@ -44,9 +44,6 @@ const PROFILE = {
   phone: '050-1234567',
   birthDate: '1990-05-15',
   gender: 'female',
-  emergencyContactName: 'יוסי כהן',
-  emergencyContactPhone: '052-7654321',
-  emergencyContactRelationship: 'parent',
 } as const;
 
 function stagePartialProfileMember() {
@@ -82,12 +79,6 @@ describe('complete-profile onboarding gate', () => {
     expect(await screen.findByDisplayValue(PROFILE.firstName)).toBeOnTheScreen();
     expect(screen.getByDisplayValue(PROFILE.lastName)).toBeOnTheScreen();
     expect(screen.getByDisplayValue(PROFILE.phone)).toBeOnTheScreen();
-    expect(
-      screen.getByDisplayValue(PROFILE.emergencyContactName),
-    ).toBeOnTheScreen();
-    expect(
-      screen.getByDisplayValue(PROFILE.emergencyContactPhone),
-    ).toBeOnTheScreen();
     // The gender select shows the stored choice, not its placeholder.
     expect(screen.getByText(genderOptions.female)).toBeOnTheScreen();
     // The national id is deliberately never hydrated — the member must
@@ -127,7 +118,6 @@ describe('complete-profile onboarding gate', () => {
       ...PROFILE,
       nationalId: VALID_ID,
       phone: '+972501234567',
-      emergencyContactPhone: '+972527654321',
     });
     await waitFor(() =>
       expect(mockRouterReplace).toHaveBeenCalledWith('/(tabs)'),

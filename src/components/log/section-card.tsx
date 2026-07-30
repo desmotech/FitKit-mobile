@@ -4,8 +4,8 @@
  *
  * Visual: `FKGlassPanel` (radius 20, padding 16, gap 14) — same as every
  * other form in the app. Section labels render as 11pt uppercase
- * mute-text INSIDE the card (mirrors the profile/personal "Emergency
- * Contact" subheading idiom).
+ * mute-text INSIDE the card (the app's standard form-section subheading
+ * idiom).
  *
  * This replaces the previous bespoke iOS-grouped card aesthetic with
  * the established FitKit visual language so log surfaces feel native
