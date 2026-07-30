@@ -1,7 +1,7 @@
 /**
  * Personal Details — mirror of web's `/profile/personal`. Edits
- * first/last name, phone, national ID, birth date, gender, emergency
- * contact. PATCHes `/users/me`. Validates against
+ * first/last name, phone, national ID, birth date, gender.
+ * PATCHes `/users/me`. Validates against
  * `updateUserProfileSchema` (loose: only non-empty fields are submitted).
  */
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,12 +9,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import {
-  type Gender,
-  type Relationship,
-  relationshipValues,
-  updateUserProfileSchema,
-} from '@fitkit/shared';
+import { type Gender, updateUserProfileSchema } from '@fitkit/shared';
 import {
   FKBtn,
   FKGlassPanel,
@@ -52,8 +47,6 @@ export default function PersonalDetailsScreen() {
   const commonT = (t as unknown as Record<string, Record<string, string>>).common ?? {};
   const settingsT = (profileT.settings ?? {}) as Record<string, string>;
   const genderT = (cpT.genderOptions ?? {}) as Record<Gender, string>;
-  const emergencyT = (cpT.emergency ?? {}) as Record<string, unknown>;
-  const relT = (emergencyT.relationshipOptions ?? {}) as Record<Relationship, string>;
 
   const labels = {
     title: settingsT.personal ?? 'Personal Details',
@@ -67,10 +60,6 @@ export default function PersonalDetailsScreen() {
     birthDatePlaceholder: 'YYYY-MM-DD',
     gender: (cpT.gender as string) ?? 'Gender',
     selectGender: (cpT.selectGender as string) ?? 'Select gender',
-    emergencyTitle: (emergencyT.title as string) ?? 'Emergency Contact',
-    emergencyName: (emergencyT.name as string) ?? 'Contact Name',
-    emergencyPhone: (emergencyT.phone as string) ?? 'Contact Phone',
-    emergencyRelationship: (emergencyT.relationship as string) ?? 'Relationship',
     save: commonT.save ?? 'Save',
     saving: (cpT.submitting as string) ?? 'Saving…',
     cancel: commonT.cancel ?? 'Cancel',
@@ -84,9 +73,6 @@ export default function PersonalDetailsScreen() {
     nationalId: '',
     birthDate: '',
     gender: '' as '' | Gender,
-    emergencyContactName: '',
-    emergencyContactPhone: '',
-    emergencyContactRelationship: '' as '' | Relationship,
   });
   const [hydrated, setHydrated] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -102,9 +88,6 @@ export default function PersonalDetailsScreen() {
       nationalId: '',
       birthDate: user.birthDate ?? '',
       gender: (user.gender ?? '') as '' | Gender,
-      emergencyContactName: user.emergencyContactName ?? '',
-      emergencyContactPhone: user.emergencyContactPhone ?? '',
-      emergencyContactRelationship: (user.emergencyContactRelationship ?? '') as '' | Relationship,
     });
     setHydrated(true);
   }
@@ -300,73 +283,6 @@ export default function PersonalDetailsScreen() {
                       invalid={!!errors.gender}
                       onChange={(v) => update('gender', v)}
                       options={genderOptions}
-                    />
-                  </Field>
-                </Row>
-              </FKGlassPanel>
-
-              <FKGlassPanel radius={20} style={{ padding: 16, gap: 14 }}>
-                <Text
-                  className="text-muted-foreground"
-                  style={{
-                    fontSize: 11,
-                    fontWeight: '700',
-                    letterSpacing: 1.2,
-                    textTransform: 'uppercase',
-                    textAlign: isRTL ? 'right' : 'left',
-                  }}
-                >
-                  {labels.emergencyTitle}
-                </Text>
-
-                <Field
-                  label={labels.emergencyName}
-                  error={errors.emergencyContactName}
-                  isRTL={isRTL}
-                >
-                  <Input
-                    value={form.emergencyContactName}
-                    onChangeText={(v) => update('emergencyContactName', v)}
-                    autoCapitalize="words"
-                    style={{ textAlign: isRTL ? 'right' : 'left' }}
-                  />
-                </Field>
-
-                <Row isRTL={isRTL}>
-                  <Field
-                    label={labels.emergencyPhone}
-                    error={errors.emergencyContactPhone}
-                    isRTL={isRTL}
-                  >
-                    <Input
-                      value={form.emergencyContactPhone}
-                      onChangeText={(v) =>
-                        update('emergencyContactPhone', v)
-                      }
-                      onBlur={() => handleBlur('emergencyContactPhone')}
-                      keyboardType="phone-pad"
-                      placeholder={labels.phonePlaceholder}
-                      style={{ textAlign: isRTL ? 'right' : 'left' }}
-                    />
-                  </Field>
-                  <Field
-                    label={labels.emergencyRelationship}
-                    error={errors.emergencyContactRelationship}
-                    isRTL={isRTL}
-                  >
-                    <FKSelectSheet
-                      value={form.emergencyContactRelationship}
-                      placeholder={(emergencyT.selectRelationship as string) ?? 'Select'}
-                      title={labels.emergencyRelationship}
-                      cancelLabel={labels.cancel}
-                      invalid={!!errors.emergencyContactRelationship}
-                      onChange={(v) =>
-                        update('emergencyContactRelationship', v)
-                      }
-                      options={relationshipValues.map((r) => ({
-                        value: r,
-                        label: relT[r] ?? r,
-                      }))}
                     />
                   </Field>
                 </Row>
