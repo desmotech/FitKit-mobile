@@ -25,6 +25,16 @@ import {
 } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { completeProfileSchema, type Gender } from '@fitkit/shared';
+
+// The published @fitkit/shared still marks the emergency-contact fields as
+// required in completeProfileSchema; the form no longer collects them, so
+// validate against the schema without those keys. Once the dependency picks
+// up the release where they became optional, this omit is a harmless no-op.
+const profileGateSchema = completeProfileSchema.omit({
+  emergencyContactName: true,
+  emergencyContactPhone: true,
+  emergencyContactRelationship: true,
+});
 import {
   FKBrandMark,
   FKButton,
@@ -154,7 +164,7 @@ export default function CompleteProfileScreen() {
       if (trimmed) data[k] = trimmed;
     }
 
-    const result = completeProfileSchema.safeParse(data);
+    const result = profileGateSchema.safeParse(data);
     if (!result.success) {
       setErrors(extractFieldErrors(result.error, validationT));
       setSubmitError(formErrorSummary(lang));
