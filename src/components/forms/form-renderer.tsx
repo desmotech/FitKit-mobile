@@ -19,15 +19,32 @@
  *     the token screen wraps `useTokenUpload`), replacing each URI with
  *     `{ r2Key, mime }` (or an array for `photo.multiple`). The
  *     transformed answers map is what we POST.
+ *   - Every upload is memoized by source URI, so a submit that fails
+ *     *after* the uploads (validation 400, offline POST) doesn't re-PUT
+ *     the same bytes when the member hits submit again.
+ *
+ * Draft persistence (FIT-279):
+ *   - With a `draftKey`, answers are mirrored to AsyncStorage on a ~1s
+ *     debounce and restored on mount, so backgrounding the app or
+ *     leaving the screen mid-form no longer loses everything typed.
+ *   - Precedence on mount: local draft > server `initialAnswers` > blank.
+ *   - The draft is dropped once the submit succeeds.
  */
-import { useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
 import { FKButton, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import type { FormStrings } from '@/i18n/form-strings';
+import {
+  clearFormDraft,
+  hasAnyAnswer,
+  loadFormDraft,
+  saveFormDraft,
+  DRAFT_DEBOUNCE_MS,
+} from '@/lib/form-draft';
 import { isValidIsraeliId, isValidIsraeliPhone } from '@/lib/validation-i18n';
 import type {
   FormAnswerValue,
@@ -81,6 +98,18 @@ export interface FormRendererProps {
    * `useFormUpload`; the token screen passes one around `useTokenUpload`.
    */
   uploadAttachment: UploadAttachmentFn;
+  /**
+   * Stable id for this form's draft (instance id in-app, a token slice on
+   * the public route). Omit to disable persistence entirely — the form
+   * then behaves exactly as it did before FIT-279.
+   */
+  draftKey?: string;
+  /**
+   * Answers already on the instance server-side. Used as the starting
+   * point when there's no local draft; a draft always wins, since it's
+   * strictly newer than whatever the server last stored.
+   */
+  initialAnswers?: FormAnswers | null;
 }
 
 function isAnswerPresent(field: FormField, v: FormAnswerValue | undefined): boolean {
@@ -137,6 +166,8 @@ export function FormRenderer({
   submitting,
   serverError,
   uploadAttachment,
+  draftKey,
+  initialAnswers,
 }: FormRendererProps) {
   // Forms own their locale independently of the member's UI language. A
   // Hebrew form must render RTL even when the app is set to English.
@@ -147,9 +178,63 @@ export function FormRenderer({
   const haptics = useHaptics();
   const s = useFormStrings();
 
-  const [answers, setAnswers] = useState<FormAnswers>({});
+  // Seeded from the server's answers; a local draft (loaded below) wins
+  // over them the moment it resolves.
+  const [answers, setAnswers] = useState<FormAnswers>(() =>
+    hasAnyAnswer(initialAnswers) ? { ...initialAnswers } : {},
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
+
+  // Nothing to restore without a key, so persistence starts "hydrated".
+  const [draftHydrated, setDraftHydrated] = useState(!draftKey);
+  // Mirror of the flag for the unmount flush, which can't read state.
+  const hydratedRef = useRef(!draftKey);
+  // Flipped off once the form is submitted, so neither the trailing
+  // debounce nor the unmount flush can resurrect a cleared draft.
+  const persistDraft = useRef(true);
+  // Latest answers for the unmount flush (the effect below closes over
+  // the render's value, which is stale by the time cleanup runs).
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  // Uploaded attachments keyed by source URI. Survives a failed submit so
+  // the retry reuses the r2Key instead of re-uploading the same bytes.
+  const uploadCache = useRef(new Map<string, FormAttachment>());
+
+  useEffect(() => {
+    if (!draftKey) return;
+    let cancelled = false;
+    void (async () => {
+      const draft = await loadFormDraft(draftKey);
+      if (cancelled) return;
+      if (draft) setAnswers(draft);
+      hydratedRef.current = true;
+      setDraftHydrated(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || !draftHydrated) return;
+    const timer = setTimeout(() => {
+      // Re-read the ref at fire time: a submit that landed while this
+      // timer was pending must not write the draft back out.
+      if (!persistDraft.current) return;
+      void saveFormDraft(draftKey, answers);
+    }, DRAFT_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [draftKey, draftHydrated, answers]);
+
+  // Flush on unmount — leaving the screen within the debounce window
+  // (tap back right after typing) would otherwise drop the last edit.
+  useEffect(() => {
+    return () => {
+      if (!draftKey || !persistDraft.current || !hydratedRef.current) return;
+      void saveFormDraft(draftKey, answersRef.current);
+    };
+  }, [draftKey]);
 
   const handleChange = (fieldId: string, next: FormAnswerValue) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: next }));
@@ -203,10 +288,34 @@ export function FormRenderer({
     }
   };
 
-  const validate = (): { ok: boolean; errors: Record<string, string> } => {
+  /**
+   * Number fields persist the raw string between keystrokes so partial
+   * input ("-", "1.") survives typing; the server schema only accepts
+   * numbers. Coerce parseable strings and drop unparseable leftovers so
+   * an abandoned "1." on an optional field can't 400 the whole submit.
+   */
+  const normalizeAnswers = (src: FormAnswers): FormAnswers => {
+    const out: FormAnswers = { ...src };
+    for (const field of form.fields) {
+      const v = out[field.id];
+      if (field.type === 'number' && typeof v === 'string') {
+        const parsed = Number.parseFloat(v.replace(',', '.'));
+        if (Number.isFinite(parsed)) {
+          out[field.id] = parsed;
+        } else {
+          delete out[field.id];
+        }
+      }
+    }
+    return out;
+  };
+
+  const validate = (
+    src: FormAnswers,
+  ): { ok: boolean; errors: Record<string, string> } => {
     const next: Record<string, string> = {};
     for (const field of form.fields) {
-      const v = answers[field.id];
+      const v = src[field.id];
       if (field.required && !isAnswerPresent(field, v)) {
         next[field.id] = requiredMessageFor(field);
         continue;
@@ -240,6 +349,23 @@ export function FormRenderer({
   };
 
   /**
+   * Uploads a local file once per URI. The cache is what makes a retry
+   * cheap: the second submit press finds every attachment already in R2
+   * and goes straight to the POST.
+   */
+  const uploadOnce = async (
+    uri: string,
+    mime: string,
+    kind: FormUploadKind,
+  ): Promise<FormAttachment> => {
+    const cached = uploadCache.current.get(uri);
+    if (cached) return cached;
+    const result = await uploadAttachment(uri, mime, kind);
+    uploadCache.current.set(uri, result);
+    return result;
+  };
+
+  /**
    * Walks answers, uploads any local URIs to R2 via useFormUpload, and
    * returns a new answers map where binary fields hold `{ r2Key, mime }`
    * (or arrays of them for `photo.multiple`). Non-binary answers pass
@@ -252,17 +378,13 @@ export function FormRenderer({
     for (const field of form.fields) {
       const v = src[field.id];
       if (field.type === 'signature' && isLocalUri(v)) {
-        const result = await uploadAttachment(v, 'image/png', 'signature');
+        const result = await uploadOnce(v, 'image/png', 'signature');
         out[field.id] = result;
       } else if (field.type === 'photo' && Array.isArray(v)) {
         const uploaded: { r2Key: string; mime?: string }[] = [];
         for (const entry of v) {
           if (isLocalUri(entry)) {
-            const result = await uploadAttachment(
-              entry,
-              mimeForUri(entry),
-              'photo',
-            );
+            const result = await uploadOnce(entry, mimeForUri(entry), 'photo');
             uploaded.push(result);
           } else if (
             typeof entry === 'object' &&
@@ -281,21 +403,45 @@ export function FormRenderer({
   };
 
   const onPressSubmit = async () => {
-    const { ok, errors: nextErrors } = validate();
+    const normalized = normalizeAnswers(answers);
+    const { ok, errors: nextErrors } = validate(normalized);
     setErrors(nextErrors);
     if (!ok) {
       haptics.error();
       return;
     }
     haptics.tap();
+    // Keeps the post-upload answers reachable from the catch below.
+    let retryAnswers: FormAnswers = normalized;
     try {
       setUploading(true);
-      const finalAnswers = await uploadBinaries(answers);
+      const finalAnswers = await uploadBinaries(normalized);
+      // Keep the uploaded signature in state (and therefore in the draft):
+      // the local PNG lives in the cache dir and can be swept by the OS,
+      // whereas the r2Key stays valid. Photo answers deliberately stay as
+      // local URIs — the picker tiles render from them, and `uploadCache`
+      // already spares the retry from re-uploading.
+      retryAnswers = { ...normalized };
+      for (const field of form.fields) {
+        if (field.type !== 'signature') continue;
+        const uploaded = finalAnswers[field.id];
+        if (uploaded && typeof uploaded === 'object' && 'r2Key' in uploaded) {
+          retryAnswers[field.id] = uploaded;
+        }
+      }
+      setAnswers(retryAnswers);
+      // Stop persisting before the POST, not after: the host unmounts this
+      // renderer the instant the submit resolves, and the unmount flush
+      // would otherwise race the clear below and rewrite the draft.
+      persistDraft.current = false;
       await onSubmit(finalAnswers);
+      if (draftKey) void clearFormDraft(draftKey);
     } catch (err) {
       // Surface the upload error at the form level — the parent
       // mutation never ran. The user can retry; failed uploads don't
       // leave a partial-submit on the server side.
+      persistDraft.current = true;
+      if (draftKey) void saveFormDraft(draftKey, retryAnswers);
       haptics.error();
       const message = err instanceof Error ? err.message : s.uploadFailed;
       setErrors((prev) => ({ ...prev, __submit__: message }));
@@ -325,11 +471,11 @@ export function FormRenderer({
 
   return (
     <FormRTLProvider isRTL={isRTL}>
-    <ScrollView
-      contentContainerStyle={{ gap: 20, paddingBottom: 24 }}
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    >
+    {/* Plain View, not a ScrollView: both host screens already scroll.
+        The nested same-axis scroller competed for the touch responder —
+        it could steal an in-flight signature stroke — and on Android an
+        inner list doesn't scroll at all without nestedScrollEnabled. */}
+    <View style={{ gap: 20, paddingBottom: 24 }}>
       {form.bodyRichtext ? (
         <Text
           style={{
@@ -440,7 +586,7 @@ export function FormRenderer({
           {s.requiredRemaining(requiredRemaining)}
         </Text>
       ) : null}
-    </ScrollView>
+    </View>
     </FormRTLProvider>
   );
 }

@@ -14,13 +14,14 @@
 import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
-import { CheckCircle2 } from 'lucide-react-native';
+import { CheckCircle2, Download } from 'lucide-react-native';
 import { FKButton, FKGlassPanel, FKSubScreen, useFKColors } from '@/components/fk';
 import { FormRenderer } from '@/components/forms/form-renderer';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   useFormInstance,
+  useOpenSignedFormPdf,
   useSubmitCheckInAnswers,
   useSubmitFormInstance,
 } from '@/hooks/use-forms';
@@ -65,6 +66,11 @@ export default function SignFormInstanceScreen() {
       );
     }
   };
+
+  // Signed compliance forms carry a countersigned PDF the member is
+  // entitled to a copy of (FIT-277). Check-ins never produce one.
+  const pdf = useOpenSignedFormPdf(orgId);
+  const openPdf = () => pdf.mutate(id);
 
   const isLoading = query.isLoading;
   const isError = query.isError;
@@ -132,6 +138,10 @@ export default function SignFormInstanceScreen() {
             actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
+            // The PDF is rendered during submit, so it's already on file.
+            onDownload={isCheckIn ? undefined : openPdf}
+            downloading={pdf.isPending}
+            downloadError={pdf.isError ? s.downloadPdfFailed : null}
           />
         ) : null}
 
@@ -144,6 +154,9 @@ export default function SignFormInstanceScreen() {
             actionLabel={s.signedAction}
             isRTL={isRTL}
             onAction={() => router.back()}
+            onDownload={status === 'signed' ? openPdf : undefined}
+            downloading={pdf.isPending}
+            downloadError={pdf.isError ? s.downloadPdfFailed : null}
           />
         ) : null}
 
@@ -152,6 +165,10 @@ export default function SignFormInstanceScreen() {
             <FormRenderer
               form={entry.form}
               uploadAttachment={uploadFormAttachment}
+              // Answers survive a background/kill mid-form, and any
+              // answers already on the instance seed the first paint.
+              draftKey={`instance:${id}`}
+              initialAnswers={entry.instance.answers}
               onSubmit={handleSubmit}
               submitting={submitMutation.isPending}
               serverError={submitError}
@@ -168,14 +185,22 @@ function SignedSuccess({
   actionLabel,
   isRTL,
   onAction,
+  onDownload,
+  downloading,
+  downloadError,
 }: {
   title: string;
   subtitle: string;
   actionLabel: string;
   isRTL: boolean;
   onAction: () => void;
+  /** Set only when a signed PDF exists for this instance. */
+  onDownload?: () => void;
+  downloading?: boolean;
+  downloadError?: string | null;
 }) {
   const colors = useFKColors();
+  const s = useFormStrings();
   return (
     <FKGlassPanel
       radius={20}
@@ -217,6 +242,33 @@ function SignedSuccess({
       >
         {subtitle}
       </Text>
+      {onDownload ? (
+        <FKButton
+          label={downloading ? s.downloadPdfPending : s.downloadPdf}
+          variant="outline"
+          size="md"
+          leading={
+            <Download size={16} color={BRAND_TEAL} strokeWidth={2.2} />
+          }
+          disabled={downloading}
+          onPress={onDownload}
+          style={{ marginTop: 8 }}
+        />
+      ) : null}
+      {downloadError ? (
+        <Text
+          accessibilityRole="alert"
+          style={{
+            fontSize: 12,
+            fontWeight: '500',
+            color: '#B84A40',
+            textAlign: 'center',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
+          }}
+        >
+          {downloadError}
+        </Text>
+      ) : null}
       <FKButton
         label={actionLabel}
         variant="primary"
