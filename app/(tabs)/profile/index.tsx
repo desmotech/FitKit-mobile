@@ -19,7 +19,6 @@ import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   Bell,
@@ -143,6 +142,13 @@ export default function ProfileScreen() {
 
   const initials =
     `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}` || '?';
+  // Clerk always serves a generated placeholder via imageUrl; only treat a
+  // real upload (hasImage) as an avatar so the fallback shows brand initials.
+  const avatarUrl = clerkUser
+    ? clerkUser.hasImage
+      ? clerkUser.imageUrl
+      : null
+    : (user?.imageUrl ?? null);
   const displayName =
     [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
     user?.email ||
@@ -362,89 +368,34 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomPad }}
       >
-        {/* ── HERO — teal panel, rounded bottom corners */}
-        <View
-          style={{
-            borderBottomLeftRadius: 28,
-            borderBottomRightRadius: 28,
-            borderCurve: 'continuous',
-            overflow: 'hidden',
-          }}
+        {/* ── HERO — centered identity over the ambient backdrop */}
+        <Animated.View
+          entering={FadeInDown.duration(420).springify()}
+          style={{ alignItems: 'center', paddingTop: 16, paddingHorizontal: 20 }}
         >
-            {/* teal gradient field */}
-            <LinearGradient
-              colors={
-                colors.isDark
-                  ? ['#16776f', '#0f5650', '#0b3f3b']
-                  : ['#14a39c', '#0E8C8C', '#0b7474']
-              }
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 0.9, y: 1 }}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-            {/* top-trailing sheen */}
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(255,255,255,0.20)', 'rgba(255,255,255,0)']}
-              start={{ x: 1, y: 0 }}
-              end={{ x: 0.25, y: 0.75 }}
-              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            />
-            {/* decorative concentric rings, trailing-bottom */}
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                insetInlineEnd: -60,
-                bottom: -70,
-                width: 180,
-                height: 180,
-                borderRadius: 90,
-                borderWidth: 1.5,
-                borderColor: 'rgba(255,255,255,0.16)',
-              }}
-            />
-            <View
-              pointerEvents="none"
-              style={{
-                position: 'absolute',
-                insetInlineEnd: -30,
-                bottom: -40,
-                width: 110,
-                height: 110,
-                borderRadius: 55,
-                borderWidth: 1.5,
-                borderColor: 'rgba(255,255,255,0.16)',
-              }}
-            />
-            <View style={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24 }}>
-              {/* Avatar + name + chips row */}
-              <Animated.View
-                entering={FadeInDown.duration(420).springify()}
-                style={{
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  alignItems: 'center',
-                  gap: 16,
-                }}
-              >
-                <View style={{ position: 'relative' }}>
+          <View style={{ position: 'relative' }}>
                   <View
                     style={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: 40,
-                      borderWidth: 3,
-                      borderColor: 'rgba(255,255,255,0.18)',
+                      width: 92,
+                      height: 92,
+                      borderRadius: 46,
+                      borderWidth: 1,
+                      borderColor: colors.isDark
+                        ? 'rgba(53,196,187,0.35)'
+                        : 'rgba(14,140,140,0.25)',
                       overflow: 'hidden',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: 'rgba(255,255,255,0.10)',
+                      backgroundColor: colors.isDark
+                        ? 'rgba(53,196,187,0.12)'
+                        : 'rgba(14,140,140,0.10)',
+                      boxShadow: '0 8px 28px rgba(14,140,140,0.30)',
                     }}
                   >
-                    {(clerkUser?.imageUrl ?? user?.imageUrl) ? (
+                    {avatarUrl ? (
                       <Image
-                        source={{ uri: clerkUser?.imageUrl ?? user?.imageUrl ?? undefined }}
-                        style={{ width: 80, height: 80 }}
+                        source={{ uri: avatarUrl }}
+                        style={{ width: '100%', height: '100%' }}
                         contentFit="cover"
                         transition={200}
                       />
@@ -452,9 +403,9 @@ export default function ProfileScreen() {
                       <Text
                         className="font-display"
                         style={{
-                          color: '#fff',
-                          fontSize: 28,
-                          lineHeight: 34,
+                          color: colors.isDark ? '#35C4BB' : '#0E8C8C',
+                          fontSize: 32,
+                          lineHeight: 38,
                           fontWeight: '800',
                           letterSpacing: -0.5,
                         }}
@@ -483,121 +434,129 @@ export default function ProfileScreen() {
                     disabled={avatarBusy}
                     style={{
                       position: 'absolute',
-                      bottom: -2,
-                      [isRTL ? 'right' : 'left']: -2,
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      backgroundColor: '#0E8C8C',
+                      bottom: 0,
+                      [isRTL ? 'left' : 'right']: -2,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: '#fff',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderWidth: 2,
-                      borderColor: '#1B7C7C',
+                      borderWidth: 1,
+                      borderColor: 'rgba(0,0,0,0.06)',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.16)',
                     }}
                   >
-                    <Pencil size={10} color="#fff" strokeWidth={2.6} />
+                    <Pencil size={12} color="#0E8C8C" strokeWidth={2.6} />
                   </TouchableOpacity>
                 </View>
 
-                <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
-                  {userLoading ? (
-                    <Skeleton style={{ width: 140, height: 24, borderRadius: 6 }} />
-                  ) : (
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 24,
-                        lineHeight: 30,
-                        color: '#fff',
-                        letterSpacing: -0.6,
-                        textAlign: isRTL ? 'right' : 'left',
-                        fontFamily: displayFamily(lang, 'bold'),
-                      }}
-                    >
-                      {displayName}
-                    </Text>
-                  )}
+                {userLoading ? (
+                  <Skeleton
+                    style={{ width: 160, height: 28, borderRadius: 8, marginTop: 14 }}
+                  />
+                ) : (
                   <Text
                     numberOfLines={1}
                     style={{
-                      fontSize: 12,
-                      color: 'rgba(255,255,255,0.78)',
-                      fontWeight: '500',
-                      marginTop: 2,
-                      textAlign: isRTL ? 'right' : 'left',
+                      marginTop: 14,
+                      fontSize: 26,
+                      lineHeight: 32,
+                      color: colors.foreground,
+                      letterSpacing: -0.5,
+                      textAlign: 'center',
+                      fontFamily: displayFamily(lang, 'bold'),
                     }}
                   >
-                    {memberSinceLine}
+                    {displayName}
                   </Text>
-                  <View
+                )}
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontSize: 13,
+                    color: colors.mutedFg,
+                    fontWeight: '500',
+                    marginTop: 3,
+                    textAlign: 'center',
+                  }}
+                >
+                  {memberSinceLine}
+                </Text>
+                <View
+                  style={{
+                    marginTop: 10,
+                    paddingHorizontal: 11,
+                    paddingVertical: 4.5,
+                    borderRadius: 999,
+                    backgroundColor: colors.isDark
+                      ? 'rgba(53,196,187,0.16)'
+                      : 'rgba(14,140,140,0.12)',
+                  }}
+                >
+                  <Text
                     style={{
-                      flexDirection: isRTL ? 'row-reverse' : 'row',
-                      gap: 6,
-                      marginTop: 10,
-                      flexWrap: 'wrap',
+                      fontSize: 11,
+                      fontWeight: '700',
+                      color: colors.isDark ? '#35C4BB' : '#0E8C8C',
+                      letterSpacing: 0.5,
                     }}
                   >
-                    <View
-                      style={{
-                        paddingHorizontal: 9,
-                        paddingVertical: 3,
-                        borderRadius: 6,
-                        backgroundColor: 'rgba(255,255,255,0.18)',
-                      }}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 10,
-                          fontWeight: '800',
-                          color: '#fff',
-                          letterSpacing: 0.4,
-                        }}
-                      >
-                        {labels.activeMembership.toUpperCase()}
-                      </Text>
-                    </View>
-                    {/* Flame chip removed — duplicated classesThisMonth from the 3-up grid below. */}
-                  </View>
+                    {labels.activeMembership.toUpperCase()}
+                  </Text>
                 </View>
               </Animated.View>
 
-              {/* 3-up stat strip — plain numerals on hairline dividers */}
-              <View
-                style={{
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  marginTop: 20,
-                  paddingTop: 16,
-                  borderTopWidth: 1,
-                  borderTopColor: 'rgba(255,255,255,0.20)',
-                }}
-              >
-                <HeroStat
-                  value={classesThisMonth}
-                  label={labels.thisMonth}
-                  lang={lang}
-                />
-                <View
-                  style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.20)' }}
-                />
-                <HeroStat
-                  value={prCount}
-                  label={labels.newPrsLabel}
-                  lang={lang}
-                  accent={colors.isDark ? '#EAC35E' : '#FFE27A'}
-                />
-                <View
-                  style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.20)' }}
-                />
-                <HeroStat
-                  value={totalClasses}
-                  label={labels.totalWods}
-                  lang={lang}
-                />
-              </View>
-            </View>
-        </View>
-
-        <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 24 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20, gap: 24 }}>
+          {/* ── 3-up stat strip — glass panel, hairline dividers ── */}
+          <FKGlassPanel
+            radius={20}
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              paddingVertical: 16,
+              paddingHorizontal: 8,
+            }}
+          >
+            <HeroStat
+              value={classesThisMonth}
+              label={labels.thisMonth}
+              lang={lang}
+              color={colors.foreground}
+              labelColor={colors.mutedFg}
+            />
+            <View
+              style={{
+                width: 1,
+                marginVertical: 4,
+                backgroundColor: colors.isDark
+                  ? 'rgba(255,255,255,0.12)'
+                  : 'rgba(60,60,67,0.14)',
+              }}
+            />
+            <HeroStat
+              value={prCount}
+              label={labels.newPrsLabel}
+              lang={lang}
+              accent={colors.isDark ? '#EAC35E' : '#B07D2A'}
+              labelColor={colors.mutedFg}
+            />
+            <View
+              style={{
+                width: 1,
+                marginVertical: 4,
+                backgroundColor: colors.isDark
+                  ? 'rgba(255,255,255,0.12)'
+                  : 'rgba(60,60,67,0.14)',
+              }}
+            />
+            <HeroStat
+              value={totalClasses}
+              label={labels.totalWods}
+              lang={lang}
+              color={colors.foreground}
+              labelColor={colors.mutedFg}
+            />
+          </FKGlassPanel>
           {/* ── Recent PRs (scoreboard) ────────────────────────── */}
           {recentPRRecords.length > 0 ? (
             <RecentPRs

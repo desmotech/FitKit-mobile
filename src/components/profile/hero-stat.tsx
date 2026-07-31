@@ -8,19 +8,23 @@ export function HeroStat({
   label,
   lang,
   accent,
+  color,
+  labelColor,
 }: {
   value: number | string;
   label: string;
   lang: string | undefined;
   accent?: string;
+  color?: string;
+  labelColor?: string;
 }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
       <Text
         style={{
-          fontSize: 24,
-          lineHeight: 26,
-          color: accent ?? '#fff',
+          fontSize: 26,
+          lineHeight: 30,
+          color: accent ?? color ?? '#fff',
           fontVariant: ['tabular-nums'],
           fontFamily: 'Assistant-SemiBold',
           includeFontPadding: false,
@@ -31,9 +35,9 @@ export function HeroStat({
       <Text
         numberOfLines={1}
         style={{
-          fontSize: 9.5,
-          color: 'rgba(255,255,255,0.76)',
-          marginTop: 6,
+          fontSize: 10,
+          color: labelColor ?? 'rgba(255,255,255,0.72)',
+          marginTop: 4,
           ...eyebrow(lang),
         }}
       >
