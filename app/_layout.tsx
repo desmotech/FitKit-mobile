@@ -2,7 +2,7 @@ import '../global.css';
 
 import { ClerkProvider } from '@clerk/clerk-expo';
 import * as Sentry from '@sentry/react-native';
-import { Stack } from 'expo-router';
+import { Stack, useNavigationContainerRef } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
@@ -39,6 +39,14 @@ import { AnimatedSplash } from '@/components/animated-splash';
 // stay silent. Source maps + debug IDs are uploaded automatically during
 // EAS Build via the `@sentry/react-native/expo` config plugin (see
 // app.config.ts) and the `getSentryExpoConfig` wrapper in metro.config.js.
+// Screen-transaction instrumentation. Without this, `reactNativeTracingIntegration`
+// alone produces no navigation transactions under Expo Router — so the app
+// emitted nothing to trace against and the propagated trace id never rotated:
+// one app session was one trace (a single prod trace held 422 spans, all of
+// them API-side roots with no mobile parent). Must be registered with the
+// router's navigation container below.
+const navigationIntegration = Sentry.reactNavigationIntegration();
+
 Sentry.init({
   dsn: sentryDsn,
   // Privacy posture: keep PII off by default; align with our shipping
@@ -58,12 +66,21 @@ Sentry.init({
   integrations: [
     Sentry.mobileReplayIntegration(),
     Sentry.reactNativeTracingIntegration(),
+    navigationIntegration,
   ],
 });
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function RootLayout() {
+  // Hand the router's navigation container to Sentry so screen changes open
+  // navigation transactions (and start a fresh trace per screen). Without
+  // this registration `navigationIntegration` is inert.
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (navigationRef) navigationIntegration.registerNavigationContainer(navigationRef);
+  }, [navigationRef]);
+
   const [fontsLoaded, fontError] = useFonts({
     // ── FitKit "Whiteboard" type system ──────────────────────────────
     // Static per-weight faces. RN/Android weight-matching within a single

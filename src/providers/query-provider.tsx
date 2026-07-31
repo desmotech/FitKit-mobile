@@ -1,9 +1,12 @@
 import {
+  MutationCache,
+  QueryCache,
   QueryClient,
   focusManager,
   keepPreviousData,
   onlineManager,
 } from '@tanstack/react-query';
+import { reportQueryError } from '@/lib/error-reporting';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,6 +27,22 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
+        // Every failed request funnels through these two caches, so this is
+        // the one place that guarantees a server-side failure reaches Sentry.
+        // Screens catch their own errors to render copy; before this, that
+        // was also where the error stopped. See src/lib/error-reporting.ts
+        // for what is deliberately filtered out.
+        queryCache: new QueryCache({
+          onError: (error, query) =>
+            reportQueryError(error, { source: 'query', key: query.queryKey }),
+        }),
+        mutationCache: new MutationCache({
+          onError: (error, _vars, _ctx, mutation) =>
+            reportQueryError(error, {
+              source: 'mutation',
+              key: mutation.options.mutationKey,
+            }),
+        }),
         defaultOptions: {
           queries: {
             staleTime: ONE_MINUTE,
