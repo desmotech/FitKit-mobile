@@ -1,15 +1,18 @@
 // Finger-drawn signature canvas. Captured to PNG via view-shot (captureRef),
 // not Svg.toDataURL (which never fires on Fabric). Value is a local file URI;
 // FormRenderer uploads it and swaps in { r2Key, mime } before submit.
-import { useRef, useState } from 'react';
-import {
-  Pressable,
-  StyleSheet,
-  View,
-  PanResponder,
-  type GestureResponderEvent,
-  type PanResponderInstance,
-} from 'react-native';
+//
+// Touch capture uses react-native-gesture-handler, NOT the legacy
+// PanResponder. The responder system negotiates with ancestors: the two
+// screen-level scrollers could steal the touch mid-stroke (default
+// onPanResponderTerminationRequest → true), which silently dropped the
+// in-flight stroke — the user saw ink, but Save stayed disabled and the
+// screen scrolled under their finger. An RNGH Pan with minDistance(0)
+// claims the touch on contact, so parent scrolling never competes, and
+// onFinalize commits the stroke buffer even if the gesture is interrupted.
+import { useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as FileSystem from 'expo-file-system/legacy';
 import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -24,6 +27,12 @@ import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
 
 const BRAND_TEAL = '#0E8C8C';
+const INK = '#0D1B2A';
+// The canvas is always white regardless of theme: the captured PNG is
+// embedded in the legal PDF, so it must be opaque (view-shot preserves
+// alpha) and readable on any background — paper, not glass.
+const CANVAS_BG = '#FFFFFF';
+const PLACEHOLDER_FG = 'rgba(60,60,67,0.45)';
 
 type Point = { x: number; y: number };
 type Stroke = Point[];
@@ -49,6 +58,12 @@ export interface SignatureFieldProps {
    * a `{ r2Key, mime: 'image/png' }` value before POSTing the form.
    */
   value: string;
+  /**
+   * The answer is already an uploaded `{ r2Key }` (retry after a failed
+   * submit, or a server-prefilled answer). Signed, but with no local
+   * file to preview.
+   */
+  uploaded?: boolean;
   onChange: (next: string) => void;
   error?: string | null;
 }
@@ -56,6 +71,7 @@ export interface SignatureFieldProps {
 export function SignatureFieldRenderer({
   field,
   value,
+  uploaded,
   onChange,
   error,
 }: SignatureFieldProps) {
@@ -66,53 +82,62 @@ export function SignatureFieldRenderer({
   const isDark = colorScheme === 'dark';
   const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
 
-  const [editing, setEditing] = useState(!value);
+  const [editing, setEditing] = useState(!value && !uploaded);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [current, setCurrent] = useState<Stroke>([]);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
   const canvasSize = useRef({ width: 0, height: 200 });
   const shotRef = useRef<View | null>(null);
-
-  // PanResponder lives across renders to avoid re-creation on every
-  // stroke update; it reads/writes the live stroke buffer via refs.
   const liveStroke = useRef<Stroke>([]);
-  const pan = useRef<PanResponderInstance | null>(null);
-  if (!pan.current) {
-    pan.current = PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: (evt: GestureResponderEvent) => {
-        const { locationX, locationY } = evt.nativeEvent;
-        liveStroke.current = [{ x: locationX, y: locationY }];
-        setCurrent(liveStroke.current);
-      },
-      onPanResponderMove: (evt: GestureResponderEvent) => {
-        const { locationX, locationY } = evt.nativeEvent;
-        const last = liveStroke.current[liveStroke.current.length - 1];
-        // Drop redundant points within 1pt — the SVG stays small without
-        // visible loss of fidelity.
-        if (
-          last &&
-          Math.abs(last.x - locationX) < 1 &&
-          Math.abs(last.y - locationY) < 1
-        ) {
-          return;
-        }
-        liveStroke.current = [
-          ...liveStroke.current,
-          { x: locationX, y: locationY },
-        ];
-        setCurrent(liveStroke.current);
-      },
-      onPanResponderRelease: () => {
-        if (liveStroke.current.length === 0) return;
-        setStrokes((prev) => [...prev, liveStroke.current]);
-        liveStroke.current = [];
-        setCurrent([]);
-      },
-    });
-  }
+
+  const hasInk = strokes.length > 0 || current.length > 0;
+
+  const beginStroke = (x: number, y: number) => {
+    setCommitError(null);
+    liveStroke.current = [{ x, y }];
+    setCurrent(liveStroke.current);
+  };
+
+  const extendStroke = (x: number, y: number) => {
+    const last = liveStroke.current[liveStroke.current.length - 1];
+    // Drop redundant points within 1pt — the SVG stays small without
+    // visible loss of fidelity.
+    if (last && Math.abs(last.x - x) < 1 && Math.abs(last.y - y) < 1) {
+      return;
+    }
+    liveStroke.current = [...liveStroke.current, { x, y }];
+    setCurrent(liveStroke.current);
+  };
+
+  // Called from onFinalize, which RNGH fires on BOTH completion and
+  // interruption — ink is committed to `strokes` no matter how the
+  // gesture ends. The old PanResponder only committed on a clean
+  // release, so a stolen touch dropped the whole stroke.
+  const endStroke = () => {
+    if (liveStroke.current.length === 0) return;
+    const done = liveStroke.current;
+    liveStroke.current = [];
+    setStrokes((prev) => [...prev, done]);
+    setCurrent([]);
+  };
+
+  // minDistance(0): activate on contact so the parent scrollers (which
+  // need ~10pt of travel) never win the touch. onBegin (not onStart)
+  // starts the stroke so a plain tap still leaves a dot.
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .minDistance(0)
+        .maxPointers(1)
+        .shouldCancelWhenOutside(false)
+        .runOnJS(true)
+        .onBegin((e) => beginStroke(e.x, e.y))
+        .onUpdate((e) => extendStroke(e.x, e.y))
+        .onFinalize(() => endStroke()),
+    // Handlers only touch refs and functional setState — safe to build once.
+    [],
+  );
 
   const onClear = () => {
     haptics.select();
@@ -120,35 +145,35 @@ export function SignatureFieldRenderer({
     setCurrent([]);
     setCommitError(null);
     liveStroke.current = [];
+    // Drop any previously saved answer too — otherwise a cleared canvas
+    // still submits the stale PNG sitting in FormRenderer's answers
+    // (or the r2Key of an already-uploaded one).
+    if (value || uploaded) onChange('');
   };
 
   const onCommit = async () => {
-    if (strokes.length === 0 || !shotRef.current) return;
+    if (!hasInk || !shotRef.current) return;
     if (committing) return;
     setCommitError(null);
     setCommitting(true);
     try {
-      const width = Math.max(1, Math.round(canvasSize.current.width));
-      const height = Math.max(1, Math.round(canvasSize.current.height));
-
+      const width = Math.round(canvasSize.current.width);
+      const height = Math.round(canvasSize.current.height);
       if (width < 10 || height < 10) {
-        throw new Error('Canvas not laid out yet — try again.');
+        throw new Error(s.sigErrNotReady);
       }
 
-      // Timeout guard so a wedged native call never hangs "Save".
+      // No width/height override: view-shot then captures at the device
+      // pixel ratio instead of downscaling to points — the PDF gets a
+      // sharp signature, not a ~350px blur.
       const captured: string = await Promise.race([
         captureRef(shotRef, {
           format: 'png',
           quality: 1,
           result: 'tmpfile',
-          width,
-          height,
         }),
         new Promise<string>((_, reject) =>
-          setTimeout(
-            () => reject(new Error('Signature capture timed out.')),
-            5000,
-          ),
+          setTimeout(() => reject(new Error(s.sigErrTimeout)), 5000),
         ),
       ]);
 
@@ -160,7 +185,7 @@ export function SignatureFieldRenderer({
 
       const info = await FileSystem.getInfoAsync(fileUri);
       if (!info.exists || !info.size || info.size < 100) {
-        throw new Error('Signature file was not saved correctly.');
+        throw new Error(s.sigErrBadFile);
       }
 
       if (__DEV__) {
@@ -171,7 +196,7 @@ export function SignatureFieldRenderer({
       onChange(fileUri);
       setEditing(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Save failed.';
+      const message = err instanceof Error ? err.message : s.sigErrSaveFailed;
       if (__DEV__) {
         console.error('[signature] commit failed:', message, err);
       }
@@ -188,12 +213,12 @@ export function SignatureFieldRenderer({
     setCurrent([]);
     setCommitError(null);
     liveStroke.current = [];
+    // The saved URI must not survive into a re-sign session — clearing
+    // it also flips the field back to "unanswered" for validation.
+    if (value || uploaded) onChange('');
     setEditing(true);
   };
 
-  const canvasBg = isDark
-    ? 'rgba(118,118,128,0.20)'
-    : 'rgba(118,118,128,0.10)';
   const canvasBorder = 'rgba(94,112,130,0.25)';
 
   return (
@@ -205,82 +230,86 @@ export function SignatureFieldRenderer({
     >
       {editing ? (
         <View style={{ gap: 8 }}>
-          <View
-            onLayout={(e) => {
-              canvasSize.current = {
-                width: e.nativeEvent.layout.width,
-                height: 200,
-              };
-            }}
-            style={{
-              width: '100%',
-              height: 200,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              borderWidth: 1,
-              borderColor: canvasBorder,
-              backgroundColor: canvasBg,
-              overflow: 'hidden',
-              position: 'relative',
-            }}
-            {...pan.current.panHandlers}
-          >
+          <GestureDetector gesture={panGesture}>
             <View
-              ref={shotRef}
-              collapsable={false}
-              pointerEvents="none"
-              style={StyleSheet.absoluteFill}
+              accessible
+              accessibilityLabel={field.label}
+              accessibilityHint={s.sigHint}
+              onLayout={(e) => {
+                canvasSize.current = {
+                  width: e.nativeEvent.layout.width,
+                  height: e.nativeEvent.layout.height,
+                };
+              }}
+              style={{
+                width: '100%',
+                height: 200,
+                borderRadius: 12,
+                borderCurve: 'continuous',
+                borderWidth: 1,
+                borderColor: canvasBorder,
+                backgroundColor: CANVAS_BG,
+                overflow: 'hidden',
+                position: 'relative',
+              }}
             >
-              <Svg
-                width="100%"
-                height="100%"
-                style={StyleSheet.absoluteFill}
-              >
-                {strokes.map((s, idx) => (
-                  <Path
-                    key={idx}
-                    d={strokeToPath(s)}
-                    stroke="#0D1B2A"
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                ))}
-                {current.length > 0 ? (
-                  <Path
-                    d={strokeToPath(current)}
-                    stroke="#0D1B2A"
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                ) : null}
-              </Svg>
-            </View>
-            {strokes.length === 0 && current.length === 0 ? (
               <View
+                ref={shotRef}
+                collapsable={false}
                 pointerEvents="none"
-                style={{
-                  ...StyleSheet.absoluteFillObject,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+                style={[StyleSheet.absoluteFill, { backgroundColor: CANVAS_BG }]}
               >
-                <PenLine size={28} color={mutedFg} strokeWidth={1.5} />
-                <Text
+                <Svg
+                  width="100%"
+                  height="100%"
+                  style={StyleSheet.absoluteFill}
+                >
+                  {strokes.map((stroke, idx) => (
+                    <Path
+                      key={idx}
+                      d={strokeToPath(stroke)}
+                      stroke={INK}
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  ))}
+                  {current.length > 0 ? (
+                    <Path
+                      d={strokeToPath(current)}
+                      stroke={INK}
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  ) : null}
+                </Svg>
+              </View>
+              {!hasInk ? (
+                <View
+                  pointerEvents="none"
                   style={{
-                    marginTop: 8,
-                    fontSize: 13,
-                    color: mutedFg,
+                    ...StyleSheet.absoluteFillObject,
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  {s.sigPlaceholder}
-                </Text>
-              </View>
-            ) : null}
-          </View>
+                  <PenLine size={28} color={PLACEHOLDER_FG} strokeWidth={1.5} />
+                  <Text
+                    style={{
+                      marginTop: 8,
+                      fontSize: 13,
+                      color: PLACEHOLDER_FG,
+                    }}
+                  >
+                    {s.sigPlaceholder}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </GestureDetector>
           <View
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -291,8 +320,8 @@ export function SignatureFieldRenderer({
           >
             <View
               style={{
-                height: 36,
-                paddingHorizontal: 12,
+                height: 44,
+                paddingHorizontal: 14,
                 borderRadius: 10,
                 borderCurve: 'continuous',
                 borderWidth: 1,
@@ -303,16 +332,16 @@ export function SignatureFieldRenderer({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={s.sigClear}
+                accessibilityState={{ disabled: !hasInk }}
                 onPress={onClear}
-                disabled={strokes.length === 0 && current.length === 0}
+                disabled={!hasInk}
                 style={{
                   flex: 1,
                   flexDirection: isRTL ? 'row-reverse' : 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  opacity:
-                    strokes.length === 0 && current.length === 0 ? 0.4 : 1,
+                  opacity: hasInk ? 1 : 0.4,
                 }}
               >
                 <Eraser size={14} color={mutedFg} strokeWidth={2.2} />
@@ -329,24 +358,22 @@ export function SignatureFieldRenderer({
             </View>
             <View
               style={{
-                height: 36,
-                paddingHorizontal: 16,
+                height: 44,
+                paddingHorizontal: 18,
                 borderRadius: 10,
                 borderCurve: 'continuous',
-                backgroundColor:
-                  strokes.length === 0
-                    ? 'rgba(14,140,140,0.30)'
-                    : BRAND_TEAL,
+                backgroundColor: hasInk ? BRAND_TEAL : 'rgba(14,140,140,0.30)',
                 overflow: 'hidden',
               }}
             >
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={s.sigSave}
+                accessibilityState={{ disabled: !hasInk || committing }}
                 onPress={() => {
                   void onCommit();
                 }}
-                disabled={strokes.length === 0 || committing}
+                disabled={!hasInk || committing}
                 style={{
                   flex: 1,
                   alignItems: 'center',
@@ -388,11 +415,16 @@ export function SignatureFieldRenderer({
               justifyContent: 'center',
             }}
           >
-            <ExpoImage
-              source={{ uri: value }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="contain"
-            />
+            {value ? (
+              <ExpoImage
+                source={{ uri: value }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="contain"
+              />
+            ) : (
+              // Already uploaded — the PNG lives in R2, not on disk.
+              <PenLine size={22} color={PLACEHOLDER_FG} strokeWidth={1.8} />
+            )}
           </View>
           <View style={{ flex: 1, gap: 4 }}>
             <Text

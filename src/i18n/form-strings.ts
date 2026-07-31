@@ -33,6 +33,10 @@ export interface FormStrings {
   kindCheckIn: string;
   expiresToday: string;
   expiresInDays: (n: number) => string;
+  /** Signed-PDF download (FIT-277) — compliance instances only. */
+  downloadPdf: string;
+  downloadPdfPending: string;
+  downloadPdfFailed: string;
 
   // ── Sign screen chrome (shared by auth + token) ───────────────────
   loadingTitle: string;
@@ -93,6 +97,11 @@ export interface FormStrings {
   sigSave: string;
   sigSigned: string;
   sigResign: string;
+  /** Commit-path failures — previously hardcoded English. */
+  sigErrNotReady: string;
+  sigErrTimeout: string;
+  sigErrBadFile: string;
+  sigErrSaveFailed: string;
 
   // ── Photo field ───────────────────────────────────────────────────
   photoAdd: string;
@@ -116,6 +125,9 @@ const HE: FormStrings = {
   kindCheckIn: "צ'ק-אין",
   expiresToday: 'פג תוקף היום',
   expiresInDays: (n) => (n === 1 ? 'פג תוקף מחר' : `פג תוקף בעוד ${n} ימים`),
+  downloadPdf: 'הורדת המסמך',
+  downloadPdfPending: 'פותח את המסמך…',
+  downloadPdfFailed: 'לא הצלחנו לפתוח את המסמך. נסו שוב.',
 
   loadingTitle: 'פותח את הטופס…',
   loadingSubtitle: 'רגע — מאמתים את הקישור.',
@@ -172,6 +184,10 @@ const HE: FormStrings = {
   sigSave: 'שמור חתימה',
   sigSigned: 'חתום',
   sigResign: 'חתום מחדש',
+  sigErrNotReady: 'משטח החתימה עדיין נטען. נסו שוב.',
+  sigErrTimeout: 'שמירת החתימה נמשכה זמן רב מדי. נסו שוב.',
+  sigErrBadFile: 'לא ניתן היה לשמור את החתימה. נסו שוב.',
+  sigErrSaveFailed: 'השמירה נכשלה. נסו שוב.',
 
   photoAdd: 'הוסף תמונה',
   photoAddAnother: 'הוסף עוד',
@@ -194,6 +210,9 @@ const EN: FormStrings = {
   kindCheckIn: 'Check-in',
   expiresToday: 'Expires today',
   expiresInDays: (n) => (n === 1 ? 'Expires tomorrow' : `Expires in ${n} days`),
+  downloadPdf: 'Download PDF',
+  downloadPdfPending: 'Opening PDF…',
+  downloadPdfFailed: "We couldn't open the document. Try again.",
 
   loadingTitle: 'Opening your form…',
   loadingSubtitle: 'Just a moment — verifying your link.',
@@ -255,6 +274,10 @@ const EN: FormStrings = {
   sigSave: 'Save signature',
   sigSigned: 'Signed',
   sigResign: 'Re-sign',
+  sigErrNotReady: 'The signature pad is still loading. Try again.',
+  sigErrTimeout: 'Saving the signature took too long. Try again.',
+  sigErrBadFile: 'The signature could not be saved. Try again.',
+  sigErrSaveFailed: 'Saving failed. Try again.',
 
   photoAdd: 'Add photo',
   photoAddAnother: 'Add another',
@@ -278,6 +301,9 @@ const RU: FormStrings = {
   kindCheckIn: 'Чек-ин',
   expiresToday: 'Истекает сегодня',
   expiresInDays: (n) => (n === 1 ? 'Истекает завтра' : `Истекает через ${n} дн.`),
+  downloadPdf: 'Скачать PDF',
+  downloadPdfPending: 'Открываем PDF…',
+  downloadPdfFailed: 'Не удалось открыть документ. Попробуйте снова.',
 
   loadingTitle: 'Открываем вашу форму…',
   loadingSubtitle: 'Минутку — проверяем ссылку.',
@@ -345,6 +371,10 @@ const RU: FormStrings = {
   sigSave: 'Сохранить подпись',
   sigSigned: 'Подписано',
   sigResign: 'Подписать заново',
+  sigErrNotReady: 'Поле для подписи ещё загружается. Попробуйте снова.',
+  sigErrTimeout: 'Сохранение подписи заняло слишком много времени. Попробуйте снова.',
+  sigErrBadFile: 'Не удалось сохранить подпись. Попробуйте снова.',
+  sigErrSaveFailed: 'Сохранение не удалось. Попробуйте снова.',
 
   photoAdd: 'Добавить фото',
   photoAddAnother: 'Добавить ещё',

@@ -61,6 +61,10 @@ export default function SignFormScreen() {
   let phase: Phase = 'loading';
   if (signedAt) {
     phase = 'signed';
+  } else if (tokenStr.length < 32) {
+    // useFormByToken never enables for short tokens, so without this
+    // branch a truncated link spins forever instead of saying "invalid".
+    phase = 'invalid';
   } else if (query.isError) {
     phase = 'error';
   } else if (query.data) {
@@ -190,6 +194,11 @@ export default function SignFormScreen() {
             <FormRenderer
               form={form}
               uploadAttachment={uploadViaToken}
+              // No instance id on this route — the token identifies the
+              // draft. A 16-char slice is unique enough for a device-local
+              // key without parking the whole signing credential in
+              // AsyncStorage under a readable name.
+              draftKey={`token:${tokenStr.slice(0, 16)}`}
               onSubmit={handleSubmit}
               submitting={submit.isPending}
               serverError={submitError}

@@ -11,7 +11,7 @@
  * this is the normal state.
  */
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import {
@@ -20,6 +20,7 @@ import {
   Circle,
   ClipboardCheck,
   ClipboardList,
+  Download,
   FileSignature,
 } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
@@ -33,7 +34,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useMyForms, type MyFormEntry } from '@/hooks/use-forms';
+import {
+  useMyForms,
+  useOpenSignedFormPdf,
+  type MyFormEntry,
+} from '@/hooks/use-forms';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -51,6 +56,15 @@ const STATUS_PILL_FG: Record<string, string> = {
 
 function isActionable(status: string): boolean {
   return status === 'pending' || status === 'sent' || status === 'scheduled';
+}
+
+/**
+ * Only a signed compliance instance has a countersigned PDF on file
+ * (check-ins never produce one, and a pending form has nothing to show).
+ */
+function hasSignedPdf(entry: MyFormEntry): boolean {
+  return entry.instance.kind === 'compliance' &&
+    entry.instance.status === 'signed';
 }
 
 export default function MyFormsScreen() {
@@ -120,6 +134,34 @@ export default function MyFormsScreen() {
     });
   };
 
+  // One mutation for the whole list — `variables` names the row whose PDF
+  // is in flight, so the spinner and any error land on the right card.
+  const pdf = useOpenSignedFormPdf(orgId);
+
+  const renderRow = (entry: MyFormEntry) => {
+    const isThisRow = pdf.variables === entry.instance.id;
+    return (
+      <FormRow
+        key={entry.instance.id}
+        entry={entry}
+        isRTL={isRTL}
+        isDark={isDark}
+        statusLabel={statusLabel(entry.instance.status)}
+        onPress={() => onPressEntry(entry)}
+        onDownload={
+          hasSignedPdf(entry)
+            ? () => {
+                haptics.tap();
+                pdf.mutate(entry.instance.id);
+              }
+            : undefined
+        }
+        downloading={isThisRow && pdf.isPending}
+        downloadError={isThisRow && pdf.isError ? s.downloadPdfFailed : null}
+      />
+    );
+  };
+
   return (
     <FKSubScreen
       title={s.listTitle}
@@ -149,13 +191,7 @@ export default function MyFormsScreen() {
                     key={entry.instance.id}
                     entering={FadeInDown.delay(idx * 30).springify().damping(18)}
                   >
-                    <FormRow
-                      entry={entry}
-                      isRTL={isRTL}
-                      isDark={isDark}
-                      statusLabel={statusLabel(entry.instance.status)}
-                      onPress={() => onPressEntry(entry)}
-                    />
+                    {renderRow(entry)}
                   </Animated.View>
                 ))}
               </SectionGroup>
@@ -167,16 +203,7 @@ export default function MyFormsScreen() {
                 isRTL={isRTL}
                 isDark={isDark}
               >
-                {groups.done.map((entry) => (
-                  <FormRow
-                    key={entry.instance.id}
-                    entry={entry}
-                    isRTL={isRTL}
-                    isDark={isDark}
-                    statusLabel={statusLabel(entry.instance.status)}
-                    onPress={() => onPressEntry(entry)}
-                  />
-                ))}
+                {groups.done.map(renderRow)}
               </SectionGroup>
             ) : null}
 
@@ -186,16 +213,7 @@ export default function MyFormsScreen() {
                 isRTL={isRTL}
                 isDark={isDark}
               >
-                {groups.archived.map((entry) => (
-                  <FormRow
-                    key={entry.instance.id}
-                    entry={entry}
-                    isRTL={isRTL}
-                    isDark={isDark}
-                    statusLabel={statusLabel(entry.instance.status)}
-                    onPress={() => onPressEntry(entry)}
-                  />
-                ))}
+                {groups.archived.map(renderRow)}
               </SectionGroup>
             ) : null}
           </>
@@ -242,12 +260,19 @@ function FormRow({
   isDark,
   statusLabel,
   onPress,
+  onDownload,
+  downloading,
+  downloadError,
 }: {
   entry: MyFormEntry;
   isRTL: boolean;
   isDark: boolean;
   statusLabel: string;
   onPress: () => void;
+  /** Set only for rows that have a signed PDF to open. */
+  onDownload?: () => void;
+  downloading?: boolean;
+  downloadError?: string | null;
 }) {
   const colors = useFKColors();
   const s = useFormStrings();
@@ -407,7 +432,50 @@ function FormRow({
               </>
             ) : null}
           </View>
+          {downloadError ? (
+            <Text
+              accessibilityRole="alert"
+              style={{
+                fontSize: 12,
+                fontWeight: '500',
+                color: '#B84A40',
+                textAlign: isRTL ? 'right' : 'left',
+                writingDirection: isRTL ? 'rtl' : 'ltr',
+              }}
+            >
+              {downloadError}
+            </Text>
+          ) : null}
         </View>
+        {/* Nested Pressable: the deepest view wins the touch, so tapping
+            the PDF button opens the document instead of the form. */}
+        {onDownload ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              downloading ? s.downloadPdfPending : s.downloadPdf
+            }
+            accessibilityState={{ disabled: !!downloading, busy: !!downloading }}
+            disabled={downloading}
+            hitSlop={8}
+            onPress={onDownload}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              borderCurve: 'continuous',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(14,140,140,0.12)',
+            }}
+          >
+            {downloading ? (
+              <ActivityIndicator size="small" color={BRAND_TEAL} />
+            ) : (
+              <Download size={17} color={BRAND_TEAL} strokeWidth={2.2} />
+            )}
+          </Pressable>
+        ) : null}
         <ChevronRight
           size={18}
           color={isDark ? 'rgba(235,235,245,0.4)' : 'rgba(60,60,67,0.4)'}

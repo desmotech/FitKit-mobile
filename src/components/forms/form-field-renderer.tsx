@@ -114,15 +114,27 @@ export function FormFieldRenderer({
           error={error}
         />
       );
-    case 'signature':
+    case 'signature': {
+      // Once FormRenderer has uploaded the PNG (a submit that failed at
+      // the POST), or when the server prefilled the answer, the value is
+      // `{ r2Key }` — there's no local file to preview, but the field
+      // must still read as signed rather than snapping back to a blank
+      // canvas.
+      const uploaded =
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        'r2Key' in value;
       return (
         <SignatureFieldRenderer
           field={field}
           value={typeof value === 'string' ? value : ''}
+          uploaded={uploaded}
           onChange={onChange}
           error={error}
         />
       );
+    }
     default: {
       // Exhaustiveness check — if a new `type` is added to the union
       // and not handled above, TypeScript will surface it here.
