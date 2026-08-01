@@ -28,7 +28,11 @@ jest.mock('expo-router', () => ({
     push: mockRouterPush,
     replace: jest.fn(),
     back: jest.fn(),
+    setParams: jest.fn(),
   }),
+  // No ?plan= deep link in these specs — the shop screen reads it via
+  // useLocalSearchParams since the deep-link landing was added.
+  useLocalSearchParams: () => ({}),
 }));
 
 // The mocked posthog-react-native constructor returns one shared client
