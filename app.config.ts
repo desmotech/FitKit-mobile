@@ -214,6 +214,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             host: 'app.fitkit.fit',
             pathPrefix: '/forms/sign',
           },
+          // Shop deep links (quick-register → shop landing, optionally
+          // with ?plan=<id> to auto-open a plan's purchase). Locale
+          // prefixes are stripped in-app by app/+native-intent.ts.
+          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/shop' },
+          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/he/shop' },
+          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/en/shop' },
+          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/ru/shop' },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       },

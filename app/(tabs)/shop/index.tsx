@@ -2,11 +2,11 @@
 // tab only; Goods/merch is not built yet). Shows the org's plans as glass
 // cards; tapping Subscribe runs hosted checkout and routes to the
 // payment-return verification screen.
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { ShoppingBag } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import type { PlanResponse } from '@fitkit/shared';
 import { FKAmbientBackdrop, MemberHeader, useFKColors } from '@/components/fk';
@@ -19,6 +19,7 @@ import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import { usePaymentConfig, usePlans, usePurchasePlan } from '@/hooks/use-shop';
 import { paymentReturnUrl } from '@/lib/api';
+import { formatPrice } from '@/lib/format-price';
 import { MEMBER_PLAN_CHANGE_FLAG } from '@/lib/plan-change';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import * as analytics from '@/lib/analytics';
@@ -184,6 +185,94 @@ export default function ShopScreen() {
     },
     [orgId, pendingPlanId, purchase, router, pc.purchaseFailed],
   );
+
+  // ── Deep-link landing (`/shop?plan=<id>`) ───────────────────────────
+  // Quick-register QR / marketing links land here to spotlight a specific
+  // plan: the switch flow when the member holds a recurring sub and the
+  // flag allows it, or a native confirm before purchase. Deliberately NOT
+  // auto-checkout: opening a link must never create a payment session (or
+  // silently enroll a free plan) without a tap. One shot per mount, only
+  // after every input has loaded; anything non-actionable (unknown plan,
+  // already current, no payment provider) degrades to the plain shop list.
+  // The ?plan= param is cleared once handled so a tab revisit can't
+  // re-trigger the landing. Mirrors the web shop's deep-link behavior.
+  const deepLink = useLocalSearchParams<{ plan?: string }>();
+  const deepLinkPlanId =
+    typeof deepLink.plan === 'string' ? deepLink.plan : undefined;
+  const autoLaunchedRef = useRef(false);
+  useEffect(() => {
+    if (autoLaunchedRef.current || !deepLinkPlanId || !orgId) return;
+    if (plansQ.isLoading || payQ.isLoading || subsQ.isLoading) return;
+    autoLaunchedRef.current = true;
+    const plan = plans.find((p) => p.id === deepLinkPlanId);
+    analytics.track('member_shop_deeplink', {
+      org_id: orgId,
+      plan_id: deepLinkPlanId,
+      matched: !!plan,
+    });
+    router.setParams?.({ plan: undefined });
+    if (!plan) return;
+    const isCurrent =
+      plan.type === 'subscription' && !!currentByPlanId[plan.id];
+    const canSwitch =
+      switchPlanEnabled &&
+      plan.type === 'subscription' &&
+      !isCurrent &&
+      !pendingByPlanId[plan.id] &&
+      activeSubscriptionSubs.length > 0;
+    if (canSwitch) {
+      handleSwitchClick(plan.id);
+      return;
+    }
+    if (isCurrent) return;
+    if (plan.priceInCents > 0 && !hasPaymentProvider) return;
+    // Fallback strings until the mobile @fitkit/shared pin picks up the
+    // shop.deepLink keys (added alongside the web landing).
+    const dlT = ((dict.shop?.deepLink as Record<string, string>) ?? {}) as Record<
+      string,
+      string
+    >;
+    const title = (dlT.title ?? 'Sign up for {plan}?').replace(
+      '{plan}',
+      plan.name,
+    );
+    const message =
+      plan.priceInCents > 0
+        ? (
+            dlT.desc ?? "You'll continue to a secure checkout to pay {price}."
+          ).replace(
+            '{price}',
+            formatPrice(plan.priceInCents, plan.currency, lang),
+          )
+        : (dlT.descFree ?? 'This plan is free. Confirm to activate it.');
+    Alert.alert(title, message, [
+      {
+        text: (dict.common?.cancel as string) ?? 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: dlT.cta ?? 'Continue',
+        onPress: () => void handleSelect(plan),
+      },
+    ]);
+  }, [
+    deepLinkPlanId,
+    orgId,
+    plansQ.isLoading,
+    payQ.isLoading,
+    subsQ.isLoading,
+    plans,
+    currentByPlanId,
+    pendingByPlanId,
+    activeSubscriptionSubs,
+    switchPlanEnabled,
+    hasPaymentProvider,
+    handleSelect,
+    handleSwitchClick,
+    router,
+    dict,
+    lang,
+  ]);
 
   const isLoading = plansQ.isLoading || payQ.isLoading;
   const isError = plansQ.isError;
