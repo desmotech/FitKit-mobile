@@ -18,11 +18,18 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { saveActiveOrgId } from '@/lib/settings-store';
+import { clearActiveOrgId, saveActiveOrgId } from '@/lib/settings-store';
 
 type ActiveOrgValue = {
   activeOrgId: string | null;
   setActiveOrgId: (orgId: string) => void;
+  /**
+   * Drops the selection from memory *and* from disk. Clearing only the
+   * stored value isn't enough: this state is seeded once at startup, so a
+   * sign-out that doesn't reset it leaves the next user signing in on this
+   * device pinned to the previous user's org for the rest of the app run.
+   */
+  clearActiveOrg: () => void;
 };
 
 const ActiveOrgContext = createContext<ActiveOrgValue | null>(null);
@@ -41,9 +48,14 @@ export function ActiveOrgProvider({
     void saveActiveOrgId(orgId);
   }, []);
 
+  const clearActiveOrg = useCallback(() => {
+    setState(null);
+    void clearActiveOrgId();
+  }, []);
+
   const value = useMemo(
-    () => ({ activeOrgId, setActiveOrgId }),
-    [activeOrgId, setActiveOrgId],
+    () => ({ activeOrgId, setActiveOrgId, clearActiveOrg }),
+    [activeOrgId, setActiveOrgId, clearActiveOrg],
   );
 
   return (

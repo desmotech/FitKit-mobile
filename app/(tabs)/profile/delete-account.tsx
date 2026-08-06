@@ -29,6 +29,8 @@ import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useHaptics } from '@/hooks/use-haptics';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
+import { resetClientSession } from '@/lib/session-reset';
+import { useActiveOrg } from '@/providers/active-org-provider';
 import { useI18n } from '@/providers/i18n-provider';
 
 const CONFIRM_LITERAL = 'DELETE';
@@ -48,6 +50,7 @@ export default function DeleteAccountScreen() {
   const { signOut } = useClerk();
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
+  const { clearActiveOrg } = useActiveOrg();
 
   const [typed, setTyped] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -92,23 +95,22 @@ export default function DeleteAccountScreen() {
       // 2. Hit the destructive endpoint. Server cascades + deletes Clerk.
       await fetchWithAuth('/users/me', { method: 'DELETE' });
 
-      // 3. Local cleanup so a re-sign-up starts from a clean slate.
-      try {
-        queryClient.clear();
-        const AsyncStorage = (
-          await import('@react-native-async-storage/async-storage')
-        ).default;
-        await AsyncStorage.removeItem('fitkit-rq-cache');
-      } catch {
-        // best-effort
-      }
-
-      // 4. Sign out + redirect. If the server already nuked the Clerk
-      // session, signOut may throw — swallow it.
+      // 3. Sign out. If the server already nuked the Clerk session, signOut
+      // may throw — swallow it.
       try {
         await signOut();
       } catch {
         // already gone
+      }
+
+      // 4. Local cleanup so a re-sign-up starts from a clean slate. After
+      // the sign-out, not before: with the session still live, clearing the
+      // cache makes mounted screens refetch and re-persist it.
+      try {
+        clearActiveOrg();
+        await resetClientSession(queryClient);
+      } catch {
+        // best-effort
       }
 
       haptics.success();

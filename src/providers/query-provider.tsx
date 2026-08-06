@@ -8,20 +8,13 @@ import {
 } from '@tanstack/react-query';
 import { reportQueryError } from '@/lib/error-reporting';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { queryPersister } from '@/lib/query-persister';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 const ONE_MINUTE = 60_000;
 const THIRTY_MINUTES = 30 * ONE_MINUTE;
 const TWENTY_FOUR_HOURS = 24 * 60 * ONE_MINUTE;
-
-const persister = createAsyncStoragePersister({
-  storage: AsyncStorage,
-  key: 'fitkit-rq-cache',
-  throttleTime: 1_000,
-});
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -75,7 +68,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister, maxAge: TWENTY_FOUR_HOURS }}
+      persistOptions={{ persister: queryPersister, maxAge: TWENTY_FOUR_HOURS }}
     >
       {children}
     </PersistQueryClientProvider>
