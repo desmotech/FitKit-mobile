@@ -241,13 +241,15 @@ describe('Profile hub', () => {
     // fires when a push token was registered this session).
     expect(mockAuthState.getToken).toHaveBeenCalled();
     expect(mockAuthState.signOut).toHaveBeenCalled();
-    // The persisted active-org selection is dropped so the next sign-in
-    // starts with a clean slate. (The rq-cache removal can't be observed
-    // here: the screen loads AsyncStorage via a dynamic `import()`, which
-    // Jest's VM rejects — the screen's best-effort catch swallows it.)
-    expect(
-      (AsyncStorage.removeItem as jest.Mock).mock.calls.map((c) => c[0]),
-    ).toContain('fitkit:settings:activeOrg');
+    // Everything the next person signing in on this device could otherwise
+    // inherit is dropped: the persisted query cache, the active-org
+    // selection, and the stamp saying whose cache it was.
+    const removed = (AsyncStorage.removeItem as jest.Mock).mock.calls.map(
+      (c) => c[0],
+    );
+    expect(removed).toContain('fitkit-rq-cache');
+    expect(removed).toContain('fitkit:settings:activeOrg');
+    expect(removed).toContain('fitkit:auth:cacheOwner');
     expect(mockRouterReplace).toHaveBeenCalledWith('/(auth)/sign-in');
 
     // Let the refetches triggered by queryClient.clear() settle so nothing

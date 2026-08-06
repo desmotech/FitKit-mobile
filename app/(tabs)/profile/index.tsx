@@ -78,7 +78,8 @@ import {
 } from '@/i18n/use-payment-error-strings';
 import { ApiError } from '@/hooks/use-api';
 import { queryKeys } from '@/lib/query-keys';
-import { clearActiveOrgId } from '@/lib/settings-store';
+import { resetClientSession } from '@/lib/session-reset';
+import { useActiveOrg } from '@/providers/active-org-provider';
 import { useI18n } from '@/providers/i18n-provider';
 import { useThemePreference } from '@/providers/theme-provider';
 import { RecentPRs } from '@/components/profile/recent-prs';
@@ -108,6 +109,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { dir, lang, setLang, t } = useI18n();
   const { user, activeOrganization, isLoading: userLoading } = useCurrentUser();
+  const { clearActiveOrg } = useActiveOrg();
   const { signOut } = useClerk();
   const { getToken } = useAuth();
   const { user: clerkUser } = useUser();
@@ -194,19 +196,22 @@ export default function ProfileScreen() {
           } catch {
             // Best-effort — server reaps dead tokens on next send anyway.
           }
-          // Clear cached server data (and the active-org selection) so a
-          // sign-in as a different user starts with a clean slate.
-          try {
-            queryClient.clear();
-            await clearActiveOrgId();
-            const AsyncStorage = (
-              await import('@react-native-async-storage/async-storage')
-            ).default;
-            await AsyncStorage.removeItem('fitkit-rq-cache');
-          } catch {
-            // Cache clear is best-effort — never block sign-out on it.
-          }
+          // Drop the session FIRST, then clear. The other order looks
+          // harmless but isn't: while the session is still live every
+          // mounted screen's query is enabled, so `clear()` makes them all
+          // refetch with the outgoing user's token and the persister's
+          // throttled write puts that data straight back on disk — where
+          // the next sign-in restores it. Signing out first disables the
+          // queries (`useApiQuery` gates on `isSignedIn`), so nothing
+          // repopulates what we erase.
           await signOut();
+          try {
+            clearActiveOrg();
+            await resetClientSession(queryClient);
+          } catch {
+            // Best-effort — never block sign-out on it. SessionGuard runs
+            // the same reset when it sees the identity change.
+          }
           router.replace('/(auth)/sign-in');
         },
       },

@@ -25,6 +25,8 @@ import {
   type ThemePreference,
 } from '@/lib/settings-store';
 import { resolveDeviceLocale, type Locale } from '@/i18n/config';
+import { loadSessionOwner } from '@/lib/session-reset';
+import { SessionGuard } from '@/providers/session-guard';
 import { secureTokenCache } from '@/lib/secure-token-cache';
 import { apiUrl, clerkPublishableKey, sentryDsn } from '@/lib/api';
 import { hydrateAnalyticsConsent } from '@/lib/analytics';
@@ -126,6 +128,7 @@ function RootLayout() {
     theme: ThemePreference;
     locale: Locale | null;
     activeOrgId: string | null;
+    sessionOwnerId: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -135,10 +138,14 @@ function RootLayout() {
       loadLocaleOverride(),
       loadAnalyticsConsent(),
       loadActiveOrgId(),
-    ]).then(([theme, locale, analyticsConsent, activeOrgId]) => {
+      // Who the persisted query cache belongs to. Read here so SessionGuard
+      // can compare it against Clerk's user on the very first render rather
+      // than after an async round trip the tab shell would race.
+      loadSessionOwner(),
+    ]).then(([theme, locale, analyticsConsent, activeOrgId, sessionOwnerId]) => {
       if (!cancelled) {
         hydrateAnalyticsConsent(analyticsConsent);
-        setSettings({ theme, locale, activeOrgId });
+        setSettings({ theme, locale, activeOrgId, sessionOwnerId });
       }
     });
     return () => {
@@ -196,6 +203,11 @@ function RootLayout() {
                 <ActiveOrgProvider initialActiveOrgId={settings.activeOrgId}>
                   <QueryProvider>
                     <RealtimeProvider>
+                    {/* Erases the previous session's cache + org selection
+                        whenever the signed-in identity changes. Must sit
+                        inside QueryProvider (query client + restore state)
+                        and ActiveOrgProvider. */}
+                    <SessionGuard initialOwnerId={settings.sessionOwnerId} />
                     <PushBootstrap />
                     <StatusBar style="auto" />
                     <Stack screenOptions={{ headerShown: false }}>

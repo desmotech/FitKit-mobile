@@ -29,12 +29,18 @@ export class ApiError extends Error {
 }
 
 export function useApi() {
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   const { lang } = useI18n();
-  const tokenRef = useRef<{ value: string | null; expiresAt: number }>({
-    value: null,
-    expiresAt: 0,
-  });
+  // The cached JWT is stamped with the user it was minted for. Hooks mounted
+  // above the auth gate (analytics identity, push bootstrap) outlive a
+  // sign-out, so an unstamped cache would hand the outgoing member's token to
+  // the next sign-in for up to TOKEN_CACHE_TTL — and /users/me would answer
+  // with the wrong person.
+  const tokenRef = useRef<{
+    value: string | null;
+    expiresAt: number;
+    userId: string | null;
+  }>({ value: null, expiresAt: 0, userId: null });
 
   const getCachedToken = useCallback(
     async (forceRefresh = false) => {
@@ -42,6 +48,7 @@ export function useApi() {
       if (
         !forceRefresh &&
         tokenRef.current.value &&
+        tokenRef.current.userId === (userId ?? null) &&
         now < tokenRef.current.expiresAt
       ) {
         return tokenRef.current.value;
@@ -52,10 +59,14 @@ export function useApi() {
       const token = await getToken(
         forceRefresh ? { skipCache: true } : undefined,
       );
-      tokenRef.current = { value: token, expiresAt: now + TOKEN_CACHE_TTL };
+      tokenRef.current = {
+        value: token,
+        expiresAt: now + TOKEN_CACHE_TTL,
+        userId: userId ?? null,
+      };
       return token;
     },
-    [getToken],
+    [getToken, userId],
   );
 
   const fetchWithAuth = useCallback(
