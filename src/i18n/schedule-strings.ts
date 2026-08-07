@@ -49,6 +49,8 @@ export interface ScheduleStrings {
   cancelPolicy: string;
   keepBooking: string;
   bookFailed: string;
+  /** Title for eligibility blocks (no plan, limits) — not an error. */
+  bookUnavailable: string;
   cancelFailed: string;
 
   // ── Plan picker ───────────────────────────────────────────────────
@@ -104,16 +106,17 @@ const HE: ScheduleStrings = {
   cancellationWindowClosed: 'חלון הביטול נסגר',
   cancelPolicy: 'ניתן לבטל עד {hours} שעות לפני תחילת השיעור.',
   keepBooking: 'השארת הרישום',
-  bookFailed: 'ההרשמה לשיעור נכשלה',
-  cancelFailed: 'ביטול הרישום נכשל',
+  bookFailed: 'לא הצלחנו להשלים את ההרשמה',
+  bookUnavailable: 'רגע לפני ההרשמה',
+  cancelFailed: 'לא הצלחנו לבטל את הרישום',
 
   selectPlan: 'בחירת מנוי',
   creditsLeft: 'נותרו {count} כניסות',
   unlimited: 'ללא הגבלה',
 
-  noPlan: 'רכוש מנוי כדי להירשם לשיעורים',
-  membershipInactive: 'המנוי שלך אינו פעיל. פנה למועדון לקבלת סיוע.',
-  noCredits: 'לא נותרו כניסות',
+  noPlan: 'כדי להירשם לשיעורים צריך מנוי פעיל.',
+  membershipInactive: 'המנוי שלך אינו פעיל כרגע. פנה אלינו במועדון ונשמח לעזור.',
+  noCredits: 'לא נותרו כניסות במנוי',
   overlap: 'חופף להרשמה אחרת',
   dailyLimit: 'מגבלה יומית ({max} ביום)',
   weeklyLimit: 'מגבלה שבועית ({max} בשבוע)',
@@ -155,17 +158,18 @@ const EN: ScheduleStrings = {
   cancellationWindowClosed: 'Cancellation window closed',
   cancelPolicy: 'You may cancel up to {hours} hour(s) before class start.',
   keepBooking: 'Keep booking',
-  bookFailed: 'Failed to book class',
-  cancelFailed: 'Failed to cancel booking',
+  bookFailed: "Couldn't complete your booking",
+  bookUnavailable: 'Before you book',
+  cancelFailed: "Couldn't cancel your booking",
 
   selectPlan: 'Select Plan',
   creditsLeft: '{count} credits left',
   unlimited: 'Unlimited',
 
-  noPlan: 'Purchase a plan to book classes',
+  noPlan: "You'll need an active plan to book classes.",
   membershipInactive:
-    'Your membership is not active. Contact the gym for assistance.',
-  noCredits: 'No credits remaining',
+    "Your membership isn't active right now. Reach out to the gym and we'll help.",
+  noCredits: 'No credits left on this plan',
   overlap: 'Overlaps with another booking',
   dailyLimit: 'Daily limit ({max}/day)',
   weeklyLimit: 'Weekly limit ({max}/week)',
@@ -209,16 +213,17 @@ const RU: ScheduleStrings = {
     'Отменить можно не позднее чем за {hours} ч. до начала занятия.',
   keepBooking: 'Оставить запись',
   bookFailed: 'Не удалось записаться на занятие',
+  bookUnavailable: 'Прежде чем записаться',
   cancelFailed: 'Не удалось отменить запись',
 
   selectPlan: 'Выберите план',
   creditsLeft: 'Осталось занятий: {count}',
   unlimited: 'Безлимит',
 
-  noPlan: 'Купите план, чтобы записываться на занятия',
+  noPlan: 'Для записи на занятия нужен активный абонемент.',
   membershipInactive:
-    'Ваш абонемент неактивен. Обратитесь в зал за помощью.',
-  noCredits: 'Не осталось занятий',
+    'Ваш абонемент сейчас неактивен. Свяжитесь с залом — мы поможем.',
+  noCredits: 'На этом абонементе не осталось занятий',
   overlap: 'Пересекается с другой записью',
   dailyLimit: 'Дневной лимит ({max}/день)',
   weeklyLimit: 'Недельный лимит ({max}/нед.)',

@@ -18,6 +18,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import { usePaymentConfig, usePlans, usePurchasePlan } from '@/hooks/use-shop';
+import { readFormGate } from '@/lib/form-gate';
 import { paymentReturnUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/format-price';
 import { MEMBER_PLAN_CHANGE_FLAG } from '@/lib/plan-change';
@@ -175,6 +176,16 @@ export default function ShopScreen() {
           params: { status, sub: sub.id },
         });
       } catch (e) {
+        // Compliance gate (plan regulations / consent): open the pending
+        // instance the API just minted instead of a dead-end alert.
+        const gate = readFormGate(e);
+        if (gate) {
+          router.push({
+            pathname: '/(tabs)/profile/forms/[instanceId]',
+            params: { instanceId: gate.instanceId, reason: 'purchase' },
+          });
+          return;
+        }
         Alert.alert(
           pc.purchaseFailed ?? 'Failed to purchase plan',
           e instanceof Error ? e.message : undefined,

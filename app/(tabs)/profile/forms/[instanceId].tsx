@@ -34,7 +34,12 @@ const BRAND_TEAL = '#0E8C8C';
 
 export default function SignFormInstanceScreen() {
   const router = useRouter();
-  const { instanceId } = useLocalSearchParams<{ instanceId: string }>();
+  const { instanceId, reason } = useLocalSearchParams<{
+    instanceId: string;
+    /** Set when a gated flow (booking / purchase) pushed us here, so the
+     *  member sees why they were interrupted instead of a bare form. */
+    reason?: string;
+  }>();
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const s = useFormStrings();
@@ -42,6 +47,12 @@ export default function SignFormInstanceScreen() {
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
+  const gateBanner =
+    reason === 'booking'
+      ? s.gateBookingBanner
+      : reason === 'purchase'
+        ? s.gatePurchaseBanner
+        : null;
   const id = typeof instanceId === 'string' ? instanceId : '';
   const query = useFormInstance(orgId, id);
   const submit = useSubmitFormInstance(orgId, id);
@@ -158,6 +169,19 @@ export default function SignFormInstanceScreen() {
             downloading={pdf.isPending}
             downloadError={pdf.isError ? s.downloadPdfFailed : null}
           />
+        ) : null}
+
+        {!isLoading && entry && !signedAt && !isTerminal && gateBanner ? (
+          <FKGlassPanel
+            radius={16}
+            style={{ padding: 14, marginBottom: 12 }}
+          >
+            <Text
+              style={{ color: colors.mutedFg, textAlign: isRTL ? 'right' : 'left' }}
+            >
+              {gateBanner}
+            </Text>
+          </FKGlassPanel>
         ) : null}
 
         {!isLoading && entry && !signedAt && !isTerminal ? (
