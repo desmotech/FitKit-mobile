@@ -40,6 +40,7 @@ import {
   weekStartFor,
 } from '@/hooks/use-workouts';
 import { useScheduleStrings } from '@/i18n/use-schedule-strings';
+import { readFormGate } from '@/lib/form-gate';
 import { displayFamily, font } from '@/lib/type';
 import { monthRangeLabel, ymd } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
@@ -196,7 +197,7 @@ export default function ScheduleScreen() {
     const decision = decideBookingPlan(session);
     if (decision.kind === 'blocked') {
       Alert.alert(
-        s.bookFailed,
+        s.bookUnavailable,
         blockReasonText(decision.reason, decision.plan, s),
       );
       return;
@@ -217,11 +218,20 @@ export default function ScheduleScreen() {
       },
       {
         onSuccess: () => haptics.success(),
-        onError: (err) =>
-          Alert.alert(
-            s.bookFailed,
-            extractApiErrorMessage(err, s.bookFailed),
-          ),
+        onError: (err) => {
+          // Compliance gate: the API already minted the pending instance, so
+          // take the member straight to it instead of alerting with a raw
+          // (English) server message they can't act on.
+          const gate = readFormGate(err);
+          if (gate) {
+            router.push({
+              pathname: '/(tabs)/profile/forms/[instanceId]',
+              params: { instanceId: gate.instanceId, reason: 'booking' },
+            });
+            return;
+          }
+          Alert.alert(s.bookFailed, extractApiErrorMessage(err, s.bookFailed));
+        },
         onSettled: () => setPendingSessionId(null),
       },
     );

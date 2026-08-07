@@ -48,6 +48,7 @@ import {
   usePlanPicker,
 } from '@/components/schedule/plan-picker';
 import { getWeekStartDay, weekStartFor } from '@/hooks/use-workouts';
+import { readFormGate } from '@/lib/form-gate';
 import { useI18n } from '@/providers/i18n-provider';
 import { SessionInfoCard } from '@/components/schedule/session-info-card';
 import { WorkoutBlock } from '@/components/schedule/session-workout-block';
@@ -148,8 +149,8 @@ export default function SessionDetailScreen() {
     classStarted: member.classStarted ?? 'Class Has Already Started',
     cancellationWindowClosed:
       member.cancellationWindowClosed ?? 'Cancellation Window Closed',
-    bookFailed: member.bookFailed ?? 'Failed to book class',
-    cancelFailed: member.cancelFailed ?? 'Failed to cancel booking',
+    bookFailed: member.bookFailed ?? "Couldn't complete your booking",
+    cancelFailed: member.cancelFailed ?? "Couldn't cancel your booking",
     cancelPolicy:
       member.cancelPolicy ??
       'You may cancel up to {hours} hour(s) before class start.',
@@ -288,6 +289,17 @@ export default function SessionDetailScreen() {
       {
         onSuccess: () => haptics.success(),
         onError: (err) => {
+          // Compliance gate: the pending instance already exists (the API
+          // mints it on refusal), so open it rather than dead-ending on a
+          // message the member can't act on.
+          const gate = readFormGate(err);
+          if (gate) {
+            router.push({
+              pathname: '/(tabs)/profile/forms/[instanceId]',
+              params: { instanceId: gate.instanceId, reason: 'booking' },
+            });
+            return;
+          }
           // Structured codes (e.g. C3's booking-beyond-subscription-end
           // guard) get localized copy; anything else falls back to the
           // server message as before (FIT-272).

@@ -39,6 +39,9 @@ export interface FormStrings {
   downloadPdfFailed: string;
 
   // ── Sign screen chrome (shared by auth + token) ───────────────────
+  /** Why the member was brought here straight from another flow. */
+  gateBookingBanner: string;
+  gatePurchaseBanner: string;
   loadingTitle: string;
   loadingSubtitle: string;
   notFoundTitle: string;
@@ -129,6 +132,8 @@ const HE: FormStrings = {
   downloadPdfPending: 'פותח את המסמך…',
   downloadPdfFailed: 'לא הצלחנו לפתוח את המסמך. נסו שוב.',
 
+  gateBookingBanner: 'רגע לפני ההרשמה — יש לחתום על התקנון הבא.',
+  gatePurchaseBanner: 'רגע לפני הרכישה — יש לחתום על התקנון הבא.',
   loadingTitle: 'פותח את הטופס…',
   loadingSubtitle: 'רגע — מאמתים את הקישור.',
   notFoundTitle: 'הטופס לא נמצא',
@@ -214,6 +219,8 @@ const EN: FormStrings = {
   downloadPdfPending: 'Opening PDF…',
   downloadPdfFailed: "We couldn't open the document. Try again.",
 
+  gateBookingBanner: 'One quick step before booking — please sign the form below.',
+  gatePurchaseBanner: 'One quick step before your purchase — please sign the form below.',
   loadingTitle: 'Opening your form…',
   loadingSubtitle: 'Just a moment — verifying your link.',
   notFoundTitle: 'Form not found',
@@ -305,6 +312,8 @@ const RU: FormStrings = {
   downloadPdfPending: 'Открываем PDF…',
   downloadPdfFailed: 'Не удалось открыть документ. Попробуйте снова.',
 
+  gateBookingBanner: 'Один шаг до записи — подпишите форму ниже.',
+  gatePurchaseBanner: 'Один шаг до покупки — подпишите форму ниже.',
   loadingTitle: 'Открываем вашу форму…',
   loadingSubtitle: 'Минутку — проверяем ссылку.',
   notFoundTitle: 'Форма не найдена',
