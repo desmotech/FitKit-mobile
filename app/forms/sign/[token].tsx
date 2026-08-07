@@ -1,211 +1,140 @@
 /**
- * /forms/sign/[token] — public, token-gated form signing surface (FIT-178).
+ * /forms/sign/[token] — resolves a signing link to the member's own form.
  *
- * Reached two ways:
- *   - Real flow: WhatsApp/SMS/email link via Universal Link →
- *     `app.fitkit.fit/forms/sign/<token>` → intercepted by AASA →
- *     opens this route. (Pending AASA deployment per FIT-188.)
- *   - Local sim testing: custom scheme:
- *     `xcrun simctl openurl booted "fitkit:///forms/sign/<token>"`
+ * The token used to be the ONLY gate, which made every signing URL a bearer
+ * credential for a legal signature: forwarded once, anyone could sign as the
+ * member (including a minor opening the parental-consent link assigned to
+ * them). The API now requires a session whose user IS the assignee, so this
+ * screen no longer renders a form — it resolves the link and hands off to
+ * `/(tabs)/profile/forms/[instanceId]`, the one authenticated signing
+ * surface.
  *
- * All copy in Hebrew RTL where appropriate. Visual idiom matches the
- * onboarding screens (FKBrandMark hero + FKGlassPanel card + iOS form
- * typography) so the member's first signing experience feels native to
- * the rest of the app.
+ * Reached via Universal Link (`app.fitkit.fit/forms/sign/<token>`) or, in the
+ * simulator, `xcrun simctl openurl booted "fitkit:///forms/sign/<token>"`.
  */
-import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
-import { CheckCircle2 } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, View } from 'react-native';
+import { AlertTriangle } from 'lucide-react-native';
 import { FKBrandMark, FKGlassPanel, useFKColors } from '@/components/fk';
-import { FormRenderer } from '@/components/forms/form-renderer';
 import { Text } from '@/components/ui/text';
-import {
-  useFormByToken,
-  useSubmitFormByToken,
-  useTokenUpload,
-  type FormTokenStatus,
-} from '@/hooks/use-form-token';
+import { useApi } from '@/hooks/use-api';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
-import type { FormAnswers } from '@/types/forms';
 
-const BRAND_TEAL = '#0E8C8C';
+type Failure = 'expired' | 'not-found' | 'wrong-account' | 'already-signed' | 'error';
 
-type Phase = FormTokenStatus | 'loading' | 'signed';
+/** HTTP status → what the member is told. */
+function failureFor(status: number | undefined): Failure {
+  switch (status) {
+    case 410:
+      return 'expired';
+    case 404:
+      return 'not-found';
+    // Signed in, but the link is someone else's — the case the old bearer
+    // link silently allowed.
+    case 401:
+    case 403:
+      return 'wrong-account';
+    case 409:
+      return 'already-signed';
+    default:
+      return 'error';
+  }
+}
 
-export default function SignFormScreen() {
+export default function SignFormLinkScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
+  const router = useRouter();
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const colors = useFKColors();
-  const insets = useSafeAreaInsets();
   const s = useFormStrings();
+  const { fetchWithAuth } = useApi();
 
   const tokenStr = typeof token === 'string' ? token : '';
-  const query = useFormByToken(tokenStr);
-  const submit = useSubmitFormByToken(tokenStr);
-  const uploadViaToken = useTokenUpload(tokenStr);
+  const [failure, setFailure] = useState<Failure | null>(null);
 
-  const [signedAt, setSignedAt] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  // Status branching. `query.isLoading` covers initial fetch; the
-  // `result.status` field covers HTTP-level branching once we have a
-  // response. Network failures land as `error` via the queryFn rejecting.
-  // The "signed" phase is local — set after a successful submit.
-  let phase: Phase = 'loading';
-  if (signedAt) {
-    phase = 'signed';
-  } else if (tokenStr.length < 32) {
-    // useFormByToken never enables for short tokens, so without this
-    // branch a truncated link spins forever instead of saying "invalid".
-    phase = 'invalid';
-  } else if (query.isError) {
-    phase = 'error';
-  } else if (query.data) {
-    phase = query.data.status;
-  }
-
-  const handleSubmit = async (answers: FormAnswers) => {
-    setSubmitError(null);
-    const result = await submit.mutateAsync({ answers });
-    if (result.status === 'ok') {
-      setSignedAt(new Date().toISOString());
+  useEffect(() => {
+    if (!tokenStr || tokenStr.length < 32) {
+      setFailure('not-found');
       return;
     }
-    if (result.status === 'expired') {
-      setSubmitError(s.expiredSubtitle);
-    } else if (result.status === 'invalid') {
-      setSubmitError(result.message ?? s.validationFailed);
-    } else {
-      setSubmitError(s.errorSubtitle);
-    }
+    let ignore = false;
+    void (async () => {
+      try {
+        const res = (await fetchWithAuth(`/forms/sign/${tokenStr}`)) as {
+          data: { instance: { id: string; status: string } };
+        };
+        if (ignore) return;
+        const instance = res.data.instance;
+        if (instance.status === 'signed' || instance.status === 'archived') {
+          setFailure('already-signed');
+          return;
+        }
+        router.replace({
+          pathname: '/(tabs)/profile/forms/[instanceId]',
+          params: { instanceId: instance.id },
+        });
+      } catch (err) {
+        if (ignore) return;
+        setFailure(failureFor((err as { status?: number }).status));
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [tokenStr, fetchWithAuth, router]);
+
+  const copy: Record<Failure, { title: string; body: string }> = {
+    expired: { title: s.expiredTitle, body: s.expiredSubtitle },
+    'not-found': { title: s.notFoundTitle, body: s.notFoundSubtitle },
+    'wrong-account': { title: s.wrongAccountTitle, body: s.wrongAccountSubtitle },
+    'already-signed': { title: s.alreadySignedTitle, body: s.alreadySignedSubtitle },
+    error: { title: s.errorTitle, body: s.errorSubtitle },
   };
 
-  const hero = ((): { title: string; subtitle: string } => {
-    switch (phase) {
-      case 'loading':
-        return { title: s.loadingTitle, subtitle: s.loadingSubtitle };
-      case 'expired':
-        return { title: s.expiredTitle, subtitle: s.expiredSubtitle };
-      case 'not-found':
-        return {
-          title: s.notFoundTitle,
-          subtitle: s.notFoundSubtitle,
-        };
-      case 'invalid':
-        return { title: s.invalidTitle, subtitle: s.invalidSubtitle };
-      case 'error':
-        return { title: s.errorTitle, subtitle: s.errorSubtitle };
-      case 'signed':
-        return { title: s.signedTitle, subtitle: s.signedSubtitle };
-      case 'ok':
-        return {
-          title: query.data?.data?.form.name ?? s.readyTitle,
-          subtitle: s.readySubtitle,
-        };
-    }
-  })();
-
-  const form = query.data?.data?.form;
-
   return (
-    <SafeAreaView
-      edges={['bottom']}
-      style={{ flex: 1, backgroundColor: colors.background }}
-    >
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingTop: insets.top + 24,
-          paddingHorizontal: 24,
-          paddingBottom: 24,
-          gap: 24,
-          justifyContent: phase === 'loading' ? 'center' : 'flex-start',
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={{ alignItems: 'center', gap: 14, paddingBottom: 4 }}>
-          {phase === 'signed' ? (
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 30,
-                backgroundColor: 'rgba(14,140,140,0.12)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 4,
-              }}
-            >
-              <CheckCircle2 size={36} color={BRAND_TEAL} strokeWidth={2.2} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 20 }}>
+        <FKBrandMark />
+        <FKGlassPanel radius={20} style={{ padding: 24, width: '100%' }}>
+          {failure ? (
+            <View style={{ alignItems: 'center', gap: 10 }} testID={`sign-link-${failure}`}>
+              <AlertTriangle size={28} color={colors.mutedFg} />
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: colors.foreground,
+                  textAlign: 'center',
+                  writingDirection: isRTL ? 'rtl' : 'ltr',
+                }}
+              >
+                {copy[failure].title}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  lineHeight: 20,
+                  color: colors.mutedFg,
+                  textAlign: 'center',
+                  writingDirection: isRTL ? 'rtl' : 'ltr',
+                }}
+              >
+                {copy[failure].body}
+              </Text>
             </View>
           ) : (
-            <View style={{ paddingBottom: 12 }}>
-              <FKBrandMark size={40} />
+            <View style={{ alignItems: 'center', gap: 12 }} testID="sign-link-loading">
+              <ActivityIndicator color={colors.primary} />
+              <Text style={{ fontSize: 15, color: colors.mutedFg }}>
+                {s.loadingTitle}
+              </Text>
             </View>
           )}
-          <View style={{ alignItems: 'center', gap: 4 }}>
-            <Text
-              numberOfLines={2}
-              style={{
-                fontSize: 22,
-                fontWeight: '600',
-                lineHeight: 30,
-                letterSpacing: -0.2,
-                color: colors.foreground,
-                textAlign: 'center',
-                writingDirection: isRTL ? 'rtl' : 'ltr',
-                paddingTop: 4,
-              }}
-            >
-              {hero.title}
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '400',
-                lineHeight: 18,
-                color: colors.mutedFg,
-                textAlign: 'center',
-                maxWidth: 320,
-                writingDirection: isRTL ? 'rtl' : 'ltr',
-              }}
-              numberOfLines={4}
-            >
-              {hero.subtitle}
-            </Text>
-          </View>
-        </View>
-
-        {phase === 'loading' ? (
-          <View style={{ alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={BRAND_TEAL} />
-          </View>
-        ) : null}
-
-        {phase === 'ok' && form ? (
-          <FKGlassPanel radius={20} style={{ padding: 20 }}>
-            <FormRenderer
-              form={form}
-              uploadAttachment={uploadViaToken}
-              // No instance id on this route — the token identifies the
-              // draft. A 16-char slice is unique enough for a device-local
-              // key without parking the whole signing credential in
-              // AsyncStorage under a readable name.
-              draftKey={`token:${tokenStr.slice(0, 16)}`}
-              onSubmit={handleSubmit}
-              submitting={submit.isPending}
-              serverError={submitError}
-            />
-          </FKGlassPanel>
-        ) : null}
-      </ScrollView>
+        </FKGlassPanel>
+      </View>
     </SafeAreaView>
   );
 }
