@@ -34,6 +34,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { AlertCircle } from 'lucide-react-native';
 import { FKButton, useFKColors } from '@/components/fk';
+import { FormBodyView, isRichDocEmpty } from './form-body-view';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useFormStrings } from '@/i18n/use-form-strings';
@@ -175,6 +176,9 @@ export function FormRenderer({
   // and <FieldShell> via useFormRTL().
   const isRTL = form.locale === 'he';
   const colors = useFKColors();
+  // `bodyRichJson` ships in a newer @fitkit/shared than this app pins, so
+  // read it off the response defensively rather than widening the type.
+  const richBody = (form as { bodyRichJson?: unknown }).bodyRichJson;
   const haptics = useHaptics();
   const s = useFormStrings();
 
@@ -476,7 +480,12 @@ export function FormRenderer({
         it could steal an in-flight signature stroke — and on Android an
         inner list doesn't scroll at all without nestedScrollEnabled. */}
     <View style={{ gap: 20, paddingBottom: 24 }}>
-      {form.bodyRichtext ? (
+      {/* Rich body (headings, lists, tables) when the coach authored one;
+          `bodyRichtext` is the flattened fallback for templates written
+          before the rich editor, where a table would read as loose words. */}
+      {!isRichDocEmpty(richBody) ? (
+        <FormBodyView doc={richBody} isRTL={isRTL} />
+      ) : form.bodyRichtext ? (
         <Text
           style={{
             fontSize: 14,
