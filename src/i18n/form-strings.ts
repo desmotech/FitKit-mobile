@@ -40,6 +40,9 @@ export interface FormStrings {
 
   // ── Sign screen chrome (shared by auth + token) ───────────────────
   /** Why the member was brought here straight from another flow. */
+  /** Signing link opened by the wrong account (or signed out). */
+  wrongAccountTitle: string;
+  wrongAccountSubtitle: string;
   gateBookingBanner: string;
   gatePurchaseBanner: string;
   loadingTitle: string;
@@ -132,6 +135,8 @@ const HE: FormStrings = {
   downloadPdfPending: 'פותח את המסמך…',
   downloadPdfFailed: 'לא הצלחנו לפתוח את המסמך. נסו שוב.',
 
+  wrongAccountTitle: 'הקישור שייך למישהו אחר',
+  wrongAccountSubtitle: 'התחברו עם החשבון שאליו נשלח הטופס ופתחו שוב את הקישור.',
   gateBookingBanner: 'רגע לפני ההרשמה — יש לחתום על התקנון הבא.',
   gatePurchaseBanner: 'רגע לפני הרכישה — יש לחתום על התקנון הבא.',
   loadingTitle: 'פותח את הטופס…',
@@ -219,6 +224,8 @@ const EN: FormStrings = {
   downloadPdfPending: 'Opening PDF…',
   downloadPdfFailed: "We couldn't open the document. Try again.",
 
+  wrongAccountTitle: 'This link is for someone else',
+  wrongAccountSubtitle: 'Sign in as the member this form was sent to, then open the link again.',
   gateBookingBanner: 'One quick step before booking — please sign the form below.',
   gatePurchaseBanner: 'One quick step before your purchase — please sign the form below.',
   loadingTitle: 'Opening your form…',
@@ -312,6 +319,8 @@ const RU: FormStrings = {
   downloadPdfPending: 'Открываем PDF…',
   downloadPdfFailed: 'Не удалось открыть документ. Попробуйте снова.',
 
+  wrongAccountTitle: 'Эта ссылка для другого человека',
+  wrongAccountSubtitle: 'Войдите под аккаунтом, которому отправлена форма, и откройте ссылку снова.',
   gateBookingBanner: 'Один шаг до записи — подпишите форму ниже.',
   gatePurchaseBanner: 'Один шаг до покупки — подпишите форму ниже.',
   loadingTitle: 'Открываем вашу форму…',
