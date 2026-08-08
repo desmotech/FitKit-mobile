@@ -16,9 +16,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useHaptics } from '@/hooks/use-haptics';
-import { displayFamily, eyebrow } from '@/lib/type';
+import { displayFamily, eyebrow, type } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 import { useFKColors } from './colors';
+import { FKGlassSurface } from './glass-surface';
 
 /**
  * Day status — drives the bar under the date (one consistent semantic across
@@ -109,17 +110,16 @@ export function FKDateRail({
   }));
 
   return (
-    <View
+    // Glass, not an opaque slab: over the ambient backdrop `colors.card` read
+    // as a hard black box cut out of the screen.
+    <FKGlassSurface
+      radius={16}
+      interactive={false}
       style={{
         flexDirection: isRTL ? 'row-reverse' : 'row',
         position: 'relative',
         padding: 4,
         gap: 2,
-        borderRadius: 16,
-        borderCurve: 'continuous',
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: colors.card,
       }}
     >
       <Animated.View
@@ -154,7 +154,7 @@ export function FKDateRail({
           }
         />
       ))}
-    </View>
+    </FKGlassSurface>
   );
 }
 
@@ -251,18 +251,19 @@ function RailCell({
       ) : null}
       <Animated.Text
         style={{
-          fontSize: 10,
+          fontSize: type.kicker.fontSize,
+          lineHeight: type.kicker.lineHeight,
           color: sub,
           ...eyebrow(lang),
         }}
       >
         {day.dow}
       </Animated.Text>
+      {/* One step below the selected-day heading the rail feeds — the rail
+          is the picker, not the title. */}
       <Animated.Text
         style={{
-          fontSize: 19,
-          lineHeight: 20,
-          letterSpacing: -0.3,
+          ...type.subhead,
           color: fg,
           fontFamily: displayFamily(lang, 'semibold'),
           fontVariant: ['tabular-nums'],

@@ -1,7 +1,8 @@
 /**
- * Single back-button affordance used by every pushed screen. iOS
- * Settings / Mail / Notes pattern: tinted `chevron.left` glyph + label
- * with no fill. Brand teal accent.
+ * Single back-button affordance used by every pushed screen. iOS 26 nav-bar
+ * pattern: a Liquid Glass capsule carrying a tinted `chevron.left` glyph +
+ * label. Pre-iOS-26 and Android fall back to the translucent fill, which is
+ * close to the flat tinted-glyph look this used to have. Brand teal accent.
  *
  * RTL is handled in two places:
  *  1. The icon is mirrored — `ChevronLeft` in LTR, `ChevronRight` in RTL.
@@ -15,11 +16,14 @@
  */
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { Pressable, View } from 'react-native';
+import { Pressable } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
+import { FKGlassSurface } from './glass-surface';
 
 const BRAND_TEAL = '#0E8C8C';
+/** Capsule height — matches iOS 26's 36pt nav-bar glass controls. */
+const HEIGHT = 36;
 
 export function FKBackButton({
   onPress,
@@ -52,22 +56,28 @@ export function FKBackButton({
       accessibilityLabel={resolvedLabel ?? 'Back'}
     >
       {({ pressed }) => (
-        <View
+        <FKGlassSurface
+          radius={HEIGHT / 2}
+          pressed={pressed}
           style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            paddingVertical: 6,
-            paddingHorizontal: 4,
+            height: HEIGHT,
+            // Icon-only collapses to a circle; the labelled variant is a
+            // capsule with the chevron optically tucked toward the edge.
+            paddingStart: resolvedLabel ? 8 : 0,
+            paddingEnd: resolvedLabel ? 14 : 0,
+            width: resolvedLabel ? undefined : HEIGHT,
             gap: resolvedLabel ? 2 : 0,
-            opacity: pressed ? 0.5 : 1,
           }}
         >
-          <Chevron size={28} color={BRAND_TEAL} strokeWidth={2.6} />
+          <Chevron size={22} color={BRAND_TEAL} strokeWidth={2.6} />
           {resolvedLabel ? (
             <Text
+              maxFontSizeMultiplier={1.4}
               style={{
                 fontSize: 17,
-                fontWeight: '400',
+                lineHeight: 22,
+                fontWeight: '600',
                 color: BRAND_TEAL,
                 letterSpacing: -0.2,
               }}
@@ -75,7 +85,7 @@ export function FKBackButton({
               {resolvedLabel}
             </Text>
           ) : null}
-        </View>
+        </FKGlassSurface>
       )}
     </Pressable>
   );

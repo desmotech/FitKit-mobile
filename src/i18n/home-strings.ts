@@ -51,13 +51,20 @@ export interface HomeStrings {
     evening: string;
   };
 
-  /** Context-aware sub-greeting under the greeting line. */
+  /**
+   * Context-aware sub-greeting under the greeting line.
+   *
+   * Deliberately has no "empty board" variant: the Today card directly below
+   * already states that, and a sub-greeting saying the same thing made the
+   * screen say "nothing today" three times over (kicker → sub-greeting →
+   * card title → card body). The greeting stays motivational; the card
+   * carries the fact.
+   */
   subgreeting: {
     fresh: string;
     hot: string;
     comeback: string;
     rest: string;
-    open: string;
   };
 }
 
@@ -67,12 +74,14 @@ const HE: HomeStrings = {
   addGoal: 'הוספת יעד',
   viewAllGoals: 'הצג הכל',
 
+  // Hebrew here is deliberately verb-free where English would use an
+  // imperative: "צא"/"קח" are masculine-only and misgender half the members.
   restDayTitle: 'יום מנוחה',
-  restDaySubtitle: 'קח את זה בקלות — התאוששות היא גם אימון.',
-  openDayTitle: 'אין אימון על הלוח היום',
-  openDaySubtitle:
-    'לא הוקצה אימון — צא לתנועה קלה: הליכה, מוביליטי או מתיחות.',
-  browseWeek: 'לצפייה בשבוע',
+  restDaySubtitle: 'הגוף בונה את עצמו בימים כאלה.',
+  // No "היום" — the section kicker right above already says it.
+  openDayTitle: 'אין אימון על הלוח',
+  openDaySubtitle: 'זמן טוב לתנועה קלה — הליכה, מתיחות או ניידות.',
+  browseWeek: 'מה יש השבוע',
 
   booked: 'רשום',
   waitlisted: 'המתנה',
@@ -107,7 +116,6 @@ const HE: HomeStrings = {
     hot: 'ממשיכים ברצף!',
     comeback: 'טוב שחזרת — ממשיכים מאיפה שעצרנו.',
     rest: 'מנוחה היא חלק מהאימון.',
-    open: 'יום פנוי — קצת תנועה תמיד טובה.',
   },
 };
 
@@ -118,11 +126,10 @@ const EN: HomeStrings = {
   viewAllGoals: 'View all',
 
   restDayTitle: 'Rest day',
-  restDaySubtitle: 'Take it easy — recovery is training too.',
-  openDayTitle: 'No workout on the board today',
-  openDaySubtitle:
-    'Nothing programmed — get some easy movement in: a walk, mobility, or a light stretch.',
-  browseWeek: 'Browse this week',
+  restDaySubtitle: 'This is where the body rebuilds itself.',
+  openDayTitle: 'Nothing on the board',
+  openDaySubtitle: 'A good day for easy movement — a walk, a stretch, mobility.',
+  browseWeek: "See what's on this week",
 
   booked: 'Booked',
   waitlisted: 'Waitlist',
@@ -154,7 +161,6 @@ const EN: HomeStrings = {
     hot: "You're on a roll.",
     comeback: "Good to have you back — let's pick up where we left off.",
     rest: 'Recovery is part of the work.',
-    open: 'Open day — move a little anyway.',
   },
 };
 
@@ -165,11 +171,11 @@ const RU: HomeStrings = {
   viewAllGoals: 'Показать все',
 
   restDayTitle: 'День отдыха',
-  restDaySubtitle: 'Не перегружайтесь — восстановление тоже тренировка.',
-  openDayTitle: 'Сегодня на доске нет тренировки',
+  restDaySubtitle: 'Именно в такие дни тело восстанавливается.',
+  openDayTitle: 'На доске пусто',
   openDaySubtitle:
-    'Ничего не запланировано — немного лёгкого движения: прогулка, мобилити или растяжка.',
-  browseWeek: 'Посмотреть неделю',
+    'Хороший день для лёгкого движения — прогулка, растяжка, мобильность.',
+  browseWeek: 'Что на этой неделе',
 
   booked: 'Запись',
   waitlisted: 'Лист ожидания',
@@ -201,7 +207,6 @@ const RU: HomeStrings = {
     hot: 'Вы в ударе!',
     comeback: 'С возвращением — продолжим с того места, где остановились.',
     rest: 'Отдых — тоже часть тренировки.',
-    open: 'Свободный день — немного движения не помешает.',
   },
 };
 

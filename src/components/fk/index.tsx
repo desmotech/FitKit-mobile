@@ -25,6 +25,7 @@ import { FKGlassPanel } from './glass-panel';
 export { FK_DARK, FK_LIGHT, useFKColors } from './colors';
 export { FKAmbientBackdrop } from './ambient-backdrop';
 export { FKGlassPanel } from './glass-panel';
+export { FKGlassSurface, LIQUID_GLASS } from './glass-surface';
 export { FKRing } from './ring';
 export {
   FKDateRail,

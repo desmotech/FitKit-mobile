@@ -58,15 +58,16 @@ export function FKScreenHeader({
 
         {/* Centered title — absolute-positioned so it ignores the back
             button's variable width and always sits on the screen's
-            horizontal center, exactly like UINavigationBar. */}
+            horizontal center, exactly like UINavigationBar. The 88pt
+            gutters clear the back button's glass capsule. */}
         <View
           pointerEvents="none"
           style={{
             position: 'absolute',
             top: 0,
             bottom: 0,
-            left: 60,
-            right: 60,
+            left: 88,
+            right: 88,
             alignItems: 'center',
             justifyContent: 'center',
           }}

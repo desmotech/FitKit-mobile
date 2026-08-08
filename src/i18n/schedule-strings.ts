@@ -22,6 +22,10 @@ export interface ScheduleStrings {
   minSuffix: string;
   today: string;
 
+  // ── Week navigation (VoiceOver labels for the icon-only chevrons) ──
+  prevWeek: string;
+  nextWeek: string;
+
   // ── Read-path errors ──────────────────────────────────────────────
   loadFailedTitle: string;
   loadFailedSubtitle: string;
@@ -85,6 +89,9 @@ const HE: ScheduleStrings = {
   minSuffix: 'דק׳',
   today: 'היום',
 
+  prevWeek: 'השבוע הקודם',
+  nextWeek: 'השבוע הבא',
+
   loadFailedTitle: 'לא הצלחנו לטעון את לוח השיעורים',
   loadFailedSubtitle: 'בדוק את החיבור לאינטרנט ונסה שוב.',
   tryAgain: 'נסה שוב',
@@ -136,6 +143,9 @@ const EN: ScheduleStrings = {
   noClassesToday: 'No classes scheduled',
   minSuffix: 'min',
   today: 'Today',
+
+  prevWeek: 'Previous week',
+  nextWeek: 'Next week',
 
   loadFailedTitle: "Couldn't load the schedule",
   loadFailedSubtitle: 'Check your connection and try again.',
@@ -189,6 +199,9 @@ const RU: ScheduleStrings = {
   noClassesToday: 'Занятий не запланировано',
   minSuffix: 'мин',
   today: 'Сегодня',
+
+  prevWeek: 'Предыдущая неделя',
+  nextWeek: 'Следующая неделя',
 
   loadFailedTitle: 'Не удалось загрузить расписание',
   loadFailedSubtitle: 'Проверьте подключение и попробуйте снова.',

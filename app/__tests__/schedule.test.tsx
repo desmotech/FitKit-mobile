@@ -10,10 +10,10 @@
  * Booking-mutation behavior is covered at hook level — here we only assert
  * what the member sees.
  */
-import { screen, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import ScheduleScreen from '../(tabs)/schedule/index';
 import { scheduleStringsFor } from '@/i18n/schedule-strings';
-import { getWeekStartDay, pad2, weekStartFor } from '@/lib/week';
+import { getWeekStartDay, pad2, shiftWeek, weekStartFor } from '@/lib/week';
 import { stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
@@ -176,5 +176,54 @@ describe('Schedule — day list', () => {
     ).toBeOnTheScreen();
     // The open class: a book CTA — and only that one row offers it.
     expect(screen.getByRole('button', { name: S.bookClass })).toBeOnTheScreen();
+  });
+});
+
+describe('Schedule — week navigation', () => {
+  it('shows the new week\'s classes immediately, without needing a day tap', async () => {
+    // Regression: the selected day used to stay pinned to today when the
+    // week changed, so next week's list looked up a date that week didn't
+    // contain and fell through to the empty state until a cell was tapped.
+    const nextWeekStart = shiftWeek(WEEK_START, 1);
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/sessions`), ({ request }) => {
+        const week = new URL(request.url).searchParams.get('weekStart');
+        if (week !== nextWeekStart) return HttpResponse.json({ data: [] });
+        // A class on the first day of next week — the day the strip lands
+        // on once the selection can no longer be today.
+        const startsAt = new Date(`${nextWeekStart}T09:00:00`);
+        return HttpResponse.json({
+          data: [
+            classSession({
+              id: 'sess_next',
+              classType: {
+                id: 'ct_2',
+                name: 'Next Week Ride',
+                color: null,
+                defaultDurationMin: 45,
+              },
+              startsAt: startsAt.toISOString(),
+              endsAt: new Date(startsAt.getTime() + 45 * 60_000).toISOString(),
+            }),
+          ],
+        });
+      }),
+      http.get(api(`/organizations/${TEST_ORG}/announcements/unread-count`), () =>
+        HttpResponse.json({ data: { count: 0 } }),
+      ),
+      http.get(api(`/organizations/${TEST_ORG}/conversations`), () =>
+        HttpResponse.json({ data: { conversations: [] } }),
+      ),
+    );
+
+    await renderWithProviders(<ScheduleScreen />);
+    await waitFor(() =>
+      expect(screen.getByText(S.noClassesToday)).toBeOnTheScreen(),
+    );
+
+    await userEvent.press(screen.getByRole('button', { name: S.nextWeek }));
+
+    expect(await screen.findByText('Next Week Ride')).toBeOnTheScreen();
+    expect(screen.queryByText(S.noClassesToday)).not.toBeOnTheScreen();
   });
 });

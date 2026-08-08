@@ -7,7 +7,7 @@ import {
   classBookState,
   differenceInMinutes,
 } from '@/hooks/use-schedule';
-import { bodyFamily, eyebrow, font } from '@/lib/type';
+import { bodyFamily, font, type } from '@/lib/type';
 import { pad2 } from '@/lib/week';
 
 interface SessionRowLabels {
@@ -76,6 +76,9 @@ export function SessionRow({
   const bs = classBookState(session, Date.now());
   const isClosed = bs === 'closed';
 
+  // Status reads as the first clause of the meta line rather than a chip in
+  // its own column. A bordered stamp stacked over the action button forced
+  // every row ~100pt tall and left a void where the title should breathe.
   let stampText = labels.open;
   let tone: StampTone = 'muted';
   if (isClosed) {
@@ -152,15 +155,16 @@ export function SessionRow({
               gap: 13,
             }}
           >
-            {/* Time column */}
+            {/* Time column — a scanning anchor, deliberately *below* the
+                class name in the ramp: the title is what the row is about. */}
             <View
               style={{ width: 50, flexShrink: 0, alignItems: 'center', gap: 2 }}
             >
               <Text
                 style={{
+                  ...type.body,
                   fontFamily: font.monoMedium,
-                  fontSize: 18,
-                  lineHeight: 20,
+                  fontSize: 16,
                   color: colors.foreground,
                   fontVariant: ['tabular-nums'],
                 }}
@@ -170,8 +174,8 @@ export function SessionRow({
               <Text
                 numberOfLines={1}
                 style={{
+                  ...type.kicker,
                   fontFamily: font.mono,
-                  fontSize: 10,
                   letterSpacing: 0.4,
                   color: colors.mutedFg,
                   fontVariant: ['tabular-nums'],
@@ -185,58 +189,48 @@ export function SessionRow({
             <View
               style={{
                 width: 3,
-                height: 30,
+                height: 32,
                 borderRadius: 2,
                 backgroundColor: accentColor,
                 flexShrink: 0,
               }}
             />
 
-            {/* Title + meta */}
+            {/* Title + meta. The meta line opens with the status in its tone
+                colour, so the trailing column carries the action alone. */}
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 numberOfLines={1}
                 style={{
+                  ...type.subhead,
                   fontFamily: bodyFamily(lang, 'bold'),
-                  fontSize: 15,
-                  letterSpacing: -0.1,
                   color: colors.foreground,
                   textAlign: isRTL ? 'right' : 'left',
                 }}
               >
                 {session.title ?? session.classType.name}
               </Text>
-              {meta ? (
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    fontFamily: font.mono,
-                    fontSize: 11,
-                    color: colors.mutedFg,
-                    marginTop: 3,
-                    textAlign: isRTL ? 'right' : 'left',
-                  }}
-                >
-                  {meta}
+              <Text
+                numberOfLines={1}
+                style={{
+                  ...type.caption,
+                  fontFamily: font.mono,
+                  color: colors.mutedFg,
+                  marginTop: 1,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                <Text style={{ color: STAMP_FG(tone, colors) }}>
+                  {stampText}
                 </Text>
-              ) : null}
+                {meta ? ` · ${meta}` : ''}
+              </Text>
             </View>
 
-            {/* Status + inline book/cancel action */}
-            <View
-              style={{
-                flexShrink: 0,
-                alignItems: isRTL ? 'flex-start' : 'flex-end',
-                gap: 7,
-              }}
-            >
-              <SessionStamp
-                text={stampText}
-                tone={tone}
-                colors={colors}
-                lang={lang}
-              />
-              {showAction ? (
+            {/* Action — the only thing in the trailing column, so it centres
+                against the two text lines instead of stacking under a chip. */}
+            {showAction ? (
+              <View style={{ flexShrink: 0 }}>
                 <BookBtn
                   label={actionLabel}
                   primary={actionPrimary}
@@ -245,8 +239,8 @@ export function SessionRow({
                   colors={colors}
                   lang={lang}
                 />
-              ) : null}
-            </View>
+              </View>
+            ) : null}
           </FKCard>
         )}
       </Pressable>
@@ -254,53 +248,22 @@ export function SessionRow({
   );
 }
 
-function SessionStamp({
-  text,
-  tone,
-  colors,
-  lang,
-}: {
-  text: string;
-  tone: StampTone;
-  colors: ReturnType<typeof useFKColors>;
-  lang: string;
-}) {
+/** Ink for the status clause that opens the meta line. */
+function STAMP_FG(
+  tone: StampTone,
+  colors: ReturnType<typeof useFKColors>,
+): string {
   const isDark = colors.isDark;
-  const map: Record<StampTone, { fg: string; bd: string }> = {
-    green: {
-      fg: isDark ? '#93C49B' : '#5E7E3E',
-      bd: isDark ? 'rgba(147,196,155,0.42)' : 'rgba(94,126,62,0.42)',
-    },
-    gold: {
-      fg: isDark ? '#E2B85C' : '#B07D2A',
-      bd: isDark ? 'rgba(226,184,92,0.42)' : 'rgba(176,125,42,0.42)',
-    },
-    rose: {
-      fg: isDark ? '#EC7C70' : '#C0524A',
-      bd: isDark ? 'rgba(236,124,112,0.42)' : 'rgba(192,82,74,0.42)',
-    },
-    muted: {
-      fg: colors.mutedFg,
-      bd: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(40,36,30,0.16)',
-    },
-  };
-  const m = map[tone];
-  return (
-    <View
-      style={{
-        flexShrink: 0,
-        paddingHorizontal: 8,
-        paddingTop: 5,
-        paddingBottom: 4,
-        borderRadius: 7,
-        borderCurve: 'continuous',
-        borderWidth: 1,
-        borderColor: m.bd,
-      }}
-    >
-      <Text style={{ fontSize: 10, color: m.fg, ...eyebrow(lang) }}>{text}</Text>
-    </View>
-  );
+  switch (tone) {
+    case 'green':
+      return isDark ? '#93C49B' : '#5E7E3E';
+    case 'gold':
+      return isDark ? '#E2B85C' : '#B07D2A';
+    case 'rose':
+      return isDark ? '#EC7C70' : '#C0524A';
+    default:
+      return colors.mutedFg;
+  }
 }
 
 /** Compact inline action — book / waitlist (filled) or cancel / leave
@@ -339,9 +302,9 @@ function BookBtn({
       {({ pressed }) => (
         <View
           style={{
-            height: 30,
+            height: 32,
             paddingHorizontal: 12,
-            borderRadius: 10,
+            borderRadius: 16,
             borderCurve: 'continuous',
             flexDirection: 'row',
             alignItems: 'center',
@@ -356,9 +319,10 @@ function BookBtn({
           {pending ? <ActivityIndicator size="small" color={fg} /> : null}
           <Text
             numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
             style={{
+              ...type.caption,
               fontFamily: bodyFamily(lang, 'bold'),
-              fontSize: 12.5,
               letterSpacing: -0.1,
               color: fg,
             }}

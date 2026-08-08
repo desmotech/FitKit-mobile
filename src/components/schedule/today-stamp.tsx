@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useFKColors } from '@/components/fk';
-import { eyebrow } from '@/lib/type';
+import { eyebrow, type } from '@/lib/type';
 
 /** "Today" pill in the selected-day header. */
 export function TodayStamp({
@@ -29,7 +29,12 @@ export function TodayStamp({
       }}
     >
       <Text
-        style={{ fontSize: 10, color: colors.primaryText, ...eyebrow(lang) }}
+        style={{
+          fontSize: type.kicker.fontSize,
+          lineHeight: type.kicker.lineHeight,
+          color: colors.primaryText,
+          ...eyebrow(lang),
+        }}
       >
         {label}
       </Text>

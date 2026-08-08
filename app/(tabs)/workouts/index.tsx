@@ -86,7 +86,6 @@ export default function WhiteboardScreen() {
     weekStartFor(new Date(), weekStartsOn),
   );
   const todayStr = ymd(new Date());
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   // Expanded sections — keyed by section id. Default: first uncompleted
   // section per assignment (set when assignment changes).
 
@@ -95,8 +94,10 @@ export default function WhiteboardScreen() {
 
   // ── Labels ──────────────────────────────────────────────────────────
   const s = useWhiteboardStrings();
-  // Short weekday labels are shared with the Schedule tab's date rail.
-  const { daysOfWeek } = useScheduleStrings();
+  // Short weekday labels + week-nav a11y labels are shared with the
+  // Schedule tab's date rail.
+  const daysStrings = useScheduleStrings();
+  const { daysOfWeek } = daysStrings;
   const dayLabels = useMemo(
     () => weekOrder.map((k) => daysOfWeek[k]),
     [weekOrder, daysOfWeek],
@@ -114,11 +115,8 @@ export default function WhiteboardScreen() {
     return m;
   }, [all]);
 
-  const { weekDays, goPrev, goNext, weekSwipeGesture } = useWeekStrip({
-    weekStart,
-    setWeekStart,
-    isRTL,
-  });
+  const { weekDays, selectedDate, setSelectedDate, goPrev, goNext, weekSwipeGesture } =
+    useWeekStrip({ weekStart, setWeekStart, isRTL });
 
   const dayAssignments = useMemo(
     () => byDate.get(selectedDate) ?? [],
@@ -183,7 +181,11 @@ export default function WhiteboardScreen() {
             paddingBottom: 6,
           }}
         >
-          <FKNavButton onPress={goPrev} Icon={ChevronStart} />
+          <FKNavButton
+            onPress={goPrev}
+            Icon={ChevronStart}
+            accessibilityLabel={daysStrings.prevWeek}
+          />
           <Text
             numberOfLines={1}
             style={{
@@ -198,7 +200,11 @@ export default function WhiteboardScreen() {
           >
             {monthRangeLabel(weekStart)}
           </Text>
-          <FKNavButton onPress={goNext} Icon={ChevronEnd} />
+          <FKNavButton
+            onPress={goNext}
+            Icon={ChevronEnd}
+            accessibilityLabel={daysStrings.nextWeek}
+          />
         </View>
 
         {/* Day strip — swipe horizontally to move week. The gesture
