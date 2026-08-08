@@ -41,7 +41,7 @@ import {
 } from '@/hooks/use-workouts';
 import { useScheduleStrings } from '@/i18n/use-schedule-strings';
 import { readFormGate } from '@/lib/form-gate';
-import { displayFamily, font } from '@/lib/type';
+import { displayFamily, font, type } from '@/lib/type';
 import { monthRangeLabel, ymd } from '@/lib/week';
 import { useI18n } from '@/providers/i18n-provider';
 import { TodayStamp } from '@/components/schedule/today-stamp';
@@ -66,7 +66,6 @@ export default function ScheduleScreen() {
     weekStartFor(new Date(), weekStartsOn),
   );
   const todayStr = ymd(new Date());
-  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const sessionsQuery = useMyWeekSessions(orgId, weekStart);
   const all = useMemo(() => sessionsQuery.data?.data ?? [], [sessionsQuery.data]);
@@ -124,11 +123,15 @@ export default function ScheduleScreen() {
     return map;
   }, [published]);
 
-  const { weekDays, goPrev, goNext, weekSwipeGesture } = useWeekStrip({
-    weekStart,
-    setWeekStart,
-    isRTL,
-  });
+  const {
+    weekDays,
+    selectedDate,
+    setSelectedDate,
+    goPrev,
+    goNext,
+    weekSwipeGesture,
+    daySwipeGesture,
+  } = useWeekStrip({ weekStart, setWeekStart, isRTL });
 
   const daysSessions = byDate.get(selectedDate) ?? [];
 
@@ -279,25 +282,37 @@ export default function ScheduleScreen() {
             paddingBottom: 6,
           }}
         >
-          <FKNavButton onPress={goPrev} Icon={ChevronStart} />
+          <FKNavButton
+            onPress={goPrev}
+            Icon={ChevronStart}
+            accessibilityLabel={s.prevWeek}
+          />
+          {/* Week context, not the screen's title — the selected-day heading
+              below carries that, so this sits a step down the ramp in the
+              secondary ink. */}
           <Text
             numberOfLines={1}
             style={{
+              ...type.caption,
               textAlign: 'center',
               fontFamily: font.monoMedium,
-              fontSize: 14,
-              letterSpacing: 2,
+              letterSpacing: 1.4,
               textTransform: 'uppercase',
-              color: colors.foreground,
+              color: colors.mutedFg,
               fontVariant: ['tabular-nums'],
             }}
           >
             {monthRangeLabel(weekStart)}
           </Text>
-          <FKNavButton onPress={goNext} Icon={ChevronEnd} />
+          <FKNavButton
+            onPress={goNext}
+            Icon={ChevronEnd}
+            accessibilityLabel={s.nextWeek}
+          />
         </View>
 
-        {/* Day strip — swipe horizontally to move week. */}
+        {/* Day strip — swiping the *picker* pages a whole week. Swiping the
+            day's content below steps one day. */}
         <GestureDetector gesture={weekSwipeGesture}>
           <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
             <FKDateRail
@@ -341,7 +356,9 @@ export default function ScheduleScreen() {
           </View>
         </GestureDetector>
 
-        {/* Selected-day header + class list */}
+        {/* Selected-day header + class list — swipe horizontally to step a
+            day, rolling into the next/previous week at the edges. */}
+        <GestureDetector gesture={daySwipeGesture}>
         <View style={{ paddingHorizontal: 18, paddingTop: 20 }}>
           <View
             style={{
@@ -352,13 +369,13 @@ export default function ScheduleScreen() {
               marginBottom: 12,
             }}
           >
+            {/* The screen's real title: what day you're looking at. */}
             <Text
               numberOfLines={1}
               style={{
+                ...type.heading,
                 flexShrink: 1,
                 fontFamily: displayFamily(lang, 'semibold'),
-                fontSize: 19,
-                letterSpacing: -0.4,
                 color: colors.foreground,
                 textAlign: isRTL ? 'right' : 'left',
               }}
@@ -388,7 +405,10 @@ export default function ScheduleScreen() {
           ) : daysSessions.length === 0 ? (
             <ScheduleEmptyState message={s.noClassesToday} />
           ) : (
-            <View style={{ gap: 12 }}>
+            // Keyed on the day so stepping days remounts the rows and they
+            // re-run their stagger — the swipe reads as a change of content,
+            // not a silent swap.
+            <View key={selectedDate} style={{ gap: 12 }}>
               {daysSessions.map((session, i) => (
                 <SessionRow
                   key={session.id}
@@ -406,6 +426,7 @@ export default function ScheduleScreen() {
             </View>
           )}
         </View>
+        </GestureDetector>
       </ScrollView>
       {planPickerElement}
     </View>

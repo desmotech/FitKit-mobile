@@ -169,7 +169,6 @@ export default function HomeScreen() {
   const greeting = greetingForHour(today.getHours(), s.greeting);
   const subgreeting = subGreetingFor({
     assignment: todayAssignment,
-    sessionsCount: todaySessions.length,
     topGoalProgress: activeGoals[0]?.progressPercent ?? null,
     subgreetingT: s.subgreeting,
   });
@@ -823,8 +822,7 @@ function greetingForHour(
 /**
  * Picks a sub-greeting that reflects the member's current state without
  * needing new server data. Order matters: assigned rest first (most
- * specific), then open/empty board, then hot streak based on top-goal
- * progress, then fresh default.
+ * specific), then hot streak based on top-goal progress, then fresh default.
  *
  * "Comeback" is intentionally not wired yet — we don't have an easy
  * "last activity" signal without another fetch, so we leave that line in
@@ -832,23 +830,19 @@ function greetingForHour(
  */
 function subGreetingFor({
   assignment,
-  sessionsCount,
   topGoalProgress,
   subgreetingT,
 }: {
   assignment: { kind?: string | null } | null;
-  sessionsCount: number;
   topGoalProgress: number | null;
   subgreetingT: HomeStrings['subgreeting'];
 }): string {
   if (assignment?.kind === 'rest') {
     return subgreetingT.rest;
   }
-  // Empty board — nothing programmed, nothing booked. Not rest; nudge
-  // toward light movement rather than implying prescribed recovery.
-  if (!assignment && sessionsCount === 0) {
-    return subgreetingT.open;
-  }
+  // No "empty board" line here on purpose — the OpenDayCard right below
+  // already says the board is empty and suggests light movement. Saying it
+  // twice made the screen read as nagging.
   if (topGoalProgress != null && topGoalProgress >= 70) {
     return subgreetingT.hot;
   }

@@ -2,10 +2,13 @@ import { Coffee } from 'lucide-react-native';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { FKCard, useFKColors } from '@/components/fk';
+import { bodyFamily, type } from '@/lib/type';
+import { useI18n } from '@/providers/i18n-provider';
 
-/** No-classes-today empty state — coffee icon over a centered message. */
+/** No-classes-on-this-day empty state — coffee icon over a centered message. */
 export function ScheduleEmptyState({ message }: { message: string }) {
   const colors = useFKColors();
+  const { lang } = useI18n();
   return (
     <FKCard style={{ padding: 28, alignItems: 'center', gap: 12 }}>
       <View
@@ -25,11 +28,10 @@ export function ScheduleEmptyState({ message }: { message: string }) {
       </View>
       <Text
         style={{
-          fontSize: 14.5,
-          fontWeight: '600',
+          ...type.body,
+          fontFamily: bodyFamily(lang, 'semibold'),
           color: colors.foreground,
           textAlign: 'center',
-          letterSpacing: -0.1,
         }}
       >
         {message}

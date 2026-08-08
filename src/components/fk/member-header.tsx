@@ -10,9 +10,10 @@ import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Bell, MessageCircle, QrCode } from 'lucide-react-native';
 import { type ReactNode } from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrgSwitcher } from '@/components/fk/org-switcher';
+import { FKGlassSurface } from './glass-surface';
 import { Text } from '@/components/ui/text';
 import { useAnnouncementUnreadCount } from '@/hooks/use-announcements';
 import { useTotalUnread } from '@/hooks/use-conversations';
@@ -20,6 +21,9 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
 import { useFKColors } from './colors';
+
+/** Header glyph button diameter. 40pt + 6pt slop clears the 44pt HIG target. */
+const BTN = 40;
 
 interface MemberHeaderProps {
   /** Optional QR scan tap handler — when set, renders the QR button. */
@@ -202,66 +206,61 @@ function HeaderIconButton({
   const showBadge = badge != null && badge > 0;
   const label = showBadge ? (badge > 99 ? '99+' : String(badge)) : null;
   return (
-    <TouchableOpacity
-      activeOpacity={0.6}
+    <Pressable
       onPressIn={onPress}
       hitSlop={6}
-      style={{
-        width: 38,
-        height: 38,
-        borderRadius: 12,
-        borderCurve: 'continuous',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: isPrimary
-          ? colors.primary
-          : isDark
-            ? 'rgba(58,70,78,0.72)'
-            : 'rgba(255,255,255,0.82)',
-        borderWidth: 1,
-        borderColor: isPrimary
-          ? 'transparent'
-          : isDark
-            ? 'rgba(255,255,255,0.22)'
-            : 'rgba(255,255,255,0.92)',
-      }}
+      accessibilityRole="button"
+      style={{ width: BTN, height: BTN }}
     >
-      <Icon
-        size={18}
-        color={isPrimary ? '#FFFFFF' : colors.foreground}
-        strokeWidth={2.1}
-      />
-      {showBadge ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: -4,
-            right: -4,
-            minWidth: 18,
-            height: 18,
-            paddingHorizontal: 5,
-            borderRadius: 9,
-            backgroundColor: '#0E8C8C',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderWidth: 1.5,
-            borderColor: isDark ? '#0B0B0D' : '#fff',
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 10,
-              fontWeight: '800',
-              color: '#fff',
-              fontVariant: ['tabular-nums'],
-              letterSpacing: -0.2,
-              lineHeight: 12,
-            }}
+      {({ pressed }) => (
+        <View style={{ width: BTN, height: BTN }}>
+          <FKGlassSurface
+            radius={BTN / 2}
+            pressed={pressed}
+            tint={isPrimary ? colors.primary : undefined}
+            style={{ width: BTN, height: BTN }}
           >
-            {label}
-          </Text>
+            <Icon
+              size={18}
+              color={isPrimary ? '#FFFFFF' : colors.foreground}
+              strokeWidth={2.1}
+            />
+          </FKGlassSurface>
+          {/* Badge sits outside the glass — a counter painted *onto* the
+              refracting surface would smear with it. */}
+          {showBadge ? (
+            <View
+              style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                minWidth: 18,
+                height: 18,
+                paddingHorizontal: 5,
+                borderRadius: 9,
+                backgroundColor: '#0E8C8C',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1.5,
+                borderColor: isDark ? '#0B0B0D' : '#fff',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '800',
+                  color: '#fff',
+                  fontVariant: ['tabular-nums'],
+                  letterSpacing: -0.2,
+                  lineHeight: 13,
+                }}
+              >
+                {label}
+              </Text>
+            </View>
+          ) : null}
         </View>
-      ) : null}
-    </TouchableOpacity>
+      )}
+    </Pressable>
   );
 }
