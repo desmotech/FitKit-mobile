@@ -34,8 +34,10 @@ const BRAND_TEAL = '#0E8C8C';
 
 export default function SignFormInstanceScreen() {
   const router = useRouter();
-  const { instanceId, reason } = useLocalSearchParams<{
+  const { instanceId, reason, resumePlanId } = useLocalSearchParams<{
     instanceId: string;
+    /** Plan the member was buying when the gate stopped them. */
+    resumePlanId?: string;
     /** Set when a gated flow (booking / purchase) pushed us here, so the
      *  member sees why they were interrupted instead of a bare form. */
     reason?: string;
@@ -148,7 +150,23 @@ export default function SignFormInstanceScreen() {
             subtitle={isCheckIn ? s.checkinDoneSubtitle : s.signedSubtitle}
             actionLabel={s.signedAction}
             isRTL={isRTL}
-            onAction={() => router.back()}
+            onAction={() => {
+              // Signed as part of a purchase: return to the shop naming the
+              // plan, so the member lands back in the flow they started
+              // instead of a list.
+              if (reason === 'purchase' && resumePlanId) {
+                // Hand back to the shop's existing deep-link landing, which
+                // spotlights the plan and asks for a tap. Resuming must not
+                // create a payment session on the member's behalf — they
+                // stopped to sign, they did not authorise a charge.
+                router.replace({
+                  pathname: '/(tabs)/shop',
+                  params: { plan: resumePlanId },
+                });
+                return;
+              }
+              router.back();
+            }}
             // The PDF is rendered during submit, so it's already on file.
             onDownload={isCheckIn ? undefined : openPdf}
             downloading={pdf.isPending}
