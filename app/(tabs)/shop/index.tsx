@@ -182,7 +182,13 @@ export default function ShopScreen() {
         if (gate) {
           router.push({
             pathname: '/(tabs)/profile/forms/[instanceId]',
-            params: { instanceId: gate.instanceId, reason: 'purchase' },
+            params: {
+              instanceId: gate.instanceId,
+              reason: 'purchase',
+              // Signing returns to the shop naming this plan, which lands on
+              // the existing spotlight + confirm — never an auto-checkout.
+              resumePlanId: plan.id,
+            },
           });
           return;
         }
