@@ -611,6 +611,10 @@ export default function ProfileScreen() {
             </FKGlassPanel>
           ) : (
             <MembershipCard
+              // `quotas` + `introCyclesRemaining` ride along on the
+              // subscription payload; mobile's pinned @fitkit/shared predates
+              // both, so the card types them structurally and renders them
+              // only when the API actually sends them.
               sub={subList[0]}
               isRTL={isRTL}
               colors={colors}

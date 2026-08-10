@@ -6,6 +6,8 @@ import { useFKColors } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
+import { useQuotaStrings } from '@/i18n/use-quota-strings';
+import { QuotaBalance, type QuotaUsage } from './quota-balance';
 
 type ColorTokens = ReturnType<typeof useFKColors>;
 
@@ -26,6 +28,10 @@ export function MembershipCard({
     plan: { name: string; type?: string; classCredits?: number | null };
     remainingCredits?: number | null;
     currentPeriodEnd?: string | null;
+    /** Anchored booking-allowance windows (absent on unlimited plans). */
+    quotas?: QuotaUsage[] | null;
+    /** Discounted charges left on a presale plan; 0/null = standard price. */
+    introCyclesRemaining?: number | null;
   };
   isRTL: boolean;
   colors: ColorTokens;
@@ -44,8 +50,17 @@ export function MembershipCard({
   const haptics = useHaptics();
   const { isDark } = useFKColors();
   const { lang } = useI18n();
+  const quotaT = useQuotaStrings();
   const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
   const isActive = sub.status === 'active' || sub.status === 'paused';
+  const introLeft = sub.introCyclesRemaining ?? 0;
+  const introRemaining =
+    introLeft > 0
+      ? (introLeft === 1
+          ? quotaT.introPaymentsRemainingOne
+          : quotaT.introPaymentsRemaining
+        ).replace('{count}', String(introLeft))
+      : null;
   const expiresStr = sub.currentPeriodEnd
     ? labels.expires.replace(
         '{date}',
@@ -213,6 +228,34 @@ export function MembershipCard({
           )}
         </Pressable>
       </View>
+
+      {/* What's left to book and when it resets — the two questions a member
+          has, answered before they hit the limit. */}
+      {sub.quotas && sub.quotas.length > 0 ? (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255,255,255,0.18)',
+            paddingTop: 12,
+          }}
+        >
+          <QuotaBalance quotas={sub.quotas} isRTL={isRTL} locale={lang} />
+        </View>
+      ) : null}
+
+      {introRemaining ? (
+        <Text
+          testID="intro-remaining"
+          style={{
+            fontSize: 11.5,
+            color: goldOnHero,
+            fontFamily: 'Assistant-Medium',
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {introRemaining}
+        </Text>
+      ) : null}
     </View>
   );
 }
