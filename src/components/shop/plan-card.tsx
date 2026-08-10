@@ -98,8 +98,12 @@ export function PlanCard({
     soldOut?: boolean;
   };
   const introCycles = presale.introDurationCycles ?? null;
+  // Plan changes never grant intro pricing — the member is prorated against
+  // the standard price — so a switch target must not advertise an intro rate
+  // the checkout won't honour.
   const hasIntro =
     !isCurrent &&
+    !switchMode &&
     introCycles != null &&
     introCycles >= 1 &&
     (presale.introPriceInCents != null || presale.introDiscountPercent != null);

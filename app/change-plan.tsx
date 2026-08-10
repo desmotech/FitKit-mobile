@@ -82,7 +82,10 @@ export default function ChangePlanScreen() {
         (p) =>
           p.type === 'subscription' &&
           p.isActive &&
-          p.id !== subscription?.planId,
+          p.id !== subscription?.planId &&
+          // A capped plan with no seats left is refused server-side
+          // (PLAN_SOLD_OUT); don't offer it as a target at all.
+          (p as unknown as { soldOut?: boolean }).soldOut !== true,
       ),
     [plans, subscription?.planId],
   );
