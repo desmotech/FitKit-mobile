@@ -157,7 +157,14 @@ export default function ProfileScreen() {
     '—';
   const classesThisMonth = (stats.data?.data?.classesThisMonth as number) ?? 0;
   const totalClasses = (stats.data?.data?.totalClasses as number) ?? 0;
-  const subList = subs.data?.data ?? [];
+  // Drop the row a plan change left behind: it's cancelled only because it
+  // was replaced, so showing it reads as "your membership ended" next to the
+  // membership that actually replaced it.
+  const subList = (subs.data?.data ?? []).filter(
+    (s) =>
+      (s as unknown as { cancellationReason?: string | null })
+        .cancellationReason !== 'plan_change',
+  );
   const prCount = (prs.data?.data ?? []).length;
   const recentPRRecords = [...(prs.data?.data ?? [])]
     .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt))
@@ -626,6 +633,9 @@ export default function ProfileScreen() {
                 manage: labels.managePlan,
                 renew: labels.renew,
                 renewing: labels.renewing,
+                completePayment: labels.completePayment,
+                updateCard: labels.updateCard,
+                endedByGym: labels.endedByGym,
               }}
               isRenewing={renew.isPending && renew.variables === subList[0].id}
               onRenew={() => {
