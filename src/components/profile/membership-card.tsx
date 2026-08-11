@@ -7,6 +7,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 import { useQuotaStrings } from '@/i18n/use-quota-strings';
+import { useEarlyRenewStrings } from '@/i18n/use-early-renew-strings';
 import { QuotaBalance, type QuotaUsage } from './quota-balance';
 
 type ColorTokens = ReturnType<typeof useFKColors>;
@@ -21,6 +22,9 @@ export function MembershipCard({
   statusLabels,
   isRenewing,
   onRenew,
+  canRenewEarly,
+  isRenewingEarly,
+  onRenewEarly,
 }: {
   sub: {
     id: string;
@@ -53,11 +57,18 @@ export function MembershipCard({
   };
   isRenewing: boolean;
   onRenew: () => void;
+  /** FIT-282 follow-up (early renewal, BoostApp parity): true once the
+   *  month quota is exhausted, the sub is eligible, and the org's flag is
+   *  on — the parent screen resolves all of that, this card just renders. */
+  canRenewEarly?: boolean;
+  isRenewingEarly?: boolean;
+  onRenewEarly?: () => void;
 }) {
   const haptics = useHaptics();
   const { isDark } = useFKColors();
   const { lang } = useI18n();
   const quotaT = useQuotaStrings();
+  const earlyRenewT = useEarlyRenewStrings();
   const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
   const isActive = sub.status === 'active' || sub.status === 'paused';
   // The money CTA follows the server's verdict, not the raw status: a gym
@@ -271,6 +282,59 @@ export function MembershipCard({
           }}
         >
           <QuotaBalance quotas={sub.quotas} isRTL={isRTL} locale={lang} />
+        </View>
+      ) : null}
+
+      {/* FIT-282 follow-up (early renewal, BoostApp parity): out of
+          bookings before the period ends — pay now instead of waiting. */}
+      {canRenewEarly ? (
+        <View
+          style={{
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            padding: 10,
+            borderRadius: 12,
+            backgroundColor: 'rgba(255,255,255,0.10)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.22)',
+          }}
+        >
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 11.5,
+              color: 'rgba(255,255,255,0.88)',
+              fontFamily: 'Assistant-Medium',
+              textAlign: isRTL ? 'right' : 'left',
+            }}
+          >
+            {earlyRenewT.prompt}
+          </Text>
+          <Pressable
+            testID="renew-early-cta"
+            onPressIn={haptics.tap}
+            onPress={onRenewEarly}
+            disabled={isRenewingEarly}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  paddingVertical: 7,
+                  paddingHorizontal: 12,
+                  borderRadius: 9,
+                  borderCurve: 'continuous',
+                  backgroundColor: '#fff',
+                  opacity: pressed || isRenewingEarly ? 0.85 : 1,
+                }}
+              >
+                <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#0E8C8C' }}>
+                  {isRenewingEarly ? earlyRenewT.renewing : earlyRenewT.cta}
+                </Text>
+              </View>
+            )}
+          </Pressable>
         </View>
       ) : null}
 

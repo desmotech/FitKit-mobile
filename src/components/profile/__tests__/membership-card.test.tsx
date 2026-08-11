@@ -5,7 +5,7 @@
  * button now follows `memberAction`, resolved server-side by the same
  * predicate the renew endpoint enforces.
  */
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { MembershipCard } from '../membership-card';
 import { renderWithProviders } from '../../../../test/render';
 
@@ -82,5 +82,54 @@ describe('MembershipCard CTA', () => {
     await renderCard({ status: 'cancelled', memberAction: 'renew' });
     expect(screen.getByText('Renew')).toBeOnTheScreen();
     expect(screen.queryByTestId('membership-ended-note')).toBeNull();
+  });
+});
+
+// FIT-282 follow-up (early renewal, BoostApp parity): a second, independent
+// CTA from the main memberAction pill — the parent screen resolves
+// eligibility (quota exhausted, flag on, no pending change), this card just
+// renders what it's told.
+describe('MembershipCard — early renewal CTA', () => {
+  it('renders nothing extra when canRenewEarly is not set', async () => {
+    await renderCard({ status: 'active', memberAction: 'none' });
+    expect(screen.queryByTestId('renew-early-cta')).toBeNull();
+  });
+
+  it('shows the early-renew CTA when the parent says it is eligible', async () => {
+    await renderWithProviders(
+      <MembershipCard
+        sub={{ id: 's1', status: 'active', plan: { name: 'Monthly' } } as never}
+        isRTL={false}
+        colors={{} as never}
+        statusLabels={STATUS}
+        labels={LABELS}
+        isRenewing={false}
+        onRenew={jest.fn()}
+        canRenewEarly
+        isRenewingEarly={false}
+        onRenewEarly={jest.fn()}
+      />,
+    );
+    expect(screen.getByTestId('renew-early-cta')).toBeOnTheScreen();
+  });
+
+  it('fires onRenewEarly when tapped', async () => {
+    const onRenewEarly = jest.fn();
+    await renderWithProviders(
+      <MembershipCard
+        sub={{ id: 's1', status: 'active', plan: { name: 'Monthly' } } as never}
+        isRTL={false}
+        colors={{} as never}
+        statusLabels={STATUS}
+        labels={LABELS}
+        isRenewing={false}
+        onRenew={jest.fn()}
+        canRenewEarly
+        isRenewingEarly={false}
+        onRenewEarly={onRenewEarly}
+      />,
+    );
+    fireEvent.press(screen.getByTestId('renew-early-cta'));
+    expect(onRenewEarly).toHaveBeenCalledTimes(1);
   });
 });
