@@ -47,10 +47,14 @@ export function QuotaBalance({
     <View style={{ gap: 12 }} testID="quota-balance">
       {quotas.map((q) => {
         const exhausted = q.remaining === 0;
+        // windowEndsAt is a UTC-midnight calendar-day boundary from the API;
+        // formatting it in the device's local zone can shift it a day either
+        // way, so pin the format to UTC to show the date the API means.
         const resetsOn = new Intl.DateTimeFormat(locale, {
           day: '2-digit',
           month: '2-digit',
           year: '2-digit',
+          timeZone: 'UTC',
         }).format(new Date(q.windowEndsAt));
         const usedLabel = t.ofTotal
           .replace('{used}', String(q.used))
