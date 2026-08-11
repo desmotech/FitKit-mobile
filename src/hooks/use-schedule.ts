@@ -355,6 +355,14 @@ export function useBookSession(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
+      // A booking consumes quota — the Membership card's "X of Y used"
+      // reads off this query too, or it's stuck showing pre-booking numbers
+      // until something else happens to refetch it (e.g. reopening the app).
+      if (orgId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+        });
+      }
     },
   });
 }
@@ -429,6 +437,12 @@ export function useCancelBooking(
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
+      // Cancelling frees a quota slot — same staleness gap as booking.
+      if (orgId) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+        });
+      }
     },
   });
 }

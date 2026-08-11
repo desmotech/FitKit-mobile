@@ -19,13 +19,30 @@ import {
   useSelfCheckin,
   type ClassSession,
 } from '../use-schedule';
-import type { ApiEnvelope } from '../use-feed-data';
+import { useMySubscription, type ApiEnvelope } from '../use-feed-data';
 import { api, delay, http, HttpResponse, server } from '../../../test/msw';
 import { makeTestQueryClient, TEST_ORG } from '../../../test/render';
 
 const WEEK_START = '2026-07-05';
 const WEEK_KEY = queryKeys.sessions.week(TEST_ORG, WEEK_START);
 const BOOK_PATH = api(`/organizations/${TEST_ORG}/sessions/:sessionId/book`);
+const SUBS_PATH = api(`/organizations/${TEST_ORG}/subscriptions/my`);
+const SUBS_KEY = queryKeys.subscriptions.all(TEST_ORG, { mine: true });
+
+/** A minimal subscription payload carrying just the quota field the
+ *  Membership card reads — enough to prove a refetch happened. */
+function subsPayload(remaining: number) {
+  return {
+    data: [
+      {
+        id: 'sub_1',
+        status: 'active',
+        plan: { name: 'Monthly', type: 'subscription' },
+        quotas: [{ period: 'month', limit: 10, used: 10 - remaining, remaining }],
+      },
+    ],
+  };
+}
 
 function session(overrides: Partial<ClassSession> = {}): ClassSession {
   return {
@@ -221,6 +238,38 @@ describe('useBookSession — optimistic booking on the week list', () => {
     );
     expect(result.current.week.data?.data[0]?.capacityRemaining).toBe(3);
   });
+
+  it('also refetches the subscriptions quota — a booking consumes a slot the Membership card shows', async () => {
+    const queryClient = makeTestQueryClient();
+    queryClient.setQueryData(SUBS_KEY, subsPayload(5));
+    server.use(
+      http.get(SUBS_PATH, () => HttpResponse.json(subsPayload(4))),
+      http.post(BOOK_PATH, () =>
+        HttpResponse.json({ data: { status: 'confirmed' } }),
+      ),
+    );
+
+    const { result } = await renderHook(
+      () => ({
+        subs: useMySubscription(TEST_ORG),
+        book: useBookSession(TEST_ORG, WEEK_START),
+      }),
+      { wrapper: makeWrapper(queryClient) },
+    );
+
+    expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(5);
+
+    await act(async () => {
+      result.current.book.mutate({ sessionId: 'sess_1' });
+    });
+
+    await waitFor(() => expect(result.current.book.isSuccess).toBe(true));
+    // Without the fix this stays 5 (stale) until something else refetches it
+    // — the exact bug: the count only updated after reopening the app.
+    await waitFor(() =>
+      expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(4),
+    );
+  });
 });
 
 describe('useCancelBooking — optimistic cancellation on the week list', () => {
@@ -317,6 +366,36 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(cachedSession(queryClient)).toEqual(before);
+  });
+
+  it('also refetches the subscriptions quota — cancelling frees a slot the Membership card shows', async () => {
+    const queryClient = makeTestQueryClient();
+    queryClient.setQueryData(SUBS_KEY, subsPayload(4));
+    server.use(
+      http.get(SUBS_PATH, () => HttpResponse.json(subsPayload(5))),
+      http.delete(BOOK_PATH, () =>
+        HttpResponse.json({ data: { cancelled: true } }),
+      ),
+    );
+
+    const { result } = await renderHook(
+      () => ({
+        subs: useMySubscription(TEST_ORG),
+        cancel: useCancelBooking(TEST_ORG, WEEK_START),
+      }),
+      { wrapper: makeWrapper(queryClient) },
+    );
+
+    expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(4);
+
+    await act(async () => {
+      result.current.cancel.mutate({ sessionId: 'sess_1' });
+    });
+
+    await waitFor(() => expect(result.current.cancel.isSuccess).toBe(true));
+    await waitFor(() =>
+      expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(5),
+    );
   });
 });
 
