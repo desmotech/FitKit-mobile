@@ -44,6 +44,14 @@ function subsPayload(remaining: number) {
   };
 }
 
+/** `quotas` rides along on the payload structurally — the pinned
+ *  `@fitkit/shared` predates it, same as everywhere else this ships. */
+function monthRemaining(sub: unknown): number | undefined {
+  return (
+    sub as { quotas?: { period: string; remaining: number }[] } | undefined
+  )?.quotas?.find((q) => q.period === 'month')?.remaining;
+}
+
 function session(overrides: Partial<ClassSession> = {}): ClassSession {
   return {
     id: 'sess_1',
@@ -257,7 +265,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
       { wrapper: makeWrapper(queryClient) },
     );
 
-    expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(5);
+    expect(monthRemaining(result.current.subs.data?.data[0])).toBe(5);
 
     await act(async () => {
       result.current.book.mutate({ sessionId: 'sess_1' });
@@ -267,7 +275,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
     // Without the fix this stays 5 (stale) until something else refetches it
     // — the exact bug: the count only updated after reopening the app.
     await waitFor(() =>
-      expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(4),
+      expect(monthRemaining(result.current.subs.data?.data[0])).toBe(4),
     );
   });
 });
@@ -386,7 +394,7 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
       { wrapper: makeWrapper(queryClient) },
     );
 
-    expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(4);
+    expect(monthRemaining(result.current.subs.data?.data[0])).toBe(4);
 
     await act(async () => {
       result.current.cancel.mutate({ sessionId: 'sess_1' });
@@ -394,7 +402,7 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
 
     await waitFor(() => expect(result.current.cancel.isSuccess).toBe(true));
     await waitFor(() =>
-      expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(5),
+      expect(monthRemaining(result.current.subs.data?.data[0])).toBe(5),
     );
   });
 });

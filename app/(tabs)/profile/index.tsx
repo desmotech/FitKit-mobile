@@ -19,7 +19,7 @@ import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   Bell,
   Building2,
@@ -45,7 +45,7 @@ import {
   User as UserIcon,
   type LucideIcon,
 } from 'lucide-react-native';
-import { Fragment } from 'react';
+import { Fragment, useCallback } from 'react';
 import { useColorScheme } from 'nativewind';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -148,6 +148,22 @@ export default function ProfileScreen() {
   // src/lib/early-renew.ts.
   const earlyRenewalEnabled = useFeatureFlag(EARLY_RENEWAL_FLAG);
   const queryClient = useQueryClient();
+
+  // The membership card's money CTA (Renew/Manage/Renew-now) is only as
+  // correct as this query's cache. staleTime + AppState-driven refetch
+  // (query-provider.tsx) cover backgrounding the RN app itself, but a
+  // member who completes checkout OUTSIDE it entirely — a hosted payment
+  // page finished on a different device/browser, no in-app deep-link
+  // return — never triggers that. Revalidating on every screen focus
+  // closes that gap regardless of how the member got back here.
+  useFocusEffect(
+    useCallback(() => {
+      if (!orgId) return;
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+      });
+    }, [orgId, queryClient]),
+  );
 
   // The membership card's status labels stay on the raw dictionary — they
   // are a pass-through map keyed by status, not individual labels.

@@ -27,13 +27,22 @@ import { renderWithProviders, TEST_ORG } from '../../test/render';
 
 const mockRouterPush = jest.fn();
 const mockRouterReplace = jest.fn();
-jest.mock('expo-router', () => ({
-  useRouter: () => ({
-    push: mockRouterPush,
-    replace: mockRouterReplace,
-    back: jest.fn(),
-  }),
-}));
+jest.mock('expo-router', () => {
+  const { useEffect } = jest.requireActual<typeof import('react')>('react');
+  return {
+    useRouter: () => ({
+      push: mockRouterPush,
+      replace: mockRouterReplace,
+      back: jest.fn(),
+    }),
+    // The screen revalidates subscriptions on focus; under test the screen
+    // is always focused, so run the callback as a plain effect (same
+    // convention as app/__tests__/home.test.tsx).
+    useFocusEffect: (cb: () => void) => {
+      useEffect(cb, [cb]);
+    },
+  };
+});
 
 // Under Jest the NativeWind metro pipeline never runs, so the `darkMode:
 // class` flag it registers is missing and a *manual* setColorScheme (the
