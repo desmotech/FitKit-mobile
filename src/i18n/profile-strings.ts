@@ -43,6 +43,12 @@ export interface ProfileStrings {
   renew: string;
   renewing: string;
   managePlan: string;
+  /** Checkout was started and never finished. */
+  completePayment: string;
+  /** Debt: clearing the balance is staff-only, so the member fixes the card. */
+  updateCard: string;
+  /** Why there's no action: the gym ended this membership. */
+  endedByGym: string;
 
   // ── Settings rows ─────────────────────────────────────────────────
   settingPersonal: string;
@@ -118,6 +124,9 @@ const HE: ProfileStrings = {
   renew: 'חידוש',
   renewing: 'מחדש…',
   managePlan: 'ניהול מנוי',
+  completePayment: 'השלמת תשלום',
+  updateCard: 'עדכון כרטיס',
+  endedByGym: 'המנוי הופסק על ידי המועדון',
 
   settingPersonal: 'פרטים אישיים',
   settingPayment: 'תשלומים',
@@ -187,6 +196,9 @@ const EN: ProfileStrings = {
   renew: 'Renew',
   renewing: 'Renewing…',
   managePlan: 'Manage plan',
+  completePayment: 'Complete payment',
+  updateCard: 'Update card',
+  endedByGym: 'This membership was ended by the gym',
 
   settingPersonal: 'Personal Details',
   settingPayment: 'Payments',
@@ -256,6 +268,9 @@ const RU: ProfileStrings = {
   renew: 'Продлить',
   renewing: 'Продлеваем…',
   managePlan: 'Управление абонементом',
+  completePayment: 'Завершить оплату',
+  updateCard: 'Обновить карту',
+  endedByGym: 'Клуб завершил это членство',
 
   settingPersonal: 'Личные данные',
   settingPayment: 'Платежи',

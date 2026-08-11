@@ -6,6 +6,8 @@ import { useFKColors } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
+import { useQuotaStrings } from '@/i18n/use-quota-strings';
+import { QuotaBalance, type QuotaUsage } from './quota-balance';
 
 type ColorTokens = ReturnType<typeof useFKColors>;
 
@@ -26,6 +28,14 @@ export function MembershipCard({
     plan: { name: string; type?: string; classCredits?: number | null };
     remainingCredits?: number | null;
     currentPeriodEnd?: string | null;
+    /** Anchored booking-allowance windows (absent on unlimited plans). */
+    quotas?: QuotaUsage[] | null;
+    /** Discounted charges left on a presale plan; 0/null = standard price. */
+    introCyclesRemaining?: number | null;
+    /** What the member may actually do, resolved server-side. Status alone
+     *  can't say: a gym-cancelled subscription and a member-cancelled one are
+     *  both `cancelled`, but only one is renewable. */
+    memberAction?: 'none' | 'renew' | 'complete_checkout' | 'update_card' | null;
   };
   isRTL: boolean;
   colors: ColorTokens;
@@ -37,6 +47,9 @@ export function MembershipCard({
     manage: string;
     renew: string;
     renewing: string;
+    completePayment: string;
+    updateCard: string;
+    endedByGym: string;
   };
   isRenewing: boolean;
   onRenew: () => void;
@@ -44,8 +57,38 @@ export function MembershipCard({
   const haptics = useHaptics();
   const { isDark } = useFKColors();
   const { lang } = useI18n();
+  const quotaT = useQuotaStrings();
   const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
   const isActive = sub.status === 'active' || sub.status === 'paused';
+  // The money CTA follows the server's verdict, not the raw status: a gym
+  // cancellation and a plan-change ghost are both `cancelled` yet neither is
+  // renewable, and offering Renew there let a member undo a staff decision
+  // (or resurrect a superseded plan and pay for two).
+  const action = sub.memberAction ?? 'none';
+  const isTerminal = sub.status === 'cancelled';
+  const ctaLabel =
+    action === 'renew'
+      ? labels.renew
+      : action === 'complete_checkout'
+        ? labels.completePayment
+        : action === 'update_card'
+          ? labels.updateCard
+          : // Nothing to pay: keep Manage for a live membership, and show no
+            // button at all once it has ended.
+            isTerminal
+            ? null
+            : labels.manage;
+  // Say why there's no way back, rather than leaving a dead card.
+  const endedNote = isTerminal && action === 'none' ? labels.endedByGym : null;
+
+  const introLeft = sub.introCyclesRemaining ?? 0;
+  const introRemaining =
+    introLeft > 0
+      ? (introLeft === 1
+          ? quotaT.introPaymentsRemainingOne
+          : quotaT.introPaymentsRemaining
+        ).replace('{count}', String(introLeft))
+      : null;
   const expiresStr = sub.currentPeriodEnd
     ? labels.expires.replace(
         '{date}',
@@ -185,34 +228,79 @@ export function MembershipCard({
         {/* Children-as-function + static View: a `Pressable style={() => …}`
             function gets dropped in this RN build, so the white pill never
             rendered (teal text on teal card = invisible). */}
-        <Pressable onPressIn={haptics.tap} onPress={onRenew} disabled={isRenewing}>
-          {({ pressed }) => (
-            <View
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 18,
-                borderRadius: 11,
-                borderCurve: 'continuous',
-                backgroundColor: '#fff',
-                shadowColor: '#000',
-                shadowOpacity: 0.16,
-                shadowRadius: 8,
-                shadowOffset: { width: 0, height: 3 },
-                elevation: 3,
-                opacity: pressed || isRenewing ? 0.85 : 1,
-              }}
-            >
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
-                {sub.status === 'past_due' || sub.status === 'cancelled'
-                  ? isRenewing
-                    ? labels.renewing
-                    : labels.renew
-                  : labels.manage}
-              </Text>
-            </View>
-          )}
-        </Pressable>
+        {ctaLabel ? (
+          <Pressable
+            testID="membership-cta"
+            onPressIn={haptics.tap}
+            onPress={onRenew}
+            disabled={isRenewing}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  paddingVertical: 10,
+                  paddingHorizontal: 18,
+                  borderRadius: 11,
+                  borderCurve: 'continuous',
+                  backgroundColor: '#fff',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.16,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 3,
+                  opacity: pressed || isRenewing ? 0.85 : 1,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
+                  {isRenewing ? labels.renewing : ctaLabel}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+        ) : null}
       </View>
+
+      {/* What's left to book and when it resets — the two questions a member
+          has, answered before they hit the limit. */}
+      {sub.quotas && sub.quotas.length > 0 ? (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255,255,255,0.18)',
+            paddingTop: 12,
+          }}
+        >
+          <QuotaBalance quotas={sub.quotas} isRTL={isRTL} locale={lang} />
+        </View>
+      ) : null}
+
+      {endedNote ? (
+        <Text
+          testID="membership-ended-note"
+          style={{
+            fontSize: 11.5,
+            color: 'rgba(255,255,255,0.78)',
+            fontFamily: 'Assistant-Medium',
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {endedNote}
+        </Text>
+      ) : null}
+
+      {introRemaining ? (
+        <Text
+          testID="intro-remaining"
+          style={{
+            fontSize: 11.5,
+            color: goldOnHero,
+            fontFamily: 'Assistant-Medium',
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {introRemaining}
+        </Text>
+      ) : null}
     </View>
   );
 }

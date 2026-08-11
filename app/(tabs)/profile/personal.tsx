@@ -1,6 +1,7 @@
 /**
  * Personal Details — mirror of web's `/profile/personal`. Edits
- * first/last name, phone, national ID, birth date, gender.
+ * first/last name, phone, national ID, birth date, gender, and shows the
+ * sign-in email read-only (Clerk owns it; `/users/me` won't accept it).
  * PATCHes `/users/me`. Validates against
  * `updateUserProfileSchema` (loose: only non-empty fields are submitted).
  */
@@ -50,6 +51,7 @@ export default function PersonalDetailsScreen() {
 
   const labels = {
     title: settingsT.personal ?? 'Personal Details',
+    email: commonT.email ?? 'Email',
     firstName: (cpT.firstName as string) ?? 'First Name',
     lastName: (cpT.lastName as string) ?? 'Last Name',
     phone: (cpT.phone as string) ?? 'Phone',
@@ -185,6 +187,20 @@ export default function PersonalDetailsScreen() {
           ) : (
             <>
               <FKGlassPanel radius={20} style={{ padding: 16, gap: 14 }}>
+                {/* Sign-in email — read-only: it's Clerk-owned identity and
+                    `updateUserProfileSchema` has no field for it. Value stays
+                    LTR even in RTL layouts (Latin address). */}
+                <Field label={labels.email} isRTL={isRTL}>
+                  <Input
+                    testID="personal-email"
+                    value={user?.email ?? ''}
+                    editable={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    style={{ textAlign: 'left' }}
+                  />
+                </Field>
+
                 <Row isRTL={isRTL}>
                   <Field
                     label={labels.firstName}
