@@ -61,11 +61,13 @@ import { displayFamily } from '@/lib/type';
 import { useAvatarUpload } from '@/hooks/use-avatar-upload';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
+  useEarlyRenewSubscription,
   useMyPersonalRecords,
   useMyStats,
   useMySubscription,
   useRenewSubscription,
 } from '@/hooks/use-feed-data';
+import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useHaptics } from '@/hooks/use-haptics';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
@@ -76,7 +78,14 @@ import {
   paymentErrorMessage,
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
+import {
+  earlyRenewErrorMessage,
+  useEarlyRenewStrings,
+} from '@/i18n/use-early-renew-strings';
 import { ApiError } from '@/hooks/use-api';
+import { EARLY_RENEWAL_FLAG } from '@/lib/early-renew';
+import { formatPrice } from '@/lib/format-price';
+import { getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
 import { resetClientSession } from '@/lib/session-reset';
 import { useActiveOrg } from '@/providers/active-org-provider';
@@ -126,6 +135,7 @@ export default function ProfileScreen() {
   // All screen labels — dictionary-first with per-language static fallbacks.
   const labels = useProfileStrings();
   const errorStrings = usePaymentErrorStrings();
+  const earlyRenewT = useEarlyRenewStrings();
 
   const orgId = activeOrganization?.id;
   const incompleteForms = useIncompleteFormsCount(orgId);
@@ -133,6 +143,10 @@ export default function ProfileScreen() {
   const prs = useMyPersonalRecords(orgId);
   const subs = useMySubscription(orgId);
   const renew = useRenewSubscription(orgId);
+  const earlyRenew = useEarlyRenewSubscription(orgId);
+  // Shares FIT-282's presale-terms flag rather than getting its own — see
+  // src/lib/early-renew.ts.
+  const earlyRenewalEnabled = useFeatureFlag(EARLY_RENEWAL_FLAG);
   const queryClient = useQueryClient();
 
   // The membership card's status labels stay on the raw dictionary — they
@@ -165,6 +179,28 @@ export default function ProfileScreen() {
       (s as unknown as { cancellationReason?: string | null })
         .cancellationReason !== 'plan_change',
   );
+  // FIT-282 follow-up (early renewal, BoostApp parity): once the month
+  // quota is gone, offer to pay now and open a new period rather than wait
+  // out days the member can't book with. Gated the same way the server
+  // enforces it — a scheduled plan change or cancellation already decides
+  // what happens at period end, so early-renewing under one would fight it.
+  const primarySub = subList[0] as
+    | (typeof subList)[0] & {
+        quotas?: { period: string; remaining: number }[] | null;
+        cancelAtPeriodEnd?: boolean | null;
+        effectivePriceInCents?: number | null;
+      }
+    | undefined;
+  const exhaustedMonthQuota = primarySub?.quotas?.find(
+    (q) => q.period === 'month' && q.remaining === 0,
+  );
+  const canRenewEarly =
+    earlyRenewalEnabled &&
+    primarySub?.status === 'active' &&
+    primarySub.plan.type === 'subscription' &&
+    !!exhaustedMonthQuota &&
+    !primarySub.cancelAtPeriodEnd &&
+    !getPlanChangeSchedule(primarySub as never);
   const prCount = (prs.data?.data ?? []).length;
   const recentPRRecords = [...(prs.data?.data ?? [])]
     .sort((a, b) => b.achievedAt.localeCompare(a.achievedAt))
@@ -187,6 +223,48 @@ export default function ProfileScreen() {
       ? labels.memberSince.replace('{year}', String(createdYear))
       : `${labels.memberPrefix} ${createdYear}`
     : (activeOrganization?.name ?? 'FitKit');
+
+  // FIT-282 follow-up (early renewal, BoostApp parity) — confirm-then-charge:
+  // this alert IS the confirmation step, no silent auto-charge. Mirrors
+  // web's early-renew-dialog.tsx.
+  const handleRenewEarly = () => {
+    if (!primarySub || earlyRenew.isPending) return;
+    const amount = formatPrice(
+      primarySub.effectivePriceInCents ?? primarySub.plan.priceInCents,
+      primarySub.plan.currency,
+      lang,
+    );
+    const date = primarySub.currentPeriodEnd
+      ? new Date(primarySub.currentPeriodEnd).toLocaleDateString(lang)
+      : '';
+    haptics.tap();
+    Alert.alert(
+      earlyRenewT.cta,
+      earlyRenewT.description.replace('{amount}', amount).replace('{date}', date),
+      [
+        { text: earlyRenewT.cancel, style: 'cancel' },
+        {
+          text: earlyRenewT.confirmAction.replace('{amount}', amount),
+          onPress: () => {
+            earlyRenew.mutate(primarySub.id, {
+              onSuccess: () => {
+                haptics.success();
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.subscriptions.all(orgId!, { mine: true }),
+                });
+                Alert.alert('', earlyRenewT.success);
+              },
+              onError: (err) => {
+                haptics.error();
+                const code = err instanceof ApiError ? err.code : undefined;
+                Alert.alert('', earlyRenewErrorMessage(earlyRenewT, code));
+              },
+            });
+          },
+        },
+      ],
+    );
+  };
 
   const handleSignOut = () =>
     Alert.alert(labels.signOutTitle, undefined, [
@@ -670,6 +748,9 @@ export default function ProfileScreen() {
                   },
                 });
               }}
+              canRenewEarly={canRenewEarly}
+              isRenewingEarly={earlyRenew.isPending}
+              onRenewEarly={handleRenewEarly}
             />
           )}
 

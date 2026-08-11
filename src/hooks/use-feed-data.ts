@@ -256,6 +256,21 @@ export function useRenewSubscription(orgId: string | undefined | null) {
 }
 
 /**
+ * FIT-282 follow-up (early renewal / "renew now" — BoostApp parity, mobile
+ * mirror of web's early-renew-dialog.tsx). Distinct from
+ * {@link useRenewSubscription}: THIS one only accepts an `active`
+ * subscription — a member who ran out of quota before the period ends pays
+ * now to open a fresh period immediately, instead of waiting it out.
+ */
+export function useEarlyRenewSubscription(orgId: string | undefined | null) {
+  return useApiAction<ApiEnvelope<SubscriptionLite>, string>({
+    path: (id: string) =>
+      `/organizations/${orgId}/subscriptions/my/${id}/renew-early`,
+    method: 'POST',
+  });
+}
+
+/**
  * Member: schedule cancellation at end of the current period. `reason` is
  * required by the API. Reversible via {@link useResumeCancellation} until the
  * period actually ends.
