@@ -17,11 +17,14 @@ import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { MessageResponse } from '@fitkit/shared';
 import { dictionaries } from '@fitkit/shared';
 import ChatScreen from '../messages/[id]';
+import { commonStringsFor } from '@/i18n/common-strings';
 import { conversation, stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
 
 const he = dictionaries.he as unknown as Record<string, Record<string, string>>;
+// a11y labels come from the app, not the shared dictionary.
+const C = commonStringsFor('he');
 
 // The [id] route param is the participant's membership id. Dereferenced at
 // call time inside the factory, so the lazy jest.mock hoisting is safe.
@@ -180,7 +183,8 @@ describe('Message thread', () => {
     await screen.findByText('הודעה קיימת');
 
     const composer = screen.getByPlaceholderText(he.messages.typePlaceholder);
-    const send = screen.getByRole('button', { name: 'Send' });
+    // The a11y label is localized now (was hardcoded English).
+    const send = screen.getByRole('button', { name: C.a11ySend });
     expect(send).toBeDisabled();
 
     await userEvent.type(composer, 'נתראה מחר בבוקר');
@@ -214,7 +218,7 @@ describe('Message thread', () => {
 
     const composer = screen.getByPlaceholderText(he.messages.typePlaceholder);
     await userEvent.type(composer, 'הודעה שלא תישלח');
-    await userEvent.press(screen.getByRole('button', { name: 'Send' }));
+    await userEvent.press(screen.getByRole('button', { name: C.a11ySend }));
 
     await waitFor(() =>
       expect(alertSpy).toHaveBeenCalledWith(he.messages.sendFailed),

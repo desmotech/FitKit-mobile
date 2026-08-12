@@ -76,7 +76,7 @@ const HE: WhiteboardStrings = {
   emptyComingUp: 'בהמשך השבוע',
   emptyNoneThisWeek: 'לא הוקצו אימונים השבוע',
   restDayTitle: 'יום מנוחה',
-  restDaySubtitle: 'התאושש היום. שתה מים, עשה מתיחות וחזור רענן.',
+  restDaySubtitle: 'יום התאוששות — מים, מתיחות ושינה טובה.',
 
   errorTitle: 'לא הצלחנו לטעון את התוכנית שלך',
   errorSubtitle: 'בדוק חיבור ונסה שוב.',

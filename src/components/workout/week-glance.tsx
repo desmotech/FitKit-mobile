@@ -11,7 +11,7 @@
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Check, Dumbbell, Moon } from 'lucide-react-native';
+import { Check, Dumbbell, Moon, X } from 'lucide-react-native';
 import { FKRing, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -198,7 +198,7 @@ function DayPill({
   onPress: () => void;
   colors: ReturnType<typeof useFKColors>;
 }) {
-  const v = visualFor(cell.status, cell.isToday, colors);
+  const v = visualFor(cell, colors);
   return (
     <Pressable
       onPress={onPress}
@@ -227,6 +227,7 @@ function DayPill({
           backgroundColor: v.bg,
           borderWidth: v.borderWidth,
           borderColor: v.borderColor,
+          borderStyle: v.borderStyle ?? 'solid',
         }}
       >
         {v.icon}
@@ -262,18 +263,17 @@ interface CellVisual {
   bg: string;
   borderWidth: number;
   borderColor: string;
+  borderStyle?: 'solid' | 'dashed';
   icon: React.ReactNode;
 }
 
 function visualFor(
-  status: DayCell['status'],
-  isToday: boolean,
+  cell: DayCell,
   colors: ReturnType<typeof useFKColors>,
 ): CellVisual {
+  const { status, isToday, isPast } = cell;
   // Today always wears a teal ring, whatever its underlying state.
-  const todayRing = isToday
-    ? { borderWidth: 2, borderColor: TEAL }
-    : null;
+  const todayRing = isToday ? { borderWidth: 2, borderColor: TEAL } : null;
   switch (status) {
     case 'done':
       return {
@@ -299,11 +299,14 @@ function visualFor(
         ...todayRing,
       };
     case 'missed':
+      // Was an amber ring with an EMPTY centre, which is the same shape as an
+      // untouched day — the two read alike at a glance and colour was the
+      // only difference. A missed commitment now carries an explicit mark.
       return {
-        bg: 'transparent',
+        bg: withAlpha(AMBER, 0.12),
         borderWidth: 1.5,
         borderColor: withAlpha(AMBER, 0.7),
-        icon: null,
+        icon: <X size={13} color={AMBER} strokeWidth={2.6} />,
         ...todayRing,
       };
     case 'rest':
@@ -314,23 +317,39 @@ function visualFor(
         icon: <Moon size={13} color={colors.mutedFg} strokeWidth={2} />,
         ...todayRing,
       };
-    default: // empty
-      return {
-        bg: 'transparent',
-        borderWidth: 1,
-        borderColor: colors.border,
-        icon: (
-          <View
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: 3,
-              backgroundColor: colors.border,
-            }}
-          />
-        ),
-        ...todayRing,
-      };
+    default:
+      // Nothing on this day. Behind you that is a gap that has closed; ahead
+      // of you it is an open slot. They used to render identically — a faint
+      // ring around a faint dot, seven times over on a fresh week, which is
+      // what made the rail unreadable.
+      return isPast
+        ? {
+            // Closed: a dash, no fill. Reads as "nothing was on".
+            bg: 'transparent',
+            borderWidth: 1,
+            borderColor: withAlpha(colors.mutedFg, 0.22),
+            icon: (
+              <View
+                style={{
+                  width: 9,
+                  height: 1.5,
+                  borderRadius: 1,
+                  backgroundColor: withAlpha(colors.mutedFg, 0.45),
+                }}
+              />
+            ),
+            ...todayRing,
+          }
+        : {
+            // Open: a clean hairline ring with nothing inside — room for
+            // something, rather than a thing that is absent.
+            bg: 'transparent',
+            borderWidth: 1,
+            borderColor: withAlpha(colors.mutedFg, 0.3),
+            borderStyle: 'dashed' as const,
+            icon: null,
+            ...todayRing,
+          };
   }
 }
 

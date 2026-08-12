@@ -24,7 +24,6 @@ import {
   type ClassSession,
   canCancelBooking,
   decideBookingPlan,
-  extractApiErrorMessage,
   useBookSession,
   useCancelBooking,
   useMyWeekSessions,
@@ -40,6 +39,10 @@ import {
   weekStartFor,
 } from '@/hooks/use-workouts';
 import { useScheduleStrings } from '@/i18n/use-schedule-strings';
+import {
+  paymentErrorMessage,
+  usePaymentErrorStrings,
+} from '@/i18n/use-payment-error-strings';
 import { readFormGate } from '@/lib/form-gate';
 import { displayFamily, font, type } from '@/lib/type';
 import { monthRangeLabel, ymd } from '@/lib/week';
@@ -51,6 +54,7 @@ import { ScheduleEmptyState } from '@/components/schedule/schedule-empty-state';
 export default function ScheduleScreen() {
   const router = useRouter();
   const { dir, lang } = useI18n();
+  const errorStrings = usePaymentErrorStrings();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const isRTL = dir === 'rtl';
@@ -184,7 +188,13 @@ export default function ScheduleScreen() {
                 onError: (err) =>
                   Alert.alert(
                     s.cancelFailed,
-                    extractApiErrorMessage(err, s.cancelFailed),
+                    paymentErrorMessage(
+                      errorStrings,
+                      err,
+                      lang,
+                      s.cancelFailedBody,
+                      'session-cancel',
+                    ),
                   ),
                 onSettled: () => setPendingSessionId(null),
               },
@@ -233,7 +243,19 @@ export default function ScheduleScreen() {
             });
             return;
           }
-          Alert.alert(s.bookFailed, extractApiErrorMessage(err, s.bookFailed));
+          // Structured codes get their own localized copy; anything else
+          // gets our own soft body rather than the API's message, which
+          // `X-Locale` returns as the staff-console "the booking failed".
+          Alert.alert(
+            s.bookFailed,
+            paymentErrorMessage(
+              errorStrings,
+              err,
+              lang,
+              s.bookFailedBody,
+              'session-book',
+            ),
+          );
         },
         onSettled: () => setPendingSessionId(null),
       },

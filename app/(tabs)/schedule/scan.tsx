@@ -23,10 +23,10 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import {
-  extractApiErrorMessage,
   useSelfCheckin,
 } from '@/hooks/use-schedule';
 import { getWeekStartDay, weekStartFor } from '@/hooks/use-workouts';
+import { useScheduleStrings } from '@/i18n/use-schedule-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 export default function ScanScreen() {
@@ -37,6 +37,9 @@ export default function ScanScreen() {
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const { lang, t: dict, dir } = useI18n();
+  // Member-facing refusal copy lives in the app, not the shared console
+  // dictionary — see the `failed` label below.
+  const sched = useScheduleStrings();
   const isRTL = dir === 'rtl';
   const weekStart = weekStartFor(new Date(), getWeekStartDay(lang));
 
@@ -54,7 +57,7 @@ export default function ScanScreen() {
       invalidQr: scanT.invalidQr ?? 'Invalid QR code',
       expiredQr: scanT.expiredQr ?? 'This QR code has expired',
       unreadable: scanT.unreadable ?? 'Could not read QR code',
-      failed: scanT.failed ?? 'Check-in failed',
+      failed: sched.checkInRefusedTitle,
       cameraNeeded: scanT.cameraNeeded ?? 'Camera access needed',
       cameraDesc:
         scanT.cameraDesc ??
@@ -64,7 +67,7 @@ export default function ScanScreen() {
       cancel: commonT.cancel ?? 'Cancel',
       tryAgain: commonT.tryAgain ?? 'Try again',
     };
-  }, [dict]);
+  }, [dict, sched]);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
@@ -124,7 +127,10 @@ export default function ScanScreen() {
             onError: (err) => {
               handled.current = false;
               setBusy(false);
-              setError(extractApiErrorMessage(err, labels.failed));
+              // Not the server's message: a refusal here is a rule (too
+              // early, wrong place, not booked), and its phrasing is either
+              // raw English or the staff console's "הצ׳ק-אין נכשל".
+              setError(sched.checkInRefusedBody);
             },
           },
         );
@@ -132,7 +138,7 @@ export default function ScanScreen() {
         setError(labels.unreadable);
       }
     },
-    [busy, checkin, haptics, router, labels],
+    [busy, checkin, haptics, router, labels, sched.checkInRefusedBody],
   );
 
   function handleClose() {

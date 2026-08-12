@@ -214,7 +214,7 @@ describe('FormRenderer drafts', () => {
 
     await user.press(screen.getByText(S.submit));
 
-    expect(await screen.findByText('Network request failed')).toBeOnTheScreen();
+    expect(await screen.findByText(S.submitFailed)).toBeOnTheScreen();
     await waitFor(async () =>
       expect(await storedDraft()).toEqual({ full_name: 'Dana Levi' }),
     );
@@ -240,7 +240,7 @@ describe('FormRenderer uploads', () => {
     );
 
     await user.press(screen.getByText(S.submit));
-    expect(await screen.findByText('Network request failed')).toBeOnTheScreen();
+    expect(await screen.findByText(S.submitFailed)).toBeOnTheScreen();
 
     await user.press(screen.getByText(S.submit));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
@@ -271,7 +271,7 @@ describe('FormRenderer uploads', () => {
 
     await user.press(screen.getByText(S.submit));
 
-    expect(await screen.findByText('Network request failed')).toBeOnTheScreen();
+    expect(await screen.findByText(S.submitFailed)).toBeOnTheScreen();
     await waitFor(async () =>
       expect(await storedDraft()).toEqual({
         sig: { r2Key: 'org/forms/inst_1/sig.png', mime: 'image/png' },

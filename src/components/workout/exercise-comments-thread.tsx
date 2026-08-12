@@ -31,6 +31,7 @@ import { useExerciseComments } from '@/hooks/use-exercise-comments';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { useUpload, type UploadItem } from '@/hooks/use-upload';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { ExerciseCommentDto } from '@fitkit/shared';
 
@@ -52,6 +53,7 @@ export function ExerciseCommentsThread({
   const colors = useFKColors();
   const isDark = colors.isDark;
   const { dir, t } = useI18n();
+  const common = useCommonStrings();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
 
@@ -141,11 +143,10 @@ export function ExerciseCommentsThread({
       });
       setDraft('');
       upload.clearAll();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Send failed';
-      Alert.alert('', msg);
+    } catch {
+      Alert.alert('', common.sendFailed);
     }
-  }, [draft, haptics, sendComment, upload]);
+  }, [common.sendFailed, draft, haptics, sendComment, upload]);
 
   const canSend =
     (draft.trim().length > 0 || upload.getReadyUploadIds().length > 0) &&

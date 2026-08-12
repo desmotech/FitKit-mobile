@@ -43,6 +43,13 @@ export interface DayCell {
   date: string; // YYYY-MM-DD
   status: DayStatus;
   isToday: boolean;
+  /**
+   * A day with nothing on it reads very differently behind you and ahead of
+   * you — one is a gap that already happened, the other is an open slot. The
+   * rail cannot tell them apart from `status: 'empty'` alone, and on a fresh
+   * week that made all seven cells identical.
+   */
+  isPast: boolean;
   /** Day carries a booked/attended class — drives the secondary pip. */
   hasClass: boolean;
   /** Representative ids so a tap can open the right detail screen. */
@@ -149,6 +156,7 @@ export function buildWeekGlance(input: {
       date,
       status,
       isToday,
+      isPast,
       hasClass: bookings.length > 0,
       assignmentId: workouts[0]?.id ?? null,
       sessionId: bookings[0]?.id ?? null,

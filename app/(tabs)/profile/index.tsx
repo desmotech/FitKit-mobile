@@ -729,7 +729,13 @@ export default function ProfileScreen() {
                   // routes to Payments, where card registration lives.
                   onError: (err) => {
                     haptics.error();
-                    const message = paymentErrorMessage(errorStrings, err, lang);
+                    const message = paymentErrorMessage(
+                      errorStrings,
+                      err,
+                      lang,
+                      errorStrings.renewFailed,
+                      'subscription-renew',
+                    );
                     if (
                       err instanceof ApiError &&
                       err.code === 'no_active_payment_method'

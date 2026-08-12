@@ -53,9 +53,25 @@ export interface ScheduleStrings {
   cancelPolicy: string;
   keepBooking: string;
   bookFailed: string;
+  /**
+   * Body for a refusal we have no specific copy for. Deliberately not the
+   * API's own message: with `X-Locale` it comes back as the staff-console
+   * phrasing ("ההרשמה נכשלה" — "the booking failed"), which reads like the
+   * member did something wrong when the usual cause is a plan or a limit.
+   */
+  bookFailedBody: string;
   /** Title for eligibility blocks (no plan, limits) — not an error. */
   bookUnavailable: string;
   cancelFailed: string;
+  /** Body for an unmapped cancellation refusal — see `bookFailedBody`. */
+  cancelFailedBody: string;
+  /**
+   * Self check-in refusal. The shared `schedule.checkinPage.errorTitle` /
+   * `.failed` say "הצ׳ק-אין נכשל" ("check-in failed"), but a refusal here is
+   * almost always a rule — too early, wrong place, no booking.
+   */
+  checkInRefusedTitle: string;
+  checkInRefusedBody: string;
 
   // ── Plan picker ───────────────────────────────────────────────────
   selectPlan: string;
@@ -114,8 +130,13 @@ const HE: ScheduleStrings = {
   cancelPolicy: 'ניתן לבטל עד {hours} שעות לפני תחילת השיעור.',
   keepBooking: 'השארת הרישום',
   bookFailed: 'לא הצלחנו להשלים את ההרשמה',
+  bookFailedBody: 'לא הצלחנו לרשום אותך לשיעור הזה. כדאי לנסות שוב, ואם זה חוזר — דברו איתנו במועדון.',
   bookUnavailable: 'רגע לפני ההרשמה',
   cancelFailed: 'לא הצלחנו לבטל את הרישום',
+  cancelFailedBody: 'הרישום שלך עדיין קיים. כדאי לנסות שוב, ואם זה חוזר — דברו איתנו במועדון.',
+  checkInRefusedTitle: 'לא הצלחנו לרשום נוכחות',
+  checkInRefusedBody:
+    'ייתכן שהשיעור עוד לא נפתח לצ׳ק-אין, או שאינך רשום אליו. כדאי לבדוק בלוח הזמנים או לפנות אלינו במועדון.',
 
   selectPlan: 'בחירת מנוי',
   creditsLeft: 'נותרו {count} כניסות',
@@ -169,8 +190,15 @@ const EN: ScheduleStrings = {
   cancelPolicy: 'You may cancel up to {hours} hour(s) before class start.',
   keepBooking: 'Keep booking',
   bookFailed: "Couldn't complete your booking",
+  bookFailedBody:
+    "We couldn't get you into this class. Try again, and talk to us at the club if it keeps happening.",
   bookUnavailable: 'Before you book',
   cancelFailed: "Couldn't cancel your booking",
+  cancelFailedBody:
+    "Your booking is still in place. Try again, and talk to us at the club if it keeps happening.",
+  checkInRefusedTitle: "We couldn't record your attendance",
+  checkInRefusedBody:
+    "The class may not be open for check-in yet, or you may not be booked into it. Check your schedule, or talk to us at the club.",
 
   selectPlan: 'Select Plan',
   creditsLeft: '{count} credits left',
@@ -226,8 +254,15 @@ const RU: ScheduleStrings = {
     'Отменить можно не позднее чем за {hours} ч. до начала занятия.',
   keepBooking: 'Оставить запись',
   bookFailed: 'Не удалось записаться на занятие',
+  bookFailedBody:
+    'Не получилось записать вас на это занятие. Попробуйте ещё раз, а если повторится — свяжитесь с клубом.',
   bookUnavailable: 'Прежде чем записаться',
   cancelFailed: 'Не удалось отменить запись',
+  cancelFailedBody:
+    'Ваша запись всё ещё активна. Попробуйте ещё раз, а если повторится — свяжитесь с клубом.',
+  checkInRefusedTitle: 'Не удалось отметить посещение',
+  checkInRefusedBody:
+    'Возможно, отметка ещё не открыта или вы не записаны на это занятие. Проверьте расписание или свяжитесь с клубом.',
 
   selectPlan: 'Выберите план',
   creditsLeft: 'Осталось занятий: {count}',

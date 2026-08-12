@@ -392,7 +392,7 @@ const he: LogStrings = {
   prNoneBody: 'תעד את השיא הראשון שלך כדי להתחיל.',
   prMark: 'שיא',
   exerciseHistory: 'היסטוריית תרגיל',
-  histTopSet: 'סט מקס',
+  histTopSet: 'טופ סט',
   histVolume: 'נפח',
   histGoal: 'יעד',
   histSessions: 'אימונים',

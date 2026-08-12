@@ -18,6 +18,10 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import { usePaymentConfig, usePlans, usePurchasePlan } from '@/hooks/use-shop';
+import {
+  paymentErrorMessage,
+  usePaymentErrorStrings,
+} from '@/i18n/use-payment-error-strings';
 import { readFormGate } from '@/lib/form-gate';
 import { paymentReturnUrl } from '@/lib/api';
 import { formatPrice } from '@/lib/format-price';
@@ -42,10 +46,8 @@ export default function ShopScreen() {
 
   const dict = t as unknown as Record<string, Record<string, unknown>>;
   const shopT = (dict.shop ?? {}) as Record<string, string>;
-  const pc = ((dict.shop?.planCard as Record<string, string>) ?? {}) as Record<
-    string,
-    string
-  >;
+
+  const errorStrings = usePaymentErrorStrings();
 
   const plansQ = usePlans(orgId);
   const payQ = usePaymentConfig(orgId);
@@ -208,15 +210,24 @@ export default function ShopScreen() {
           });
           return;
         }
+        // Not `pc.purchaseFailed` ("רכישת המנוי נכשלה") and not the raw
+        // server message: a refusal here is nearly always a rule, and the
+        // body has to say plainly that no money moved.
         Alert.alert(
-          pc.purchaseFailed ?? 'Failed to purchase plan',
-          e instanceof Error ? e.message : undefined,
+          errorStrings.purchaseRefusedTitle,
+          paymentErrorMessage(
+            errorStrings,
+            e,
+            lang,
+            errorStrings.purchaseRefusedBody,
+            'plan-purchase',
+          ),
         );
       } finally {
         setPendingPlanId(null);
       }
     },
-    [orgId, pendingPlanId, purchase, router, pc.purchaseFailed],
+    [orgId, pendingPlanId, purchase, router, errorStrings, lang],
   );
 
   // ── Deep-link landing (`/shop?plan=<id>`) ───────────────────────────

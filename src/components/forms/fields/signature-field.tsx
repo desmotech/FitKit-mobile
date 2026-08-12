@@ -22,6 +22,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import { reportHandledError } from '@/lib/error-reporting';
 import type { FormField } from '@/types/forms';
 import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
@@ -196,7 +197,11 @@ export function SignatureFieldRenderer({
       onChange(fileUri);
       setEditing(false);
     } catch (err) {
-      const message = err instanceof Error ? err.message : s.sigErrSaveFailed;
+      // Was DEV-console only: a member who cannot sign is fully blocked, and
+      // in production nothing recorded why.
+      reportHandledError(err, { feature: 'signature-commit' });
+      // Localized copy only — the raw failure is a canvas/encode error.
+      const message = s.sigErrSaveFailed;
       if (__DEV__) {
         console.error('[signature] commit failed:', message, err);
       }

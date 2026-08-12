@@ -11,6 +11,7 @@
 import { dictionaries } from '@fitkit/shared';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import CheckInScreen from '../checkin';
+import { scheduleStringsFor } from '@/i18n/schedule-strings';
 import { stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
@@ -19,6 +20,9 @@ const heDict = dictionaries.he as unknown as {
   schedule: { checkinPage: Record<string, string> };
 };
 const C = heDict.schedule.checkinPage;
+// The refusal title/body are the app's own softer copy, NOT the shared
+// console dictionary's "הצ׳ק-אין נכשל" — see schedule-strings.ts.
+const S = scheduleStringsFor('he');
 
 const mockRouterReplace = jest.fn();
 let mockSearchParams: Record<string, string> = {};
@@ -94,7 +98,7 @@ describe('QR deep-link check-in', () => {
 
     await renderWithProviders(<CheckInScreen />);
 
-    expect(await screen.findByText(C.errorTitle)).toBeOnTheScreen();
+    expect(await screen.findByText(S.checkInRefusedTitle)).toBeOnTheScreen();
     expect(screen.getByText(C.invalidLink)).toBeOnTheScreen();
     expect(bodies).toHaveLength(0);
   });
@@ -110,7 +114,7 @@ describe('QR deep-link check-in', () => {
 
     await renderWithProviders(<CheckInScreen />);
 
-    expect(await screen.findByText(C.errorTitle)).toBeOnTheScreen();
+    expect(await screen.findByText(S.checkInRefusedTitle)).toBeOnTheScreen();
     expect(screen.getByText(C.expired)).toBeOnTheScreen();
     expect(bodies).toHaveLength(0);
   });
@@ -128,9 +132,13 @@ describe('QR deep-link check-in', () => {
 
     await renderWithProviders(<CheckInScreen />);
 
-    expect(await screen.findByText(C.errorTitle)).toBeOnTheScreen();
-    // The API's explanation reaches the member verbatim.
-    expect(screen.getByText('Session not found')).toBeOnTheScreen();
+    expect(await screen.findByText(S.checkInRefusedTitle)).toBeOnTheScreen();
+    // The API's own wording never reaches the member: it is raw English here,
+    // and the staff console's "הצ׳ק-אין נכשל" when the API does localize.
+    // A refusal on this screen is a rule (too early, wrong place, no
+    // booking), so the member gets copy that says where to look instead.
+    expect(screen.queryByText('Session not found')).not.toBeOnTheScreen();
+    expect(screen.getByText(S.checkInRefusedBody)).toBeOnTheScreen();
     expect(screen.queryByText(C.success)).not.toBeOnTheScreen();
 
     await userEvent.press(

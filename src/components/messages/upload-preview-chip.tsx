@@ -8,6 +8,7 @@ import { AlertCircle, X } from 'lucide-react-native';
 import { ActivityIndicator, Alert, Pressable, View } from 'react-native';
 import type { UploadItem } from '@/hooks/use-message-uploads';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useI18n } from '@/providers/i18n-provider';
 
 const FILL = {
   position: 'absolute',
@@ -27,6 +28,12 @@ export function UploadPreviewChip({
   onRemove: () => void;
 }) {
   const haptics = useHaptics();
+  const { t } = useI18n();
+  // The upload error itself is a raw network/S3 string — never shown. The
+  // member only needs to know it failed and that tapping retries.
+  const uploadFailed =
+    ((t as unknown as Record<string, Record<string, unknown>>).messages
+      ?.uploadFailed as string) ?? 'Upload failed';
   const done = upload.progress === 100 && !!upload.uploadId && !upload.error;
   const failed = !!upload.error;
   return (
@@ -53,7 +60,7 @@ export function UploadPreviewChip({
         {failed ? (
           <Pressable
             onPress={() =>
-              Alert.alert('Upload failed', upload.error ?? 'Unknown error')
+              Alert.alert('', uploadFailed)
             }
             style={[FILL, { backgroundColor: 'rgba(184,74,64,0.45)' }]}
           >

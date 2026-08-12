@@ -20,7 +20,7 @@ import {
   type ClassSession,
 } from '../use-schedule';
 import { useMySubscription, type ApiEnvelope } from '../use-feed-data';
-import { api, delay, http, HttpResponse, server } from '../../../test/msw';
+import { api, http, HttpResponse, server } from '../../../test/msw';
 import { makeTestQueryClient, TEST_ORG } from '../../../test/render';
 
 const WEEK_START = '2026-07-05';
@@ -97,6 +97,31 @@ function seedWeek(queryClient: QueryClient, sessions: ClassSession[]) {
   });
 }
 
+/**
+ * A response the test releases by hand.
+ *
+ * These three specs assert `isPending === true` — the whole point is that the
+ * cache flips BEFORE the server answers. They used to hold the response with
+ * `delay(150)`, which made the in-flight window a race against the test body:
+ * when the timer won, the mutation had already settled and `isPending` was
+ * false. A gate removes the timing assumption entirely — the server cannot
+ * answer until `release()` is called.
+ *
+ * The gate alone was not enough. `waitFor` on `cachedSession()` reads the
+ * query cache DIRECTLY, so it passes the instant `onMutate` writes — while
+ * `result.current` is still the pre-mutation render snapshot, making
+ * `isPending` false. So the specs now wait on the HOOK (which needs a React
+ * re-render) and assert the cache synchronously after; the held response
+ * guarantees both are true at the same moment.
+ */
+function responseGate() {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { held, release: () => release() };
+}
+
 function cachedSession(queryClient: QueryClient, id = 'sess_1'): ClassSession {
   const cached =
     queryClient.getQueryData<ApiEnvelope<ClassSession[]>>(WEEK_KEY);
@@ -109,9 +134,10 @@ describe('useBookSession — optimistic booking on the week list', () => {
   it('marks an open class confirmed (and takes a spot) before the server answers', async () => {
     const queryClient = makeTestQueryClient();
     seedWeek(queryClient, [session({ bookingCount: 5, capacityRemaining: 7 })]);
+    const gate = responseGate();
     server.use(
       http.post(BOOK_PATH, async () => {
-        await delay(150);
+        await gate.held;
         return HttpResponse.json({ data: { status: 'confirmed' } });
       }),
     );
@@ -126,13 +152,15 @@ describe('useBookSession — optimistic booking on the week list', () => {
     });
 
     // Optimistic: the flip lands while the request is still in flight.
-    await waitFor(() =>
-      expect(cachedSession(queryClient).myBookingStatus).toBe('confirmed'),
-    );
-    expect(result.current.isPending).toBe(true);
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+    expect(cachedSession(queryClient).myBookingStatus).toBe('confirmed');
     expect(cachedSession(queryClient).bookingCount).toBe(6);
     expect(cachedSession(queryClient).capacityRemaining).toBe(6);
 
+    // Let the server answer now that the in-flight assertions have run.
+    await act(async () => {
+      gate.release();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
@@ -141,9 +169,10 @@ describe('useBookSession — optimistic booking on the week list', () => {
     seedWeek(queryClient, [
       session({ bookingCount: 12, capacityRemaining: 0 }),
     ]);
+    const gate = responseGate();
     server.use(
       http.post(BOOK_PATH, async () => {
-        await delay(150);
+        await gate.held;
         return HttpResponse.json({ data: { status: 'waitlisted' } });
       }),
     );
@@ -157,13 +186,15 @@ describe('useBookSession — optimistic booking on the week list', () => {
       result.current.mutate({ sessionId: 'sess_1' });
     });
 
-    await waitFor(() =>
-      expect(cachedSession(queryClient).myBookingStatus).toBe('waitlisted'),
-    );
-    expect(result.current.isPending).toBe(true);
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+    expect(cachedSession(queryClient).myBookingStatus).toBe('waitlisted');
     expect(cachedSession(queryClient).bookingCount).toBe(12);
     expect(cachedSession(queryClient).capacityRemaining).toBe(0);
 
+    // Let the server answer now that the in-flight assertions have run.
+    await act(async () => {
+      gate.release();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
@@ -282,9 +313,10 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
         capacityRemaining: 6,
       }),
     ]);
+    const gate = responseGate();
     server.use(
       http.delete(BOOK_PATH, async () => {
-        await delay(150);
+        await gate.held;
         return HttpResponse.json({ data: { cancelled: true } });
       }),
     );
@@ -298,13 +330,15 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
       result.current.mutate({ sessionId: 'sess_1' });
     });
 
-    await waitFor(() =>
-      expect(cachedSession(queryClient).myBookingStatus).toBeNull(),
-    );
-    expect(result.current.isPending).toBe(true);
+    await waitFor(() => expect(result.current.isPending).toBe(true));
+    expect(cachedSession(queryClient).myBookingStatus).toBeNull();
     expect(cachedSession(queryClient).bookingCount).toBe(5);
     expect(cachedSession(queryClient).capacityRemaining).toBe(7);
 
+    // Let the server answer now that the in-flight assertions have run.
+    await act(async () => {
+      gate.release();
+    });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 

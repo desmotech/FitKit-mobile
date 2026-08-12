@@ -38,6 +38,7 @@ import { FormBodyView, isRichDocEmpty } from './form-body-view';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import { reportHandledError } from '@/lib/error-reporting';
 import type { FormStrings } from '@/i18n/form-strings';
 import {
   clearFormDraft,
@@ -417,6 +418,10 @@ export function FormRenderer({
     haptics.tap();
     // Keeps the post-upload answers reachable from the catch below.
     let retryAnswers: FormAnswers = normalized;
+    // Which half of the try failed — the copy differs, and neither may be the
+    // raw error (S3/network strings for uploads, the API's own wording for
+    // the submit; both unlocalized).
+    let phase: 'upload' | 'submit' = 'upload';
     try {
       setUploading(true);
       const finalAnswers = await uploadBinaries(normalized);
@@ -438,16 +443,22 @@ export function FormRenderer({
       // renderer the instant the submit resolves, and the unmount flush
       // would otherwise race the clear below and rewrite the draft.
       persistDraft.current = false;
+      phase = 'submit';
       await onSubmit(finalAnswers);
       if (draftKey) void clearFormDraft(draftKey);
     } catch (err) {
-      // Surface the upload error at the form level — the parent
-      // mutation never ran. The user can retry; failed uploads don't
-      // leave a partial-submit on the server side.
+      // `onSubmit` is the host's mutation, so the MutationCache reporter has
+      // that half. The attachment uploads are plain async calls — nothing
+      // else would ever see them fail.
+      if (phase === 'upload') {
+        reportHandledError(err, { feature: 'form-attachment-upload' });
+      }
+      // Surface it at the form level and keep the draft, so a retry still
+      // has the answers. Failed uploads leave no partial submit server-side.
       persistDraft.current = true;
       if (draftKey) void saveFormDraft(draftKey, retryAnswers);
       haptics.error();
-      const message = err instanceof Error ? err.message : s.uploadFailed;
+      const message = phase === 'upload' ? s.uploadFailed : s.submitFailed;
       setErrors((prev) => ({ ...prev, __submit__: message }));
     } finally {
       setUploading(false);

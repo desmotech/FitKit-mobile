@@ -11,6 +11,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 import { continuousCorners } from '@/lib/utils';
 
 /**
@@ -23,6 +24,7 @@ import { continuousCorners } from '@/lib/utils';
  * source (most common on iOS simulator).
  */
 export default function VideoPlayerScreen() {
+  const common = useCommonStrings();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { url, title } = useLocalSearchParams<{ url?: string; title?: string }>();
@@ -214,7 +216,7 @@ export default function VideoPlayerScreen() {
                     letterSpacing: -0.1,
                   }}
                 >
-                  Open in browser
+                  {common.openInBrowser}
                 </Text>
               </TouchableOpacity>
             ) : null}

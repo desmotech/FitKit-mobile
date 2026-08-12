@@ -34,6 +34,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { useUploadProgressPhoto } from '@/hooks/use-progress-photos';
 import { useUpload } from '@/hooks/use-upload';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 function get(dict: any, path: string): string | null {
@@ -49,6 +50,7 @@ export default function UploadPhotoScreen() {
   const isDark = colors.isDark;
   const haptics = useHaptics();
   const { dir, t } = useI18n();
+  const common = useCommonStrings();
   const isRTL = dir === 'rtl';
 
   const { activeOrganization } = useCurrentUser();
@@ -155,11 +157,19 @@ export default function UploadPhotoScreen() {
         bodyweightKg: bw ? parseFloat(bw) : undefined,
       });
       router.back();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Save failed';
-      Alert.alert('', msg);
+    } catch {
+      Alert.alert('', common.saveFailed);
     }
-  }, [bodyweight, canSave, current?.uploadId, haptics, notes, recordedAt, uploadMutation]);
+  }, [
+    bodyweight,
+    canSave,
+    common.saveFailed,
+    current?.uploadId,
+    haptics,
+    notes,
+    recordedAt,
+    uploadMutation,
+  ]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>

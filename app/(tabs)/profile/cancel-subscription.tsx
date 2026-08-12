@@ -23,7 +23,6 @@ import {
 } from 'react-native';
 import { FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
-import { ApiError } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   paymentErrorMessage,
@@ -158,11 +157,13 @@ export default function CancelSubscriptionScreen() {
       // exclusion) — map the structured 409 to localized copy (FIT-272).
       Alert.alert(
         '',
-        e instanceof ApiError && e.code
-          ? paymentErrorMessage(errorStrings, e, lang)
-          : e instanceof Error
-            ? e.message
-            : L.error,
+        paymentErrorMessage(
+          errorStrings,
+          e,
+          lang,
+          L.error,
+          'subscription-cancel',
+        ),
       );
     }
   };

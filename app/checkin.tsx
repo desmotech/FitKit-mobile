@@ -30,7 +30,8 @@ import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
-import { extractApiErrorMessage, useSelfCheckin } from '@/hooks/use-schedule';
+import { useSelfCheckin } from '@/hooks/use-schedule';
+import { useScheduleStrings } from '@/i18n/use-schedule-strings';
 import { getWeekStartDay, weekStartFor } from '@/hooks/use-workouts';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -41,6 +42,9 @@ export default function CheckInScreen() {
   const { isLoaded, isSignedIn } = useAuth();
   const { activeOrganization } = useCurrentUser();
   const { lang, t: dict, dir } = useI18n();
+  // Member-facing refusal copy lives in the app, not the shared console
+  // dictionary — see the `errorTitle` / `failed` labels below.
+  const sched = useScheduleStrings();
   const haptics = useHaptics();
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
@@ -65,8 +69,8 @@ export default function CheckInScreen() {
       pleaseWait: pageT.pleaseWait ?? 'Please wait',
       success: pageT.success ?? "You're checked in!",
       successDesc: pageT.successDesc ?? 'Your attendance has been recorded.',
-      errorTitle: pageT.errorTitle ?? 'Check-in failed',
-      failed: pageT.failed ?? 'Check-in failed. Please try again.',
+      errorTitle: sched.checkInRefusedTitle,
+      failed: sched.checkInRefusedBody,
       invalidLink:
         pageT.invalidLink ?? 'Invalid check-in link. Please scan the QR again.',
       expired:
@@ -75,7 +79,7 @@ export default function CheckInScreen() {
       backToSchedule: pageT.backToSchedule ?? 'Back to Schedule',
       tryAgain: commonT.tryAgain ?? 'Try again',
     };
-  }, [dict]);
+  }, [dict, sched]);
 
   // The schedule mutation invalidates by week. We don't know the
   // session's week here (we'd need to fetch the session first), so we
@@ -126,7 +130,10 @@ export default function CheckInScreen() {
         onError: (err) => {
           haptics.error();
           setState('error');
-          setErrorMessage(extractApiErrorMessage(err, labels.failed));
+          // Not the server's message: a refusal here is a rule (too early,
+          // wrong place, not booked), and its phrasing is either raw English
+          // or the staff console's "הצ׳ק-אין נכשל".
+          setErrorMessage(sched.checkInRefusedBody);
         },
       },
     );
@@ -143,6 +150,7 @@ export default function CheckInScreen() {
     haptics,
     labels,
     router,
+    sched.checkInRefusedBody,
   ]);
 
   // Auth gate: if Clerk reports signed-out, push the user through the

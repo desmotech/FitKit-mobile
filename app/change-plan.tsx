@@ -185,6 +185,7 @@ export default function ChangePlanScreen() {
         planChangeErrorMessage(
           strings,
           e instanceof ApiError ? e.code : undefined,
+          { error: e, feature: 'plan-change' },
         ),
       );
     } finally {

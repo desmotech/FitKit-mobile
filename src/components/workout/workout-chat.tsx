@@ -44,6 +44,7 @@ import { useMessageUploads, type UploadItem } from '@/hooks/use-message-uploads'
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { bodyFamily } from '@/lib/type';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
 
@@ -92,6 +93,7 @@ export function WorkoutChat({
   // same as the profile sub-screens / FKActionBar), not just the home indicator.
   const tabBarTop = useTabBarTop();
   const { dir, lang, t } = useI18n();
+  const common = useCommonStrings();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
 
@@ -395,7 +397,7 @@ export function WorkoutChat({
           onPress={handlePickAttachment}
           hitSlop={6}
           accessibilityRole="button"
-          accessibilityLabel="Add attachment"
+          accessibilityLabel={common.a11yAddAttachment}
         >
           {({ pressed }) => (
             <View
@@ -454,7 +456,7 @@ export function WorkoutChat({
             disabled={!canSend}
             hitSlop={6}
             accessibilityRole="button"
-            accessibilityLabel="Send"
+            accessibilityLabel={common.a11ySend}
           >
             <View
               style={{
@@ -647,6 +649,8 @@ function BubbleAttachments({ attachments }: { attachments: AttachmentResponse[] 
   );
 }
 
+// TODO: duplicates components/messages/upload-preview-chip.tsx — collapse
+// onto the shared one when this file is next touched.
 function UploadPreviewChip({
   upload,
   onRemove,
@@ -655,6 +659,10 @@ function UploadPreviewChip({
   onRemove: () => void;
 }) {
   const haptics = useHaptics();
+  const { t } = useI18n();
+  // The upload error is a raw network/S3 string — never shown. The member
+  // only needs to know it failed and that tapping retries.
+  const uploadFailed = dict(t, 'messages.uploadFailed') ?? 'Upload failed';
   const done = upload.progress === 100 && !!upload.uploadId && !upload.error;
   const failed = !!upload.error;
   return (
@@ -687,7 +695,7 @@ function UploadPreviewChip({
         ) : null}
         {failed ? (
           <Pressable
-            onPress={() => Alert.alert('Upload failed', upload.error ?? 'Unknown error')}
+            onPress={() => Alert.alert('', uploadFailed)}
             style={{
               position: 'absolute',
               top: 0,

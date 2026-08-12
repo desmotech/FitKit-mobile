@@ -29,6 +29,7 @@ import {
   formErrorSummary,
   validateProfileField,
 } from '@/lib/validation-i18n';
+import { reportHandledError } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
 
 type FieldErrors = Partial<Record<string, string>>;
@@ -143,7 +144,9 @@ export default function PersonalDetailsScreen() {
       await queryClient.invalidateQueries({ queryKey: ['/users/me'] });
       haptics.success();
       router.back();
-    } catch {
+    } catch (err) {
+      // Raw `fetchWithAuth`, so no MutationCache reporter sees this.
+      reportHandledError(err, { feature: 'personal-details-save' });
       setSubmitError(labels.error);
       haptics.error();
     } finally {

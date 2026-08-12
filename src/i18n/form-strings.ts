@@ -58,6 +58,12 @@ export interface FormStrings {
   readyTitle: string;
   readySubtitle: string;
   validationFailed: string;
+  /**
+   * The submit itself was refused. Distinct from `errorSubtitle` (which is
+   * about failing to OPEN the form) and from `uploadFailed` (an attachment).
+   * Says the answers survived, because they do — the draft is re-persisted.
+   */
+  submitFailed: string;
   signedTitle: string;
   signedSubtitle: string;
   signedAction: string;
@@ -154,10 +160,11 @@ const HE: FormStrings = {
   readyTitle: 'מוכן לחתימה',
   readySubtitle: 'מלא את הטופס למטה. התשובות נשלחות באופן מאובטח למועדון.',
   validationFailed: 'חלק מהתשובות אינן עוברות אימות. אנא בדוק את הטופס.',
+  submitFailed: 'לא הצלחנו לשלוח את הטופס. התשובות שלך נשמרו — כדאי לנסות שוב.',
   signedTitle: 'נחתם — תודה',
   signedSubtitle: 'המועדון קיבל את הטופס החתום שלך.',
   signedAction: 'חזרה לטפסים שלי',
-  signedResumePurchase: 'המשך לרכישה',
+  signedResumePurchase: 'מעבר לרכישה',
   alreadySignedTitle: 'כבר חתום',
   alreadySignedSubtitle: 'כבר חתמת על הטופס. אין צורך בפעולה נוספת.',
   checkinDoneTitle: 'נשלח — תודה',
@@ -248,6 +255,8 @@ const EN: FormStrings = {
   readySubtitle:
     'Review and complete the form below. Your answers are sent securely to your gym.',
   validationFailed: "Some answers didn't pass validation. Please review.",
+  submitFailed:
+    "We couldn't submit the form. Your answers are saved — please try again.",
   signedTitle: 'Signed — thank you',
   signedSubtitle: 'Your gym has received your signed form.',
   signedAction: 'Back to My Forms',
@@ -346,6 +355,8 @@ const RU: FormStrings = {
     'Просмотрите и заполните форму ниже. Ваши ответы безопасно отправляются в зал.',
   validationFailed:
     'Некоторые ответы не прошли проверку. Проверьте форму.',
+  submitFailed:
+    'Не удалось отправить форму. Ваши ответы сохранены — попробуйте ещё раз.',
   signedTitle: 'Подписано — спасибо',
   signedSubtitle: 'Ваш зал получил подписанную форму.',
   signedAction: 'Назад к моим формам',

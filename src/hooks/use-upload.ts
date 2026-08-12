@@ -17,6 +17,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useCallback, useState } from 'react';
 import { useApi } from './use-api';
+import { reportHandledError } from '@/lib/error-reporting';
 import type {
   PresignedUploadResponseDto,
   UploadOwnerType,
@@ -236,6 +237,14 @@ export function useUpload(orgId: string | undefined | null, opts: UseUploadOptio
         updateItem(localId, { progress: 100 });
         return data.uploadId;
       } catch (err) {
+        // The message is stored only as a failure marker for the UI (read as
+        // a boolean); Sentry is where the actual cause has to land. The
+        // sibling hook (use-message-uploads) already did this — this one
+        // silently dropped every upload failure.
+        reportHandledError(err, {
+          feature: 'upload',
+          extra: { ownerType: opts.ownerType, localId },
+        });
         const message = err instanceof Error ? err.message : 'Upload failed';
         updateItem(localId, { error: message });
         return null;

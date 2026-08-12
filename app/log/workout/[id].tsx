@@ -474,9 +474,10 @@ export default function LogWorkoutResultScreen() {
                   textAlign: isRTL ? 'right' : 'left',
                 }}
               >
-                {mutation.error?.message
-                  ? `${L.workoutFailed} — ${mutation.error.message}`
-                  : L.workoutFailed}
+                {/* The raw server text used to be appended here; it is
+                    unlocalized and means nothing to a member. Sentry keeps
+                    it via the mutation reporter. */}
+                {L.workoutFailed}
               </Text>
             </Animated.View>
           )}

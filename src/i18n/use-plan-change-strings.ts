@@ -3,6 +3,7 @@ import {
   type PlanChangeStrings,
   planChangeStringsFor,
 } from './plan-change-strings';
+import { reportUnmappedApiCode } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
 
 /**
@@ -84,6 +85,13 @@ export function usePlanChangeStrings(): PlanChangeStrings {
 export function planChangeErrorMessage(
   strings: PlanChangeStrings,
   code: string | undefined,
+  /**
+   * The error itself + the flow name, so an unmapped code leaves a trail.
+   * Without this the default branch below silently renders `errGeneric`:
+   * `shouldReportError` drops the 4xx, and the member is told nothing
+   * specific — a plan change refused for a reason nobody can name.
+   */
+  report?: { error: unknown; feature: string },
 ): string {
   switch (code) {
     case 'outstanding_balance':
@@ -95,6 +103,9 @@ export function planChangeErrorMessage(
     case 'plan_change_charge_failed':
       return strings.errChargeFailed;
     default:
+      if (report) {
+        reportUnmappedApiCode(report.error, { feature: report.feature });
+      }
       return strings.errGeneric;
   }
 }

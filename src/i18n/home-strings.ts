@@ -51,21 +51,6 @@ export interface HomeStrings {
     evening: string;
   };
 
-  /**
-   * Context-aware sub-greeting under the greeting line.
-   *
-   * Deliberately has no "empty board" variant: the Today card directly below
-   * already states that, and a sub-greeting saying the same thing made the
-   * screen say "nothing today" three times over (kicker → sub-greeting →
-   * card title → card body). The greeting stays motivational; the card
-   * carries the fact.
-   */
-  subgreeting: {
-    fresh: string;
-    hot: string;
-    comeback: string;
-    rest: string;
-  };
 }
 
 const HE: HomeStrings = {
@@ -79,8 +64,8 @@ const HE: HomeStrings = {
   restDayTitle: 'יום מנוחה',
   restDaySubtitle: 'הגוף בונה את עצמו בימים כאלה.',
   // No "היום" — the section kicker right above already says it.
-  openDayTitle: 'אין אימון על הלוח',
-  openDaySubtitle: 'זמן טוב לתנועה קלה — הליכה, מתיחות או ניידות.',
+  openDayTitle: 'אין אימון מתוכנן',
+  openDaySubtitle: 'זמן טוב לתנועה קלה — הליכה, מתיחות או מוביליטי.',
   browseWeek: 'מה יש השבוע',
 
   booked: 'רשום',
@@ -108,15 +93,6 @@ const HE: HomeStrings = {
     evening: 'ערב טוב',
   },
 
-  // Curated Hebrew — the shared feed.subgreeting Hebrew was a literal
-  // mistranslation ("count" → לספור) and gendered; these are the natural,
-  // gender-neutral lines that replaced it.
-  subgreeting: {
-    fresh: 'יום חדש, הזדמנות חדשה.',
-    hot: 'ממשיכים ברצף!',
-    comeback: 'טוב שחזרת — ממשיכים מאיפה שעצרנו.',
-    rest: 'מנוחה היא חלק מהאימון.',
-  },
 };
 
 const EN: HomeStrings = {
@@ -156,12 +132,6 @@ const EN: HomeStrings = {
     evening: 'Good evening',
   },
 
-  subgreeting: {
-    fresh: "Let's make today count.",
-    hot: "You're on a roll.",
-    comeback: "Good to have you back — let's pick up where we left off.",
-    rest: 'Recovery is part of the work.',
-  },
 };
 
 const RU: HomeStrings = {
@@ -202,12 +172,6 @@ const RU: HomeStrings = {
     evening: 'Добрый вечер',
   },
 
-  subgreeting: {
-    fresh: 'Сделаем этот день полезным.',
-    hot: 'Вы в ударе!',
-    comeback: 'С возвращением — продолжим с того места, где остановились.',
-    rest: 'Отдых — тоже часть тренировки.',
-  },
 };
 
 export function homeStringsFor(lang: Locale): HomeStrings {
