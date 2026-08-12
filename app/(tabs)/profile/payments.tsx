@@ -277,13 +277,9 @@ export default function PaymentsScreen() {
     haptics.tap();
     router.push({
       pathname: '/(tabs)/profile/cancel-subscription',
-      params: {
-        id: activeSub.id,
-        plan: activeSub.plan.name,
-        periodEnd:
-          (activeSub as unknown as { currentPeriodEnd?: string | null })
-            .currentPeriodEnd ?? '',
-      },
+      // No date passed: the cancel screen shows the effective date the API
+      // returns, which is one month from the notice and not knowable here.
+      params: { id: activeSub.id, plan: activeSub.plan.name },
     });
   };
 
@@ -601,6 +597,12 @@ export default function PaymentsScreen() {
 
 // ── Subcomponents ─────────────────────────────────────────────
 
+/** Has the member given notice? Read via a cast — `SubscriptionLite` predates
+ *  the cancellation columns and doesn't declare them. */
+function scheduledToCancelOf(sub: unknown): boolean {
+  return !!(sub as { cancelAtPeriodEnd?: boolean }).cancelAtPeriodEnd;
+}
+
 function SubscriptionCard({
   sub,
   isRTL,
@@ -647,19 +649,37 @@ function SubscriptionCard({
 }) {
   const status = sub.status;
   const showRenew = status === 'past_due' || status === 'cancelled';
-  const showCancel = status === 'active';
-  const scheduledToCancel = !!(
-    sub as unknown as { cancelAtPeriodEnd?: boolean }
-  ).cancelAtPeriodEnd;
-  const periodEnd = (sub as unknown as { currentPeriodEnd?: string | null })
-    .currentPeriodEnd;
-  const periodEndStr = periodEnd
-    ? new Date(periodEnd).toLocaleDateString(lang, {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      })
-    : null;
+  // A member may give notice from any live state. Requiring `active` locked out
+  // paused, past_due and debt members — the ones most likely to want out — and
+  // the API no longer refuses them either.
+  const showCancel =
+    !scheduledToCancelOf(sub) &&
+    (status === 'active' ||
+      status === 'paused' ||
+      status === 'past_due' ||
+      status === 'debt');
+  const scheduledToCancel = scheduledToCancelOf(sub);
+
+  const fmtDate = (iso?: string | null) =>
+    iso
+      ? new Date(iso).toLocaleDateString(lang, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        })
+      : null;
+
+  // Two different dates, deliberately not conflated: the next charge is a
+  // billing fact, while the end date is the cancellation's effective date —
+  // one month from the member's notice. Showing the billing boundary as an end
+  // date was wrong by up to a month.
+  const nextBillingStr = fmtDate(
+    (sub as unknown as { currentPeriodEnd?: string | null }).currentPeriodEnd,
+  );
+  const endsOnStr = fmtDate(
+    (sub as unknown as { cancellationEffectiveAt?: string | null })
+      .cancellationEffectiveAt,
+  );
 
   const isActive = status === 'active' || status === 'paused';
   const statusTone = isActive
@@ -746,7 +766,7 @@ function SubscriptionCard({
           {formatAmount(sub.plan.priceInCents, sub.plan.currency)}
           {intervalLabel}
         </Text>
-        {periodEndStr ? (
+        {!scheduledToCancel && nextBillingStr ? (
           <Text
             style={{
               fontSize: 12,
@@ -755,8 +775,7 @@ function SubscriptionCard({
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
-            {scheduledToCancel ? '' : `${labels.nextBilling}: `}
-            {periodEndStr}
+            {`${labels.nextBilling}: ${nextBillingStr}`}
           </Text>
         ) : null}
       </View>
@@ -791,7 +810,7 @@ function SubscriptionCard({
               >
                 {labels.scheduledCancelBanner.replace(
                   '{date}',
-                  periodEndStr ?? '—',
+                  endsOnStr ?? '—',
                 )}
               </Text>
               <Text

@@ -25,6 +25,7 @@ export function MembershipCard({
   canRenewEarly,
   isRenewingEarly,
   onRenewEarly,
+  onManage,
 }: {
   sub: {
     id: string;
@@ -36,6 +37,11 @@ export function MembershipCard({
     quotas?: QuotaUsage[] | null;
     /** Discounted charges left on a presale plan; 0/null = standard price. */
     introCyclesRemaining?: number | null;
+    /** Member has given notice; the membership ends on the date below. */
+    cancelAtPeriodEnd?: boolean | null;
+    /** When it actually ends — one month from the notice, computed server-side.
+     *  Distinct from `currentPeriodEnd`, which is only the next billing date. */
+    cancellationEffectiveAt?: string | null;
     /** What the member may actually do, resolved server-side. Status alone
      *  can't say: a gym-cancelled subscription and a member-cancelled one are
      *  both `cancelled`, but only one is renewable. */
@@ -49,6 +55,8 @@ export function MembershipCard({
     active: string;
     expires: string;
     manage: string;
+    /** Used once the member has given notice. Falls back to `expires`. */
+    endsOn?: string;
     renew: string;
     renewing: string;
     completePayment: string;
@@ -63,6 +71,9 @@ export function MembershipCard({
   canRenewEarly?: boolean;
   isRenewingEarly?: boolean;
   onRenewEarly?: () => void;
+  /** Opens subscription management (cancel, resume, change plan, card).
+   *  Required for the Manage CTA to do anything — see the note below. */
+  onManage?: () => void;
 }) {
   const haptics = useHaptics();
   const { isDark } = useFKColors();
@@ -89,6 +100,14 @@ export function MembershipCard({
             isTerminal
             ? null
             : labels.manage;
+  // The CTA label already switched to "Manage" when there was nothing to pay,
+  // but the press still called `onRenew` — so the one button a member with a
+  // healthy membership could see said Manage and performed a renewal, and
+  // there was no route into cancel/resume/change-plan at all. The label now
+  // decides the action.
+  const isManageCta = ctaLabel === labels.manage;
+  const onCtaPress = isManageCta ? onManage : onRenew;
+
   // Say why there's no way back, rather than leaving a dead card.
   const endedNote = isTerminal && action === 'none' ? labels.endedByGym : null;
 
@@ -100,10 +119,14 @@ export function MembershipCard({
           : quotaT.introPaymentsRemaining
         ).replace('{count}', String(introLeft))
       : null;
-  const expiresStr = sub.currentPeriodEnd
-    ? labels.expires.replace(
+  // Once notice is given the meaningful date is when the membership ENDS, not
+  // when it would next have billed. Those differ by up to a month.
+  const endsOn = sub.cancelAtPeriodEnd ? sub.cancellationEffectiveAt : null;
+  const shownDate = endsOn ?? sub.currentPeriodEnd;
+  const expiresStr = shownDate
+    ? (endsOn ? labels.endsOn ?? labels.expires : labels.expires).replace(
         '{date}',
-        new Date(sub.currentPeriodEnd).toLocaleDateString(),
+        new Date(shownDate).toLocaleDateString(),
       )
     : '';
 
@@ -243,8 +266,8 @@ export function MembershipCard({
           <Pressable
             testID="membership-cta"
             onPressIn={haptics.tap}
-            onPress={onRenew}
-            disabled={isRenewing}
+            onPress={onCtaPress}
+            disabled={isRenewing || (isManageCta && !onManage)}
           >
             {({ pressed }) => (
               <View
@@ -263,7 +286,7 @@ export function MembershipCard({
                 }}
               >
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
-                  {isRenewing ? labels.renewing : ctaLabel}
+                  {isRenewing && !isManageCta ? labels.renewing : ctaLabel}
                 </Text>
               </View>
             )}
