@@ -130,6 +130,31 @@ export function PlanCard({
         : (pc.dropIn ?? 'Single visit');
 
   const price = formatPrice(plan.priceInCents, plan.currency, lang);
+  // The standard rate as the member will pay it once the intro runs out.
+  // Only a recurring plan carries an interval suffix — a pack's subtitle is
+  // a credit count ("10 classes"), which would read as nonsense appended to
+  // a price.
+  const intervalSuffix =
+    plan.type === 'subscription' && plan.interval ? subtitle : '';
+  const standardPrice = `${price}${intervalSuffix}`;
+
+  // Saving as a round percentage, for the badge. Given directly on a
+  // percent-based offer, derived on a price-based one. Sub-1% roundings show
+  // nothing rather than a meaningless "0%".
+  const discountPercent = !hasIntro
+    ? null
+    : (presale.introDiscountPercent ??
+        (plan.priceInCents > 0 && introCents != null
+          ? Math.round(
+              ((plan.priceInCents - introCents) / plan.priceInCents) * 100,
+            )
+          : null));
+  const showDiscount = discountPercent != null && discountPercent >= 1;
+
+  // What the member gets, when that is not an interval: a pack's credit
+  // count, or a drop-in's single visit. Recurring plans say it beside the
+  // price instead, as "/month".
+  const inclusionLine = intervalSuffix ? null : subtitle;
 
   const isPaidWithoutProvider = plan.priceInCents > 0 && !hasPaymentProvider;
   const disabled = switchMode
@@ -150,7 +175,7 @@ export function PlanCard({
   return (
     <FKCard
       style={{
-        padding: 16,
+        padding: 18,
         overflow: 'hidden',
         ...(isCurrent
           ? { borderWidth: 1, borderColor: `${colors.primary}55` }
@@ -159,26 +184,31 @@ export function PlanCard({
     >
       {isCurrent ? <FKHairline tone="primary" /> : null}
 
-      {/* Subtitle kicker + current-plan chip */}
+      {/* Header: the plan's name leads, its status sits opposite. The
+          interval used to sit up here as an uppercase mono kicker, which
+          separated it from the number it qualifies — it now rides the price
+          where "/month" actually means something. */}
       <View
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'space-between',
-          gap: 8,
+          gap: 10,
         }}
       >
         <Text
           style={{
-            fontFamily: font.mono,
-            fontSize: 10.5,
-            letterSpacing: 1,
-            textTransform: 'uppercase',
-            color: colors.mutedFg,
+            flex: 1,
+            fontFamily: displayFamily(lang, 'bold'),
+            fontSize: 19,
+            lineHeight: 25,
+            letterSpacing: -0.3,
+            color: colors.foreground,
+            textAlign: isRTL ? 'right' : 'left',
           }}
-          numberOfLines={1}
+          numberOfLines={2}
         >
-          {subtitle}
+          {plan.name}
         </Text>
         {isCurrent ? (
           <FKChip tone="success">{pc.currentPlan ?? 'Current Plan'}</FKChip>
@@ -198,37 +228,34 @@ export function PlanCard({
         ) : null}
       </View>
 
-      {/* Plan name */}
-      <Text
-        style={{
-          fontFamily: displayFamily(lang, 'bold'),
-          fontSize: 18,
-          letterSpacing: -0.3,
-          color: colors.foreground,
-          marginTop: 6,
-          textAlign: isRTL ? 'right' : 'left',
-        }}
-        numberOfLines={2}
-      >
-        {plan.name}
-      </Text>
+      {/* Price — the card's centre of gravity. One baseline row: the rate
+          being charged, its interval, then (on an intro offer) the standard
+          rate struck through and the saving as a badge.
 
-      {/* Price */}
+          `justifyContent: flex-start` is deliberate and load-bearing: under
+          `row-reverse` the main axis starts at the RIGHT edge, so this is
+          what keeps the price on the correct side in Hebrew. Pairing
+          `row-reverse` with `flex-end` — the intuitive-looking combination —
+          pushes the whole row to the left. */}
       <View
+        testID="price-row"
         style={{
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'baseline',
-          marginTop: 8,
-          justifyContent: isRTL ? 'flex-end' : 'flex-start',
+          justifyContent: 'flex-start',
+          flexWrap: 'wrap',
+          columnGap: 7,
+          rowGap: 2,
+          marginTop: 12,
         }}
       >
         <Text
           style={{
             fontFamily: font.mono,
-            fontSize: 28,
-            lineHeight: 30,
-            letterSpacing: -0.5,
-            color: colors.foreground,
+            fontSize: 34,
+            lineHeight: 38,
+            letterSpacing: -1,
+            color: hasIntro ? colors.primaryText : colors.foreground,
             fontVariant: ['tabular-nums'],
           }}
         >
@@ -236,27 +263,118 @@ export function PlanCard({
             ? formatPrice(introCents, plan.currency, lang)
             : price}
         </Text>
+
+        {intervalSuffix ? (
+          <Text
+            style={{
+              fontFamily: font.bodyMedium,
+              fontSize: 15,
+              lineHeight: 20,
+              color: colors.mutedFg,
+            }}
+          >
+            {intervalSuffix}
+          </Text>
+        ) : null}
+
+        {hasIntro ? (
+          // Glance-level cue only, and deliberately hidden from VoiceOver:
+          // line-through is not announced, so a screen reader would hear a
+          // second bare price and take it for the one being charged. The
+          // "then …" line below carries that meaning in words instead.
+          <Text
+            testID="standard-price-struck"
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+            style={{
+              fontFamily: font.mono,
+              fontSize: 16,
+              lineHeight: 21,
+              color: colors.mutedFg,
+              textDecorationLine: 'line-through',
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {standardPrice}
+          </Text>
+        ) : null}
+
+        {showDiscount ? (
+          <View
+            testID="discount-badge"
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              borderRadius: 999,
+              borderCurve: 'continuous',
+              backgroundColor: `${colors.primary}1F`,
+            }}
+          >
+            <Text
+              // A signed number: pinned LTR so the sign cannot drift to the
+              // wrong end of the digits in a Hebrew paragraph.
+              style={{
+                fontFamily: font.monoMedium,
+                fontSize: 12,
+                lineHeight: 16,
+                color: colors.primaryText,
+                writingDirection: 'ltr',
+                fontVariant: ['tabular-nums'],
+              }}
+            >
+              {`\u2212${discountPercent}%`}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
-      {/* Intro offer: the discounted price leads, the standard price stays
-          plainly readable underneath — never fine print. */}
+      {/* How long the intro lasts and what it becomes. The rate the member
+          ends up paying is the part they get surprised by, so it carries
+          full-contrast ink and weight — never fine print. */}
       {hasIntro && introCycles != null ? (
         <Text
           testID="intro-pricing"
           style={{
-            fontSize: 12.5,
-            marginTop: 4,
+            fontSize: 13,
+            lineHeight: 18,
+            marginTop: 6,
             color: colors.mutedFg,
-            fontFamily: 'Assistant-Medium',
+            fontFamily: font.bodyMedium,
             textAlign: isRTL ? 'right' : 'left',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
           }}
         >
           {(introCycles === 1
             ? qt.introFirstPaymentsOne
             : qt.introFirstPayments
           ).replace('{count}', String(introCycles))}
-          {' · '}
-          {qt.introThen.replace('{price}', `${price}${subtitle}`)}
+          {' \u00b7 '}
+          <Text
+            style={{
+              color: colors.foreground,
+              fontFamily: font.bodySemibold,
+            }}
+          >
+            {qt.introThen.replace('{price}', standardPrice)}
+          </Text>
+        </Text>
+      ) : null}
+
+      {/* What a non-recurring plan actually buys — a pack's credits, a
+          drop-in's single visit. */}
+      {inclusionLine ? (
+        <Text
+          style={{
+            fontFamily: font.bodyMedium,
+            fontSize: 13.5,
+            lineHeight: 18,
+            marginTop: 6,
+            color: colors.mutedFg,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+          numberOfLines={1}
+        >
+          {inclusionLine}
         </Text>
       ) : null}
 
@@ -269,14 +387,26 @@ export function PlanCard({
             lineHeight: 19,
             marginTop: 10,
             textAlign: isRTL ? 'right' : 'left',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
           }}
+          numberOfLines={3}
         >
           {plan.description}
         </Text>
       ) : null}
 
-      {/* CTA */}
-      <View style={{ marginTop: 16 }}>
+      {/* A hairline between what the plan is and the button that buys it —
+          the depth cue that stops the CTA reading as more body content. */}
+      <View
+        style={{
+          height: 1,
+          marginTop: 16,
+          backgroundColor: colors.border,
+          opacity: 0.7,
+        }}
+      />
+
+      <View style={{ marginTop: 14 }}>
         <FKButton
           fullWidth
           label={ctaLabel}
