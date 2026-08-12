@@ -56,7 +56,23 @@ export default function ShopScreen() {
   // a library player that mobile doesn't have yet — hide them until
   // courses GA on mobile.
   const plans = (plansQ.data?.data ?? []).filter((p) => p.type !== 'course');
-  const hasPaymentProvider = payQ.data?.data?.isActive === true;
+  // `isActive` means "this is the org's selected provider", NOT "it can
+  // charge". A FitKit-managed terminal awaiting Cardcom's KYC is active and
+  // unchargeable, so gating on it alone showed buyable plans against a
+  // terminal that rejects every checkout (prod, KineticsCF, 2026-08-12).
+  //
+  // `status` (FIT-286) is the field that says whether money can move. It is
+  // read defensively: this app ships against older @fitkit/shared builds and
+  // older API deployments where the field does not exist, and there "no
+  // status" means the provider was always chargeable — treating it as
+  // unchargeable would hide the shop for every gym.
+  const paymentConfig = payQ.data?.data as
+    | { isActive?: boolean; status?: string }
+    | null
+    | undefined;
+  const hasPaymentProvider =
+    paymentConfig?.isActive === true &&
+    (paymentConfig.status ?? 'active') === 'active';
   const subs = useMemo(() => subsQ.data?.data ?? [], [subsQ.data]);
 
   // Recurring subscriptions are exclusive per plan: active AND paused both
