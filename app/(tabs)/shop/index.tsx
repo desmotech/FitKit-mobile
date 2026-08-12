@@ -56,7 +56,23 @@ export default function ShopScreen() {
   // a library player that mobile doesn't have yet — hide them until
   // courses GA on mobile.
   const plans = (plansQ.data?.data ?? []).filter((p) => p.type !== 'course');
-  const hasPaymentProvider = payQ.data?.data?.isActive === true;
+  // `isActive` means "this is the org's selected provider", NOT "it can
+  // charge". A FitKit-managed terminal awaiting Cardcom's KYC is active and
+  // unchargeable, so gating on it alone showed buyable plans against a
+  // terminal that rejects every checkout (prod, KineticsCF, 2026-08-12).
+  //
+  // `status` (FIT-286) is the field that says whether money can move. It is
+  // read defensively: this app ships against older @fitkit/shared builds and
+  // older API deployments where the field does not exist, and there "no
+  // status" means the provider was always chargeable — treating it as
+  // unchargeable would hide the shop for every gym.
+  const paymentConfig = payQ.data?.data as
+    | { isActive?: boolean; status?: string }
+    | null
+    | undefined;
+  const hasPaymentProvider =
+    paymentConfig?.isActive === true &&
+    (paymentConfig.status ?? 'active') === 'active';
   const subs = useMemo(() => subsQ.data?.data ?? [], [subsQ.data]);
 
   // Recurring subscriptions are exclusive per plan: active AND paused both
@@ -216,11 +232,21 @@ export default function ShopScreen() {
   const deepLink = useLocalSearchParams<{ plan?: string }>();
   const deepLinkPlanId =
     typeof deepLink.plan === 'string' ? deepLink.plan : undefined;
-  const autoLaunchedRef = useRef(false);
+  // One shot per *landing*, not per mount. This tab stays mounted while the
+  // member is off signing a compliance-gated form, and signing hands them
+  // back here with ?plan= set again — a mount-scoped latch would swallow
+  // that second landing and strand them on the plain list, exactly the
+  // members who arrived on a quick-register link. Re-arms when the param
+  // clears, so nothing else can re-trigger a handled landing.
+  const landingHandledRef = useRef(false);
   useEffect(() => {
-    if (autoLaunchedRef.current || !deepLinkPlanId || !orgId) return;
+    if (!deepLinkPlanId) {
+      landingHandledRef.current = false;
+      return;
+    }
+    if (landingHandledRef.current || !orgId) return;
     if (plansQ.isLoading || payQ.isLoading || subsQ.isLoading) return;
-    autoLaunchedRef.current = true;
+    landingHandledRef.current = true;
     const plan = plans.find((p) => p.id === deepLinkPlanId);
     analytics.track('member_shop_deeplink', {
       org_id: orgId,

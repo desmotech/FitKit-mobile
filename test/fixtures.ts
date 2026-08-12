@@ -154,9 +154,6 @@ export function announcement(
     authorRole: 'coach',
     title: `Announcement ${announcementSeq}`,
     content: 'Body text',
-    // Required by the AnnouncementResponse type in the pinned @fitkit/shared
-    // release; the app itself no longer renders a priority badge.
-    priority: false,
     createdAt: '2026-07-01T10:00:00.000Z',
     readAt: null,
     readCount: 0,

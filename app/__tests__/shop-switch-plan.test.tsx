@@ -33,6 +33,13 @@ jest.mock('expo-router', () => ({
   // No ?plan= deep link in these specs — the shop screen reads it via
   // useLocalSearchParams since the deep-link landing was added.
   useLocalSearchParams: () => ({}),
+  // The shop resumes a gated purchase on focus; run the callback like a
+  // real focus would.
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useEffect } = require('react');
+    useEffect(cb, [cb]);
+  },
 }));
 
 // The mocked posthog-react-native constructor returns one shared client
