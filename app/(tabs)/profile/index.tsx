@@ -708,6 +708,7 @@ export default function ProfileScreen() {
                 title: labels.membershipTitle,
                 active: labels.activeMembership,
                 expires: labels.expires,
+                endsOn: labels.endsOn,
                 manage: labels.managePlan,
                 renew: labels.renew,
                 renewing: labels.renewing,
@@ -751,6 +752,8 @@ export default function ProfileScreen() {
               canRenewEarly={canRenewEarly}
               isRenewingEarly={earlyRenew.isPending}
               onRenewEarly={handleRenewEarly}
+              // Where cancel, resume, change plan and card management live.
+              onManage={() => router.push('/(tabs)/profile/payments')}
             />
           )}
 

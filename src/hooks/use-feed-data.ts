@@ -271,14 +271,16 @@ export function useEarlyRenewSubscription(orgId: string | undefined | null) {
 }
 
 /**
- * Member: schedule cancellation at end of the current period. `reason` is
- * required by the API. Reversible via {@link useResumeCancellation} until the
- * period actually ends.
+ * Member: give notice of cancellation. The membership ends one month later —
+ * the API computes that date and returns it as `cancellationEffectiveAt`, which
+ * callers should display rather than deriving an end date from a billing
+ * period. `reason` is optional. Reversible via {@link useResumeCancellation}
+ * until it takes effect.
  */
 export function useCancelAtPeriodEnd(orgId: string | undefined | null) {
   return useApiSend<
     ApiEnvelope<SubscriptionLite>,
-    { id: string; reason: string }
+    { id: string; reason?: string }
   >({
     path: (b) =>
       `/organizations/${orgId}/subscriptions/my/${b.id}/cancel-at-period-end`,
@@ -290,22 +292,6 @@ export function useCancelAtPeriodEnd(orgId: string | undefined | null) {
 export function useResumeCancellation(orgId: string | undefined | null) {
   return useApiSend<ApiEnvelope<SubscriptionLite>, { id: string }>({
     path: (b) => `/organizations/${orgId}/subscriptions/my/${b.id}/resume`,
-    method: 'POST',
-  });
-}
-
-/**
- * Member: request immediate cancellation + refund. Opens a
- * `cancellation_requests` row for the gym owner to approve — not an instant
- * cancel.
- */
-export function useRequestCancellation(orgId: string | undefined | null) {
-  return useApiSend<
-    ApiEnvelope<unknown>,
-    { id: string; reason: string; refundRequested: boolean }
-  >({
-    path: (b) =>
-      `/organizations/${orgId}/subscriptions/my/${b.id}/cancellation-requests`,
     method: 'POST',
   });
 }

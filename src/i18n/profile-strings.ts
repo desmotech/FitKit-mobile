@@ -40,6 +40,8 @@ export interface ProfileStrings {
   browsePlans: string;
   /** Template with `{date}`. */
   expires: string;
+  /** Shown instead of `expires` once the member has given notice. */
+  endsOn: string;
   renew: string;
   renewing: string;
   managePlan: string;
@@ -121,6 +123,7 @@ const HE: ProfileStrings = {
   noPlan: 'אין לך מנוי פעיל',
   browsePlans: 'לצפייה במנויים',
   expires: 'בתוקף עד {date}',
+  endsOn: 'מסתיים ב־{date}',
   renew: 'חידוש',
   renewing: 'מחדש…',
   managePlan: 'ניהול מנוי',
@@ -193,6 +196,7 @@ const EN: ProfileStrings = {
   noPlan: 'You have no active plan',
   browsePlans: 'Browse plans',
   expires: 'Expires {date}',
+  endsOn: 'Ends {date}',
   renew: 'Renew',
   renewing: 'Renewing…',
   managePlan: 'Manage plan',
@@ -265,6 +269,7 @@ const RU: ProfileStrings = {
   noPlan: 'У вас нет активного абонемента',
   browsePlans: 'Посмотреть абонементы',
   expires: 'Истекает {date}',
+  endsOn: 'Заканчивается {date}',
   renew: 'Продлить',
   renewing: 'Продлеваем…',
   managePlan: 'Управление абонементом',
