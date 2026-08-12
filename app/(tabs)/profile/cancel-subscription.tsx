@@ -27,13 +27,14 @@ import {
 } from 'react-native';
 import { FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
-import { ApiError } from '@/hooks/use-api';
+import { ApiError, useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   paymentErrorMessage,
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
 import { useCancelAtPeriodEnd } from '@/hooks/use-feed-data';
+import { isFormActionable, type MyFormEntry } from '@/hooks/use-forms';
 import { useHaptics } from '@/hooks/use-haptics';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
@@ -62,6 +63,7 @@ export default function CancelSubscriptionScreen() {
 
   const cancelMut = useCancelAtPeriodEnd(orgId);
   const errorStrings = usePaymentErrorStrings();
+  const { fetchWithAuth } = useApi();
 
   const [reason, setReason] = useState('');
 
@@ -127,10 +129,34 @@ export default function CancelSubscriptionScreen() {
           : L.title,
       );
       haptics.success();
-      if (orgId) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+      if (!orgId) {
+        router.back();
+        return;
+      }
+
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+      });
+
+      // The API issues a written cancellation form when notice is given — the
+      // law wants the notice in writing, carrying the member's name and ID, and
+      // a button press records neither. Take the member straight to it rather
+      // than leaving a silent to-do behind a badge.
+      //
+      // Best-effort by design: it is a record, never a gate. If the gym has no
+      // such form, or the fetch fails, the member is already cancelled and just
+      // goes back.
+      const instanceId = await findPendingCancellationForm(
+        fetchWithAuth,
+        queryClient,
+        orgId,
+      );
+      if (instanceId) {
+        router.replace({
+          pathname: '/(tabs)/profile/forms/[instanceId]',
+          params: { instanceId },
         });
+        return;
       }
       router.back();
     } catch (e) {
@@ -275,4 +301,37 @@ export default function CancelSubscriptionScreen() {
       </KeyboardAvoidingView>
     </View>
   );
+}
+
+/**
+ * The cancellation form the API just issued, if the gym has one published.
+ *
+ * Fetches rather than reading cache: the instance was created moments ago by
+ * the cancel call, and `/forms/mine` may never have been mounted in this
+ * session at all. The result is seeded into the query cache so the forms list
+ * and its badge are correct on the way out.
+ */
+async function findPendingCancellationForm(
+  fetchWithAuth: (path: string) => Promise<unknown>,
+  queryClient: ReturnType<typeof useQueryClient>,
+  orgId: string,
+): Promise<string | null> {
+  try {
+    const res = (await fetchWithAuth(
+      `/organizations/${orgId}/forms/mine`,
+    )) as { data?: MyFormEntry[] } | undefined;
+    const entries = res?.data ?? [];
+    queryClient.setQueryData(queryKeys.forms.mine(orgId), { data: entries });
+
+    const match = entries.find(
+      (e) =>
+        e.form?.typeKey === 'membership_cancellation' &&
+        !e.instance?.archivedAt &&
+        isFormActionable(e.instance?.status ?? ''),
+    );
+    return match?.instance?.id ?? null;
+  } catch {
+    // Never let paperwork discovery break the exit.
+    return null;
+  }
 }
