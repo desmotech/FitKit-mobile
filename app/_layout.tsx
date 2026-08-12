@@ -25,6 +25,7 @@ import {
   type ThemePreference,
 } from '@/lib/settings-store';
 import { resolveDeviceLocale, type Locale } from '@/i18n/config';
+import { commonStringsFor } from '@/i18n/common-strings';
 import { loadSessionOwner } from '@/lib/session-reset';
 import { SessionGuard } from '@/providers/session-guard';
 import { secureTokenCache } from '@/lib/secure-token-cache';
@@ -176,7 +177,13 @@ function RootLayout() {
     // what got build 1.0.0(2) rejected by App Review (Guideline 2.1a:
     // "loads for an indefinite amount of time"). Render a visible, static
     // error screen instead so the failure is diagnosable, never a hang.
-    return <ConfigErrorScreen />;
+    return (
+      <ConfigErrorScreen
+        // `getLocales()` (not the reactive hook) is enough: this is a
+        // terminal boot failure, nothing re-renders after it.
+        lang={settings.locale ?? resolveDeviceLocale(getLocales())}
+      />
+    );
   }
 
   // Match the splash to the persisted theme so there's no light↔dark flash
@@ -274,7 +281,12 @@ function RootLayout() {
  * tree can't initialize. Hides the splash on mount so the user never sees
  * an indefinite load.
  */
-function ConfigErrorScreen() {
+function ConfigErrorScreen({ lang }: { lang: Locale }) {
+  // This screen renders above <I18nProvider>, so `useI18n()` is unavailable —
+  // it resolves the locale from the persisted override / device the same way
+  // the provider does. App Review reads this screen; it must not be English
+  // for a Hebrew device.
+  const s = commonStringsFor(lang);
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => undefined);
   }, []);
@@ -297,7 +309,7 @@ function ConfigErrorScreen() {
           marginBottom: 8,
         }}
       >
-        Configuration error
+        {s.configErrorTitle}
       </Text>
       <Text
         style={{
@@ -307,9 +319,7 @@ function ConfigErrorScreen() {
           lineHeight: 20,
         }}
       >
-        This build is missing required configuration and can’t start. Please
-        reinstall the latest version from the App Store, or contact support if
-        the problem persists.
+        {s.configErrorBody}
       </Text>
     </View>
   );

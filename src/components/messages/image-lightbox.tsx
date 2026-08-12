@@ -7,6 +7,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { X } from 'lucide-react-native';
 import { Modal, Pressable, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 
 export function ImageLightbox({
   uri,
@@ -15,6 +16,7 @@ export function ImageLightbox({
   uri: string | null;
   onClose: () => void;
 }) {
+  const common = useCommonStrings();
   return (
     <Modal
       visible={!!uri}
@@ -29,7 +31,7 @@ export function ImageLightbox({
             onPress={onClose}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel="Close"
+            accessibilityLabel={common.a11yClose}
             style={{
               width: 40,
               height: 40,

@@ -29,6 +29,7 @@ import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useHaptics } from '@/hooks/use-haptics';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
+import { reportHandledError } from '@/lib/error-reporting';
 import { resetClientSession } from '@/lib/session-reset';
 import { useActiveOrg } from '@/providers/active-org-provider';
 import { useI18n } from '@/providers/i18n-provider';
@@ -118,8 +119,11 @@ export default function DeleteAccountScreen() {
       router.replace('/(auth)/sign-in');
     } catch (err) {
       haptics.error();
-      const msg = err instanceof Error ? err.message : labels.failed;
-      Alert.alert('', msg || labels.failed);
+      // Raw `fetchWithAuth`, so no MutationCache reporter covers this — and
+      // it is destructive and one-shot. Report explicitly, including 4xx.
+      reportHandledError(err, { feature: 'account-delete' });
+      // Localized copy only — the API's message here is unlocalized.
+      Alert.alert('', labels.failed);
     } finally {
       setSubmitting(false);
     }

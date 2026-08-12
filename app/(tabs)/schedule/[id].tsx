@@ -29,7 +29,6 @@ import {
   paymentErrorMessage,
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
-import { ApiError } from '@/hooks/use-api';
 import {
   type ClassSession,
   canCancelBooking,
@@ -48,6 +47,7 @@ import {
   usePlanPicker,
 } from '@/components/schedule/plan-picker';
 import { getWeekStartDay, weekStartFor } from '@/hooks/use-workouts';
+import { useScheduleStrings } from '@/i18n/use-schedule-strings';
 import { readFormGate } from '@/lib/form-gate';
 import { useI18n } from '@/providers/i18n-provider';
 import { SessionInfoCard } from '@/components/schedule/session-info-card';
@@ -124,6 +124,9 @@ export default function SessionDetailScreen() {
   const sched = (dict.schedule ?? {}) as Record<string, unknown>;
   const mobile = (sched.mobile ?? {}) as Record<string, string>;
   const member = (sched.memberBooking ?? {}) as Record<string, string>;
+  // Member-facing failure copy lives in the app, not the shared console
+  // dictionary — see the labels below.
+  const sched2 = useScheduleStrings();
   const quota = ((sched.memberBooking as Record<string, unknown> | undefined)
     ?.quota ?? {}) as Record<string, string>;
   const common = (dict.common ?? {}) as Record<string, string>;
@@ -149,8 +152,14 @@ export default function SessionDetailScreen() {
     classStarted: member.classStarted ?? 'Class Has Already Started',
     cancellationWindowClosed:
       member.cancellationWindowClosed ?? 'Cancellation Window Closed',
-    bookFailed: member.bookFailed ?? "Couldn't complete your booking",
-    cancelFailed: member.cancelFailed ?? "Couldn't cancel your booking",
+    // NOT `member.bookFailed` / `member.cancelFailed`: those are the shared
+    // staff-console strings ("ההרשמה נכשלה" — "the registration failed"),
+    // which read as the member's fault when the usual cause is a plan or a
+    // limit. The app's own schedule strings carry the softer member phrasing.
+    bookFailed: sched2.bookFailed,
+    bookFailedBody: sched2.bookFailedBody,
+    cancelFailed: sched2.cancelFailed,
+    cancelFailedBody: sched2.cancelFailedBody,
     cancelPolicy:
       member.cancelPolicy ??
       'You may cancel up to {hours} hour(s) before class start.',
@@ -301,13 +310,18 @@ export default function SessionDetailScreen() {
             return;
           }
           // Structured codes (e.g. C3's booking-beyond-subscription-end
-          // guard) get localized copy; anything else falls back to the
-          // server message as before (FIT-272).
+          // guard) get localized copy; anything else gets our own soft body
+          // rather than the API's message, which `X-Locale` returns as the
+          // staff-console "the booking failed" (FIT-272).
           Alert.alert(
             labels.bookFailed,
-            err instanceof ApiError && err.code
-              ? paymentErrorMessage(errorStrings, err, lang)
-              : extractApiErrorMessage(err, labels.bookFailed),
+            paymentErrorMessage(
+              errorStrings,
+              err,
+              lang,
+              labels.bookFailedBody,
+              'session-book',
+            ),
           );
         },
         onSettled: () => setPending(null),
@@ -346,7 +360,13 @@ export default function SessionDetailScreen() {
                 onError: (err) => {
                   Alert.alert(
                     labels.cancelFailed,
-                    extractApiErrorMessage(err, labels.cancelFailed),
+                    paymentErrorMessage(
+                      errorStrings,
+                      err,
+                      lang,
+                      labels.cancelFailedBody,
+                      'session-cancel',
+                    ),
                   );
                 },
                 onSettled: () => setPending(null),
@@ -415,13 +435,15 @@ export default function SessionDetailScreen() {
             // copy; everything else falls back to the generic message.
             // Either way we offer "Use QR instead" so the user isn't
             // dead-ended.
-            const raw = extractApiErrorMessage(err, labels.locationUnavailable);
+            // `raw` is read to classify the refusal, never shown — it is
+            // the server's own unlocalized wording.
+            const raw = extractApiErrorMessage(err, '');
             const isTooFar =
               /GPS_TOO_FAR/i.test(String(err?.message ?? '')) ||
               /too far|רחוק|далеко/i.test(raw);
             showGpsFallbackAlert(
               labels.gpsCheckIn,
-              isTooFar ? labels.tooFar : raw,
+              isTooFar ? labels.tooFar : labels.locationUnavailable,
             );
           },
           onSettled: () => setPending(null),

@@ -73,10 +73,10 @@ export default function SignFormInstanceScreen() {
     try {
       await submitMutation.mutateAsync({ answers });
       setSignedAt(new Date().toISOString());
-    } catch (err) {
-      setSubmitError(
-        err instanceof Error ? err.message : s.errorSubtitle,
-      );
+    } catch {
+      // Localized copy only — a submit rejection comes back unlocalized,
+      // and the raw text reaches Sentry via the mutation reporter.
+      setSubmitError(s.submitFailed);
     }
   };
 

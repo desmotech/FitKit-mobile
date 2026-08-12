@@ -233,7 +233,13 @@ export default function PaymentsScreen() {
       // hosted registration page instead of a dead end (FIT-272).
       onError: (err) => {
         haptics.error();
-        const message = paymentErrorMessage(errorStrings, err, lang);
+        const message = paymentErrorMessage(
+          errorStrings,
+          err,
+          lang,
+          errorStrings.renewFailed,
+          'subscription-renew',
+        );
         if (
           err instanceof ApiError &&
           err.code === 'no_active_payment_method'
@@ -304,7 +310,20 @@ export default function PaymentsScreen() {
       queryClient.invalidateQueries({ queryKey: [txnPath] });
     } catch (e) {
       haptics.error();
-      Alert.alert('', e instanceof Error ? e.message : labels.debtDesc);
+      // Card registration refused. The provider's own wording is English and
+      // unactionable ("tokenization failed", BIN codes), so the member gets
+      // localized copy telling them what to do about it; the raw detail goes
+      // to Sentry via the mutation reporter.
+      Alert.alert(
+        '',
+        paymentErrorMessage(
+          errorStrings,
+          e,
+          lang,
+          errorStrings.cardRegistrationFailed,
+          'card-register',
+        ),
+      );
     } finally {
       setResolving(false);
     }

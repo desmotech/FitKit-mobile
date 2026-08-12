@@ -25,6 +25,7 @@ import { FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { webUrl } from '@/lib/api';
 import { useHaptics } from '@/hooks/use-haptics';
+import { reportHandledError } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
 
 type FeedbackType = 'bug' | 'feature_request';
@@ -104,8 +105,10 @@ export default function FeedbackScreen() {
       haptics.success();
       Alert.alert('', labels.success);
       router.back();
-    } catch {
+    } catch (err) {
       haptics.error();
+      // Raw `fetch`, so no MutationCache reporter sees this.
+      reportHandledError(err, { feature: 'feedback-submit' });
       Alert.alert('', labels.error);
     } finally {
       setSubmitting(false);

@@ -21,6 +21,7 @@ import {
   useDeleteProgressPhoto,
   useMyProgressPhotos,
 } from '@/hooks/use-progress-photos';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 function get(dict: any, path: string): string | null {
@@ -32,6 +33,7 @@ export default function PhotoDetailScreen() {
   const haptics = useHaptics();
   const insets = useSafeAreaInsets();
   const { dir, t, lang } = useI18n();
+  const common = useCommonStrings();
   const isRTL = dir === 'rtl';
   const params = useLocalSearchParams<{ id: string }>();
   const { activeOrganization } = useCurrentUser();
@@ -79,9 +81,8 @@ export default function PhotoDetailScreen() {
           try {
             await deleteMutation.mutateAsync(photo.id);
             router.back();
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Delete failed';
-            Alert.alert('', msg);
+          } catch {
+            Alert.alert('', common.deleteFailed);
           }
         },
       },

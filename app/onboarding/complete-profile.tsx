@@ -25,16 +25,6 @@ import {
 } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { completeProfileSchema, type Gender } from '@fitkit/shared';
-
-// The published @fitkit/shared still marks the emergency-contact fields as
-// required in completeProfileSchema; the form no longer collects them, so
-// validate against the schema without those keys. Once the dependency picks
-// up the release where they became optional, this omit is a harmless no-op.
-const profileGateSchema = completeProfileSchema.omit({
-  emergencyContactName: true,
-  emergencyContactPhone: true,
-  emergencyContactRelationship: true,
-});
 import {
   FKBrandMark,
   FKButton,
@@ -54,7 +44,18 @@ import {
   formErrorSummary,
   validateProfileField,
 } from '@/lib/validation-i18n';
+import { reportHandledError } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
+
+// The published @fitkit/shared still marks the emergency-contact fields as
+// required in completeProfileSchema; the form no longer collects them, so
+// validate against the schema without those keys. Once the dependency picks
+// up the release where they became optional, this omit is a harmless no-op.
+const profileGateSchema = completeProfileSchema.omit({
+  emergencyContactName: true,
+  emergencyContactPhone: true,
+  emergencyContactRelationship: true,
+});
 
 type FieldErrors = Partial<Record<string, string>>;
 
@@ -184,7 +185,10 @@ export default function CompleteProfileScreen() {
       // to the tabs; the manual replace below skips the briefly-mounted
       // onboarding shell flash.
       router.replace('/(tabs)');
-    } catch {
+    } catch (err) {
+      // Raw `fetchWithAuth`, no MutationCache cover — and a silent failure
+      // here strands the member in onboarding, unable to reach the app.
+      reportHandledError(err, { feature: 'onboarding-complete-profile' });
       setSubmitError(labels.error);
       haptics.error();
     } finally {

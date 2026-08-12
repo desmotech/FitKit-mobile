@@ -12,6 +12,7 @@ import { useLocales } from 'expo-localization';
 import * as Updates from 'expo-updates';
 import { dictionaries, type Dictionary } from '@fitkit/shared';
 import { localeConfig, resolveDeviceLocale, type Locale } from '@/i18n/config';
+import { reportHandledError } from '@/lib/error-reporting';
 import { clearLocaleOverride, saveLocaleOverride } from '@/lib/settings-store';
 
 type I18nValue = {
@@ -46,7 +47,11 @@ async function ensureManualRTL() {
     I18nManager.forceRTL(false);
     try {
       await Updates.reloadAsync();
-    } catch {
+    } catch (err) {
+      // Production consequence is real: layout direction stays wrong until
+      // the member restarts by hand, and the alert below is DEV-only, so
+      // this was invisible.
+      reportHandledError(err, { feature: 'rtl-reset-reload' });
       if (__DEV__) {
         Alert.alert(
           'Reload needed',

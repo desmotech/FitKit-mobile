@@ -43,6 +43,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMessages } from '@/hooks/use-messages';
 import { useMessageUploads } from '@/hooks/use-message-uploads';
+import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import { usePresence, useRealtime } from '@/providers/realtime-provider';
 
@@ -73,6 +74,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { activeOrganization, primaryMembership } = useCurrentUser();
   const { dir, t, lang } = useI18n();
+  const common = useCommonStrings();
   const colors = useFKColors();
   const { colorScheme } = useColorScheme();
   const isRTL = dir === 'rtl';
@@ -552,7 +554,7 @@ export default function ChatScreen() {
               disabled={isSending}
               hitSlop={6}
               accessibilityRole="button"
-              accessibilityLabel="Add attachment"
+              accessibilityLabel={common.a11yAddAttachment}
               style={{ width: 40, height: 40 }}
             >
               {({ pressed }) => (
@@ -609,7 +611,7 @@ export default function ChatScreen() {
               onPress={handleSend}
               disabled={!canSend}
               accessibilityRole="button"
-              accessibilityLabel="Send"
+              accessibilityLabel={common.a11ySend}
               style={{ width: 40, height: 40 }}
             >
               {({ pressed }) => (

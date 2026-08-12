@@ -15,6 +15,7 @@ import { Alert } from 'react-native';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { useProfileStrings } from '@/i18n/use-profile-strings';
+import { reportHandledError } from '@/lib/error-reporting';
 import { showActionSheet } from '@/lib/action-sheet';
 
 export function useAvatarUpload() {
@@ -33,7 +34,10 @@ export function useAvatarUpload() {
       haptics.success();
     } catch (err) {
       haptics.error();
-      Alert.alert('', err instanceof Error ? err.message : labels.avatarError);
+      // Clerk mutation — no MutationCache reporter covers it.
+      reportHandledError(err, { feature: 'avatar-upload' });
+      // Localized copy only — the raw failure is an upload/network string.
+      Alert.alert('', labels.avatarError);
     } finally {
       setAvatarBusy(false);
     }
