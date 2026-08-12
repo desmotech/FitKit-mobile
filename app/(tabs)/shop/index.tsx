@@ -232,11 +232,21 @@ export default function ShopScreen() {
   const deepLink = useLocalSearchParams<{ plan?: string }>();
   const deepLinkPlanId =
     typeof deepLink.plan === 'string' ? deepLink.plan : undefined;
-  const autoLaunchedRef = useRef(false);
+  // One shot per *landing*, not per mount. This tab stays mounted while the
+  // member is off signing a compliance-gated form, and signing hands them
+  // back here with ?plan= set again — a mount-scoped latch would swallow
+  // that second landing and strand them on the plain list, exactly the
+  // members who arrived on a quick-register link. Re-arms when the param
+  // clears, so nothing else can re-trigger a handled landing.
+  const landingHandledRef = useRef(false);
   useEffect(() => {
-    if (autoLaunchedRef.current || !deepLinkPlanId || !orgId) return;
+    if (!deepLinkPlanId) {
+      landingHandledRef.current = false;
+      return;
+    }
+    if (landingHandledRef.current || !orgId) return;
     if (plansQ.isLoading || payQ.isLoading || subsQ.isLoading) return;
-    autoLaunchedRef.current = true;
+    landingHandledRef.current = true;
     const plan = plans.find((p) => p.id === deepLinkPlanId);
     analytics.track('member_shop_deeplink', {
       org_id: orgId,

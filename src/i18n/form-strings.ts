@@ -61,6 +61,8 @@ export interface FormStrings {
   signedTitle: string;
   signedSubtitle: string;
   signedAction: string;
+  /** Done CTA when signing was the last step before a checkout resumes. */
+  signedResumePurchase: string;
   alreadySignedTitle: string;
   alreadySignedSubtitle: string;
   checkinDoneTitle: string;
@@ -155,6 +157,7 @@ const HE: FormStrings = {
   signedTitle: 'נחתם — תודה',
   signedSubtitle: 'המועדון קיבל את הטופס החתום שלך.',
   signedAction: 'חזרה לטפסים שלי',
+  signedResumePurchase: 'המשך לרכישה',
   alreadySignedTitle: 'כבר חתום',
   alreadySignedSubtitle: 'כבר חתמת על הטופס. אין צורך בפעולה נוספת.',
   checkinDoneTitle: 'נשלח — תודה',
@@ -248,6 +251,7 @@ const EN: FormStrings = {
   signedTitle: 'Signed — thank you',
   signedSubtitle: 'Your gym has received your signed form.',
   signedAction: 'Back to My Forms',
+  signedResumePurchase: 'Continue to purchase',
   alreadySignedTitle: 'Already signed',
   alreadySignedSubtitle:
     'You already signed this form. No action needed.',
@@ -345,6 +349,7 @@ const RU: FormStrings = {
   signedTitle: 'Подписано — спасибо',
   signedSubtitle: 'Ваш зал получил подписанную форму.',
   signedAction: 'Назад к моим формам',
+  signedResumePurchase: 'Перейти к покупке',
   alreadySignedTitle: 'Уже подписано',
   alreadySignedSubtitle:
     'Вы уже подписали эту форму. Никаких действий не требуется.',

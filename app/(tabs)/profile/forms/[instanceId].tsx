@@ -97,6 +97,33 @@ export default function SignFormInstanceScreen() {
     status === 'reviewed' ||
     status === 'archived';
 
+  // ── Resuming a gated purchase ───────────────────────────────────────
+  // The member tapped Subscribe, the API answered 409
+  // `form_signature_required`, and the shop sent them here carrying the
+  // plan. Handing it straight back on the way out lands them on the shop's
+  // spotlight + confirm rather than a bare list. Also covers the instance
+  // that was already terminal on arrival — signed on web, or a second tap
+  // on a gate they had already satisfied — which used to dead-end on
+  // "Back to My Forms".
+  //
+  // The plan rides the params it arrived on and nothing outlives this
+  // screen: a member who backs out unsigned leaves no purchase armed
+  // anywhere, and resuming still costs the deliberate tap the shop asks
+  // for. Not a resumed checkout — they stopped to sign, they did not
+  // authorise a charge.
+  const resumesPurchase = reason === 'purchase' && !!resumePlanId;
+  const leaveScreen = () => {
+    if (resumesPurchase) {
+      router.replace({
+        pathname: '/(tabs)/shop',
+        params: { plan: resumePlanId },
+      });
+      return;
+    }
+    router.back();
+  };
+  const doneLabel = resumesPurchase ? s.signedResumePurchase : s.signedAction;
+
   return (
     <FKSubScreen
       title={entry?.form.name ?? s.loadingTitle}
@@ -148,25 +175,9 @@ export default function SignFormInstanceScreen() {
           <SignedSuccess
             title={isCheckIn ? s.checkinDoneTitle : s.signedTitle}
             subtitle={isCheckIn ? s.checkinDoneSubtitle : s.signedSubtitle}
-            actionLabel={s.signedAction}
+            actionLabel={doneLabel}
             isRTL={isRTL}
-            onAction={() => {
-              // Signed as part of a purchase: return to the shop naming the
-              // plan, so the member lands back in the flow they started
-              // instead of a list.
-              if (reason === 'purchase' && resumePlanId) {
-                // Hand back to the shop's existing deep-link landing, which
-                // spotlights the plan and asks for a tap. Resuming must not
-                // create a payment session on the member's behalf — they
-                // stopped to sign, they did not authorise a charge.
-                router.replace({
-                  pathname: '/(tabs)/shop',
-                  params: { plan: resumePlanId },
-                });
-                return;
-              }
-              router.back();
-            }}
+            onAction={leaveScreen}
             // The PDF is rendered during submit, so it's already on file.
             onDownload={isCheckIn ? undefined : openPdf}
             downloading={pdf.isPending}
@@ -180,9 +191,9 @@ export default function SignFormInstanceScreen() {
             subtitle={
               isCheckIn ? s.checkinAlreadySubtitle : s.alreadySignedSubtitle
             }
-            actionLabel={s.signedAction}
+            actionLabel={doneLabel}
             isRTL={isRTL}
-            onAction={() => router.back()}
+            onAction={leaveScreen}
             onDownload={status === 'signed' ? openPdf : undefined}
             downloading={pdf.isPending}
             downloadError={pdf.isError ? s.downloadPdfFailed : null}

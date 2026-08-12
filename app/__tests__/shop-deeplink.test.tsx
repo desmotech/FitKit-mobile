@@ -24,6 +24,13 @@ jest.mock('expo-router', () => ({
     setParams: mockSetParams,
   }),
   useLocalSearchParams: () => mockParams,
+  // The shop resumes a gated purchase on focus; run the callback like a
+  // real focus would.
+  useFocusEffect: (cb: () => void | (() => void)) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useEffect } = require('react');
+    useEffect(cb, [cb]);
+  },
 }));
 
 jest.mock('expo-web-browser', () => ({
