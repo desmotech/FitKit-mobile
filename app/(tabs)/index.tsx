@@ -1,9 +1,14 @@
 /**
  * Home — member dashboard. Three concerns, in this order:
  *
- *   1. Greeting        — kicker date, "Good morning, {firstName}", a
- *                        warm sub-greeting that adapts to context
- *                        (rest/hot streak/comeback/fresh).
+ *   1. Greeting        — kicker date + "Good morning, {firstName}".
+ *                        A motivational sub-greeting used to sit under it,
+ *                        but the Today card below is also encouraging, so
+ *                        the screen delivered two pep-talks in a row — and
+ *                        the sub-greeting's default line ("A new day, a new
+ *                        opportunity") was written for a morning it had no
+ *                        way of knowing it was in. One message now, the
+ *                        contextual one.
  *   2. Today           — today's program workout AND today's booked
  *                        class(es), each rendered with their shared
  *                        card primitive (no inline duplication).
@@ -133,13 +138,6 @@ export default function HomeScreen() {
       ),
     [todayAssignments],
   );
-  // Primary = first incomplete workout, else the first assignment — drives
-  // the subgreeting only.
-  const todayAssignment =
-    todayWorkouts.find((a) => a.status !== 'completed') ??
-    todayWorkouts[0] ??
-    todayAssignments[0] ??
-    null;
   // Today's classes are derived from the same week query the rail uses —
   // a single source so "Today" and "This week" agree. Booked/attended only
   // (waitlist isn't a firm seat), cancelled excluded.
@@ -167,11 +165,6 @@ export default function HomeScreen() {
   const firstName =
     user?.firstName ?? currentUser?.firstName ?? null;
   const greeting = greetingForHour(today.getHours(), s.greeting);
-  const subgreeting = subGreetingFor({
-    assignment: todayAssignment,
-    topGoalProgress: activeGoals[0]?.progressPercent ?? null,
-    subgreetingT: s.subgreeting,
-  });
   const dateKicker = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(lang, {
       weekday: 'short',
@@ -273,18 +266,6 @@ export default function HomeScreen() {
             ) : (
               ''
             )}
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: '500',
-              color: colors.mutedFg,
-              marginTop: 6,
-              lineHeight: 20,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {subgreeting}
           </Text>
         </Animated.View>
 
@@ -828,23 +809,3 @@ function greetingForHour(
  * "last activity" signal without another fetch, so we leave that line in
  * the home string table for a future iteration.
  */
-function subGreetingFor({
-  assignment,
-  topGoalProgress,
-  subgreetingT,
-}: {
-  assignment: { kind?: string | null } | null;
-  topGoalProgress: number | null;
-  subgreetingT: HomeStrings['subgreeting'];
-}): string {
-  if (assignment?.kind === 'rest') {
-    return subgreetingT.rest;
-  }
-  // No "empty board" line here on purpose — the OpenDayCard right below
-  // already says the board is empty and suggests light movement. Saying it
-  // twice made the screen read as nagging.
-  if (topGoalProgress != null && topGoalProgress >= 70) {
-    return subgreetingT.hot;
-  }
-  return subgreetingT.fresh;
-}
