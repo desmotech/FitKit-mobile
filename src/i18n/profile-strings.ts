@@ -132,7 +132,7 @@ const HE: ProfileStrings = {
   settingPayment: 'תשלומים',
   settingHistory: 'היסטוריית אימונים',
   settingGoals: 'יעדים',
-  settingPrs: 'לוח השיאים',
+  settingPrs: 'השיאים שלי',
   settingMetrics: 'מדדי גוף',
   settingPhotos: 'תמונות התקדמות',
   settingForms: 'הטפסים שלי',
