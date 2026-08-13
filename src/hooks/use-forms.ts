@@ -59,12 +59,23 @@ export function isFormActionable(status: string): boolean {
   return status === 'pending' || status === 'sent' || status === 'scheduled';
 }
 
+/**
+ * Count of forms awaiting the member's action. Pure so the badge's foreground
+ * re-sync can derive the same number straight off the query cache, without
+ * standing up a hook.
+ */
+export function countActionableForms(
+  entries: MyFormEntry[] | undefined,
+): number {
+  return (entries ?? []).filter(
+    (e) => !e.instance.archivedAt && isFormActionable(e.instance.status),
+  ).length;
+}
+
 /** Count of forms awaiting the member's action — drives the profile badge + app icon badge. */
 export function useIncompleteFormsCount(orgId: string | undefined | null): number {
   const { data } = useMyForms(orgId);
-  return (data?.data ?? []).filter(
-    (e) => !e.instance.archivedAt && isFormActionable(e.instance.status),
-  ).length;
+  return countActionableForms(data?.data);
 }
 
 /**
