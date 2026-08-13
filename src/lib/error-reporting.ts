@@ -92,6 +92,30 @@ export function reportQueryError(
   });
 }
 
+/**
+ * Report a failed app-icon badge write.
+ *
+ * The badge is the only unread signal a member gets while the app is closed,
+ * and `setBadgeCountAsync` rejects for reasons we cannot see from here —
+ * revoked notification permission, an OEM launcher with no badge support.
+ * Swallowing that (`.catch(() => undefined)`, as this did until 2026-08-13)
+ * makes the failure invisible at both ends: the icon is wrong and nobody
+ * finds out. Grouped by phase so "never syncs on resume" is a different issue
+ * from "never clears on sign-out".
+ */
+export function reportBadgeError(
+  error: unknown,
+  context: { total: number; phase: 'sync' | 'resume' | 'signout' },
+): void {
+  if (!shouldReportError(error)) return;
+
+  Sentry.captureException(error, {
+    tags: { error_source: 'badge', badge_phase: context.phase },
+    contexts: { badge: { total: context.total, phase: context.phase } },
+    fingerprint: ['{{ default }}', 'badge', context.phase],
+  });
+}
+
 /** Query keys are arbitrary structures; never let serialization throw. */
 function safeKey(key: unknown): string {
   if (key === undefined) return '(none)';

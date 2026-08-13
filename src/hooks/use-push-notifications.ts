@@ -19,6 +19,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { apiUrl } from '@/lib/api';
+import { reportBadgeError } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
 
 const PROJECT_ID =
@@ -72,7 +73,9 @@ export function usePushNotifications() {
       // back in matched the cached `token:lang` key and skipped registration,
       // leaving the token revoked and push delivery dead until an app restart.
       registeredFor.current = null;
-      Notifications.setBadgeCountAsync(0).catch(() => undefined);
+      Notifications.setBadgeCountAsync(0).catch((error) => {
+        reportBadgeError(error, { total: 0, phase: 'signout' });
+      });
     }
   }, [isLoaded, isSignedIn]);
 
