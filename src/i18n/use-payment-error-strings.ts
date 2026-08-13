@@ -24,6 +24,10 @@ const DICT_PATHS: Record<keyof PaymentErrorStrings, string> = {
   planChangeCurrencyMismatch:
     'payments.errorCodes.plan_change_currency_mismatch',
   providerChargeUnverified: 'payments.errorCodes.provider_charge_unverified',
+  // Sold-out copy lives under `shop.planCard`, not `payments.errorCodes` —
+  // it is the same string the web shop toasts for this refusal.
+  planSoldOut: 'shop.planCard.purchaseFailedSoldOut',
+  offerSoldOut: 'shop.planCard.purchaseFailedGroupSoldOut',
   // No shared keys — see the field docs in payment-error-strings.ts. Pointed
   // at paths that do not exist so the static copy always wins; if they are
   // ever added upstream the dictionary takes over automatically.
@@ -73,6 +77,9 @@ const BY_CODE: Record<string, keyof PaymentErrorStrings> = {
   plan_change_conflict: 'planChangeConflict',
   plan_change_currency_mismatch: 'planChangeCurrencyMismatch',
   provider_charge_unverified: 'providerChargeUnverified',
+  // Plan scope is the default: the API omitted `scope` entirely until group
+  // caps shipped, and an omitted scope can only mean the plan's own cap.
+  plan_sold_out: 'planSoldOut',
 };
 
 /**
@@ -91,7 +98,8 @@ const BY_CODE: Record<string, keyof PaymentErrorStrings> = {
  * thing we have.
  *
  * `booking_beyond_subscription_end` interpolates the `endsAt` the API ships
- * in the error body.
+ * in the error body; `plan_sold_out` picks its copy off the `scope` the API
+ * ships there (plan cap vs. offer-wide group cap).
  */
 export function paymentErrorMessage(
   strings: PaymentErrorStrings,
@@ -113,6 +121,14 @@ export function paymentErrorMessage(
           })
         : '—';
     return strings.bookingBeyondSubscriptionEnd.replace('{endsAt}', endsAt);
+  }
+  // A sold-out refusal names whichever cap actually bound. `scope: 'group'`
+  // means the OFFER is closed, not this one variant of it — saying "this plan
+  // is sold out" would send the member to the annual variant of the same
+  // closed offer. Anything else (including no `scope` at all, which is every
+  // API build before group caps) is the plan's own cap, mapped via BY_CODE.
+  if (error?.code === 'plan_sold_out' && error.details?.scope === 'group') {
+    return strings.offerSoldOut;
   }
   const key = error?.code ? BY_CODE[error.code] : undefined;
   if (key) return strings[key];

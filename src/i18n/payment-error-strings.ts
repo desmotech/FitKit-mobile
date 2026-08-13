@@ -42,6 +42,18 @@ export interface PaymentErrorStrings {
   /** payments.errorCodes.provider_charge_unverified */
   providerChargeUnverified: string;
   /**
+   * `plan_sold_out` (FIT-282 purchase cap) at PLAN scope — this plan's own
+   * lifetime seat count is full. `shop.planCard.purchaseFailedSoldOut`.
+   */
+  planSoldOut: string;
+  /**
+   * `plan_sold_out` at GROUP scope (FIT-289 plan groups) — the cap that bound
+   * belongs to the OFFER, so every variant of it is equally unavailable and
+   * naming the plan would invite the member to try the annual one instead.
+   * `shop.planCard.purchaseFailedGroupSoldOut`.
+   */
+  offerSoldOut: string;
+  /**
    * Shop checkout refused. Title + body, because the shared dictionary's
    * `shop.planCard.purchaseFailed` ("רכישת המנוי נכשלה" — "the plan purchase
    * failed") reads as breakage, while a refusal here is nearly always a rule:
@@ -88,6 +100,8 @@ const en: PaymentErrorStrings = {
     'Plans in different currencies cannot be switched between.',
   providerChargeUnverified:
     'Front-desk charges are not available yet for this payment provider.',
+  planSoldOut: 'This plan is sold out',
+  offerSoldOut: 'This offer is sold out',
   cardRegistrationFailed:
     "We couldn't save that card. Check the details with your bank, or try another card.",
   purchaseRefusedTitle: "We couldn't complete the purchase",
@@ -117,6 +131,8 @@ const he: PaymentErrorStrings = {
   planChangeCurrencyMismatch: 'לא ניתן להחליף בין תוכניות במטבעות שונים.',
   providerChargeUnverified:
     'חיובי דלפק אינם זמינים עדיין עבור ספק תשלום זה.',
+  planSoldOut: 'המנוי הזה אזל',
+  offerSoldOut: 'ההצעה הזו אזלה',
   cardRegistrationFailed:
     'לא הצלחנו לשמור את הכרטיס. כדאי לבדוק את הפרטים מול הבנק, או לנסות כרטיס אחר.',
   purchaseRefusedTitle: 'לא הצלחנו להשלים את הרכישה',
@@ -148,6 +164,8 @@ const ru: PaymentErrorStrings = {
     'Нельзя переключаться между планами в разных валютах.',
   providerChargeUnverified:
     'Списания на стойке пока недоступны для этого платёжного провайдера.',
+  planSoldOut: 'Этот план раскуплен',
+  offerSoldOut: 'Это предложение раскуплено',
   cardRegistrationFailed:
     'Не удалось сохранить карту. Проверьте данные в банке или попробуйте другую карту.',
   purchaseRefusedTitle: 'Не удалось завершить покупку',

@@ -32,9 +32,60 @@ describe('paymentErrorMessage', () => {
     ['plan_change_conflict', S.planChangeConflict],
     ['plan_change_currency_mismatch', S.planChangeCurrencyMismatch],
     ['provider_charge_unverified', S.providerChargeUnverified],
+    ['plan_sold_out', S.planSoldOut],
   ] as const)('maps %s to its localized copy', (code, expected) => {
     const err = new ApiError('raw server text', 409, code);
     expect(paymentErrorMessage(S, err, 'he')).toBe(expected);
+  });
+
+  // FIT-289: the refusal names whichever cap bound. A group cap closes the
+  // whole offer, so naming this plan would point the member at another
+  // variant of the same closed offer.
+  it('names the offer when a group cap produced the sold-out', () => {
+    const err = new ApiError('raw', 409, 'plan_sold_out', { scope: 'group' });
+    expect(paymentErrorMessage(S, err, 'he')).toBe(S.offerSoldOut);
+  });
+
+  it('names the plan when a plan cap produced the sold-out', () => {
+    const err = new ApiError('raw', 409, 'plan_sold_out', { scope: 'plan' });
+    expect(paymentErrorMessage(S, err, 'he')).toBe(S.planSoldOut);
+  });
+
+  // Every API build before group caps sends no `scope` at all — the only cap
+  // that could have bound is the plan's own.
+  it('treats a scopeless sold-out as the plan cap', () => {
+    const err = new ApiError('raw', 409, 'plan_sold_out');
+    expect(paymentErrorMessage(S, err, 'he')).toBe(S.planSoldOut);
+  });
+
+  it('keeps sold-out copy over a caller fallback, at either scope', () => {
+    const plan = new ApiError('raw', 409, 'plan_sold_out');
+    const group = new ApiError('raw', 409, 'plan_sold_out', {
+      scope: 'group',
+    });
+    expect(paymentErrorMessage(S, plan, 'he', 'soft copy')).toBe(S.planSoldOut);
+    expect(paymentErrorMessage(S, group, 'he', 'soft copy')).toBe(
+      S.offerSoldOut,
+    );
+  });
+
+  it('stays quiet for a sold-out at either scope — nothing is missing', () => {
+    paymentErrorMessage(
+      S,
+      new ApiError('raw', 409, 'plan_sold_out'),
+      'he',
+      'soft copy',
+      'plan-purchase',
+    );
+    paymentErrorMessage(
+      S,
+      new ApiError('raw', 409, 'plan_sold_out', { scope: 'group' }),
+      'he',
+      'soft copy',
+      'plan-purchase',
+    );
+
+    expect(captureMessage).not.toHaveBeenCalled();
   });
 
   it('interpolates endsAt for booking_beyond_subscription_end', () => {
