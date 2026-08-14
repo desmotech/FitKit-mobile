@@ -35,11 +35,19 @@ function stageConversations(items: ReturnType<typeof conversation>[]) {
   );
 }
 
-/** The chrome reads the announcements unread count for the tab badge. */
-function stageInboxChrome() {
+/**
+ * The chrome reads the announcements unread count for the tab badge, and the
+ * member's program enrollments to decide whether the Workouts tab exists at
+ * all. Default: enrolled, so the tab is present for every case that isn't
+ * specifically about the gate.
+ */
+function stageInboxChrome({ enrolled = true }: { enrolled?: boolean } = {}) {
   server.use(
     http.get(api(`/organizations/${TEST_ORG}/announcements/unread-count`), () =>
       HttpResponse.json({ data: { count: 0 } }),
+    ),
+    http.get(api(`/organizations/${TEST_ORG}/programs/my-enrollments`), () =>
+      HttpResponse.json({ data: enrolled ? [{ id: 'enr_1' }] : [] }),
     ),
   );
 }
@@ -222,6 +230,62 @@ describe('Inbox — Workouts tab', () => {
     await waitFor(() =>
       expect(screen.getByText(heInbox.noWorkoutThreads)).toBeOnTheScreen(),
     );
+  });
+});
+
+/**
+ * Workout threads hang off coaching-program assignments, so a member with no
+ * enrollment has nothing the tab could ever list. It is gated on the same
+ * enrollment the Program tab in `(tabs)/_layout` uses — an empty tab that can
+ * never fill is worse than no tab at all.
+ */
+describe('Inbox — Workouts tab enrollment gate', () => {
+  it('hides the Workouts tab for a member on no coaching program', async () => {
+    stageInboxChrome({ enrolled: false });
+    stageConversations([]);
+
+    await renderWithProviders(<MessagesListScreen />);
+
+    // The other two tabs stay — this is a gate, not a breakage.
+    expect(
+      await screen.findByRole('tab', { name: heInbox.tabMessages }),
+    ).toBeOnTheScreen();
+    expect(
+      screen.getByRole('tab', { name: heInbox.tabAnnouncements }),
+    ).toBeOnTheScreen();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('tab', { name: heInbox.tabWorkouts }),
+      ).not.toBeOnTheScreen(),
+    );
+  });
+
+  it('keeps the Workouts tab for an enrolled member', async () => {
+    stageConversations([]);
+
+    await renderWithProviders(<MessagesListScreen />);
+
+    expect(
+      await screen.findByRole('tab', { name: heInbox.tabWorkouts }),
+    ).toBeOnTheScreen();
+  });
+
+  it('falls back to Direct when ?tab=workouts lands on an unenrolled member', async () => {
+    // Push notifications and older links can still carry ?tab=workouts.
+    // Landing on a tab that no longer exists must not strand the member on a
+    // blank body with no segment selected.
+    mockSearchParams = { tab: 'workouts' };
+    stageInboxChrome({ enrolled: false });
+    stageConversations([]);
+
+    await renderWithProviders(<MessagesListScreen />);
+
+    await waitFor(() =>
+      expect(screen.getByText(heInbox.noConversations)).toBeOnTheScreen(),
+    );
+    expect(
+      screen.queryByRole('tab', { name: heInbox.tabWorkouts }),
+    ).not.toBeOnTheScreen();
   });
 });
 
