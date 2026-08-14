@@ -212,6 +212,10 @@ export function useMessages(
       queryClient.invalidateQueries({
         queryKey: queryKeys.conversations.list(orgId ?? 'noop'),
       });
+      // The unified inbox badge (member header + app icon) counts these.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.badge.total(orgId ?? 'noop'),
+      });
     },
   });
 

@@ -28,7 +28,7 @@ import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { MessageResponse } from '@fitkit/shared';
-import { FKBackButton, useFKColors } from '@/components/fk';
+import { FKBackButton, FKIconButton, useFKColors } from '@/components/fk';
 import { ImageLightbox } from '@/components/messages/image-lightbox';
 import { MessageBubble } from '@/components/messages/message-bubble';
 import { UploadPreviewChip } from '@/components/messages/upload-preview-chip';
@@ -36,7 +36,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { roleLabel } from '@/lib/role-label';
-import { bodyFamily } from '@/lib/type';
+import { bodyFamily, eyebrow } from '@/lib/type';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -365,15 +365,21 @@ export default function ChatScreen() {
             {subtitle ? (
               <Text
                 numberOfLines={1}
-                style={{
-                  fontSize: 11,
-                  fontWeight: '700',
-                  color: participantTyping ? colors.primary : colors.mutedFg,
-                  letterSpacing: participantTyping ? 0 : 0.5,
-                  textTransform: participantTyping ? 'none' : 'uppercase',
-                  marginTop: 1,
-                  textAlign: isRTL ? 'right' : 'left',
-                }}
+                style={[
+                  {
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: participantTyping ? colors.primary : colors.mutedFg,
+                    marginTop: 1,
+                    textAlign: isRTL ? 'right' : 'left',
+                  },
+                  // eyebrow(): uppercase + tracking for Latin only — Hebrew
+                  // role labels must never be letter-spaced. Typing stays
+                  // plain lowercase in every language.
+                  participantTyping
+                    ? { letterSpacing: 0, textTransform: 'none' }
+                    : eyebrow(lang),
+                ]}
               >
                 {subtitle}
               </Text>
@@ -440,13 +446,11 @@ export default function ChatScreen() {
                       }}
                     >
                       <Text
-                        style={{
-                          fontFamily: 'Assistant-Medium',
-                          fontSize: 10,
-                          color: colors.mutedFg,
-                          letterSpacing: 1,
-                          textTransform: 'uppercase',
-                        }}
+                        style={[
+                          { fontSize: 10, color: colors.mutedFg },
+                          // Hebrew dates must not be letter-spaced.
+                          eyebrow(lang),
+                        ]}
                       >
                         {item.date.toLocaleDateString(lang, {
                           weekday: 'short',
@@ -549,32 +553,12 @@ export default function ChatScreen() {
               borderTopColor: colors.border,
             }}
           >
-            <Pressable
+            <FKIconButton
+              Icon={Paperclip}
+              label={common.a11yAddAttachment}
               onPress={handlePickAttachment}
               disabled={isSending}
-              hitSlop={6}
-              accessibilityRole="button"
-              accessibilityLabel={common.a11yAddAttachment}
-              style={{ width: 40, height: 40 }}
-            >
-              {({ pressed }) => (
-                <View
-                  style={{
-                    flex: 1,
-                    borderRadius: 12,
-                    borderCurve: 'continuous',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: isDark
-                      ? 'rgba(255,255,255,0.06)'
-                      : 'rgba(15,23,42,0.05)',
-                    opacity: pressed ? 0.6 : 1,
-                  }}
-                >
-                  <Paperclip size={18} color={colors.mutedFg} strokeWidth={2.2} />
-                </View>
-              )}
-            </Pressable>
+            />
 
             <View
               style={{
@@ -612,24 +596,25 @@ export default function ChatScreen() {
               disabled={!canSend}
               accessibilityRole="button"
               accessibilityLabel={common.a11ySend}
+              accessibilityState={{ disabled: !canSend, busy: isSending }}
               style={{ width: 40, height: 40 }}
             >
               {({ pressed }) => (
                 <View
                   style={{
                     flex: 1,
-                    borderRadius: 12,
+                    borderRadius: 20,
                     borderCurve: 'continuous',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: canSend ? '#0E8C8C' : 'rgba(14,140,140,0.35)',
-                    opacity: pressed && canSend ? 0.7 : 1,
+                    backgroundColor: colors.primary,
+                    opacity: !canSend ? 0.4 : pressed ? 0.7 : 1,
                   }}
                 >
                   {isSending ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={colors.onPrimary} />
                   ) : (
-                    <Send size={17} color="#fff" strokeWidth={2.2} />
+                    <Send size={17} color={colors.onPrimary} strokeWidth={2.2} />
                   )}
                 </View>
               )}

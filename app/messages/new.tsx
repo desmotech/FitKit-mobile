@@ -26,7 +26,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FKAmbientBackdrop, FKBackButton, useFKColors } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKBackButton,
+  FKEmptyState,
+  useFKColors,
+} from '@/components/fk';
 import { Avatar } from '@/components/ui/avatar';
 import { Text } from '@/components/ui/text';
 import { useApiQuery } from '@/hooks/use-api-query';
@@ -202,34 +207,7 @@ export default function NewConversationScreen() {
           <ActivityIndicator size="small" color={colors.mutedFg} />
         </View>
       ) : members.length === 0 ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingHorizontal: 32,
-            gap: 12,
-          }}
-        >
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 20,
-              borderCurve: 'continuous',
-              backgroundColor: 'rgba(14,140,140,0.10)',
-              borderWidth: 1,
-              borderColor: 'rgba(14,140,140,0.30)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <UserX size={26} color={colors.primary} strokeWidth={2} />
-          </View>
-          <Text style={{ fontSize: 14, color: colors.mutedFg, textAlign: 'center' }}>
-            {labels.noResults}
-          </Text>
-        </View>
+        <FKEmptyState Icon={UserX} title={labels.noResults} />
       ) : (
         <FlatList
           data={members}

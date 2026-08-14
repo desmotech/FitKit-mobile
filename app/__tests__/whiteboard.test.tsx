@@ -76,12 +76,9 @@ function stageWhiteboard(assignments: Record<string, unknown>[] = []) {
         return HttpResponse.json({ data: assignments });
       },
     ),
-    // Member header chrome (unread badges).
-    http.get(api(`/organizations/${TEST_ORG}/announcements/unread-count`), () =>
+    // Member header chrome (unified inbox unread badge).
+    http.get(api(`/organizations/${TEST_ORG}/badge`), () =>
       HttpResponse.json({ data: { count: 0 } }),
-    ),
-    http.get(api(`/organizations/${TEST_ORG}/conversations`), () =>
-      HttpResponse.json({ data: { conversations: [] } }),
     ),
   );
   return { requestedWeekStarts };

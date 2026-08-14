@@ -44,6 +44,9 @@ export { FKModalHeader } from './modal-header';
 export { FKBackButton } from './back-button';
 export { FKSelectSheet, type SelectOption } from './select-sheet';
 export { FKDateField } from './date-field';
+export { FKSegmented, type FKSegment } from './segmented';
+export { FKEmptyState } from './empty-state';
+export { FKIconButton } from './icon-button';
 export {
   GoalCard,
   type GoalCardVariant,
@@ -79,12 +82,13 @@ export function FKCard({
 
 /** 2px hairline accent at the top of a card. */
 export function FKHairline({ tone = 'primary' }: { tone?: 'primary' | 'warn' | 'success' }) {
+  const { primary } = useFKColors();
   const color =
     tone === 'warn'
       ? '#C9974D'
       : tone === 'success'
         ? '#7A8A5C'
-        : '#0E8C8C';
+        : primary;
   return (
     <View
       pointerEvents="none"
@@ -151,7 +155,7 @@ const CHIP_FG_DARK: Record<ChipTone, string> = {
   info: '#8FB4D9',
   danger: '#E08078',
   muted: '#9BA8B5',
-  primary: '#2AB8B8',
+  primary: '#27C8BA',
 };
 
 const CHIP_BORDER_DARK: Record<ChipTone, string> = {
@@ -243,7 +247,8 @@ export function FKButton({
           minHeight: 56,
           paddingVertical: 8,
           paddingHorizontal: 20,
-          borderRadius: 18,
+          // 16 is the app-wide CTA radius (FKBtn, booking CTAs).
+          borderRadius: 16,
         }
       : size === 'sm'
         ? {
@@ -263,18 +268,20 @@ export function FKButton({
   const fontWeight: '700' | '800' = size === 'lg' ? '800' : '700';
 
   const colors = useFKColors();
+  // Theme-aware: the old hardcoded light-teal/red never adapted to dark
+  // mode's brighter primary/destructive inks.
   const variantBg: Record<BtnVariant, string> = {
-    primary: '#0E8C8C',
+    primary: colors.primary,
     outline: colors.card,
     ghost: 'transparent',
-    destructive: '#B84A40',
+    destructive: colors.destructive,
     secondary: colors.secondary,
   };
   const variantFg: Record<BtnVariant, string> = {
-    primary: '#fff',
+    primary: colors.onPrimary,
     outline: colors.foreground,
     ghost: colors.foreground,
-    destructive: '#fff',
+    destructive: colors.isDark ? '#2B0E0B' : '#fff',
     secondary: colors.secondaryFg,
   };
 
@@ -297,7 +304,7 @@ export function FKButton({
     baseStyle.shadowOffset = { width: 0, height: 2 };
     baseStyle.elevation = 2;
   } else if (variant === 'primary' && !disabled) {
-    baseStyle.shadowColor = '#0E8C8C';
+    baseStyle.shadowColor = colors.primary;
     baseStyle.shadowOpacity = 0.25;
     baseStyle.shadowRadius = 14;
     baseStyle.shadowOffset = { width: 0, height: 6 };

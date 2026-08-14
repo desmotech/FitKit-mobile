@@ -21,6 +21,8 @@ export const FK_LIGHT = {
   border: '#E3DFD4',
   primary: '#0E8C8C', // brand teal — fills/graphics
   primaryText: '#0A6E6E', // darker teal for small text (AA on light surfaces)
+  onPrimary: '#FFFFFF', // ink on a primary-filled surface
+  destructive: '#B84A40', // the ONE destructive red (was 3 drifting values)
   energy: '#D7FF3E',
   energyFg: '#17160F',
 } as const;
@@ -36,6 +38,8 @@ export const FK_DARK = {
   border: '#26262B',
   primary: '#27C8BA',
   primaryText: '#27C8BA', // already AA on dark surfaces
+  onPrimary: '#04201E', // deep teal-black ink on the bright dark-mode teal
+  destructive: '#EC7C70', // brightened for AA on dark surfaces
   energy: '#D7FF3E',
   energyFg: '#0E0E0A',
 } as const;

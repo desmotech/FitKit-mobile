@@ -239,10 +239,10 @@ function RootLayout() {
                         user away from the invite screen before it ever
                         gets to process the ticket. */}
                     <Stack.Screen name="sign-up" />
-                    <Stack.Screen
-                      name="announcements"
-                      options={{ presentation: 'pageSheet' }}
-                    />
+                    {/* Legacy alias — redirects into the unified inbox
+                        (/messages?tab=announcements). No pageSheet: the
+                        redirect must not flash an empty sheet first. */}
+                    <Stack.Screen name="announcements" />
                     {/* Member plan-change sheet (FIT-271). Root-level so
                         both entry points can present it: Profile → Payments
                         ("Change plan") and Shop ("Switch to this plan"). */}

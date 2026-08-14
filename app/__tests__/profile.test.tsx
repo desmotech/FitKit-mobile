@@ -82,11 +82,8 @@ function stageProfile({
   subs = [] as ReturnType<typeof subscriptionWithPlan>[],
 } = {}) {
   server.use(
-    http.get(api(`/organizations/${TEST_ORG}/announcements/unread-count`), () =>
+    http.get(api(`/organizations/${TEST_ORG}/badge`), () =>
       HttpResponse.json({ data: { count: 0 } }),
-    ),
-    http.get(api(`/organizations/${TEST_ORG}/conversations`), () =>
-      HttpResponse.json({ data: { conversations: [] } }),
     ),
     http.get(api(`/organizations/${TEST_ORG}/forms/mine`), () =>
       HttpResponse.json({ data: [] }),

@@ -75,12 +75,8 @@ function stageShop({
     http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
       HttpResponse.json({ data: [] }),
     ),
-    http.get(
-      api(`/organizations/${TEST_ORG}/announcements/unread-count`),
-      () => HttpResponse.json({ data: { count: 0 } }),
-    ),
-    http.get(api(`/organizations/${TEST_ORG}/conversations`), () =>
-      HttpResponse.json({ data: { conversations: [] } }),
+    http.get(api(`/organizations/${TEST_ORG}/badge`), () =>
+      HttpResponse.json({ data: { count: 0 } }),
     ),
     http.post(
       api(`/organizations/${TEST_ORG}/plans/${PLAN.id}/purchase`),

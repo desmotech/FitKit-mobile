@@ -1,46 +1,51 @@
 /**
  * MemberHeader — sticky top bar shared across all member tabs.
  * Mirrors the web's `apps/web/src/app/[lang]/(protected)/(member)/layout.tsx`
- * pattern: org logo + org name on the start edge, optional actions on the end.
+ * pattern: org logo + org name on the start edge, actions on the end.
+ *
+ * One inbox button replaces the old bell + messages pair: every messaging
+ * surface (DMs, workout comment threads, announcements) now lives in the
+ * unified inbox, so the badge is the server's combined unread total
+ * (`GET /organizations/:orgId/badge` — the same number the app icon shows,
+ * minus forms).
  *
  * Renders inside a `<SafeAreaView edges={['top']}>` so it respects the
  * device notch / status bar.
  */
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Bell, MessageCircle, QrCode } from 'lucide-react-native';
+import { Inbox, QrCode } from 'lucide-react-native';
 import { type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrgSwitcher } from '@/components/fk/org-switcher';
-import { FKGlassSurface } from './glass-surface';
+import { FKIconButton } from './icon-button';
 import { Text } from '@/components/ui/text';
-import { useAnnouncementUnreadCount } from '@/hooks/use-announcements';
-import { useTotalUnread } from '@/hooks/use-conversations';
+import { useBadgeTotal } from '@/hooks/use-badge';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useInboxStrings } from '@/i18n/use-inbox-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import { useFKColors } from './colors';
-
-/** Header glyph button diameter. 40pt + 6pt slop clears the 44pt HIG target. */
-const BTN = 40;
 
 interface MemberHeaderProps {
   /** Optional QR scan tap handler — when set, renders the QR button. */
   onPressQR?: () => void;
-  /** Extra trailing slot (renders before the bell). */
+  /** Localized VoiceOver label for the QR button. */
+  qrLabel?: string;
+  /** Extra trailing slot (renders before the inbox button). */
   trailing?: ReactNode;
 }
 
 /**
  * Sticky top chrome shared across every member tab. The header is the
  * mobile analog of a Next.js shared layout: it self-wires its data
- * (active org, unread announcement count) and its navigation (bell
- * pushes /announcements). Tabs render it with **no props** by default;
+ * (active org, unified unread total) and its navigation (inbox button
+ * pushes /messages). Tabs render it with **no props** by default;
  * Home opts in to the QR button via `onPressQR`. This is the single
  * source of truth — no per-tab drift.
  */
-export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
+export function MemberHeader({ onPressQR, qrLabel, trailing }: MemberHeaderProps) {
   const router = useRouter();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
@@ -48,13 +53,10 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const colors = useFKColors();
+  const strings = useInboxStrings();
 
-  const unread = useAnnouncementUnreadCount(orgId);
-  const unreadCount = unread.data?.data?.count ?? 0;
-  const onPressBell = () => router.push('/announcements');
-
-  const messagesUnread = useTotalUnread(orgId);
-  const onPressMessages = () => router.push('/messages');
+  // Combined unread across DMs + workout comments + announcements.
+  const unreadTotal = useBadgeTotal(orgId).data?.data?.count ?? 0;
 
   const orgName = activeOrganization?.name ?? 'FitKit';
   const orgLogo =
@@ -104,7 +106,7 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
                 overflow: 'hidden',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#0E8C8C',
+                backgroundColor: colors.primary,
               }}
             >
               {orgLogo ? (
@@ -116,7 +118,11 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
               ) : (
                 <Text
                   className="font-display"
-                  style={{ color: '#fff', fontSize: 14, fontWeight: '800' }}
+                  style={{
+                    color: colors.isDark ? '#04201E' : '#fff',
+                    fontSize: 14,
+                    fontWeight: '800',
+                  }}
                 >
                   {orgInitial}
                 </Text>
@@ -149,118 +155,28 @@ export function MemberHeader({ onPressQR, trailing }: MemberHeaderProps) {
           }}
         >
           {trailing}
-          <HeaderIconButton
-            Icon={MessageCircle}
-            variant="glass"
+          <FKIconButton
+            Icon={Inbox}
+            label={strings.title}
             onPress={() => {
               haptics.tap();
-              onPressMessages();
+              router.push('/messages');
             }}
-            colors={colors}
-            badge={messagesUnread > 0 ? messagesUnread : undefined}
-          />
-          <HeaderIconButton
-            Icon={Bell}
-            variant="glass"
-            onPress={() => {
-              haptics.tap();
-              onPressBell?.();
-            }}
-            colors={colors}
-            badge={unreadCount && unreadCount > 0 ? unreadCount : undefined}
+            badge={unreadTotal}
           />
           {onPressQR ? (
-            <HeaderIconButton
+            <FKIconButton
               Icon={QrCode}
               variant="primary"
+              label={qrLabel ?? 'QR'}
               onPress={() => {
                 haptics.tap();
                 onPressQR();
               }}
-              colors={colors}
             />
           ) : null}
         </View>
       </View>
     </SafeAreaView>
-  );
-}
-
-function HeaderIconButton({
-  Icon,
-  onPress,
-  colors,
-  variant,
-  badge,
-}: {
-  Icon: typeof Bell;
-  onPress: () => void;
-  colors: ReturnType<typeof useFKColors>;
-  /** `glass` = translucent panel (bell); `primary` = filled teal (check-in). */
-  variant: 'glass' | 'primary';
-  /** When set + > 0, renders a teal numeric badge over the icon. */
-  badge?: number;
-}) {
-  const isDark = colors.isDark;
-  const isPrimary = variant === 'primary';
-  const showBadge = badge != null && badge > 0;
-  const label = showBadge ? (badge > 99 ? '99+' : String(badge)) : null;
-  return (
-    <Pressable
-      onPressIn={onPress}
-      hitSlop={6}
-      accessibilityRole="button"
-      style={{ width: BTN, height: BTN }}
-    >
-      {({ pressed }) => (
-        <View style={{ width: BTN, height: BTN }}>
-          <FKGlassSurface
-            radius={BTN / 2}
-            pressed={pressed}
-            tint={isPrimary ? colors.primary : undefined}
-            style={{ width: BTN, height: BTN }}
-          >
-            <Icon
-              size={18}
-              color={isPrimary ? '#FFFFFF' : colors.foreground}
-              strokeWidth={2.1}
-            />
-          </FKGlassSurface>
-          {/* Badge sits outside the glass — a counter painted *onto* the
-              refracting surface would smear with it. */}
-          {showBadge ? (
-            <View
-              style={{
-                position: 'absolute',
-                top: -4,
-                right: -4,
-                minWidth: 18,
-                height: 18,
-                paddingHorizontal: 5,
-                borderRadius: 9,
-                backgroundColor: '#0E8C8C',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1.5,
-                borderColor: isDark ? '#0B0B0D' : '#fff',
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 11,
-                  fontWeight: '800',
-                  color: '#fff',
-                  fontVariant: ['tabular-nums'],
-                  letterSpacing: -0.2,
-                  lineHeight: 13,
-                }}
-              >
-                {label}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      )}
-    </Pressable>
   );
 }
