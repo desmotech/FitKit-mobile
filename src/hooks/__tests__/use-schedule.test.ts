@@ -54,12 +54,15 @@ function plan(overrides: Partial<BookingPlanEntry> = {}): BookingPlanEntry {
     remainingCredits: null,
     bookingsToday: 0,
     bookingsThisWeek: 0,
+    bookingsThisMonth: 0,
     maxPerDay: null,
     maxPerWeek: null,
+    maxPerMonth: null,
     allowOverlapping: false,
     hasOverlap: false,
     blocked: false,
     blockReason: null,
+    planEndsAt: null,
     ...overrides,
   };
 }

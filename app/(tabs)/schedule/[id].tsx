@@ -205,6 +205,30 @@ export default function SessionDetailScreen() {
     quotaOverlap: quota.overlap ?? 'Overlaps with another booking',
     quotaDailyLimit: quota.dailyLimit ?? 'Daily limit ({max}/day)',
     quotaWeeklyLimit: quota.weeklyLimit ?? 'Weekly limit ({max}/week)',
+    // These five prefer the IN-APP strings over the shared dictionary. The
+    // shared copy ships in the published @fitkit/shared package, so a `??`
+    // chain rooted there would hand a Hebrew member English until the next
+    // release — whereas `sched2` is already translated in this build. Same
+    // reasoning as the "member-facing failure copy lives in the app" note
+    // above; the shared dictionary stays as the later fallback.
+    quotaMonthlyLimit:
+      sched2.monthlyLimit ?? quota.monthlyLimit ?? 'Monthly limit ({max}/month)',
+    quotaCreditsExpired:
+      sched2.creditsExpired ??
+      quota.creditsExpired ??
+      'These credits expired on {date}',
+    quotaCreditsExpiredNoDate:
+      sched2.creditsExpiredNoDate ??
+      quota.creditsExpiredNoDate ??
+      'These credits have expired',
+    quotaPlanEndsBeforeSession:
+      sched2.planEndsBeforeSession ??
+      quota.planEndsBeforeSession ??
+      'Your plan ends on {date}, before this class',
+    quotaPlanEndsBeforeSessionNoDate:
+      sched2.planEndsBeforeSessionNoDate ??
+      quota.planEndsBeforeSessionNoDate ??
+      'Your plan ends before this class',
   };
 
   const blockLabels = {
@@ -214,6 +238,11 @@ export default function SessionDetailScreen() {
     overlap: labels.quotaOverlap,
     dailyLimit: labels.quotaDailyLimit,
     weeklyLimit: labels.quotaWeeklyLimit,
+    monthlyLimit: labels.quotaMonthlyLimit,
+    creditsExpired: labels.quotaCreditsExpired,
+    creditsExpiredNoDate: labels.quotaCreditsExpiredNoDate,
+    planEndsBeforeSession: labels.quotaPlanEndsBeforeSession,
+    planEndsBeforeSessionNoDate: labels.quotaPlanEndsBeforeSessionNoDate,
   };
 
   const { pickPlan, planPickerElement } = usePlanPicker({
