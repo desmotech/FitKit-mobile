@@ -176,7 +176,7 @@ export function WorkoutBlock({
             sections={sections}
             checked={{}}
             locked={false}
-            readOnly
+            variant="preview"
             onToggleSection={() => {}}
             isRTL={isRTL}
             lang={lang}

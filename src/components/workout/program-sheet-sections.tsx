@@ -117,12 +117,25 @@ export interface ProgramSheetSectionsProps {
   labels: ProgramSheetLabels;
   onPlayVideo: (movement: WorkoutMovement) => void;
   /**
-   * Non-interactive mode — static numbered markers, no check-off. Used by the
-   * Schedule session preview ("what am I booking?"), which borrows the visual
-   * treatment without the personal-program completion mechanics.
+   * Who is reading this, which is not the same question as how it looks.
+   *
+   *   `assignment` — the member's own programming. The sheet is a working
+   *   surface: sections check off, and the screen around it adds timing,
+   *   logging and history.
+   *
+   *   `preview` — the class-detail "what am I booking?" glance. Same body,
+   *   same prescription, same expandable coaching detail; no completion
+   *   mechanics, because it isn't theirs to complete.
+   *
+   * The two audiences differ in what they can DO, never in how legible the
+   * prescription is — that is why this drives affordances only. It replaces a
+   * bare `readOnly` boolean, which could only ever express "hide the
+   * checkbox" and gave the difference nowhere to live.
    */
-  readOnly?: boolean;
+  variant?: ProgramSheetVariant;
 }
+
+export type ProgramSheetVariant = 'assignment' | 'preview';
 
 export function ProgramSheetSections({
   sections,
@@ -133,8 +146,9 @@ export function ProgramSheetSections({
   lang,
   labels,
   onPlayVideo,
-  readOnly = false,
+  variant = 'assignment',
 }: ProgramSheetSectionsProps) {
+  const interactive = variant === 'assignment';
   const colors = useFKColors();
   const ink = programSheetInk(colors.isDark);
   const [height, setHeight] = useState(0);
@@ -154,7 +168,7 @@ export function ProgramSheetSections({
           index={index}
           done={locked || !!checked[section.id]}
           locked={locked}
-          readOnly={readOnly}
+          interactive={interactive}
           onToggle={() => onToggleSection(section.id, !checked[section.id])}
           isRTL={isRTL}
           lang={lang}
@@ -216,7 +230,7 @@ function SectionRow({
   index,
   done,
   locked,
-  readOnly,
+  interactive,
   onToggle,
   isRTL,
   lang,
@@ -229,7 +243,8 @@ function SectionRow({
   index: number;
   done: boolean;
   locked: boolean;
-  readOnly: boolean;
+  /** False in `preview` — the marker is a static number, not a checkbox. */
+  interactive: boolean;
   onToggle: () => void;
   isRTL: boolean;
   lang: string;
@@ -247,11 +262,19 @@ function SectionRow({
     sectionTypes[section.type] ?? sectionTypeLabel(section.type);
   // The format/scheme is the primary heading; the coach's title is demoted to
   // a secondary line. Falls back to the title (then type) for linear sections
-  // that have no formatted scheme. No kicker label above the heading — the
-  // heading itself is the context (HIG: hierarchy through size and color,
-  // not label chrome).
+  // that have no formatted scheme. No kicker label above the heading — a
+  // scheme heading states its own type on its face ("EMOM 5 × 4m"), so
+  // repeating "EMOM" above it was pure chrome.
   const heading = headerLine ?? section.title ?? typeLabel;
-  const secondary = headerLine && section.title ? section.title : null;
+  // But when there is no scheme, the heading falls back to the coach's title
+  // and the type has nowhere left to appear — the athlete loses the one word
+  // that says how the section is run. It takes the subtitle slot instead of
+  // coming back as a kicker.
+  const secondary = headerLine
+    ? (section.title ?? null)
+    : section.title
+      ? typeLabel
+      : null;
   const groups = groupBySuperset(section.movements);
   // Movements flagged `each_round` are fixed cash-outs done after every round —
   // split them out (keeping superset groups intact) so they render under an
@@ -279,24 +302,24 @@ function SectionRow({
       <View style={{ width: MARKER_COL, alignItems: 'center', gap: 7 }}>
         <AnimatedPressable
           onPressIn={() => {
-            if (locked || readOnly) return;
+            if (locked || !interactive) return;
             press.value = withTiming(1, { duration: 90 });
           }}
           onPressOut={() => {
             press.value = withSpring(0, spring.press);
           }}
           onPress={() => {
-            if (locked || readOnly) return;
+            if (locked || !interactive) return;
             if (done) haptics.tap();
             else haptics.success();
             onToggle();
           }}
-          disabled={locked || readOnly}
-          accessibilityRole={readOnly ? undefined : 'button'}
+          disabled={locked || !interactive}
+          accessibilityRole={interactive ? 'button' : undefined}
           accessibilityState={
-            readOnly ? undefined : { checked: done, disabled: locked }
+            interactive ? { checked: done, disabled: locked } : undefined
           }
-          accessibilityLabel={readOnly ? undefined : a11yLabel}
+          accessibilityLabel={interactive ? a11yLabel : undefined}
           style={[
             markerStyle,
             {
@@ -665,11 +688,14 @@ function ExRow({
                 numberOfLines={1}
                 style={{
                   fontFamily: 'Assistant-SemiBold',
-                  // 16pt, not 19 — the exercise NAME is what the athlete
-                  // scans for; the prescription is its annotation, not the
-                  // headline.
-                  fontSize: 16,
-                  letterSpacing: -0.2,
+                  // 19pt, and deliberately larger than the 15pt exercise
+                  // name beside it. This briefly ran at 16 on the reasoning
+                  // that the name is what you scan for and the numbers are
+                  // its annotation — which is backwards. "Back squat" is the
+                  // label; `5×3 @ 80%` is the prescription, and it is the
+                  // thing the athlete reads, logs against and works from.
+                  fontSize: 19,
+                  letterSpacing: -0.3,
                   color: colors.foreground,
                   fontVariant: ['tabular-nums'],
                   flexShrink: 0,
