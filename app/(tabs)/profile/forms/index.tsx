@@ -239,8 +239,6 @@ function SectionGroup({
         style={{
           fontSize: 11,
           fontWeight: '700',
-          letterSpacing: 0.8,
-          textTransform: 'uppercase',
           color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
           paddingHorizontal: 4,
           textAlign: isRTL ? 'right' : 'left',

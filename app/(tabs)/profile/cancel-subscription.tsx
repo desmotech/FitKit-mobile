@@ -220,8 +220,6 @@ export default function CancelSubscriptionScreen() {
               style={{
                 fontSize: 11,
                 fontWeight: '800',
-                letterSpacing: 1.2,
-                textTransform: 'uppercase',
                 color: colors.mutedFg,
                 fontFamily: 'Assistant-Medium',
                 textAlign: isRTL ? 'right' : 'left',

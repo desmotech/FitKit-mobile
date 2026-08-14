@@ -357,8 +357,6 @@ export default function GoalCreateScreen() {
                             style={{
                               fontSize: 10,
                               fontWeight: '700',
-                              letterSpacing: 0.5,
-                              textTransform: 'uppercase',
                             }}
                           >
                             {r.category}
@@ -453,8 +451,6 @@ function SectionLabel({
       style={{
         fontSize: 11,
         fontWeight: '700',
-        letterSpacing: 0.7,
-        textTransform: 'uppercase',
         textAlign: isRTL ? 'right' : 'left',
       }}
     >

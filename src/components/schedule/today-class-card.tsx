@@ -181,8 +181,6 @@ export function TodayClassCard({
                         fontSize: 9,
                         fontWeight: '800',
                         color: pill.fg,
-                        letterSpacing: 0.4,
-                        textTransform: 'uppercase',
                       }}
                     >
                       {pill.label}

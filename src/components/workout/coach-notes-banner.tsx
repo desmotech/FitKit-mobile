@@ -59,8 +59,6 @@ export function CoachNotesBanner({
               fontSize: 10,
               fontWeight: '800',
               color: '#0E8C8C',
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
               marginBottom: 4,
               textAlign: isRTL ? 'right' : 'left',
             }}

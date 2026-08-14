@@ -144,7 +144,7 @@ export default function WorkoutDetailScreen() {
     duration: dict.workouts?.duration ?? 'Duration',
     sections: dict.workouts?.sections ?? 'Sections',
     minutes: dict.workouts?.minutes ?? 'min',
-    coach: dict.feed?.coach ?? 'COACH',
+    coach: dict.feed?.coach ?? 'Coach',
     startWorkout: dict.feed?.startWorkout ?? 'Start workout',
     logResult: dict.workouts?.logResult ?? 'Log result',
     markComplete: dict.program?.markComplete ?? 'Mark Complete',
@@ -419,8 +419,6 @@ export default function WorkoutDetailScreen() {
                 flex: 1,
                 fontSize: 11,
                 color: ink.muted,
-                letterSpacing: 1.6,
-                textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
                 fontFamily: 'Assistant-Medium',
               }}
@@ -445,8 +443,6 @@ export default function WorkoutDetailScreen() {
                   style={{
                     fontFamily: 'Assistant-Medium',
                     fontSize: 10,
-                    letterSpacing: 1.2,
-                    textTransform: 'uppercase',
                     color: colors.primaryText,
                   }}
                 >
@@ -563,8 +559,6 @@ export default function WorkoutDetailScreen() {
                   style={{
                     fontSize: 9.5,
                     color: ink.muted,
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
                     marginTop: 5,
                     fontFamily: 'Assistant-SemiBold',
                   }}

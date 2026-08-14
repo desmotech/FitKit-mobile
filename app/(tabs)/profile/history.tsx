@@ -274,8 +274,6 @@ function BookingCard({
               fontSize: 9,
               fontWeight: '800',
               color: tone.fg,
-              letterSpacing: 0.4,
-              textTransform: 'uppercase',
             }}
           >
             {statusLabel}

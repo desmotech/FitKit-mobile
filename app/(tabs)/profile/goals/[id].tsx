@@ -182,8 +182,6 @@ export default function GoalEditScreen() {
                 style={{
                   fontSize: 10,
                   fontWeight: '700',
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
                   color: colors.mutedFg,
                 }}
               >
@@ -285,8 +283,6 @@ function Field({
         style={{
           fontSize: 11,
           fontWeight: '700',
-          letterSpacing: 0.7,
-          textTransform: 'uppercase',
           textAlign: isRTL ? 'right' : 'left',
         }}
       >

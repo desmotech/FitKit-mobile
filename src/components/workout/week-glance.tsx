@@ -211,7 +211,6 @@ function DayPill({
           fontSize: 10,
           fontWeight: '700',
           color: colors.mutedFg,
-          textTransform: 'uppercase',
         }}
       >
         {weekday}

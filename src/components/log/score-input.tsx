@@ -264,8 +264,6 @@ function PairedSlot({ field }: { field: PairedField }) {
         style={{
           fontSize: 10,
           fontWeight: '600',
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
           color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
           marginBottom: 2,
         }}

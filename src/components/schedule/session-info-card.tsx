@@ -81,8 +81,6 @@ export function SessionInfoCard({
                       style={{
                         fontSize: 10,
                         fontWeight: '800',
-                        letterSpacing: 1.2,
-                        textTransform: 'uppercase',
                         textAlign: isRTL ? 'right' : 'left',
                       }}
                     >
@@ -229,8 +227,6 @@ function ParticipantsCluster({
             style={{
               fontSize: 9.5,
               fontWeight: '800',
-              letterSpacing: 0.8,
-              textTransform: 'uppercase',
               color: colors.mutedFg,
               fontFamily: 'Assistant-Medium',
             }}

@@ -54,7 +54,7 @@ import {
 import { formatPrescription, formatSectionHeader } from '@/lib/format-prescription';
 import { estimateSectionMinutes } from '@/lib/workout-estimate';
 import { programSheetInk, type ProgramSheetInk } from '@/lib/program-sheet-ink';
-import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
+import { bodyFamily, displayFamily, font } from '@/lib/type';
 import { spring } from '@/lib/motion';
 import { getShapeCaps, type SectionShape } from '@fitkit/shared';
 import { CoachNote } from './coach-note';
@@ -67,32 +67,10 @@ const SPINE_X = MARKER_COL / 2 - 1; // centre the 2px line on the marker
 
 const HEBREW_RE = /[֐-׿]/;
 
-/**
- * Content-aware micro-label styling. UI labels key off the locale via
- * `eyebrow(lang)`, but section kickers and coach-authored titles can be
- * EITHER script regardless of locale (an English "EVERY 4 MINUTES DO:" in a
- * Hebrew UI, or a Hebrew title in an English one) — so the uppercase+tracked
- * treatment keys off the text itself: Hebrew must never be letter-spaced.
- */
-function microLabelFor(text: string): {
-  fontFamily: string;
-  letterSpacing: number;
-  textTransform: 'uppercase' | 'none';
-  writingDirection: 'ltr' | 'rtl';
-} {
-  return HEBREW_RE.test(text)
-    ? {
-        fontFamily: font.bodySemibold,
-        letterSpacing: 0,
-        textTransform: 'none',
-        writingDirection: 'rtl',
-      }
-    : {
-        fontFamily: font.bodyMedium,
-        letterSpacing: 1,
-        textTransform: 'uppercase',
-        writingDirection: 'ltr',
-      };
+/** Pin a run of text to its own script's direction so bidi can't reorder
+ *  separators when it's embedded in the opposite-direction layout. */
+function directionFor(text: string): 'ltr' | 'rtl' {
+  return HEBREW_RE.test(text) ? 'rtl' : 'ltr';
 }
 
 /**
@@ -269,11 +247,11 @@ function SectionRow({
     sectionTypes[section.type] ?? sectionTypeLabel(section.type);
   // The format/scheme is the primary heading; the coach's title is demoted to
   // a secondary line. Falls back to the title (then type) for linear sections
-  // that have no formatted scheme.
+  // that have no formatted scheme. No kicker label above the heading — the
+  // heading itself is the context (HIG: hierarchy through size and color,
+  // not label chrome).
   const heading = headerLine ?? section.title ?? typeLabel;
   const secondary = headerLine && section.title ? section.title : null;
-  const kicker = heading === typeLabel ? null : typeLabel;
-  const count = section.movements.length;
   const groups = groupBySuperset(section.movements);
   // Movements flagged `each_round` are fixed cash-outs done after every round —
   // split them out (keeping superset groups intact) so they render under an
@@ -376,21 +354,6 @@ function SectionRow({
           opacity: done ? 0.55 : 1,
         }}
       >
-        {kicker ? (
-          <Text
-            numberOfLines={1}
-            style={{
-              fontSize: 11,
-              color: ink.muted,
-              minHeight: 14,
-              textAlign: isRTL ? 'right' : 'left',
-              ...microLabelFor(kicker),
-            }}
-          >
-            {`${kicker} · ${count}`}
-          </Text>
-        ) : null}
-
         <Text
           numberOfLines={2}
           style={{
@@ -399,27 +362,29 @@ function SectionRow({
             lineHeight: 26,
             letterSpacing: -0.4,
             color: colors.foreground,
-            marginTop: kicker ? 2 : 0,
             textAlign: isRTL ? 'right' : 'left',
             // Scheme headings ("EMOM 5 × 4m") are LTR jargon — pin their
             // direction so bidi can't reorder them against a Hebrew layout;
             // Hebrew coach titles keep their natural RTL flow.
-            writingDirection: HEBREW_RE.test(heading) ? 'rtl' : 'ltr',
+            writingDirection: directionFor(heading),
           }}
         >
           {heading}
         </Text>
 
         {secondary ? (
+          // Coach's subtitle, rendered as the coach wrote it — a quiet
+          // subheadline, never uppercased or letter-spaced.
           <Text
-            numberOfLines={1}
+            numberOfLines={2}
             style={{
-              fontSize: 11,
+              fontFamily: bodyFamily(lang, 'medium'),
+              fontSize: 14,
+              lineHeight: 19,
               color: ink.muted,
-              marginTop: 4,
+              marginTop: 3,
               textAlign: isRTL ? 'right' : 'left',
-              // Coach-authored — style by the text's own script, not locale.
-              ...microLabelFor(secondary),
+              writingDirection: directionFor(secondary),
             }}
           >
             {secondary}
@@ -543,11 +508,11 @@ function AfterEachRoundDivider({
       <Text
         numberOfLines={1}
         style={{
-          fontSize: 10,
-          color: ink.faint,
+          fontFamily: font.bodyMedium,
+          fontSize: 12,
+          color: ink.muted,
           textAlign: isRTL ? 'right' : 'left',
-          // Dictionary label — Hebrew must not be uppercased/letter-spaced.
-          ...microLabelFor(label),
+          writingDirection: directionFor(label),
         }}
       >
         {label}
@@ -777,11 +742,10 @@ function ExRow({
                   </Text>
                   <Text
                     style={{
-                      fontSize: 9.5,
+                      fontFamily: bodyFamily(lang, 'medium'),
+                      fontSize: 12,
                       color: ink.muted,
-                      marginTop: 4,
-                      // Localized stat header — no tracking on Hebrew.
-                      ...eyebrow(lang),
+                      marginTop: 3,
                     }}
                   >
                     {s.label}
@@ -889,10 +853,9 @@ function ExRow({
                   </View>
                   <Text
                     style={{
-                      fontSize: 11,
+                      fontFamily: bodyFamily(lang, 'semibold'),
+                      fontSize: 13,
                       color: colors.primaryText,
-                      // Localized label — no tracking on Hebrew.
-                      ...eyebrow(lang),
                     }}
                   >
                     {labels.watchDemo}

@@ -330,8 +330,6 @@ function SectionLabel({
       style={{
         fontSize: 11,
         fontWeight: '700',
-        letterSpacing: 0.7,
-        textTransform: 'uppercase',
         textAlign: isRTL ? 'right' : 'left',
       }}
     >

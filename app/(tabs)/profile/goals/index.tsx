@@ -13,12 +13,11 @@ import type { GoalResponse } from '@fitkit/shared';
 import {
   FKEmptyState,
   FKGlassPanel,
+  FKSectionHeader,
   FKSubScreen,
   GoalCard,
-  useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Text } from '@/components/ui/text';
 import { useApiAction, useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -30,7 +29,6 @@ export default function GoalsScreen() {
   const haptics = useHaptics();
   const { activeOrganization } = useCurrentUser();
   const { dir, t } = useI18n();
-  const colors = useFKColors();
   const isRTL = dir === 'rtl';
   const orgId = activeOrganization?.id;
 
@@ -123,11 +121,7 @@ export default function GoalsScreen() {
         ) : (
           <>
             {active.length > 0 && (
-              <Section
-                title={labels.active}
-                isRTL={isRTL}
-                colors={colors}
-              >
+              <Section title={labels.active}>
                 {active.map((goal, i) => (
                   <Animated.View
                     key={goal.id}
@@ -153,11 +147,7 @@ export default function GoalsScreen() {
             )}
 
             {achieved.length > 0 && (
-              <Section
-                title={labels.achieved}
-                isRTL={isRTL}
-                colors={colors}
-              >
+              <Section title={labels.achieved}>
                 {achieved.map((goal, i) => (
                   <Animated.View
                     key={goal.id}
@@ -183,29 +173,14 @@ export default function GoalsScreen() {
 
 function Section({
   title,
-  isRTL,
-  colors,
   children,
 }: {
   title: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
   children: React.ReactNode;
 }) {
   return (
     <View style={{ gap: 12 }}>
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '700',
-          letterSpacing: 1.4,
-          textTransform: 'uppercase',
-          color: colors.mutedFg,
-          textAlign: isRTL ? 'right' : 'left',
-        }}
-      >
-        {title}
-      </Text>
+      <FKSectionHeader>{title}</FKSectionHeader>
       {children}
     </View>
   );

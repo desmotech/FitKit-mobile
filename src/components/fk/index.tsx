@@ -47,6 +47,7 @@ export { FKDateField } from './date-field';
 export { FKSegmented, type FKSegment } from './segmented';
 export { FKEmptyState } from './empty-state';
 export { FKIconButton } from './icon-button';
+export { FKSectionHeader } from './section-header';
 export {
   GoalCard,
   type GoalCardVariant,

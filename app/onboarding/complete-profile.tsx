@@ -438,8 +438,6 @@ function Field({
         style={{
           fontSize: 11,
           fontWeight: '700',
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
           textAlign: isRTL ? 'right' : 'left',
         }}
       >

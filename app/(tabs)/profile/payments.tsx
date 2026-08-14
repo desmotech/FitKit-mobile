@@ -546,8 +546,6 @@ export default function PaymentsScreen() {
             style={{
               fontSize: 11,
               fontWeight: '700',
-              letterSpacing: 1.2,
-              textTransform: 'uppercase',
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
@@ -734,8 +732,6 @@ function SubscriptionCard({
               fontSize: 10,
               fontWeight: '800',
               color: statusTone.fg,
-              letterSpacing: 0.4,
-              textTransform: 'uppercase',
             }}
           >
             {(statusLabels[status] ?? status.replace('_', ' ')).toUpperCase()}
@@ -964,8 +960,6 @@ function TransactionCard({
                 fontSize: 9,
                 fontWeight: '800',
                 color: typeTone.fg,
-                letterSpacing: 0.3,
-                textTransform: 'uppercase',
               }}
             >
               {typeLabel}
@@ -987,8 +981,6 @@ function TransactionCard({
               fontSize: 9,
               fontWeight: '800',
               color: statusTone.fg,
-              letterSpacing: 0.3,
-              textTransform: 'uppercase',
             }}
           >
             {statusLabel}
