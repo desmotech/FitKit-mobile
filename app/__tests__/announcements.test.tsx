@@ -1,20 +1,26 @@
 /**
- * Announcements screen — the four user-visible states of a read path:
+ * Announcements — now the third tab of the unified inbox, plus a pushed
+ * detail screen. Pins the four user-visible states of the read path:
  * failed fetch shows a retry card (never a misleading empty state), retry
- * recovers, empty shows the "nothing yet" state, and data renders. Copy is
- * asserted against the real Hebrew dictionary, so tests follow copy edits.
+ * recovers, empty shows the "nothing yet" state, and data renders. Tapping
+ * a row deep-links to the detail route; the detail screen renders the full
+ * body and marks the announcement read on the server. Copy is asserted
+ * against the real Hebrew dictionary, so tests follow copy edits.
  *
  * Network is the only thing staged (MSW): the real query hooks, cache, and
  * screen logic run exactly as in production.
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { dictionaries } from '@fitkit/shared';
-import AnnouncementsScreen from '../announcements';
+import InboxScreen from '../messages/index';
+import AnnouncementDetailScreen from '../messages/announcement/[id]';
 import { announcement, stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
+import { inboxStringsFor } from '../../src/i18n/inbox-strings';
 
 const he = dictionaries.he as unknown as Record<string, Record<string, string>>;
+const heInbox = inboxStringsFor('he');
 const LIST_PATH = api(`/organizations/${TEST_ORG}/announcements`);
 
 function stageAnnouncements(items: ReturnType<typeof announcement>[]) {
@@ -25,24 +31,45 @@ function stageAnnouncements(items: ReturnType<typeof announcement>[]) {
   );
 }
 
-// The screen's Done button calls router.back(); no navigator is mounted in
-// these tests, so stub the router surface it touches.
+/** The inbox chrome also reads conversations + the unread-count badge. */
+function stageInboxChrome() {
+  server.use(
+    http.get(api(`/organizations/${TEST_ORG}/conversations`), () =>
+      HttpResponse.json({ data: { conversations: [] } }),
+    ),
+    http.get(api(`/organizations/${TEST_ORG}/announcements/unread-count`), () =>
+      HttpResponse.json({ data: { count: 0 } }),
+    ),
+  );
+}
+
+const mockRouterPush = jest.fn();
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ back: jest.fn(), push: jest.fn(), replace: jest.fn() }),
+  useRouter: () => ({
+    back: jest.fn(),
+    push: mockRouterPush,
+    replace: jest.fn(),
+  }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 beforeEach(() => {
+  mockRouterPush.mockClear();
+  // Land directly on the Announcements tab, as the deep link does.
+  mockSearchParams = { tab: 'announcements' };
   stageSignedInMember();
+  stageInboxChrome();
 });
 
-describe('Announcements screen', () => {
+describe('Inbox — Announcements tab', () => {
   it('shows the announcements once they load', async () => {
     stageAnnouncements([
       announcement({ title: 'אימון בוקר מבוטל' }),
       announcement({ title: 'סדנת מוביליטי בשישי' }),
     ]);
 
-    await renderWithProviders(<AnnouncementsScreen />);
+    await renderWithProviders(<InboxScreen />);
 
     expect(await screen.findByText('אימון בוקר מבוטל')).toBeOnTheScreen();
     expect(screen.getByText('סדנת מוביליטי בשישי')).toBeOnTheScreen();
@@ -51,17 +78,12 @@ describe('Announcements screen', () => {
   it('shows the empty state when the studio has posted nothing', async () => {
     stageAnnouncements([]);
 
-    await renderWithProviders(<AnnouncementsScreen />);
+    await renderWithProviders(<InboxScreen />);
 
     await waitFor(() =>
       expect(screen.getByText(he.announcements.empty)).toBeOnTheScreen(),
     );
   });
-
-  // The he dictionary has no announcements.loadFailed key yet, so the screen
-  // falls back to its inline English copy. When the key ships in
-  // @fitkit/shared, point these assertions at the dictionary.
-  const LOAD_FAILED_COPY = "Couldn't load announcements";
 
   it('shows a retry card on failure — never the empty state', async () => {
     server.use(
@@ -70,10 +92,10 @@ describe('Announcements screen', () => {
       ),
     );
 
-    await renderWithProviders(<AnnouncementsScreen />);
+    await renderWithProviders(<InboxScreen />);
 
     await waitFor(() =>
-      expect(screen.getByText(LOAD_FAILED_COPY)).toBeOnTheScreen(),
+      expect(screen.getByText(heInbox.loadFailed)).toBeOnTheScreen(),
     );
     expect(screen.queryByText(he.announcements.empty)).not.toBeOnTheScreen();
   });
@@ -85,8 +107,8 @@ describe('Announcements screen', () => {
       ),
     );
 
-    await renderWithProviders(<AnnouncementsScreen />);
-    await screen.findByText(LOAD_FAILED_COPY);
+    await renderWithProviders(<InboxScreen />);
+    await screen.findByText(heInbox.loadFailed);
 
     stageAnnouncements([announcement({ title: 'חזרנו לאוויר' })]);
     await userEvent.press(
@@ -96,10 +118,31 @@ describe('Announcements screen', () => {
     expect(await screen.findByText('חזרנו לאוויר')).toBeOnTheScreen();
   });
 
-  it('opens a tapped announcement and marks it read on the server', async () => {
-    const readCalls: string[] = [];
+  it('deep-links a tapped announcement to its detail route', async () => {
     stageAnnouncements([
-      announcement({ id: 'ann_target', title: 'שינוי בלוח הזמנים', content: 'החל מהשבוע' }),
+      announcement({ id: 'ann_target', title: 'שינוי בלוח הזמנים' }),
+    ]);
+
+    await renderWithProviders(<InboxScreen />);
+    await userEvent.press(await screen.findByText('שינוי בלוח הזמנים'));
+
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      pathname: '/messages/announcement/[id]',
+      params: { id: 'ann_target' },
+    });
+  });
+});
+
+describe('Announcement detail', () => {
+  it('renders the full announcement and marks it read on the server', async () => {
+    const readCalls: string[] = [];
+    mockSearchParams = { id: 'ann_target' };
+    stageAnnouncements([
+      announcement({
+        id: 'ann_target',
+        title: 'שינוי בלוח הזמנים',
+        content: 'החל מהשבוע',
+      }),
     ]);
     server.use(
       http.put(
@@ -109,17 +152,12 @@ describe('Announcements screen', () => {
           return HttpResponse.json({ data: { ok: true } });
         },
       ),
-      http.get(
-        api(`/organizations/${TEST_ORG}/announcements/unread-count`),
-        () => HttpResponse.json({ data: { count: 0 } }),
-      ),
     );
 
-    await renderWithProviders(<AnnouncementsScreen />);
+    await renderWithProviders(<AnnouncementDetailScreen />);
 
-    await userEvent.press(await screen.findByText('שינוי בלוח הזמנים'));
-
-    expect(await screen.findByText('החל מהשבוע')).toBeOnTheScreen();
+    expect(await screen.findByText('שינוי בלוח הזמנים')).toBeOnTheScreen();
+    expect(screen.getByText('החל מהשבוע')).toBeOnTheScreen();
     await waitFor(() => expect(readCalls).toEqual(['ann_target']));
   });
 });

@@ -54,7 +54,7 @@ import {
 import { formatPrescription, formatSectionHeader } from '@/lib/format-prescription';
 import { estimateSectionMinutes } from '@/lib/workout-estimate';
 import { programSheetInk, type ProgramSheetInk } from '@/lib/program-sheet-ink';
-import { bodyFamily, displayFamily } from '@/lib/type';
+import { bodyFamily, displayFamily, font } from '@/lib/type';
 import { spring } from '@/lib/motion';
 import { getShapeCaps, type SectionShape } from '@fitkit/shared';
 import { CoachNote } from './coach-note';
@@ -64,6 +64,14 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // Marker column geometry — the spine runs down its centre.
 const MARKER_COL = 40;
 const SPINE_X = MARKER_COL / 2 - 1; // centre the 2px line on the marker
+
+const HEBREW_RE = /[֐-׿]/;
+
+/** Pin a run of text to its own script's direction so bidi can't reorder
+ *  separators when it's embedded in the opposite-direction layout. */
+function directionFor(text: string): 'ltr' | 'rtl' {
+  return HEBREW_RE.test(text) ? 'rtl' : 'ltr';
+}
 
 /**
  * Localized labels for the rendered workout body — the prescription stat
@@ -109,12 +117,25 @@ export interface ProgramSheetSectionsProps {
   labels: ProgramSheetLabels;
   onPlayVideo: (movement: WorkoutMovement) => void;
   /**
-   * Non-interactive mode — static numbered markers, no check-off. Used by the
-   * Schedule session preview ("what am I booking?"), which borrows the visual
-   * treatment without the personal-program completion mechanics.
+   * Who is reading this, which is not the same question as how it looks.
+   *
+   *   `assignment` — the member's own programming. The sheet is a working
+   *   surface: sections check off, and the screen around it adds timing,
+   *   logging and history.
+   *
+   *   `preview` — the class-detail "what am I booking?" glance. Same body,
+   *   same prescription, same expandable coaching detail; no completion
+   *   mechanics, because it isn't theirs to complete.
+   *
+   * The two audiences differ in what they can DO, never in how legible the
+   * prescription is — that is why this drives affordances only. It replaces a
+   * bare `readOnly` boolean, which could only ever express "hide the
+   * checkbox" and gave the difference nowhere to live.
    */
-  readOnly?: boolean;
+  variant?: ProgramSheetVariant;
 }
+
+export type ProgramSheetVariant = 'assignment' | 'preview';
 
 export function ProgramSheetSections({
   sections,
@@ -125,8 +146,9 @@ export function ProgramSheetSections({
   lang,
   labels,
   onPlayVideo,
-  readOnly = false,
+  variant = 'assignment',
 }: ProgramSheetSectionsProps) {
+  const interactive = variant === 'assignment';
   const colors = useFKColors();
   const ink = programSheetInk(colors.isDark);
   const [height, setHeight] = useState(0);
@@ -146,7 +168,7 @@ export function ProgramSheetSections({
           index={index}
           done={locked || !!checked[section.id]}
           locked={locked}
-          readOnly={readOnly}
+          interactive={interactive}
           onToggle={() => onToggleSection(section.id, !checked[section.id])}
           isRTL={isRTL}
           lang={lang}
@@ -208,7 +230,7 @@ function SectionRow({
   index,
   done,
   locked,
-  readOnly,
+  interactive,
   onToggle,
   isRTL,
   lang,
@@ -221,7 +243,8 @@ function SectionRow({
   index: number;
   done: boolean;
   locked: boolean;
-  readOnly: boolean;
+  /** False in `preview` — the marker is a static number, not a checkbox. */
+  interactive: boolean;
   onToggle: () => void;
   isRTL: boolean;
   lang: string;
@@ -239,11 +262,19 @@ function SectionRow({
     sectionTypes[section.type] ?? sectionTypeLabel(section.type);
   // The format/scheme is the primary heading; the coach's title is demoted to
   // a secondary line. Falls back to the title (then type) for linear sections
-  // that have no formatted scheme.
+  // that have no formatted scheme. No kicker label above the heading — a
+  // scheme heading states its own type on its face ("EMOM 5 × 4m"), so
+  // repeating "EMOM" above it was pure chrome.
   const heading = headerLine ?? section.title ?? typeLabel;
-  const secondary = headerLine && section.title ? section.title : null;
-  const kicker = heading === typeLabel ? null : typeLabel;
-  const count = section.movements.length;
+  // But when there is no scheme, the heading falls back to the coach's title
+  // and the type has nowhere left to appear — the athlete loses the one word
+  // that says how the section is run. It takes the subtitle slot instead of
+  // coming back as a kicker.
+  const secondary = headerLine
+    ? (section.title ?? null)
+    : section.title
+      ? typeLabel
+      : null;
   const groups = groupBySuperset(section.movements);
   // Movements flagged `each_round` are fixed cash-outs done after every round —
   // split them out (keeping superset groups intact) so they render under an
@@ -271,24 +302,24 @@ function SectionRow({
       <View style={{ width: MARKER_COL, alignItems: 'center', gap: 7 }}>
         <AnimatedPressable
           onPressIn={() => {
-            if (locked || readOnly) return;
+            if (locked || !interactive) return;
             press.value = withTiming(1, { duration: 90 });
           }}
           onPressOut={() => {
             press.value = withSpring(0, spring.press);
           }}
           onPress={() => {
-            if (locked || readOnly) return;
+            if (locked || !interactive) return;
             if (done) haptics.tap();
             else haptics.success();
             onToggle();
           }}
-          disabled={locked || readOnly}
-          accessibilityRole={readOnly ? undefined : 'button'}
+          disabled={locked || !interactive}
+          accessibilityRole={interactive ? 'button' : undefined}
           accessibilityState={
-            readOnly ? undefined : { checked: done, disabled: locked }
+            interactive ? { checked: done, disabled: locked } : undefined
           }
-          accessibilityLabel={readOnly ? undefined : a11yLabel}
+          accessibilityLabel={interactive ? a11yLabel : undefined}
           style={[
             markerStyle,
             {
@@ -328,6 +359,9 @@ function SectionRow({
             letterSpacing: 0.4,
             color: ink.muted,
             opacity: done ? 0.5 : 1,
+            fontVariant: ['tabular-nums'],
+            // "~20'" is a numeral string — keep it LTR under a Hebrew layout.
+            writingDirection: 'ltr',
           }}
         >
           {`~${minutes}'`}
@@ -343,23 +377,6 @@ function SectionRow({
           opacity: done ? 0.55 : 1,
         }}
       >
-        {kicker ? (
-          <Text
-            numberOfLines={1}
-            style={{
-              fontFamily: 'Assistant-Medium',
-              fontSize: 11,
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
-              color: ink.muted,
-              minHeight: 14,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
-          >
-            {`${kicker} · ${count}`}
-          </Text>
-        ) : null}
-
         <Text
           numberOfLines={2}
           style={{
@@ -368,24 +385,29 @@ function SectionRow({
             lineHeight: 26,
             letterSpacing: -0.4,
             color: colors.foreground,
-            marginTop: kicker ? 2 : 0,
             textAlign: isRTL ? 'right' : 'left',
+            // Scheme headings ("EMOM 5 × 4m") are LTR jargon — pin their
+            // direction so bidi can't reorder them against a Hebrew layout;
+            // Hebrew coach titles keep their natural RTL flow.
+            writingDirection: directionFor(heading),
           }}
         >
           {heading}
         </Text>
 
         {secondary ? (
+          // Coach's subtitle, rendered as the coach wrote it — a quiet
+          // subheadline, never uppercased or letter-spaced.
           <Text
-            numberOfLines={1}
+            numberOfLines={2}
             style={{
-              fontFamily: 'Assistant-Medium',
-              fontSize: 11,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
+              fontFamily: bodyFamily(lang, 'medium'),
+              fontSize: 14,
+              lineHeight: 19,
               color: ink.muted,
-              marginTop: 4,
+              marginTop: 3,
               textAlign: isRTL ? 'right' : 'left',
+              writingDirection: directionFor(secondary),
             }}
           >
             {secondary}
@@ -509,12 +531,11 @@ function AfterEachRoundDivider({
       <Text
         numberOfLines={1}
         style={{
-          fontFamily: 'Assistant-Medium',
-          fontSize: 10,
-          letterSpacing: 1.2,
-          textTransform: 'uppercase',
-          color: ink.faint,
+          fontFamily: font.bodyMedium,
+          fontSize: 12,
+          color: ink.muted,
           textAlign: isRTL ? 'right' : 'left',
+          writingDirection: directionFor(label),
         }}
       >
         {label}
@@ -667,6 +688,12 @@ function ExRow({
                 numberOfLines={1}
                 style={{
                   fontFamily: 'Assistant-SemiBold',
+                  // 19pt, and deliberately larger than the 15pt exercise
+                  // name beside it. This briefly ran at 16 on the reasoning
+                  // that the name is what you scan for and the numbers are
+                  // its annotation — which is backwards. "Back squat" is the
+                  // label; `5×3 @ 80%` is the prescription, and it is the
+                  // thing the athlete reads, logs against and works from.
                   fontSize: 19,
                   letterSpacing: -0.3,
                   color: colors.foreground,
@@ -674,6 +701,9 @@ function ExRow({
                   flexShrink: 0,
                   maxWidth: '52%',
                   textAlign: isRTL ? 'left' : 'right',
+                  // "12 · @ 100kg" is a numeral/latin string — pin it LTR so
+                  // bidi can't shuffle the "@"/"·" separators under RTL.
+                  writingDirection: 'ltr',
                 }}
               >
                 {summary}
@@ -713,7 +743,11 @@ function ExRow({
                     paddingVertical: 12,
                     paddingHorizontal: 6,
                     alignItems: 'center',
-                    borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
+                    // Divider on the side facing the PREVIOUS cell in reading
+                    // order. A fixed borderLeft under row-reverse painted an
+                    // outer edge on the last cell and dropped one divider.
+                    [isRTL ? 'borderRightWidth' : 'borderLeftWidth']:
+                      i === 0 ? 0 : StyleSheet.hairlineWidth,
                     borderColor: ink.line,
                   }}
                 >
@@ -727,18 +761,17 @@ function ExRow({
                       letterSpacing: -0.5,
                       color: colors.foreground,
                       fontVariant: ['tabular-nums'],
+                      writingDirection: 'ltr',
                     }}
                   >
                     {s.value}
                   </Text>
                   <Text
                     style={{
-                      fontFamily: 'Assistant-Medium',
-                      fontSize: 9.5,
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
+                      fontFamily: bodyFamily(lang, 'medium'),
+                      fontSize: 12,
                       color: ink.muted,
-                      marginTop: 4,
+                      marginTop: 3,
                     }}
                   >
                     {s.label}
@@ -846,10 +879,8 @@ function ExRow({
                   </View>
                   <Text
                     style={{
-                      fontFamily: 'Assistant-Medium',
-                      fontSize: 11,
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
+                      fontFamily: bodyFamily(lang, 'semibold'),
+                      fontSize: 13,
                       color: colors.primaryText,
                     }}
                   >

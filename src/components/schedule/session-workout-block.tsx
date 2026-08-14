@@ -1,23 +1,22 @@
-import { Dumbbell } from 'lucide-react-native';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { FKCard, useFKColors } from '@/components/fk';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
+import { WorkoutPoster } from '@/components/workout/workout-poster';
 import { scoringLabel } from '@/components/workout/workout-summary-card';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
-import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
+import { bodyFamily } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import type { WorkoutLite, WorkoutMovement } from '@/hooks/use-workouts';
 
 /**
- * Read-only workout preview — mirrors the Program detail's poster header +
- * dotted-spine sections, but this is a "what am I booking?" glance, not a
- * personal assignment: no check-off, progress, or log. One block per workout
- * attached to the session.
+ * The class-detail "what am I booking?" preview. Shares its header with the
+ * member's own Program detail (WorkoutPoster) and its body with the same
+ * sheet (ProgramSheetSections, in `preview` variant) — the two screens differ
+ * in what the reader can do, not in what they can read.
  */
 export function WorkoutBlock({
   workout,
-  workoutLabel,
   scoringT,
   isRTL,
   lang,
@@ -27,7 +26,6 @@ export function WorkoutBlock({
   onPlayVideo,
 }: {
   workout: WorkoutLite;
-  workoutLabel: string;
   scoringT: Record<string, string>;
   isRTL: boolean;
   lang: string;
@@ -44,29 +42,25 @@ export function WorkoutBlock({
     0,
   );
 
-  const scoringStamp =
-    workout.scoring && workout.scoring !== 'none'
-      ? scoringLabel(workout.scoring, scoringT)
-      : null;
-
   if (sections.length === 0 && !workout.description) return null;
 
-  // Inline scoreboard pairs — sections · movements · cap (the design's card
-  // idiom: mono value + mono label, spread across the row; no bordered band).
-  const scoreCols = [
+  // Scoring leads the stamps — it is the fact that decides how you pace the
+  // workout, and for someone deciding whether to book, how they decide at all.
+  const stamps = [
+    workout.scoring && workout.scoring !== 'none'
+      ? scoringLabel(workout.scoring, scoringT)
+      : null,
+    workout.timeCap ? `${workout.timeCap} ${minutesLabel}` : null,
+  ].filter(Boolean) as string[];
+  const stats = [
+    {
+      label: ps.duration,
+      value: estimateDuration(sections, workout.timeCap).replace(/\s*min$/i, ''),
+    },
     { label: ps.sections, value: String(sections.length) },
     { label: ps.exercises, value: String(totalMovements) },
-    workout.timeCap
-      ? { label: minutesLabel, value: String(workout.timeCap) }
-      : {
-          label: ps.duration,
-          value: estimateDuration(sections, workout.timeCap).replace(
-            /\s*min$/i,
-            '',
-          ),
-        },
   ];
-  const orderedCols = isRTL ? [...scoreCols].reverse() : scoreCols;
+
   const descLines = (workout.description ?? '')
     .split('\n')
     .map((l) => l.trim())
@@ -87,82 +81,17 @@ export function WorkoutBlock({
         }}
       />
 
-      {/* Header — mono kicker (dumbbell + label) + scoring stamp. */}
-      <View
-        style={{
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 10,
-        }}
-      >
-        <View
-          style={{
-            flexShrink: 1,
-            minWidth: 0,
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            alignItems: 'center',
-            gap: 7,
-          }}
-        >
-          <Dumbbell size={15} color={colors.primary} strokeWidth={1.9} />
-          <Text
-            numberOfLines={1}
-            style={{ fontSize: 11, color: colors.mutedFg, ...eyebrow(lang) }}
-          >
-            {workoutLabel}
-          </Text>
-        </View>
-        {scoringStamp ? (
-          <View
-            style={{
-              paddingHorizontal: 8,
-              paddingTop: 5,
-              paddingBottom: 4,
-              borderRadius: 7,
-              borderCurve: 'continuous',
-              borderWidth: 1,
-              borderColor: colors.isDark
-                ? 'rgba(54,214,198,0.42)'
-                : 'rgba(14,140,140,0.42)',
-              backgroundColor: colors.isDark
-                ? 'rgba(54,214,198,0.16)'
-                : 'rgba(14,140,140,0.12)',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 10.5,
-                color: colors.primaryText,
-                ...eyebrow(lang),
-              }}
-            >
-              {scoringStamp}
-            </Text>
-          </View>
-        ) : null}
-      </View>
+      <WorkoutPoster
+        title={workout.displayName}
+        stamps={stamps}
+        stats={sections.length > 0 ? stats : []}
+        isRTL={isRTL}
+        lang={lang}
+      />
 
-      {/* Name — Rubik poster (the design's big workout title). */}
-      <Text
-        numberOfLines={3}
-        style={{
-          fontSize: 30,
-          lineHeight: 33,
-          color: colors.foreground,
-          letterSpacing: -0.9,
-          marginTop: 8,
-          textAlign: isRTL ? 'right' : 'left',
-          fontFamily: displayFamily(lang, 'semibold'),
-        }}
-      >
-        {workout.displayName}
-      </Text>
-
-      {/* Description — the coach's overview, surfaced directly under the title
-          (matches the design's program card). */}
+      {/* Description — the coach's overview, directly under the subtitle. */}
       {descLines.length > 0 ? (
-        <View style={{ marginTop: 8, gap: 6 }}>
+        <View style={{ marginTop: 10, gap: 6 }}>
           {descLines.map((line, i) =>
             line.startsWith('-') ? (
               <View
@@ -212,49 +141,6 @@ export function WorkoutBlock({
         </View>
       ) : null}
 
-      {/* Scoreboard — inline mono pairs (value + label) spread across the row,
-          like the design's program card (no bordered band). */}
-      {sections.length > 0 ? (
-        <View
-          style={{
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            rowGap: 8,
-            columnGap: 12,
-            marginTop: 14,
-          }}
-        >
-          {orderedCols.map(({ label, value }, i) => (
-            <View
-              key={i}
-              style={{
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                alignItems: 'baseline',
-                gap: 6,
-              }}
-            >
-              <Text
-                style={{
-                  fontFamily: font.monoMedium,
-                  fontSize: 16,
-                  color: colors.foreground,
-                  fontVariant: ['tabular-nums'],
-                }}
-              >
-                {value}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={{ fontSize: 10, color: colors.mutedFg, ...eyebrow(lang) }}
-              >
-                {label}
-              </Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-
       {/* Section timeline — read-only numbered markers on the dotted spine. */}
       {sections.length > 0 ? (
         <View style={{ marginTop: 16 }}>
@@ -262,7 +148,7 @@ export function WorkoutBlock({
             sections={sections}
             checked={{}}
             locked={false}
-            readOnly
+            variant="preview"
             onToggleSection={() => {}}
             isRTL={isRTL}
             lang={lang}

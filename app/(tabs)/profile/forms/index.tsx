@@ -11,7 +11,7 @@
  * this is the normal state.
  */
 import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import {
@@ -43,6 +43,7 @@ import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
+const BRAND_TEAL_DARK = '#27C8BA';
 const STATUS_PILL_FG: Record<string, string> = {
   pending: '#B84A40',
   sent: '#B84A40',
@@ -239,8 +240,6 @@ function SectionGroup({
         style={{
           fontSize: 11,
           fontWeight: '700',
-          letterSpacing: 0.8,
-          textTransform: 'uppercase',
           color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
           paddingHorizontal: 4,
           textAlign: isRTL ? 'right' : 'left',
@@ -278,7 +277,9 @@ function FormRow({
   const s = useFormStrings();
   const status = entry.instance.status;
   const actionable = isActionable(status);
-  const pillColor = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
+  const rawPill = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
+  const pillColor =
+    isDark && rawPill === BRAND_TEAL ? BRAND_TEAL_DARK : rawPill;
 
   const StatusIcon = actionable
     ? Circle
@@ -398,7 +399,7 @@ function FormRow({
                   style={{
                     fontSize: 12,
                     fontWeight: '600',
-                    color: 'rgb(14,140,140)',
+                    color: isDark ? BRAND_TEAL_DARK : BRAND_TEAL,
                     writingDirection: isRTL ? 'rtl' : 'ltr',
                   }}
                 >
@@ -470,9 +471,16 @@ function FormRow({
             }}
           >
             {downloading ? (
-              <ActivityIndicator size="small" color={BRAND_TEAL} />
+              <ActivityIndicator
+                size="small"
+                color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+              />
             ) : (
-              <Download size={17} color={BRAND_TEAL} strokeWidth={2.2} />
+              <Download
+                size={17}
+                color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+                strokeWidth={2.2}
+              />
             )}
           </Pressable>
         ) : null}
@@ -511,7 +519,7 @@ function EmptyState({
           justifyContent: 'center',
         }}
       >
-        <FileSignature size={26} color={BRAND_TEAL} strokeWidth={2.2} />
+        <FileSignature size={26} color={colors.primary} strokeWidth={2.2} />
       </View>
       <Text
         style={{
@@ -540,6 +548,3 @@ function EmptyState({
   );
 }
 
-// `StyleSheet` import retained for the hairline pattern used elsewhere
-// but not needed here directly. Strip if lint flags it.
-void StyleSheet;

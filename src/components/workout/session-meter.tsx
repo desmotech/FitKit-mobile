@@ -33,8 +33,6 @@ export function SessionMeter({
         style={{
           fontFamily: 'Assistant-Medium',
           fontSize: 11,
-          letterSpacing: 1.4,
-          textTransform: 'uppercase',
           color: ink.muted,
         }}
       >

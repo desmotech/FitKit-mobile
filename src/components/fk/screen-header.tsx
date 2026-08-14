@@ -6,11 +6,12 @@
  *   │  ‹ Back            Title           [⋯]      │   44pt nav bar
  *   ├─────────────────────────────────────────────┤
  *
- *   - Back: plain teal chevron + label, no gray pill (matches
- *     `chevron.left` + parent-screen text in iOS).
+ *   - Back: FKBackButton glass capsule. App convention is the icon-only
+ *     variant (`backLabel={null}`) — a labelled capsule can outgrow the
+ *     88pt title gutters in Hebrew.
  *   - Title: centered, single line, truncates to fit.
  *   - Trailing: optional ReactNode slot for action buttons.
- *   - Hairline divider beneath.
+ *   - No hairline — pushed screens sit directly on the ambient backdrop.
  *
  * RTL-aware: chevron flips and row reverses. Localized back label via
  * `common.back` dictionary key.

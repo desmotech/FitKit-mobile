@@ -67,8 +67,6 @@ export function CoachNote({
             style={{
               fontFamily: 'Assistant-Medium',
               fontSize: 11,
-              letterSpacing: 1.2,
-              textTransform: 'uppercase',
               color: ink.amber,
             }}
           >
@@ -81,8 +79,6 @@ export function CoachNote({
                 flexShrink: 1,
                 fontFamily: 'Assistant-Medium',
                 fontSize: 10,
-                letterSpacing: 0.6,
-                textTransform: 'uppercase',
                 color: ink.muted,
               }}
             >

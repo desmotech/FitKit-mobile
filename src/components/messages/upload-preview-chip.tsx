@@ -28,7 +28,8 @@ export function UploadPreviewChip({
   onRemove: () => void;
 }) {
   const haptics = useHaptics();
-  const { t } = useI18n();
+  const { dir, t } = useI18n();
+  const isRTL = dir === 'rtl';
   // The upload error itself is a raw network/S3 string — never shown. The
   // member only needs to know it failed and that tapping retries.
   const uploadFailed =
@@ -62,6 +63,8 @@ export function UploadPreviewChip({
             onPress={() =>
               Alert.alert('', uploadFailed)
             }
+            accessibilityRole="button"
+            accessibilityLabel={uploadFailed}
             style={[FILL, { backgroundColor: 'rgba(184,74,64,0.45)' }]}
           >
             <AlertCircle size={20} color="#fff" strokeWidth={2.4} />
@@ -73,8 +76,10 @@ export function UploadPreviewChip({
           haptics.tap();
           onRemove();
         }}
-        hitSlop={6}
-        style={{ position: 'absolute', top: -6, right: -6 }}
+        hitSlop={10}
+        accessibilityRole="button"
+        // Trailing corner, mirrored for RTL.
+        style={{ position: 'absolute', top: -6, [isRTL ? 'left' : 'right']: -6 }}
       >
         <View
           style={{

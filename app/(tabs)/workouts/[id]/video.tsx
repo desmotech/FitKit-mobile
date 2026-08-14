@@ -94,6 +94,8 @@ export default function VideoPlayerScreen() {
         <Pressable
           onPress={handleClose}
           hitSlop={16}
+          accessibilityRole="button"
+          accessibilityLabel={common.a11yClose}
           style={({ pressed }) => [
             continuousCorners,
             pressed && { opacity: 0.6 },

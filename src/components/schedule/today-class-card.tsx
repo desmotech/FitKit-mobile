@@ -84,7 +84,7 @@ export function TodayClassCard({
           ? {
               label: labels.booked,
               bg: 'rgba(14,140,140,0.10)',
-              fg: '#0E8C8C',
+              fg: colors.primaryText,
               border: 'rgba(14,140,140,0.30)',
             }
           : null;
@@ -132,7 +132,7 @@ export function TodayClassCard({
                 style={{
                   fontSize: 18,
                   fontWeight: '800',
-                  color: '#0E8C8C',
+                  color: colors.primaryText,
                   fontFamily: 'Assistant-Medium',
                   fontVariant: ['tabular-nums'],
                   letterSpacing: -0.2,
@@ -181,8 +181,6 @@ export function TodayClassCard({
                         fontSize: 9,
                         fontWeight: '800',
                         color: pill.fg,
-                        letterSpacing: 0.4,
-                        textTransform: 'uppercase',
                       }}
                     >
                       {pill.label}

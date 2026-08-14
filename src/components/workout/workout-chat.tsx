@@ -14,12 +14,10 @@
 import { Image as ExpoImage } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import {
-  AlertCircle,
   ArrowUp,
   Check,
   CheckCheck,
   Paperclip,
-  X,
 } from 'lucide-react-native';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -37,18 +35,17 @@ import { showActionSheet } from '@/lib/action-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
 import { useFKColors } from '@/components/fk';
+import { UploadPreviewChip } from '@/components/messages/upload-preview-chip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
-import { useMessageUploads, type UploadItem } from '@/hooks/use-message-uploads';
+import { useMessageUploads } from '@/hooks/use-message-uploads';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { programSheetInk } from '@/lib/program-sheet-ink';
-import { bodyFamily } from '@/lib/type';
+import { bodyFamily, eyebrow } from '@/lib/type';
 import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
-
-const BRAND_TEAL = '#0E8C8C';
 
 function dict(t: unknown, path: string): string | null {
   return (
@@ -242,13 +239,11 @@ export function WorkoutChat({
         return (
           <View style={{ alignItems: 'center', paddingVertical: 10 }}>
             <Text
-              style={{
-                fontFamily: 'Assistant-Medium',
-                fontSize: 10,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-                color: ink.faint,
-              }}
+              style={[
+                { fontSize: 10, color: ink.faint },
+                // Hebrew dates must not be letter-spaced.
+                eyebrow(lang),
+              ]}
             >
               {item.date.toLocaleDateString(lang, {
                 weekday: 'short',
@@ -457,21 +452,28 @@ export function WorkoutChat({
             hitSlop={6}
             accessibilityRole="button"
             accessibilityLabel={common.a11ySend}
+            accessibilityState={{ disabled: !canSend, busy: isSending }}
           >
             <View
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: canSend ? BRAND_TEAL : 'rgba(120,120,128,0.3)',
+                backgroundColor: canSend
+                  ? colors.primary
+                  : 'rgba(120,120,128,0.3)',
               }}
             >
               {isSending ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.onPrimary} />
               ) : (
-                <ArrowUp size={16} color="#fff" strokeWidth={2.8} />
+                <ArrowUp
+                  size={16}
+                  color={canSend ? colors.onPrimary : '#fff'}
+                  strokeWidth={2.8}
+                />
               )}
             </View>
           </Pressable>
@@ -506,9 +508,15 @@ const MessageBubble = memo(function MessageBubble({
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
   const coachBg = isDark ? 'rgba(78,92,100,0.46)' : 'rgba(255,255,255,0.72)';
-  const bubbleBg = isOwn ? BRAND_TEAL : coachBg;
-  const bubbleFg = isOwn ? '#fff' : colors.foreground;
-  const metaFg = isOwn ? 'rgba(255,255,255,0.85)' : ink.faint;
+  // Own bubbles take the theme primary (brighter teal + dark ink in dark
+  // mode) — mirrors the DM thread's shared MessageBubble.
+  const bubbleBg = isOwn ? colors.primary : coachBg;
+  const bubbleFg = isOwn ? colors.onPrimary : colors.foreground;
+  const metaFg = isOwn
+    ? isDark
+      ? 'rgba(4,32,30,0.72)'
+      : 'rgba(255,255,255,0.85)'
+    : ink.faint;
   const hasAttachments = !!message.attachments && message.attachments.length > 0;
   const timeStr = new Date(message.createdAt).toLocaleTimeString(lang, {
     hour: '2-digit',
@@ -519,15 +527,16 @@ const MessageBubble = memo(function MessageBubble({
     <View style={{ alignItems: align, marginVertical: 3 }}>
       {!isOwn && message.senderName ? (
         <Text
-          style={{
-            fontFamily: 'Assistant-Medium',
-            fontSize: 10,
-            letterSpacing: 0.6,
-            textTransform: 'uppercase',
-            color: ink.muted,
-            marginBottom: 3,
-            marginHorizontal: 8,
-          }}
+          style={[
+            {
+              fontSize: 10,
+              color: ink.muted,
+              marginBottom: 3,
+              marginHorizontal: 8,
+            },
+            // Hebrew names must not be letter-spaced.
+            eyebrow(lang),
+          ]}
         >
           {message.senderName}
         </Text>
@@ -588,7 +597,11 @@ const MessageBubble = memo(function MessageBubble({
               </Text>
               {isOwn ? (
                 message.readAt ? (
-                  <CheckCheck size={14} color="#fff" strokeWidth={2.4} />
+                  <CheckCheck
+                    size={14}
+                    color={colors.onPrimary}
+                    strokeWidth={2.4}
+                  />
                 ) : (
                   <Check size={14} color={metaFg} strokeWidth={2.4} />
                 )
@@ -645,86 +658,6 @@ function BubbleAttachments({ attachments }: { attachments: AttachmentResponse[] 
           ) : null}
         </View>
       ))}
-    </View>
-  );
-}
-
-// TODO: duplicates components/messages/upload-preview-chip.tsx — collapse
-// onto the shared one when this file is next touched.
-function UploadPreviewChip({
-  upload,
-  onRemove,
-}: {
-  upload: UploadItem;
-  onRemove: () => void;
-}) {
-  const haptics = useHaptics();
-  const { t } = useI18n();
-  // The upload error is a raw network/S3 string — never shown. The member
-  // only needs to know it failed and that tapping retries.
-  const uploadFailed = dict(t, 'messages.uploadFailed') ?? 'Upload failed';
-  const done = upload.progress === 100 && !!upload.uploadId && !upload.error;
-  const failed = !!upload.error;
-  return (
-    <View style={{ width: 64, height: 64, position: 'relative' }}>
-      <View
-        style={{
-          flex: 1,
-          borderRadius: 12,
-          borderCurve: 'continuous',
-          overflow: 'hidden',
-          backgroundColor: 'rgba(120,120,128,0.10)',
-        }}
-      >
-        <ExpoImage source={{ uri: upload.uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-        {!done && !failed ? (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              backgroundColor: 'rgba(0,0,0,0.35)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <ActivityIndicator size="small" color="#fff" />
-          </View>
-        ) : null}
-        {failed ? (
-          <Pressable
-            onPress={() => Alert.alert('', uploadFailed)}
-            style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              left: 0,
-              backgroundColor: 'rgba(184,74,64,0.45)',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <AlertCircle size={20} color="#fff" strokeWidth={2.4} />
-          </Pressable>
-        ) : null}
-      </View>
-      <Pressable onPress={() => { haptics.tap(); onRemove(); }} hitSlop={6} style={{ position: 'absolute', top: -6, right: -6 }}>
-        <View
-          style={{
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            backgroundColor: '#0F172A',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <X size={12} color="#fff" strokeWidth={2.8} />
-        </View>
-      </Pressable>
     </View>
   );
 }

@@ -216,8 +216,6 @@ export function SetFocused({
                   fontFamily: MONO,
                   fontSize: 11,
                   color: t.muted,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.6,
                 }}
               >
                 {L.setColTime}
@@ -333,8 +331,6 @@ function StepperRow({
           fontFamily: MONO,
           fontSize: 11,
           color: t.muted,
-          textTransform: 'uppercase',
-          letterSpacing: 0.6,
         }}
       >
         {label}
@@ -366,8 +362,6 @@ function StepperRow({
                 fontFamily: MONO,
                 fontSize: 10,
                 color: t.faint,
-                textTransform: 'uppercase',
-                letterSpacing: 0.8,
                 marginTop: -2,
               }}
             >

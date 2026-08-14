@@ -18,6 +18,7 @@ import { Text } from '@/components/ui/text';
 import {
   FKAmbientBackdrop,
   FKScreenHeader,
+  FKSectionHeader,
   useFKColors,
 } from '@/components/fk';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -557,14 +558,16 @@ export default function SessionDetailScreen() {
                   borderColor: 'rgba(14,140,140,0.28)',
                 }}
               >
-                <CheckCircle2 size={11} color="#0E8C8C" strokeWidth={2.4} />
+                <CheckCircle2
+                  size={11}
+                  color={colors.primaryText}
+                  strokeWidth={2.4}
+                />
                 <Text
                   style={{
                     fontSize: 10,
                     fontWeight: '800',
-                    color: '#0E8C8C',
-                    letterSpacing: 0.4,
-                    textTransform: 'uppercase',
+                    color: colors.primaryText,
                   }}
                 >
                   {labels.checkedIn}
@@ -666,7 +669,6 @@ export default function SessionDetailScreen() {
               <WorkoutBlock
                 key={w.id}
                 workout={w}
-                workoutLabel={labels.workout}
                 scoringT={scoringT}
                 isRTL={isRTL}
                 lang={lang}
@@ -689,18 +691,7 @@ export default function SessionDetailScreen() {
         {/* Check-in section — only when within window AND booked. */}
         {inCheckinWindow ? (
           <View style={{ paddingHorizontal: 18, paddingTop: 22, gap: 10 }}>
-            <Text
-              className="text-muted-foreground"
-              style={{
-                fontSize: 11,
-                fontWeight: '800',
-                letterSpacing: 1.4,
-                textTransform: 'uppercase',
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {labels.checkInHeader}
-            </Text>
+            <FKSectionHeader>{labels.checkInHeader}</FKSectionHeader>
             <CheckinButton
               Icon={Satellite}
               title={labels.gpsCheckIn}

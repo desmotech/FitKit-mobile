@@ -44,8 +44,6 @@ export function LogSectionCard({
           style={{
             fontSize: 11,
             fontWeight: '700',
-            letterSpacing: 1.2,
-            textTransform: 'uppercase',
             textAlign: isRTL ? 'right' : 'left',
           }}
         >

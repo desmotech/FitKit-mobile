@@ -33,15 +33,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   FKAmbientBackdrop,
   FKButton,
+  FKIconButton,
   FKScreenHeader,
   useFKColors,
 } from '@/components/fk';
 import { useWorkoutComments } from '@/hooks/use-workout-comments';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
+import { WorkoutPoster } from '@/components/workout/workout-poster';
 import { scoringLabel } from '@/components/workout/workout-summary-card';
 import { CoachNote } from '@/components/workout/coach-note';
 import { analytics } from '@/lib/analytics';
-import { bodyFamily, displayFamily, eyebrow } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
@@ -143,7 +144,7 @@ export default function WorkoutDetailScreen() {
     duration: dict.workouts?.duration ?? 'Duration',
     sections: dict.workouts?.sections ?? 'Sections',
     minutes: dict.workouts?.minutes ?? 'min',
-    coach: dict.feed?.coach ?? 'COACH',
+    coach: dict.feed?.coach ?? 'Coach',
     startWorkout: dict.feed?.startWorkout ?? 'Start workout',
     logResult: dict.workouts?.logResult ?? 'Log result',
     markComplete: dict.program?.markComplete ?? 'Mark Complete',
@@ -352,7 +353,13 @@ export default function WorkoutDetailScreen() {
     { label: labels.sections, value: String(sections.length) },
     { label: labels.exercises, value: String(totalMovements) },
   ];
-  const orderedHeroStats = isRTL ? [...heroStats].reverse() : heroStats;
+  // Scoring leads — the poster gives the first stamp the accent.
+  const posterStamps = [
+    workout.scoring && workout.scoring !== 'none'
+      ? scoringLabel(workout.scoring, scoringT)
+      : null,
+    workout.timeCap ? `${workout.timeCap} ${labels.minutes}` : null,
+  ].filter(Boolean) as string[];
 
   return (
     <View className="flex-1">
@@ -363,7 +370,10 @@ export default function WorkoutDetailScreen() {
         title=""
         backLabel={null}
         trailing={
-          <Pressable
+          <FKIconButton
+            Icon={MessageSquare}
+            label={ps.chat}
+            badge={comments.unreadCount}
             onPress={() => {
               haptics.tap();
               router.push({
@@ -371,67 +381,7 @@ export default function WorkoutDetailScreen() {
                 params: { id: assignment.id, name: workout.displayName },
               });
             }}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={ps.chat}
-          >
-            {({ pressed }) => (
-              <View
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 12,
-                  borderCurve: 'continuous',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: isDark
-                    ? 'rgba(255,255,255,0.08)'
-                    : 'rgba(15,23,42,0.06)',
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: ink.line,
-                  opacity: pressed ? 0.6 : 1,
-                }}
-              >
-                <MessageSquare
-                  size={18}
-                  color={colors.foreground}
-                  strokeWidth={2.2}
-                />
-                {comments.unreadCount > 0 ? (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -3,
-                      right: -3,
-                      minWidth: 18,
-                      height: 18,
-                      paddingHorizontal: 4,
-                      borderRadius: 9,
-                      backgroundColor: '#0E8C8C',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 1.5,
-                      borderColor: colors.background,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: bodyFamily(lang, 'bold'),
-                        fontSize: 10,
-                        lineHeight: 13,
-                        color: '#fff',
-                        textAlign: 'center',
-                        includeFontPadding: false,
-                        fontVariant: ['tabular-nums'],
-                      }}
-                    >
-                      {comments.unreadCount > 9 ? '9+' : comments.unreadCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
-          </Pressable>
+          />
         }
       />
 
@@ -475,8 +425,6 @@ export default function WorkoutDetailScreen() {
                 flex: 1,
                 fontSize: 11,
                 color: ink.muted,
-                letterSpacing: 1.6,
-                textTransform: 'uppercase',
                 textAlign: isRTL ? 'right' : 'left',
                 fontFamily: 'Assistant-Medium',
               }}
@@ -501,8 +449,6 @@ export default function WorkoutDetailScreen() {
                   style={{
                     fontFamily: 'Assistant-Medium',
                     fontSize: 10,
-                    letterSpacing: 1.2,
-                    textTransform: 'uppercase',
                     color: colors.primaryText,
                   }}
                 >
@@ -512,123 +458,17 @@ export default function WorkoutDetailScreen() {
             ) : null}
           </View>
 
-          <Text
-            numberOfLines={3}
-            style={{
-              fontSize: 32,
-              lineHeight: 36,
-              color: colors.foreground,
-              letterSpacing: -1,
-              marginTop: 6,
-              textAlign: isRTL ? 'right' : 'left',
-              fontFamily: displayFamily(lang, 'bold'),
-            }}
-          >
-            {workout.displayName}
-          </Text>
-
-          {(() => {
-            const stamps: string[] = [];
-            if (workout.scoring && workout.scoring !== 'none')
-              stamps.push(scoringLabel(workout.scoring, scoringT));
-            if (workout.timeCap)
-              stamps.push(`${workout.timeCap} ${labels.minutes}`);
-            if (stamps.length === 0) return null;
-            return (
-              <View
-                style={{
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  marginTop: 12,
-                }}
-              >
-                {stamps.map((txt, i) => (
-                  <View
-                    key={i}
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 5,
-                      borderRadius: 8,
-                      borderCurve: 'continuous',
-                      borderWidth: 1,
-                      borderColor: i === 0 ? colors.primary : ink.line,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        color: i === 0 ? colors.primaryText : ink.muted,
-                        ...eyebrow(lang),
-                      }}
-                    >
-                      {txt}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            );
-          })()}
-
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 18,
-              borderRadius: 14,
-              borderCurve: 'continuous',
-              borderWidth: 1,
-              // A visible hairline on both themes — the previous white border
-              // was invisible on the light card.
-              borderColor: isDark
-                ? 'rgba(255,255,255,0.22)'
-                : 'rgba(40,36,30,0.16)',
-              backgroundColor: isDark
-                ? 'rgba(70,82,90,0.34)'
-                : 'rgba(255,255,255,0.5)',
-              overflow: 'hidden',
-            }}
-          >
-            {orderedHeroStats.map(({ label, value }, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  paddingVertical: 14,
-                  paddingHorizontal: 6,
-                  borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                  borderColor: ink.line,
-                }}
-              >
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  style={{
-                    fontSize: 26,
-                    lineHeight: 30,
-                    color: colors.foreground,
-                    fontVariant: ['tabular-nums'],
-                    letterSpacing: -0.5,
-                    fontFamily: displayFamily(lang, 'semibold'),
-                  }}
-                >
-                  {value}
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    fontSize: 9.5,
-                    color: ink.muted,
-                    letterSpacing: 1,
-                    textTransform: 'uppercase',
-                    marginTop: 5,
-                    fontFamily: 'Assistant-SemiBold',
-                  }}
-                >
-                  {label}
-                </Text>
-              </View>
-            ))}
+          {/* Spacing lives here, not in the poster — it sits directly under
+              the card's date kicker on this screen and flush at the top of
+              the card on the class preview. */}
+          <View style={{ marginTop: 6 }}>
+            <WorkoutPoster
+              title={workout.displayName}
+              stamps={posterStamps}
+              stats={heroStats}
+              isRTL={isRTL}
+              lang={lang}
+            />
           </View>
         </View>
 

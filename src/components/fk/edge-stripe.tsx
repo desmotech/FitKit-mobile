@@ -29,7 +29,7 @@ export function FKEdgeStripe({
           ? '#B84A40'
           : tone === 'muted'
             ? 'rgba(94,112,130,0.6)'
-            : '#2AB8B8';
+            : '#27C8BA';
 
   return (
     <View

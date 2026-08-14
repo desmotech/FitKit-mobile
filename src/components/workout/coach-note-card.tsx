@@ -52,8 +52,6 @@ export function CoachNoteCard({
               fontSize: 10,
               fontWeight: '800',
               color: '#8B6A35',
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
               marginBottom: 6,
               textAlign: isRTL ? 'right' : 'left',
             }}

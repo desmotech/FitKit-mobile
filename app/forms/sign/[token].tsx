@@ -16,7 +16,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, View } from 'react-native';
 import { AlertTriangle } from 'lucide-react-native';
-import { FKBrandMark, FKGlassPanel, useFKColors } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKBrandMark,
+  FKGlassPanel,
+  useFKColors,
+} from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useFormStrings } from '@/i18n/use-form-strings';
@@ -95,7 +100,9 @@ export default function SignFormLinkScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1 }}>
+    <FKAmbientBackdrop />
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 20 }}>
         <FKBrandMark />
         <FKGlassPanel radius={20} style={{ padding: 24, width: '100%' }}>
@@ -136,5 +143,6 @@ export default function SignFormLinkScreen() {
         </FKGlassPanel>
       </View>
     </SafeAreaView>
+    </View>
   );
 }

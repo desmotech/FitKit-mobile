@@ -186,8 +186,6 @@ export default function MetricDetailScreen() {
                       fontSize: 11,
                       fontWeight: '700',
                       color: colors.mutedFg,
-                      letterSpacing: 0.6,
-                      textTransform: 'uppercase',
                       textAlign: isRTL ? 'right' : 'left',
                     }}
                   >

@@ -6,6 +6,7 @@ export default function MessagesLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="[id]" />
       <Stack.Screen name="new" />
+      <Stack.Screen name="announcement/[id]" />
     </Stack>
   );
 }

@@ -18,7 +18,12 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { FKBrandMark, FKGlassPanel, useFKColors } from '@/components/fk';
+import {
+  FKAmbientBackdrop,
+  FKBrandMark,
+  FKGlassPanel,
+  useFKColors,
+} from '@/components/fk';
 import { LegalConsentForm } from '@/components/legal/legal-consent-form';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -54,9 +59,11 @@ export default function AcceptTermsScreen() {
   };
 
   return (
+    <View style={{ flex: 1 }}>
+    <FKAmbientBackdrop />
     <SafeAreaView
       edges={['bottom']}
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -131,5 +138,6 @@ export default function AcceptTermsScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </View>
   );
 }

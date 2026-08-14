@@ -11,13 +11,13 @@ import { Alert, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { GoalResponse } from '@fitkit/shared';
 import {
+  FKEmptyState,
   FKGlassPanel,
+  FKSectionHeader,
   FKSubScreen,
   GoalCard,
-  useFKColors,
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Text } from '@/components/ui/text';
 import { useApiAction, useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -29,7 +29,6 @@ export default function GoalsScreen() {
   const haptics = useHaptics();
   const { activeOrganization } = useCurrentUser();
   const { dir, t } = useI18n();
-  const colors = useFKColors();
   const isRTL = dir === 'rtl';
   const orgId = activeOrganization?.id;
 
@@ -111,57 +110,18 @@ export default function GoalsScreen() {
             <Skeleton style={{ height: 132, borderRadius: 20 }} />
           </View>
         ) : goals.length === 0 ? (
-          <FKGlassPanel
-            radius={20}
-            style={{
-              padding: 28,
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 18,
-                backgroundColor: 'rgba(14,140,140,0.10)',
-                borderWidth: 1,
-                borderColor: 'rgba(14,140,140,0.30)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Target size={26} color="#0E8C8C" strokeWidth={2.2} />
-            </View>
-            <Text
-              className="font-display"
-              style={{
-                fontSize: 16,
-                fontWeight: '800',
-                color: colors.foreground,
-                textAlign: 'center',
-              }}
-            >
-              {labels.noGoals}
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: colors.mutedFg,
-                textAlign: 'center',
-              }}
-            >
-              {labels.noGoalsHint}
-            </Text>
+          <FKGlassPanel radius={20}>
+            <FKEmptyState
+              Icon={Target}
+              title={labels.noGoals}
+              hint={labels.noGoalsHint}
+              layout="inline"
+            />
           </FKGlassPanel>
         ) : (
           <>
             {active.length > 0 && (
-              <Section
-                title={labels.active}
-                isRTL={isRTL}
-                colors={colors}
-              >
+              <Section title={labels.active}>
                 {active.map((goal, i) => (
                   <Animated.View
                     key={goal.id}
@@ -187,11 +147,7 @@ export default function GoalsScreen() {
             )}
 
             {achieved.length > 0 && (
-              <Section
-                title={labels.achieved}
-                isRTL={isRTL}
-                colors={colors}
-              >
+              <Section title={labels.achieved}>
                 {achieved.map((goal, i) => (
                   <Animated.View
                     key={goal.id}
@@ -217,29 +173,14 @@ export default function GoalsScreen() {
 
 function Section({
   title,
-  isRTL,
-  colors,
   children,
 }: {
   title: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
   children: React.ReactNode;
 }) {
   return (
     <View style={{ gap: 12 }}>
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '700',
-          letterSpacing: 1.4,
-          textTransform: 'uppercase',
-          color: colors.mutedFg,
-          textAlign: isRTL ? 'right' : 'left',
-        }}
-      >
-        {title}
-      </Text>
+      <FKSectionHeader>{title}</FKSectionHeader>
       {children}
     </View>
   );

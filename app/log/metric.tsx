@@ -161,6 +161,7 @@ export default function LogMetricScreen() {
         >
           <FKScreenHeader
             title={L.metricTitle}
+            backLabel={null}
             onBack={() => router.back()}
             trailing={
               <HeaderSaveButton
@@ -329,8 +330,6 @@ function SectionLabel({
       style={{
         fontSize: 11,
         fontWeight: '700',
-        letterSpacing: 0.7,
-        textTransform: 'uppercase',
         textAlign: isRTL ? 'right' : 'left',
       }}
     >

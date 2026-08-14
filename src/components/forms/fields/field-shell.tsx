@@ -53,8 +53,6 @@ export function FieldShell({
           style={{
             fontSize: 11,
             fontWeight: '700',
-            letterSpacing: 0.6,
-            textTransform: 'uppercase',
             color: mutedFg,
             textAlign: isRTL ? 'right' : 'left',
             writingDirection: isRTL ? 'rtl' : 'ltr',

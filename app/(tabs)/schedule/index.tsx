@@ -318,8 +318,6 @@ export default function ScheduleScreen() {
               ...type.caption,
               textAlign: 'center',
               fontFamily: font.monoMedium,
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
               color: colors.mutedFg,
               fontVariant: ['tabular-nums'],
             }}

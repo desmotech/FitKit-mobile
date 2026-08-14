@@ -6,7 +6,7 @@
  * member's subscription state. CTA states mirror apps/web's plan-card:
  *   current → resume payment → payment unavailable → purchase.
  */
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import type { PlanInterval, PlanResponse } from '@fitkit/shared';
 import {
   FKCard,
@@ -159,13 +159,16 @@ export function PlanCard({
   const isPaidWithoutProvider = plan.priceInCents > 0 && !hasPaymentProvider;
   const disabled = switchMode
     ? loading
-    : loading || isCurrent || isPaidWithoutProvider || soldOut;
+    : loading || isPaidWithoutProvider || soldOut;
+  // The plan the member is already on has nothing left to act on, and the
+  // status chip in the header already says so. A permanently-disabled
+  // "Current Plan" button underneath was the same word twice and a dead
+  // 44pt slab — the card ends at its content instead.
+  const showCta = switchMode || !isCurrent;
   const ctaLabel = switchMode
     ? (switchLabel ?? 'Switch to this plan')
     : soldOut
       ? qt.soldOut
-      : isCurrent
-      ? (pc.currentPlan ?? 'Current Plan')
       : isPending
         ? (pc.resumePayment ?? 'Resume Payment')
         : isPaidWithoutProvider
@@ -178,7 +181,7 @@ export function PlanCard({
         padding: 18,
         overflow: 'hidden',
         ...(isCurrent
-          ? { borderWidth: 1, borderColor: `${colors.primary}55` }
+          ? { borderWidth: 1, borderColor: colors.primaryEdge }
           : null),
       }}
     >
@@ -239,6 +242,17 @@ export function PlanCard({
           pushes the whole row to the left. */}
       <View
         testID="price-row"
+        // One VoiceOver stop, not four. Read as separate elements the row
+        // announced "150", "/month", "50%" as three unrelated fragments —
+        // and the struck standard rate is deliberately absent (the "then …"
+        // line below says it in words).
+        accessible
+        accessibilityLabel={[
+          `${introCents != null ? formatPrice(introCents, plan.currency, lang) : price}${intervalSuffix}`,
+          showDiscount ? `−${discountPercent}%` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'baseline',
@@ -295,7 +309,11 @@ export function PlanCard({
               fontVariant: ['tabular-nums'],
             }}
           >
-            {standardPrice}
+            {/* The bare rate, never `standardPrice`: the interval already
+                sits beside the charged price one element over, and printing
+                it again here put "/month" twice in a single row. The "then …"
+                line below is a sentence, so it keeps the suffix. */}
+            {price}
           </Text>
         ) : null}
 
@@ -307,7 +325,7 @@ export function PlanCard({
               paddingVertical: 3,
               borderRadius: 999,
               borderCurve: 'continuous',
-              backgroundColor: `${colors.primary}1F`,
+              backgroundColor: colors.primarySoft,
             }}
           >
             <Text
@@ -381,8 +399,8 @@ export function PlanCard({
       {/* Description (optional) */}
       {plan.description ? (
         <Text
-          className="text-muted-foreground"
           style={{
+            color: colors.mutedFg,
             fontSize: 13.5,
             lineHeight: 19,
             marginTop: 10,
@@ -395,31 +413,35 @@ export function PlanCard({
         </Text>
       ) : null}
 
-      {/* A hairline between what the plan is and the button that buys it —
-          the depth cue that stops the CTA reading as more body content. */}
-      <View
-        style={{
-          height: 1,
-          marginTop: 16,
-          backgroundColor: colors.border,
-          opacity: 0.7,
-        }}
-      />
+      {showCta ? (
+        <>
+          {/* A hairline between what the plan is and the button that buys it
+              — the depth cue that stops the CTA reading as more body
+              content. */}
+          <View
+            style={{
+              height: StyleSheet.hairlineWidth,
+              marginTop: 16,
+              backgroundColor: colors.border,
+            }}
+          />
 
-      <View style={{ marginTop: 14 }}>
-        <FKButton
-          fullWidth
-          label={ctaLabel}
-          variant={isCurrent ? 'secondary' : 'primary'}
-          disabled={disabled}
-          onPress={onSelect}
-          leading={
-            loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : undefined
-          }
-        />
-      </View>
+          <View style={{ marginTop: 14 }}>
+            <FKButton
+              fullWidth
+              label={ctaLabel}
+              variant="primary"
+              disabled={disabled}
+              onPress={onSelect}
+              leading={
+                loading ? (
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
+                ) : undefined
+              }
+            />
+          </View>
+        </>
+      ) : null}
     </FKCard>
   );
 }

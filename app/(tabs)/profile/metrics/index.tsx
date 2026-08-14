@@ -23,8 +23,9 @@ import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { BodyMetricSummaryResponse } from '@fitkit/shared';
 import {
+  FKButton,
   FKCard,
-  FKGlassPanel,
+  FKEmptyState,
   FKSubScreen,
   useFKColors,
 } from '@/components/fk';
@@ -35,7 +36,6 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
 
-const BRAND_TEAL = '#0E8C8C';
 const TREND_UP = '#5A6A3F';
 const TREND_DOWN = '#B84A40';
 
@@ -98,13 +98,21 @@ export default function MetricsScreen() {
             <Skeleton style={{ height: 96, borderRadius: 18 }} />
           </>
         ) : items.length === 0 ? (
-          <EmptyState
+          <FKEmptyState
+            layout="inline"
+            Icon={Scale}
             title={labels.noData}
-            subtitle={labels.logFirst}
-            ctaLabel={labels.addMetric}
-            onPressCta={handleAdd}
-            colors={colors}
-            isRTL={isRTL}
+            hint={labels.logFirst}
+            action={
+              <FKButton
+                size="sm"
+                label={labels.addMetric}
+                onPress={handleAdd}
+                leading={
+                  <Plus size={14} color={colors.onPrimary} strokeWidth={2.6} />
+                }
+              />
+            }
           />
         ) : (
           items.map((m, i) => (
@@ -207,14 +215,14 @@ function MetricSummaryCard({
                 width: 44,
                 height: 44,
                 borderRadius: 14,
-                backgroundColor: 'rgba(14,140,140,0.10)',
+                backgroundColor: colors.primarySoft,
                 borderWidth: 1,
-                borderColor: 'rgba(14,140,140,0.30)',
+                borderColor: colors.primaryEdge,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Icon size={20} color={BRAND_TEAL} strokeWidth={2.2} />
+              <Icon size={20} color={colors.primary} strokeWidth={2.2} />
             </View>
 
             {/* Identity + meta */}
@@ -320,97 +328,4 @@ function MetricSummaryCard({
   );
 }
 
-function EmptyState({
-  title,
-  subtitle,
-  ctaLabel,
-  onPressCta,
-  colors,
-  isRTL,
-}: {
-  title: string;
-  subtitle: string;
-  ctaLabel: string;
-  onPressCta: () => void;
-  colors: ReturnType<typeof useFKColors>;
-  isRTL: boolean;
-}) {
-  return (
-    <FKGlassPanel
-      radius={20}
-      style={{
-        padding: 28,
-        alignItems: 'center',
-        gap: 14,
-        marginTop: 24,
-      }}
-    >
-      <View
-        style={{
-          width: 60,
-          height: 60,
-          borderRadius: 18,
-          backgroundColor: 'rgba(14,140,140,0.10)',
-          borderWidth: 1,
-          borderColor: 'rgba(14,140,140,0.30)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Scale size={26} color={BRAND_TEAL} strokeWidth={2.2} />
-      </View>
-      <Text
-        className="font-display"
-        style={{
-          fontSize: 16,
-          fontWeight: '800',
-          color: colors.foreground,
-          textAlign: 'center',
-        }}
-      >
-        {title}
-      </Text>
-      <Text
-        style={{
-          fontSize: 13,
-          color: colors.mutedFg,
-          textAlign: 'center',
-          lineHeight: 18,
-          maxWidth: 280,
-        }}
-      >
-        {subtitle}
-      </Text>
-      <Pressable onPress={onPressCta} hitSlop={6}>
-        {({ pressed }) => (
-          <View
-            style={{
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingHorizontal: 18,
-              height: 38,
-              borderRadius: 12,
-              backgroundColor: BRAND_TEAL,
-              opacity: pressed ? 0.82 : 1,
-              marginTop: 4,
-            }}
-          >
-            <Plus size={14} color="#fff" strokeWidth={2.6} />
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '800',
-                color: '#fff',
-                letterSpacing: -0.1,
-              }}
-            >
-              {ctaLabel}
-            </Text>
-          </View>
-        )}
-      </Pressable>
-    </FKGlassPanel>
-  );
-}
 

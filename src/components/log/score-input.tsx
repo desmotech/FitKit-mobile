@@ -264,8 +264,6 @@ function PairedSlot({ field }: { field: PairedField }) {
         style={{
           fontSize: 10,
           fontWeight: '600',
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
           color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
           marginBottom: 2,
         }}
@@ -445,7 +443,8 @@ function InlineUnitSegments({
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
-  const BRAND_TEAL = '#0E8C8C';
+  const colors = useFKColors();
+  const BRAND_TEAL = colors.primary;
   const chips = options.map((opt) => {
     const active = value === opt;
     return (

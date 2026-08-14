@@ -98,14 +98,14 @@ export function SettingsRow({
   const haptics = useHaptics();
   const isDestructive = tone === 'destructive';
   const iconBg = isDestructive
-    ? 'rgba(244,63,94,0.12)'
+    ? `${colors.destructive}1F`
     : iconTint
       ? iconTint + '22'
       : isDark
         ? 'rgba(255,255,255,0.08)'
         : 'rgba(15,23,42,0.06)';
-  const iconColor = isDestructive ? '#F43F5E' : (iconTint ?? colors.mutedFg);
-  const labelColor = isDestructive ? '#F43F5E' : colors.foreground;
+  const iconColor = isDestructive ? colors.destructive : (iconTint ?? colors.mutedFg);
+  const labelColor = isDestructive ? colors.destructive : colors.foreground;
   const Chevron = isRTL ? ChevronLeft : ChevronRight;
 
   return (
@@ -113,6 +113,8 @@ export function SettingsRow({
       activeOpacity={0.7}
       onPressIn={haptics.tap}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={sublabel ? `${label}, ${sublabel}` : label}
       style={{
         flexDirection: isRTL ? 'row-reverse' : 'row',
         alignItems: 'center',
@@ -168,7 +170,7 @@ export function SettingsRow({
             height: 22,
             borderRadius: 11,
             paddingHorizontal: 7,
-            backgroundColor: '#B84A40',
+            backgroundColor: colors.destructive,
             alignItems: 'center',
             justifyContent: 'center',
             marginHorizontal: 6,
@@ -217,8 +219,9 @@ export function SegmentedRow<T extends string>({
   onChange: (v: T) => void;
   options: { value: T; render: (active: boolean) => ReactNode }[];
 }) {
+  const haptics = useHaptics();
   const trackBg = isDark ? 'rgba(0,0,0,0.22)' : 'rgba(40,36,30,0.06)';
-  const thumbBg = isDark ? '#2AB8B8' : '#FFFFFF';
+  const thumbBg = isDark ? colors.primary : '#FFFFFF';
   const thumbShadow = isDark ? '#000' : 'rgba(40,40,30,0.45)';
   // Big enough segments to read: 64px per option, capped at sensible widths.
   const segmentWidth = 64;
@@ -233,8 +236,9 @@ export function SegmentedRow<T extends string>({
       }}
     >
       <View
+        // The visual order inside the track follows the reading direction.
         style={{
-          flexDirection: 'row',
+          flexDirection: isRTL ? 'row-reverse' : 'row',
           backgroundColor: trackBg,
           borderRadius: 10,
           padding: 3,
@@ -247,10 +251,16 @@ export function SegmentedRow<T extends string>({
             <TouchableOpacity
               key={opt.value}
               activeOpacity={0.7}
-              onPress={() => onChange(opt.value)}
+              onPress={() => {
+                if (!active) haptics.tap();
+                onChange(opt.value);
+              }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
               style={[
                 {
                   width: segmentWidth - 1,
+                  minHeight: 34,
                   paddingVertical: 7,
                   borderRadius: 8,
                   alignItems: 'center',

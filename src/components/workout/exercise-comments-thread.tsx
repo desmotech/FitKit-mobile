@@ -35,7 +35,6 @@ import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import type { ExerciseCommentDto } from '@fitkit/shared';
 
-const BRAND_TEAL = '#0E8C8C';
 
 interface ExerciseCommentsThreadProps {
   orgId: string | undefined | null;
@@ -299,11 +298,15 @@ export function ExerciseCommentsThread({
               borderRadius: 18,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: canSend ? BRAND_TEAL : colors.mutedFg + '55',
+              backgroundColor: canSend ? colors.primary : colors.mutedFg + '55',
             }}
             accessibilityLabel={get(t, 'exerciseComments.send') ?? 'Send'}
           >
-            <ArrowUp size={18} color="#fff" strokeWidth={2.5} />
+            <ArrowUp
+              size={18}
+              color={canSend ? colors.onPrimary : '#fff'}
+              strokeWidth={2.5}
+            />
           </Pressable>
         </View>
       </View>
@@ -342,7 +345,7 @@ function CommentBubble({
           paddingVertical: 8,
           borderRadius: 14,
           backgroundColor: isMine
-            ? BRAND_TEAL
+            ? colors.primary
             : isDark
               ? 'rgba(255,255,255,0.08)'
               : 'rgba(15,23,42,0.05)',
@@ -365,7 +368,7 @@ function CommentBubble({
         {comment.body ? (
           <Text
             style={{
-              color: isMine ? '#fff' : colors.foreground,
+              color: isMine ? colors.onPrimary : colors.foreground,
               fontSize: 15,
               lineHeight: 20,
               textAlign: isRTL ? 'right' : 'left',

@@ -245,6 +245,7 @@ export default function LogPRScreen() {
       >
         <FKScreenHeader
           title={L.logPrTitle}
+          backLabel={null}
           onBack={() => router.back()}
           trailing={
             <HeaderSaveButton

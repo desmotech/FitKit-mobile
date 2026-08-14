@@ -18,8 +18,6 @@ import { FKGlassPanel, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
 
-const ERROR_RED = '#B84A40';
-const BRAND_TEAL = '#0E8C8C';
 
 export function QueryErrorState({
   title,
@@ -29,7 +27,10 @@ export function QueryErrorState({
   isRTL: isRTLProp,
 }: {
   title: string;
-  subtitle: string;
+  /** Optional: some surfaces have a title and a retry but no dictionary
+   *  string that honestly explains the failure. Better an omitted line than
+   *  an empty one holding a gap open. */
+  subtitle?: string;
   retryLabel: string;
   onRetry: () => void;
   /** Overrides the locale-derived direction (rarely needed). */
@@ -57,7 +58,7 @@ export function QueryErrorState({
           justifyContent: 'center',
         }}
       >
-        <AlertCircle size={26} color={ERROR_RED} strokeWidth={2.2} />
+        <AlertCircle size={26} color={colors.destructive} strokeWidth={2.2} />
       </View>
       <Text
         style={{
@@ -70,18 +71,20 @@ export function QueryErrorState({
       >
         {title}
       </Text>
-      <Text
-        style={{
-          fontSize: 13,
-          color: colors.mutedFg,
-          lineHeight: 18,
-          maxWidth: 280,
-          textAlign: 'center',
-          writingDirection: isRTL ? 'rtl' : 'ltr',
-        }}
-      >
-        {subtitle}
-      </Text>
+      {subtitle ? (
+        <Text
+          style={{
+            fontSize: 13,
+            color: colors.mutedFg,
+            lineHeight: 18,
+            maxWidth: 280,
+            textAlign: 'center',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
+          }}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
       <Pressable
         onPress={onRetry}
         accessibilityRole="button"
@@ -96,13 +99,15 @@ export function QueryErrorState({
             paddingHorizontal: 18,
             borderRadius: 12,
             borderCurve: 'continuous',
-            backgroundColor: BRAND_TEAL,
+            backgroundColor: colors.primary,
           },
           pressed && { opacity: 0.85 },
         ]}
       >
-        <RotateCw size={15} color="#fff" strokeWidth={2.4} />
-        <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>
+        <RotateCw size={15} color={colors.onPrimary} strokeWidth={2.4} />
+        <Text
+          style={{ fontSize: 14, fontWeight: '700', color: colors.onPrimary }}
+        >
           {retryLabel}
         </Text>
       </Pressable>

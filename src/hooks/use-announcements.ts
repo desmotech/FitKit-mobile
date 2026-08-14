@@ -100,6 +100,11 @@ export function useMarkAnnouncementRead(orgId: string | undefined | null) {
       });
       // Server is the source of truth for the count; refetch immediately.
       queryClient.invalidateQueries({ queryKey: countKey });
+      // The unified inbox badge (member header + app icon) counts unread
+      // announcements too.
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.badge.total(orgId ?? 'noop'),
+      });
     },
   });
 }

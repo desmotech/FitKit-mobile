@@ -1,13 +1,15 @@
 /**
- * Messages inbox — the conversation list. Pins the member-visible states:
- * staged conversations render (name, preview, unread badge), the empty state
- * shows the "no conversations" copy, a failed fetch shows the retry card
- * (never a misleading empty state), and member-role conversations are
- * filtered out (the inbox is staff-only, mirroring the web member surface).
+ * Unified inbox — pins the member-visible states of the three tabs:
+ * staged conversations render on the Direct tab (name, preview, unread
+ * badge), the empty state shows the "no conversations" copy, a failed fetch
+ * shows the retry card (never a misleading empty state), member-role
+ * conversations are filtered out (the inbox is staff-only, mirroring the
+ * web member surface), the Workouts tab lists recent workout threads that
+ * deep-link into the in-workout chat, and `?tab=` deep-links select a tab.
  *
- * Network is the only thing staged (MSW): the real useConversations hook,
- * cache, and screen logic run as in production. No RealtimeProvider is
- * mounted, so presence falls back to the no-op context.
+ * Network is the only thing staged (MSW): the real hooks, cache, and
+ * screen logic run as in production. No RealtimeProvider is mounted, so
+ * presence falls back to the no-op context.
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { dictionaries } from '@fitkit/shared';
@@ -15,8 +17,11 @@ import MessagesListScreen from '../messages/index';
 import { conversation, stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
+import { inboxStringsFor } from '../../src/i18n/inbox-strings';
+import { getWeekStartDay, weekStartFor } from '../../src/lib/week';
 
 const he = dictionaries.he as unknown as Record<string, Record<string, string>>;
+const heInbox = inboxStringsFor('he');
 
 // Registered without the ?limit=50 the hook appends — MSW matches on path
 // and ignores the request's search params.
@@ -30,21 +35,34 @@ function stageConversations(items: ReturnType<typeof conversation>[]) {
   );
 }
 
+/** The chrome reads the announcements unread count for the tab badge. */
+function stageInboxChrome() {
+  server.use(
+    http.get(api(`/organizations/${TEST_ORG}/announcements/unread-count`), () =>
+      HttpResponse.json({ data: { count: 0 } }),
+    ),
+  );
+}
+
 const mockRouterPush = jest.fn();
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     back: jest.fn(),
     push: mockRouterPush,
     replace: jest.fn(),
   }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 beforeEach(() => {
   mockRouterPush.mockClear();
+  mockSearchParams = {};
   stageSignedInMember();
+  stageInboxChrome();
 });
 
-describe('Messages inbox', () => {
+describe('Inbox — Direct tab', () => {
   it('renders staged conversations: name, last-message preview, unread badge', async () => {
     stageConversations([
       conversation({
@@ -65,7 +83,8 @@ describe('Messages inbox', () => {
 
     expect(await screen.findByText('דנה לוי')).toBeOnTheScreen();
     expect(screen.getByText('נתראה מחר בבוקר')).toBeOnTheScreen();
-    expect(screen.getByText('3')).toBeOnTheScreen();
+    // '3' renders twice: the row's unread pill AND the Direct tab's badge.
+    expect(screen.getAllByText('3').length).toBeGreaterThan(0);
     expect(screen.getByText('יוסי כהן')).toBeOnTheScreen();
     expect(screen.getByText('המנוי חודש')).toBeOnTheScreen();
   });
@@ -146,5 +165,82 @@ describe('Messages inbox', () => {
 
     expect(await screen.findByText('דנה לוי')).toBeOnTheScreen();
     expect(screen.queryByText('רוני חבר')).not.toBeOnTheScreen();
+  });
+});
+
+describe('Inbox — Workouts tab', () => {
+  const thisWeek = weekStartFor(new Date(), getWeekStartDay('he'));
+
+  function stageWeeks(assignments: Record<string, unknown>[]) {
+    server.use(
+      http.get(
+        api(`/organizations/${TEST_ORG}/assignments/my-week`),
+        ({ request }) => {
+          const weekStart = new URL(request.url).searchParams.get('weekStart');
+          return HttpResponse.json({
+            data: weekStart === thisWeek ? assignments : [],
+          });
+        },
+      ),
+    );
+  }
+
+  it('lists recent workout threads and deep-links into the workout chat', async () => {
+    stageConversations([]);
+    stageWeeks([
+      {
+        id: 'as_fran',
+        date: thisWeek,
+        published: true,
+        kind: 'workout',
+        workout: { id: 'w1', displayName: 'Fran', scoring: 'time' },
+        unreadCount: 2,
+      },
+    ]);
+
+    await renderWithProviders(<MessagesListScreen />);
+    await userEvent.press(
+      await screen.findByRole('tab', { name: heInbox.tabWorkouts }),
+    );
+
+    await userEvent.press(await screen.findByText('Fran'));
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      pathname: '/(tabs)/workouts/[id]/chat',
+      params: { id: 'as_fran', name: 'Fran' },
+    });
+  });
+
+  it('shows the workouts empty state when no recent assignments exist', async () => {
+    stageConversations([]);
+    stageWeeks([]);
+
+    await renderWithProviders(<MessagesListScreen />);
+    await userEvent.press(
+      await screen.findByRole('tab', { name: heInbox.tabWorkouts }),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText(heInbox.noWorkoutThreads)).toBeOnTheScreen(),
+    );
+  });
+});
+
+describe('Inbox — deep links', () => {
+  it('?tab=announcements opens the Announcements tab directly', async () => {
+    mockSearchParams = { tab: 'announcements' };
+    stageConversations([]);
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/announcements`), () =>
+        HttpResponse.json({
+          data: { announcements: [], nextCursor: null },
+        }),
+      ),
+    );
+
+    await renderWithProviders(<MessagesListScreen />);
+
+    await waitFor(() =>
+      expect(screen.getByText(he.announcements.empty)).toBeOnTheScreen(),
+    );
   });
 });

@@ -26,6 +26,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { completeProfileSchema, type Gender } from '@fitkit/shared';
 import {
+  FKAmbientBackdrop,
   FKBrandMark,
   FKButton,
   FKDateField,
@@ -204,13 +205,15 @@ export default function CompleteProfileScreen() {
   ];
 
   return (
+    <View style={{ flex: 1 }}>
+    <FKAmbientBackdrop />
     <SafeAreaView
       // bottom-only — top inset is applied manually on the ScrollView
       // so the layout doesn't depend on SafeAreaView's edge handling
       // (which proved inconsistent under the stack/keyboard wrappers
       // we have here).
       edges={['bottom']}
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -396,6 +399,7 @@ export default function CompleteProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </View>
   );
 }
 
@@ -438,8 +442,6 @@ function Field({
         style={{
           fontSize: 11,
           fontWeight: '700',
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
           textAlign: isRTL ? 'right' : 'left',
         }}
       >

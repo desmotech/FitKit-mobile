@@ -183,8 +183,6 @@ export function GoalCard({
                 fontSize: 9,
                 fontWeight: '800',
                 color: tintFg,
-                letterSpacing: 0.4,
-                textTransform: 'uppercase',
               }}
             >
               {labels.achieved}

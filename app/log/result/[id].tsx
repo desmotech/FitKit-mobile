@@ -307,8 +307,6 @@ function SetGroups({
                     fontFamily: MONO,
                     fontSize: 12,
                     color: t.faint,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.4,
                     textAlign: isRTL ? 'right' : 'left',
                   }}
                 >

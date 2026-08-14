@@ -25,7 +25,7 @@ export function FKBrandMark({
           backgroundColor: '#0E8C8C',
           alignItems: 'center',
           justifyContent: 'center',
-          shadowColor: '#2AB8B8',
+          shadowColor: '#27C8BA',
           shadowOpacity: 0.45,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: 0 },

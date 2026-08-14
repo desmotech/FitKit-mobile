@@ -45,7 +45,8 @@ export function RestDayState({
 }) {
   const haptics = useHaptics();
   const colors = useFKColors();
-  const onPrimary = colors.isDark ? '#04201E' : '#FFFFFF';
+  const { lang } = useI18n();
+  const onPrimary = colors.onPrimary;
   const dayName = weekdayFmt.format(new Date(selectedDate));
   const nextDayName = nextDate
     ? weekdayFmt.format(new Date(nextDate))
@@ -103,6 +104,7 @@ export function RestDayState({
           {/* Primary escape hatch — jump to the next workout (or next week). */}
           <TouchableOpacity
             activeOpacity={0.85}
+            accessibilityRole="button"
             onPress={() => {
               haptics.tap();
               if (nextDate) onJumpTo(nextDate);
@@ -113,8 +115,8 @@ export function RestDayState({
               alignItems: 'center',
               justifyContent: 'center',
               gap: 7,
-              height: 48,
-              borderRadius: 14,
+              minHeight: 52,
+              borderRadius: 16,
               borderCurve: 'continuous',
               backgroundColor: colors.primary,
             }}
@@ -152,6 +154,7 @@ export function RestDayState({
               {!isOnToday ? (
                 <TouchableOpacity
                   hitSlop={8}
+                  accessibilityRole="button"
                   onPress={() => {
                     haptics.tap();
                     onJumpToToday();
@@ -182,6 +185,7 @@ export function RestDayState({
               {nextDate ? (
                 <TouchableOpacity
                   hitSlop={8}
+                  accessibilityRole="button"
                   onPress={() => {
                     haptics.tap();
                     onNextWeek();
@@ -208,14 +212,16 @@ export function RestDayState({
         <View style={{ gap: 8 }}>
           <Text
             className="text-muted-foreground"
-            style={{
-              fontSize: 11,
-              fontWeight: '700',
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
-              paddingHorizontal: 4,
-              textAlign: isRTL ? 'right' : 'left',
-            }}
+            style={[
+              {
+                fontSize: 11,
+                fontWeight: '700',
+                paddingHorizontal: 4,
+                textAlign: isRTL ? 'right' : 'left',
+              },
+              // Hebrew must never be uppercased/letter-spaced.
+              eyebrow(lang),
+            ]}
           >
             {labels.comingUp}
           </Text>

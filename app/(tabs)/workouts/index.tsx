@@ -192,8 +192,6 @@ export default function WhiteboardScreen() {
               textAlign: 'center',
               fontFamily: font.monoMedium,
               fontSize: 14,
-              letterSpacing: 2,
-              textTransform: 'uppercase',
               color: colors.foreground,
               fontVariant: ['tabular-nums'],
             }}

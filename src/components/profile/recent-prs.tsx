@@ -80,8 +80,6 @@ export function RecentPRs({
                       fontSize: 8,
                       fontWeight: '800',
                       color: '#fff',
-                      letterSpacing: 0.4,
-                      textTransform: 'uppercase',
                     }}
                   >
                     {newLabel}
