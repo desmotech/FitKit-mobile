@@ -54,7 +54,7 @@ import {
 import { formatPrescription, formatSectionHeader } from '@/lib/format-prescription';
 import { estimateSectionMinutes } from '@/lib/workout-estimate';
 import { programSheetInk, type ProgramSheetInk } from '@/lib/program-sheet-ink';
-import { bodyFamily, displayFamily } from '@/lib/type';
+import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
 import { spring } from '@/lib/motion';
 import { getShapeCaps, type SectionShape } from '@fitkit/shared';
 import { CoachNote } from './coach-note';
@@ -64,6 +64,36 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // Marker column geometry — the spine runs down its centre.
 const MARKER_COL = 40;
 const SPINE_X = MARKER_COL / 2 - 1; // centre the 2px line on the marker
+
+const HEBREW_RE = /[֐-׿]/;
+
+/**
+ * Content-aware micro-label styling. UI labels key off the locale via
+ * `eyebrow(lang)`, but section kickers and coach-authored titles can be
+ * EITHER script regardless of locale (an English "EVERY 4 MINUTES DO:" in a
+ * Hebrew UI, or a Hebrew title in an English one) — so the uppercase+tracked
+ * treatment keys off the text itself: Hebrew must never be letter-spaced.
+ */
+function microLabelFor(text: string): {
+  fontFamily: string;
+  letterSpacing: number;
+  textTransform: 'uppercase' | 'none';
+  writingDirection: 'ltr' | 'rtl';
+} {
+  return HEBREW_RE.test(text)
+    ? {
+        fontFamily: font.bodySemibold,
+        letterSpacing: 0,
+        textTransform: 'none',
+        writingDirection: 'rtl',
+      }
+    : {
+        fontFamily: font.bodyMedium,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+        writingDirection: 'ltr',
+      };
+}
 
 /**
  * Localized labels for the rendered workout body — the prescription stat
@@ -328,6 +358,9 @@ function SectionRow({
             letterSpacing: 0.4,
             color: ink.muted,
             opacity: done ? 0.5 : 1,
+            fontVariant: ['tabular-nums'],
+            // "~20'" is a numeral string — keep it LTR under a Hebrew layout.
+            writingDirection: 'ltr',
           }}
         >
           {`~${minutes}'`}
@@ -347,13 +380,11 @@ function SectionRow({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: 'Assistant-Medium',
               fontSize: 11,
-              letterSpacing: 1.4,
-              textTransform: 'uppercase',
               color: ink.muted,
               minHeight: 14,
               textAlign: isRTL ? 'right' : 'left',
+              ...microLabelFor(kicker),
             }}
           >
             {`${kicker} · ${count}`}
@@ -370,6 +401,10 @@ function SectionRow({
             color: colors.foreground,
             marginTop: kicker ? 2 : 0,
             textAlign: isRTL ? 'right' : 'left',
+            // Scheme headings ("EMOM 5 × 4m") are LTR jargon — pin their
+            // direction so bidi can't reorder them against a Hebrew layout;
+            // Hebrew coach titles keep their natural RTL flow.
+            writingDirection: HEBREW_RE.test(heading) ? 'rtl' : 'ltr',
           }}
         >
           {heading}
@@ -379,13 +414,12 @@ function SectionRow({
           <Text
             numberOfLines={1}
             style={{
-              fontFamily: 'Assistant-Medium',
               fontSize: 11,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
               color: ink.muted,
               marginTop: 4,
               textAlign: isRTL ? 'right' : 'left',
+              // Coach-authored — style by the text's own script, not locale.
+              ...microLabelFor(secondary),
             }}
           >
             {secondary}
@@ -509,12 +543,11 @@ function AfterEachRoundDivider({
       <Text
         numberOfLines={1}
         style={{
-          fontFamily: 'Assistant-Medium',
           fontSize: 10,
-          letterSpacing: 1.2,
-          textTransform: 'uppercase',
           color: ink.faint,
           textAlign: isRTL ? 'right' : 'left',
+          // Dictionary label — Hebrew must not be uppercased/letter-spaced.
+          ...microLabelFor(label),
         }}
       >
         {label}
@@ -667,13 +700,19 @@ function ExRow({
                 numberOfLines={1}
                 style={{
                   fontFamily: 'Assistant-SemiBold',
-                  fontSize: 19,
-                  letterSpacing: -0.3,
+                  // 16pt, not 19 — the exercise NAME is what the athlete
+                  // scans for; the prescription is its annotation, not the
+                  // headline.
+                  fontSize: 16,
+                  letterSpacing: -0.2,
                   color: colors.foreground,
                   fontVariant: ['tabular-nums'],
                   flexShrink: 0,
                   maxWidth: '52%',
                   textAlign: isRTL ? 'left' : 'right',
+                  // "12 · @ 100kg" is a numeral/latin string — pin it LTR so
+                  // bidi can't shuffle the "@"/"·" separators under RTL.
+                  writingDirection: 'ltr',
                 }}
               >
                 {summary}
@@ -713,7 +752,11 @@ function ExRow({
                     paddingVertical: 12,
                     paddingHorizontal: 6,
                     alignItems: 'center',
-                    borderLeftWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
+                    // Divider on the side facing the PREVIOUS cell in reading
+                    // order. A fixed borderLeft under row-reverse painted an
+                    // outer edge on the last cell and dropped one divider.
+                    [isRTL ? 'borderRightWidth' : 'borderLeftWidth']:
+                      i === 0 ? 0 : StyleSheet.hairlineWidth,
                     borderColor: ink.line,
                   }}
                 >
@@ -727,18 +770,18 @@ function ExRow({
                       letterSpacing: -0.5,
                       color: colors.foreground,
                       fontVariant: ['tabular-nums'],
+                      writingDirection: 'ltr',
                     }}
                   >
                     {s.value}
                   </Text>
                   <Text
                     style={{
-                      fontFamily: 'Assistant-Medium',
                       fontSize: 9.5,
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
                       color: ink.muted,
                       marginTop: 4,
+                      // Localized stat header — no tracking on Hebrew.
+                      ...eyebrow(lang),
                     }}
                   >
                     {s.label}
@@ -846,11 +889,10 @@ function ExRow({
                   </View>
                   <Text
                     style={{
-                      fontFamily: 'Assistant-Medium',
                       fontSize: 11,
-                      letterSpacing: 1,
-                      textTransform: 'uppercase',
                       color: colors.primaryText,
+                      // Localized label — no tracking on Hebrew.
+                      ...eyebrow(lang),
                     }}
                   >
                     {labels.watchDemo}

@@ -123,10 +123,10 @@ export function WorkoutBlock({
               borderCurve: 'continuous',
               borderWidth: 1,
               borderColor: colors.isDark
-                ? 'rgba(54,214,198,0.42)'
+                ? 'rgba(39,200,186,0.42)'
                 : 'rgba(14,140,140,0.42)',
               backgroundColor: colors.isDark
-                ? 'rgba(54,214,198,0.16)'
+                ? 'rgba(39,200,186,0.16)'
                 : 'rgba(14,140,140,0.12)',
             }}
           >
@@ -154,6 +154,9 @@ export function WorkoutBlock({
           marginTop: 8,
           textAlign: isRTL ? 'right' : 'left',
           fontFamily: displayFamily(lang, 'semibold'),
+          // Coach-named — "E4MOM 20" style LTR names must not be bidi-
+          // reordered under a Hebrew layout; Hebrew names flow RTL.
+          writingDirection: /[֐-׿]/.test(workout.displayName) ? 'rtl' : 'ltr',
         }}
       >
         {workout.displayName}
