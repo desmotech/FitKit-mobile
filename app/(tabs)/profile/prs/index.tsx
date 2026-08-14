@@ -29,6 +29,7 @@ export default function PRBoardScreen() {
   const L = useLogStrings();
   const { dir, lang } = useI18n();
   const isRTL = dir === 'rtl';
+  const haptics = useHaptics();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
@@ -42,7 +43,10 @@ export default function PRBoardScreen() {
   return (
     <FKSubScreen
       title={L.prBoard}
-      onAdd={() => router.push('/log/pr')}
+      onAdd={() => {
+        haptics.tap();
+        router.push('/log/pr');
+      }}
       addLabel={L.logPrTitle}
     >
       {prs.isLoading ? (

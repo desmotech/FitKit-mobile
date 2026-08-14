@@ -20,16 +20,15 @@
  */
 import { Plus } from 'lucide-react-native';
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, ScrollView, View, type ViewStyle } from 'react-native';
+import { ScrollView, View, type ViewStyle } from 'react-native';
 import {
   KeyboardAwareScrollView,
   KeyboardStickyView,
 } from 'react-native-keyboard-controller';
-import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { FKActionBar } from './action-bar';
 import { FKAmbientBackdrop } from './ambient-backdrop';
-import { useFKColors } from './colors';
+import { FKIconButton } from './icon-button';
 import { FKScreenHeader } from './screen-header';
 
 export function FKSubScreen({
@@ -73,10 +72,7 @@ export function FKSubScreen({
   contentStyle?: ViewStyle;
   children: ReactNode;
 }) {
-  const colors = useFKColors();
-  const haptics = useHaptics();
   const dockPad = useTabBarPadding();
-  const onPrimary = colors.isDark ? '#04201E' : '#FFFFFF';
   // With an ActionBar the bar clears the dock; without one the scroll must.
   const scrollPad = actions ? 16 : dockPad;
   // The sticky ActionBar rides above the keyboard and overlaps the scroll, so
@@ -84,36 +80,19 @@ export function FKSubScreen({
   // with the keyboard (it drops its dock reservation when the keys are up).
   const [actionsHeight, setActionsHeight] = useState(0);
 
+  // Same round primary chrome as the member header / inbox buttons — the
+  // old bespoke 38pt teal square was the one differently-shaped header
+  // button in the app.
   const trailing =
     headerTrailing ??
     (onAdd ? (
-      <Pressable
-        onPressIn={() => haptics.tap()}
+      // Haptics stay with the caller — every `onAdd` handler already taps.
+      <FKIconButton
+        Icon={Plus}
+        variant="primary"
+        label={addLabel ?? '+'}
         onPress={onAdd}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={addLabel}
-      >
-        {({ pressed }) => (
-          // Visuals live on this inner View: a Pressable `style` *function*
-          // returning an array drops the base style on first render in this
-          // RN setup, which left the teal fill missing (white "+" only).
-          <View
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 12,
-              borderCurve: 'continuous',
-              backgroundColor: colors.primary,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: pressed ? 0.85 : 1,
-            }}
-          >
-            <Plus size={20} color={onPrimary} strokeWidth={2.6} />
-          </View>
-        )}
-      </Pressable>
+      />
     ) : undefined);
 
   // Forms scroll the focused input clear of the keyboard; everything else is a
