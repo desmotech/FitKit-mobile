@@ -46,11 +46,18 @@ export type MyBookingStatus = 'confirmed' | 'waitlisted' | 'attended';
 
 // ── Booking eligibility (mirrors BookingEligibility in scheduling.schema.ts) ──
 
+// Must stay in step with `bookingBlockReasonValues` in
+// libs/shared/src/lib/schemas/scheduling.schema.ts. A reason missing here
+// falls through `blockReasonText`'s switch and the member gets an alert with
+// an empty body — `monthly_limit` did exactly that until this was widened.
 export type BookingBlockReason =
   | 'no_credits'
   | 'overlap'
   | 'daily_limit'
-  | 'weekly_limit';
+  | 'weekly_limit'
+  | 'monthly_limit'
+  | 'credits_expired'
+  | 'plan_ends_before_session';
 
 export interface BookingPlanEntry {
   subscriptionId: string;
@@ -59,12 +66,19 @@ export interface BookingPlanEntry {
   remainingCredits: number | null;
   bookingsToday: number;
   bookingsThisWeek: number;
+  bookingsThisMonth: number;
   maxPerDay: number | null;
   maxPerWeek: number | null;
+  maxPerMonth: number | null;
   allowOverlapping: boolean;
   hasOverlap: boolean;
   blocked: boolean;
   blockReason: BookingBlockReason | null;
+  /** When this plan stops covering the member (punch-card expiry, or the
+   *  effective end date under notice). Optional: responses from an API build
+   *  that predates the field simply omit it, and the copy falls back to a
+   *  date-less phrasing. */
+  planEndsAt?: string | null;
 }
 
 export interface BookingEligibility {

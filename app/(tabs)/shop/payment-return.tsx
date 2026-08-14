@@ -75,11 +75,32 @@ export default function PaymentReturnScreen() {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    /**
+     * Everything a completed purchase changes.
+     *
+     * The session queries are NOT optional here: `bookingEligibility` — the
+     * payload `decideBookingPlan` reads to decide whether Book is enabled and
+     * which plan pays — rides on the SESSION response, not on
+     * `subscriptions/my`. Left uninvalidated, a member who tops up a punch
+     * card or buys a second drop-in keeps getting the "no credits remaining"
+     * alert (we block locally, without asking the server) while Shop and
+     * Profile happily show the new balance. `staleTime` alone doesn't save
+     * us: switching tabs isn't a focus event, so a checkout that completes
+     * inside the freshness window leaves the schedule stale indefinitely.
+     */
     const invalidate = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.plans.all(orgId) });
+      queryClient.invalidateQueries({
+        // Covers every week key, the per-session detail key and today's
+        // workouts — all of them carry eligibility or credit-derived state.
+        predicate: (query) =>
+          query.queryKey[0] === '/organizations' &&
+          query.queryKey[1] === orgId &&
+          query.queryKey[2] === 'sessions',
+      });
     };
 
     const poll = async () => {

@@ -88,6 +88,15 @@ export interface ScheduleStrings {
   dailyLimit: string;
   /** "{max}" = bookings allowed per week. */
   weeklyLimit: string;
+  /** "{max}" = bookings allowed per month. */
+  monthlyLimit: string;
+  /** "{date}" = the day the punch card's validity window closed. */
+  creditsExpired: string;
+  /** Fallback for an API build that doesn't send the date yet. */
+  creditsExpiredNoDate: string;
+  /** "{date}" = the day the plan stops covering the member. */
+  planEndsBeforeSession: string;
+  planEndsBeforeSessionNoDate: string;
 }
 
 const HE: ScheduleStrings = {
@@ -148,6 +157,11 @@ const HE: ScheduleStrings = {
   overlap: 'חופף להרשמה אחרת',
   dailyLimit: 'מגבלה יומית ({max} ביום)',
   weeklyLimit: 'מגבלה שבועית ({max} בשבוע)',
+  monthlyLimit: 'מגבלה חודשית ({max} בחודש)',
+  creditsExpired: 'תוקף הכניסות פג בתאריך {date}',
+  creditsExpiredNoDate: 'תוקף הכניסות פג',
+  planEndsBeforeSession: 'המנוי מסתיים בתאריך {date}, לפני השיעור הזה',
+  planEndsBeforeSessionNoDate: 'המנוי מסתיים לפני השיעור הזה',
 };
 
 const EN: ScheduleStrings = {
@@ -211,6 +225,11 @@ const EN: ScheduleStrings = {
   overlap: 'Overlaps with another booking',
   dailyLimit: 'Daily limit ({max}/day)',
   weeklyLimit: 'Weekly limit ({max}/week)',
+  monthlyLimit: 'Monthly limit ({max}/month)',
+  creditsExpired: 'These credits expired on {date}',
+  creditsExpiredNoDate: 'These credits have expired',
+  planEndsBeforeSession: 'Your plan ends on {date}, before this class',
+  planEndsBeforeSessionNoDate: 'Your plan ends before this class',
 };
 
 const RU: ScheduleStrings = {
@@ -275,6 +294,11 @@ const RU: ScheduleStrings = {
   overlap: 'Пересекается с другой записью',
   dailyLimit: 'Дневной лимит ({max}/день)',
   weeklyLimit: 'Недельный лимит ({max}/нед.)',
+  monthlyLimit: 'Месячный лимит ({max}/мес.)',
+  creditsExpired: 'Срок действия занятий истёк {date}',
+  creditsExpiredNoDate: 'Срок действия занятий истёк',
+  planEndsBeforeSession: 'Абонемент заканчивается {date}, до этого занятия',
+  planEndsBeforeSessionNoDate: 'Абонемент заканчивается до этого занятия',
 };
 
 export function scheduleStringsFor(lang: Locale): ScheduleStrings {

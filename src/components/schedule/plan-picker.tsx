@@ -24,7 +24,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useFKColors } from '@/components/fk';
-import type { BookingPlanEntry } from '@/hooks/use-schedule';
+import type {
+  BookingBlockReason,
+  BookingPlanEntry,
+} from '@/hooks/use-schedule';
 
 export interface PlanPickerLabels {
   /** Sheet title, e.g. "Select Plan". */
@@ -198,18 +201,18 @@ export function usePlanPicker(labels: PlanPickerLabels) {
 }
 
 /**
- * Human copy for a blocked booking. `daily_limit`/`weekly_limit` interpolate
- * the plan's own cap; the caller passes the first blocked plan (or null for
- * membership-level blocks where no plan applies).
+ * Human copy for a blocked booking. The limit reasons interpolate the plan's
+ * own cap and the expiry reasons its end date; the caller passes the first
+ * blocked plan (or null for membership-level blocks where no plan applies).
+ *
+ * Every `BookingBlockReason` the server can send needs a case here. The
+ * fallback is deliberately `no_credits`-flavoured because that is the most
+ * common block, but it is a fallback for UNKNOWN reasons only (an app build
+ * older than the API) — a known reason landing there would tell a member
+ * "no credits remaining" when the real answer is something else entirely.
  */
 export function blockReasonText(
-  reason:
-    | 'no_plan'
-    | 'membership_inactive'
-    | 'no_credits'
-    | 'overlap'
-    | 'daily_limit'
-    | 'weekly_limit',
+  reason: 'no_plan' | 'membership_inactive' | BookingBlockReason,
   plan: BookingPlanEntry | null,
   labels: {
     noPlan: string;
@@ -218,8 +221,16 @@ export function blockReasonText(
     overlap: string;
     dailyLimit: string;
     weeklyLimit: string;
+    monthlyLimit: string;
+    creditsExpired: string;
+    creditsExpiredNoDate: string;
+    planEndsBeforeSession: string;
+    planEndsBeforeSessionNoDate: string;
   },
 ): string {
+  const endsOn = plan?.planEndsAt
+    ? new Date(plan.planEndsAt).toLocaleDateString()
+    : null;
   switch (reason) {
     case 'no_plan':
       return labels.noPlan;
@@ -234,6 +245,19 @@ export function blockReasonText(
         '{max}',
         String(plan?.maxPerWeek ?? ''),
       );
+    case 'monthly_limit':
+      return labels.monthlyLimit.replace(
+        '{max}',
+        String(plan?.maxPerMonth ?? ''),
+      );
+    case 'credits_expired':
+      return endsOn
+        ? labels.creditsExpired.replace('{date}', endsOn)
+        : labels.creditsExpiredNoDate;
+    case 'plan_ends_before_session':
+      return endsOn
+        ? labels.planEndsBeforeSession.replace('{date}', endsOn)
+        : labels.planEndsBeforeSessionNoDate;
     default:
       return labels.noCredits;
   }

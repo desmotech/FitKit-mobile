@@ -95,11 +95,29 @@ export default function ShopScreen() {
   // Class packs / drop-ins are consumable: never "current", always
   // re-purchasable. Show how many credits the member still holds (summed
   // across stacked packs of the same plan).
+  //
+  // Credits on an EXPIRED punch card don't count. The row stays `active`
+  // with its balance intact — nothing sweeps it — but the server refuses to
+  // book against it ("These credits have expired"), so counting them here
+  // would advertise a balance the member cannot spend. Mirrors apps/web's
+  // shop, which already excludes them.
   const creditsByPlanId = useMemo(() => {
+    const now = Date.now();
     const m: Record<string, number> = {};
     for (const s of subs) {
+      // Consumables ONLY: a recurring plan's `currentPeriodEnd` is a billing
+      // boundary that moves on renewal, not an expiry — treating it as one
+      // would blank a paying member's credits for the gap between the
+      // boundary and the renewal cron.
+      const isConsumable =
+        s.plan?.type === 'class_pack' || s.plan?.type === 'drop_in';
+      const expired =
+        isConsumable &&
+        s.currentPeriodEnd != null &&
+        new Date(s.currentPeriodEnd).getTime() < now;
       if (
         s.status === 'active' &&
+        !expired &&
         s.remainingCredits != null &&
         s.remainingCredits > 0
       ) {
