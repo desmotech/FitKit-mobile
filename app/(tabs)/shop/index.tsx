@@ -5,11 +5,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { ShoppingBag } from 'lucide-react-native';
+import { Info, ShoppingBag } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import type { PlanResponse } from '@fitkit/shared';
-import { FKAmbientBackdrop, MemberHeader, useFKColors } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
+import {
+  FKAmbientBackdrop,
+  FKEmptyState,
+  MemberHeader,
+  useFKColors,
+} from '@/components/fk';
 import { PlanCard } from '@/components/shop/plan-card';
 import { SwitchPlanPicker } from '@/components/shop/switch-plan-picker';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -378,58 +384,61 @@ export default function ShopScreen() {
         {isLoading ? (
           <View style={{ gap: 12, marginTop: 18 }}>
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} style={{ height: 188, borderRadius: 20 }} />
+              <Skeleton key={i} style={{ height: 212, borderRadius: 20 }} />
             ))}
           </View>
         ) : isError ? (
-          <View style={{ paddingVertical: 48, alignItems: 'center' }}>
-            <Text className="text-muted-foreground" style={{ fontSize: 14 }}>
-              {(dict.common?.error as string) ?? 'Something went wrong.'}
-            </Text>
-          </View>
+          // A dead "Something went wrong." line used to be the whole error
+          // state — no cause, no way out. The shared state at least offers
+          // the retry.
+          <QueryErrorState
+            title={(dict.common?.error as string) ?? 'Something went wrong.'}
+            retryLabel={(dict.common?.tryAgain as string) ?? 'Try again'}
+            onRetry={() => void onRefresh()}
+          />
         ) : isEmpty ? (
-          <View
-            style={{
-              paddingVertical: 56,
-              paddingHorizontal: 16,
-              alignItems: 'center',
-            }}
-          >
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 18,
-                borderCurve: 'continuous',
-                backgroundColor: colors.muted,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 16,
-              }}
-            >
-              <ShoppingBag size={28} color={colors.mutedFg} strokeWidth={1.8} />
-            </View>
-            <Text
-              style={{
-                fontFamily: displayFamily(lang, 'bold'),
-                fontSize: 16,
-                color: colors.foreground,
-                textAlign: 'center',
-                marginBottom: 4,
-              }}
-            >
-              {shopT.emptyTitle ?? 'No Plans Available'}
-            </Text>
-            <Text
-              className="text-muted-foreground"
-              style={{ fontSize: 13.5, textAlign: 'center' }}
-            >
-              {shopT.emptyDesc ??
-                "Your coach hasn't set up any plans yet. Check back soon!"}
-            </Text>
-          </View>
+          <FKEmptyState
+            layout="inline"
+            Icon={ShoppingBag}
+            title={shopT.emptyTitle ?? 'No Plans Available'}
+            hint={
+              shopT.emptyDesc ??
+              "Your coach hasn't set up any plans yet. Check back soon!"
+            }
+          />
         ) : (
           <View style={{ gap: 12, marginTop: 18 }}>
+            {/* Why every paid plan's button is dead. Without this the member
+                just sees a row of greyed-out "Payment Unavailable" CTAs with
+                nothing saying the club hasn't switched payments on. */}
+            {!hasPaymentProvider && plans.some((p) => p.priceInCents > 0) ? (
+              <View
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: 14,
+                  borderRadius: 16,
+                  borderCurve: 'continuous',
+                  backgroundColor: colors.muted,
+                }}
+              >
+                <Info size={17} color={colors.mutedFg} strokeWidth={2.2} />
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: 13,
+                    lineHeight: 18,
+                    color: colors.mutedFg,
+                    textAlign: isRTL ? 'right' : 'left',
+                    writingDirection: isRTL ? 'rtl' : 'ltr',
+                  }}
+                >
+                  {shopT.noPaymentProvider ??
+                    'Online payments are unavailable. Only free plans can be purchased.'}
+                </Text>
+              </View>
+            ) : null}
             {plans.map((plan) => {
               const isConsumable =
                 plan.type === 'class_pack' || plan.type === 'drop_in';

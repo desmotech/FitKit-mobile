@@ -19,7 +19,12 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { FKSubScreen, useFKColors } from '@/components/fk';
+import {
+  FKButton,
+  FKEmptyState,
+  FKSubScreen,
+  useFKColors,
+} from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -31,7 +36,6 @@ const SCREEN_W = Dimensions.get('window').width;
 const COLUMNS = 3;
 const GAP = 4;
 const TILE = (SCREEN_W - 32 - GAP * (COLUMNS - 1)) / COLUMNS;
-const BRAND_TEAL = '#0E8C8C';
 
 function get(dict: any, path: string): string | null {
   return path.split('.').reduce<any>((acc, k) => acc?.[k], dict) ?? null;
@@ -122,12 +126,12 @@ export default function PhotosScreen() {
             ))}
           </View>
         ) : photos.length === 0 ? (
-          <EmptyState
-            label={labels.empty}
-            ctaLabel={labels.add}
-            onPress={handleAdd}
-            isDark={isDark}
-            colors={colors}
+          <FKEmptyState
+            Icon={Camera}
+            title={labels.empty}
+            action={
+              <FKButton size="sm" label={labels.add} onPress={handleAdd} />
+            }
           />
         ) : (
           <View
@@ -218,78 +222,5 @@ export default function PhotosScreen() {
           {labels.privacy}
         </Text>
     </FKSubScreen>
-  );
-}
-
-function EmptyState({
-  label,
-  ctaLabel,
-  onPress,
-  isDark,
-  colors,
-}: {
-  label: string;
-  ctaLabel: string;
-  onPress: () => void;
-  isDark: boolean;
-  colors: ReturnType<typeof useFKColors>;
-}) {
-  return (
-    <View
-      style={{
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 64,
-        paddingHorizontal: 24,
-        gap: 16,
-      }}
-    >
-      <View
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: isDark
-            ? 'rgba(14,140,140,0.16)'
-            : 'rgba(14,140,140,0.10)',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Camera size={28} color={BRAND_TEAL} strokeWidth={2} />
-      </View>
-      <Text
-        style={{
-          fontSize: 16,
-          color: colors.mutedFg,
-          textAlign: 'center',
-          maxWidth: 280,
-          lineHeight: 22,
-        }}
-      >
-        {label}
-      </Text>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={ctaLabel}
-      >
-        {({ pressed }) => (
-          <View
-            style={{
-              paddingHorizontal: 18,
-              paddingVertical: 10,
-              borderRadius: 999,
-              backgroundColor: BRAND_TEAL,
-              opacity: pressed ? 0.7 : 1,
-            }}
-          >
-            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-              {ctaLabel}
-            </Text>
-          </View>
-        )}
-      </Pressable>
-    </View>
   );
 }

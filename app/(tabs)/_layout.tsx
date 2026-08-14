@@ -1,7 +1,9 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'nativewind';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { FK_DARK, FK_LIGHT } from '@/components/fk';
+import { FKScreenLoader } from '@/components/fk/loading-bar';
 import { AuthGate } from '@/providers/auth-gate';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppIconBadge } from '@/hooks/use-badge';
@@ -24,6 +26,22 @@ const Badge = NativeTabs.Trigger.Badge;
 // the tab bar a different teal from every other accent in dark mode.
 const PRIMARY_LIGHT = FK_LIGHT.primary;
 const PRIMARY_DARK = FK_DARK.primary;
+
+/** How long the tab shell will wait on its gating queries before giving up
+ *  and rendering with whatever has resolved. */
+const TAB_GATE_TIMEOUT_MS = 3000;
+
+/** True once `ms` has elapsed, unless `settled` got there first (in which
+ *  case no timer is ever armed). */
+function useDeadline(ms: number, settled: boolean): boolean {
+  const [expired, setExpired] = useState(false);
+  useEffect(() => {
+    if (settled) return;
+    const id = setTimeout(() => setExpired(true), ms);
+    return () => clearTimeout(id);
+  }, [ms, settled]);
+  return expired;
+}
 
 // Tabs are org/membership-aware: the Schedule tab shows only when the org
 // runs a class-scheduled program, the Program tab only for members enrolled
@@ -52,6 +70,23 @@ export default function TabsLayout() {
   ).length;
   const shouldShowShop =
     paymentConfig.data?.data?.isActive === true && shoppablePlanCount > 0;
+  // The trigger set is data-driven, so mounting NativeTabs before those
+  // four queries land makes the bar visibly pop from 2 tabs to 5 on cold
+  // start — and pop *back* if one fails. Hold the same loader AuthGate
+  // shows until every gate has settled (`isFetched` covers errors too, so a
+  // failed request opens the gate rather than spinning on it). The persisted
+  // query cache makes this instant on every launch after the first, and
+  // members with no org have nothing to wait for.
+  //
+  // Capped, though: a request that hangs rather than fails would otherwise
+  // strand the member on a spinner with no way forward. Past the deadline we
+  // show whatever tabs we can prove — the pre-existing behaviour — instead of
+  // showing nothing.
+  const gatesSettled =
+    !orgId ||
+    [enrollments, orgPrograms, plans, paymentConfig].every((q) => q.isFetched);
+  const gateExpired = useDeadline(TAB_GATE_TIMEOUT_MS, gatesSettled);
+  const tabsReady = gatesSettled || gateExpired;
   const incompleteForms = useIncompleteFormsCount(activeOrganization?.id);
   // Single owner of the native app-icon badge: server unread total + forms.
   useAppIconBadge(activeOrganization?.id);
@@ -66,6 +101,16 @@ export default function TabsLayout() {
   // Unselected icon/label ink — the light-mode slate reads ~3.9:1 on the dark
   // background, so dark mode uses iOS systemGray instead.
   const inactive = isDark ? 'rgb(142,142,147)' : 'rgb(94,112,130)';
+
+  if (!tabsReady) {
+    return (
+      <AuthGate>
+        <View style={{ flex: 1 }} className="bg-background">
+          <FKScreenLoader />
+        </View>
+      </AuthGate>
+    );
+  }
 
   return (
     <AuthGate>

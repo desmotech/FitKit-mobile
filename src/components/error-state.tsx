@@ -27,7 +27,10 @@ export function QueryErrorState({
   isRTL: isRTLProp,
 }: {
   title: string;
-  subtitle: string;
+  /** Optional: some surfaces have a title and a retry but no dictionary
+   *  string that honestly explains the failure. Better an omitted line than
+   *  an empty one holding a gap open. */
+  subtitle?: string;
   retryLabel: string;
   onRetry: () => void;
   /** Overrides the locale-derived direction (rarely needed). */
@@ -68,18 +71,20 @@ export function QueryErrorState({
       >
         {title}
       </Text>
-      <Text
-        style={{
-          fontSize: 13,
-          color: colors.mutedFg,
-          lineHeight: 18,
-          maxWidth: 280,
-          textAlign: 'center',
-          writingDirection: isRTL ? 'rtl' : 'ltr',
-        }}
-      >
-        {subtitle}
-      </Text>
+      {subtitle ? (
+        <Text
+          style={{
+            fontSize: 13,
+            color: colors.mutedFg,
+            lineHeight: 18,
+            maxWidth: 280,
+            textAlign: 'center',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
+          }}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
       <Pressable
         onPress={onRetry}
         accessibilityRole="button"

@@ -13,7 +13,7 @@ import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { PersonalRecordResponse } from '@fitkit/shared';
 import { QueryErrorState } from '@/components/error-state';
-import { FKSubScreen } from '@/components/fk';
+import { FKButton, FKEmptyState, FKSubScreen } from '@/components/fk';
 import { Kicker, MONO, glass, useWB } from '@/components/log/whiteboard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -64,13 +64,20 @@ export default function PRBoardScreen() {
           onRetry={() => prs.refetch()}
         />
       ) : isEmpty ? (
-        <EmptyState
-          t={t}
+        <FKEmptyState
+          Icon={Trophy}
           title={L.prNoneTitle}
-          body={L.prNoneBody}
-          cta={L.logPrCta}
-          onCta={() => router.push('/log/pr')}
-          isRTL={isRTL}
+          hint={L.prNoneBody}
+          action={
+            <FKButton
+              size="sm"
+              label={L.logPrCta}
+              onPress={() => {
+                haptics.tap();
+                router.push('/log/pr');
+              }}
+            />
+          }
         />
       ) : (
         <View style={{ gap: 22 }}>
@@ -263,79 +270,6 @@ function PRRow({
   );
 }
 
-function EmptyState({
-  t,
-  title,
-  body,
-  cta,
-  onCta,
-  isRTL,
-}: {
-  t: ReturnType<typeof useWB>;
-  title: string;
-  body: string;
-  cta: string;
-  onCta: () => void;
-  isRTL: boolean;
-}) {
-  const haptics = useHaptics();
-  return (
-    <View
-      style={{
-        paddingVertical: 54,
-        paddingHorizontal: 30,
-        alignItems: 'center',
-        gap: 13,
-      }}
-    >
-      <View
-        style={[
-          glass(t, { radius: 17 }),
-          { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
-        ]}
-      >
-        <Trophy size={26} color={t.primary} />
-      </View>
-      <Text style={{ fontFamily: 'Assistant-Bold', fontSize: 17, color: t.text }}>
-        {title}
-      </Text>
-      <Text
-        style={{
-          fontFamily: 'Assistant-Regular',
-          fontSize: 13.5,
-          color: t.muted,
-          textAlign: 'center',
-          maxWidth: 230,
-        }}
-      >
-        {body}
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          haptics.tap();
-          onCta();
-        }}
-        style={{
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'center',
-          gap: 7,
-          marginTop: 4,
-          paddingHorizontal: 16,
-          paddingVertical: 11,
-          borderRadius: 12,
-          borderCurve: 'continuous',
-          backgroundColor: t.primary,
-        }}
-      >
-        <Trophy size={16} color={t.onPrimary} />
-        <Text style={{ fontFamily: 'Assistant-Bold', fontSize: 14, color: t.onPrimary }}>
-          {cta}
-        </Text>
-      </Pressable>
-    </View>
-  );
-}
 
 function formatDate(iso: string, lang: string): string {
   const d = new Date(iso);

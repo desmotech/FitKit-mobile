@@ -26,14 +26,6 @@ export function FKEmptyState({
   layout?: 'fill' | 'inline';
 }) {
   const colors = useFKColors();
-  // Theme-aware tint of the brand primary (the old hardcoded light-teal
-  // rgba never adapted to dark mode's brighter teal).
-  const tileBg = colors.isDark
-    ? 'rgba(39,200,186,0.12)'
-    : 'rgba(14,140,140,0.10)';
-  const tileBorder = colors.isDark
-    ? 'rgba(39,200,186,0.30)'
-    : 'rgba(14,140,140,0.28)';
 
   return (
     <View
@@ -53,9 +45,9 @@ export function FKEmptyState({
           height: 64,
           borderRadius: 20,
           borderCurve: 'continuous',
-          backgroundColor: tileBg,
+          backgroundColor: colors.primarySoft,
           borderWidth: 1,
-          borderColor: tileBorder,
+          borderColor: colors.primaryEdge,
           alignItems: 'center',
           justifyContent: 'center',
         }}
