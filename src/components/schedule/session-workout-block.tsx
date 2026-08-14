@@ -2,21 +2,18 @@ import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { FKCard, useFKColors } from '@/components/fk';
 import { ProgramSheetSections } from '@/components/workout/program-sheet-sections';
+import { WorkoutPoster } from '@/components/workout/workout-poster';
 import { scoringLabel } from '@/components/workout/workout-summary-card';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
-import { bodyFamily, displayFamily } from '@/lib/type';
+import { bodyFamily } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import type { WorkoutLite, WorkoutMovement } from '@/hooks/use-workouts';
 
-const HEBREW_RE = /[֐-׿]/;
-
 /**
- * Read-only workout preview — the "what am I booking?" glance on the class
- * detail screen. HIG-shaped: the workout NAME is the content and carries the
- * hierarchy; everything else collapses into one quiet meta line beneath it
- * (scoring · duration · exercise count) the way Fitness/Music subtitle their
- * posters. No kickers, no stamps, no labelled stat pairs — hierarchy comes
- * from size, weight and color, not from label chrome.
+ * The class-detail "what am I booking?" preview. Shares its header with the
+ * member's own Program detail (WorkoutPoster) and its body with the same
+ * sheet (ProgramSheetSections, in `preview` variant) — the two screens differ
+ * in what the reader can do, not in what they can read.
  */
 export function WorkoutBlock({
   workout,
@@ -47,19 +44,22 @@ export function WorkoutBlock({
 
   if (sections.length === 0 && !workout.description) return null;
 
-  // One subtitle line: "scoring · 20 min · 3 exercises". Units read as
-  // natural language, not as a labelled scoreboard.
-  const minutes = workout.timeCap
-    ? String(workout.timeCap)
-    : estimateDuration(sections, workout.timeCap).replace(/\s*min$/i, '');
-  const metaParts = [
+  // Scoring leads the stamps — it is the fact that decides how you pace the
+  // workout, and for someone deciding whether to book, how they decide at all.
+  const stamps = [
     workout.scoring && workout.scoring !== 'none'
       ? scoringLabel(workout.scoring, scoringT)
       : null,
-    `${minutes} ${minutesLabel}`,
-    totalMovements > 0 ? `${totalMovements} ${ps.exercises}` : null,
+    workout.timeCap ? `${workout.timeCap} ${minutesLabel}` : null,
   ].filter(Boolean) as string[];
-  const metaLine = metaParts.join(' · ');
+  const stats = [
+    {
+      label: ps.duration,
+      value: estimateDuration(sections, workout.timeCap).replace(/\s*min$/i, ''),
+    },
+    { label: ps.sections, value: String(sections.length) },
+    { label: ps.exercises, value: String(totalMovements) },
+  ];
 
   const descLines = (workout.description ?? '')
     .split('\n')
@@ -81,41 +81,13 @@ export function WorkoutBlock({
         }}
       />
 
-      {/* Name — Rubik poster. The content IS the header. */}
-      <Text
-        numberOfLines={3}
-        style={{
-          fontSize: 30,
-          lineHeight: 33,
-          color: colors.foreground,
-          letterSpacing: -0.9,
-          textAlign: isRTL ? 'right' : 'left',
-          fontFamily: displayFamily(lang, 'semibold'),
-          // Coach-named — "E4MOM 20" style LTR names must not be bidi-
-          // reordered under a Hebrew layout; Hebrew names flow RTL.
-          writingDirection: HEBREW_RE.test(workout.displayName) ? 'rtl' : 'ltr',
-        }}
-      >
-        {workout.displayName}
-      </Text>
-
-      {/* Subtitle meta line — quiet secondary ink under the poster. */}
-      {metaLine ? (
-        <Text
-          numberOfLines={1}
-          style={{
-            marginTop: 6,
-            fontFamily: bodyFamily(lang, 'medium'),
-            fontSize: 15,
-            lineHeight: 20,
-            color: colors.mutedFg,
-            textAlign: isRTL ? 'right' : 'left',
-            writingDirection: HEBREW_RE.test(metaLine) ? 'rtl' : 'ltr',
-          }}
-        >
-          {metaLine}
-        </Text>
-      ) : null}
+      <WorkoutPoster
+        title={workout.displayName}
+        stamps={stamps}
+        stats={sections.length > 0 ? stats : []}
+        isRTL={isRTL}
+        lang={lang}
+      />
 
       {/* Description — the coach's overview, directly under the subtitle. */}
       {descLines.length > 0 ? (
