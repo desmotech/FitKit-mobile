@@ -33,6 +33,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   FKAmbientBackdrop,
   FKButton,
+  FKIconButton,
   FKScreenHeader,
   useFKColors,
 } from '@/components/fk';
@@ -41,7 +42,7 @@ import { ProgramSheetSections } from '@/components/workout/program-sheet-section
 import { scoringLabel } from '@/components/workout/workout-summary-card';
 import { CoachNote } from '@/components/workout/coach-note';
 import { analytics } from '@/lib/analytics';
-import { bodyFamily, displayFamily, eyebrow } from '@/lib/type';
+import { displayFamily, eyebrow } from '@/lib/type';
 import { estimateDuration } from '@/lib/workout-estimate';
 import { programSheetInk } from '@/lib/program-sheet-ink';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
@@ -363,7 +364,10 @@ export default function WorkoutDetailScreen() {
         title=""
         backLabel={null}
         trailing={
-          <Pressable
+          <FKIconButton
+            Icon={MessageSquare}
+            label={ps.chat}
+            badge={comments.unreadCount}
             onPress={() => {
               haptics.tap();
               router.push({
@@ -371,67 +375,7 @@ export default function WorkoutDetailScreen() {
                 params: { id: assignment.id, name: workout.displayName },
               });
             }}
-            hitSlop={6}
-            accessibilityRole="button"
-            accessibilityLabel={ps.chat}
-          >
-            {({ pressed }) => (
-              <View
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 12,
-                  borderCurve: 'continuous',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: isDark
-                    ? 'rgba(255,255,255,0.08)'
-                    : 'rgba(15,23,42,0.06)',
-                  borderWidth: StyleSheet.hairlineWidth,
-                  borderColor: ink.line,
-                  opacity: pressed ? 0.6 : 1,
-                }}
-              >
-                <MessageSquare
-                  size={18}
-                  color={colors.foreground}
-                  strokeWidth={2.2}
-                />
-                {comments.unreadCount > 0 ? (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: -3,
-                      right: -3,
-                      minWidth: 18,
-                      height: 18,
-                      paddingHorizontal: 4,
-                      borderRadius: 9,
-                      backgroundColor: '#0E8C8C',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 1.5,
-                      borderColor: colors.background,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontFamily: bodyFamily(lang, 'bold'),
-                        fontSize: 10,
-                        lineHeight: 13,
-                        color: '#fff',
-                        textAlign: 'center',
-                        includeFontPadding: false,
-                        fontVariant: ['tabular-nums'],
-                      }}
-                    >
-                      {comments.unreadCount > 9 ? '9+' : comments.unreadCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            )}
-          </Pressable>
+          />
         }
       />
 

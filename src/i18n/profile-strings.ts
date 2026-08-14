@@ -90,6 +90,8 @@ export interface ProfileStrings {
   language: string;
 
   // ── Avatar action sheet ───────────────────────────────────────────
+  /** VoiceOver label for the avatar's icon-only edit pip. */
+  avatarEdit: string;
   avatarCancel: string;
   avatarCamera: string;
   avatarLibrary: string;
@@ -164,6 +166,7 @@ const HE: ProfileStrings = {
   themeDark: 'כהה',
   language: 'שפה',
 
+  avatarEdit: 'עריכת תמונת פרופיל',
   avatarCancel: 'ביטול',
   avatarCamera: 'צילום תמונה',
   avatarLibrary: 'בחירה מהגלריה',
@@ -237,6 +240,7 @@ const EN: ProfileStrings = {
   themeDark: 'Dark',
   language: 'Language',
 
+  avatarEdit: 'Edit profile photo',
   avatarCancel: 'Cancel',
   avatarCamera: 'Take photo',
   avatarLibrary: 'Choose from library',
@@ -310,6 +314,7 @@ const RU: ProfileStrings = {
   themeDark: 'Тёмная',
   language: 'Язык',
 
+  avatarEdit: 'Изменить фото профиля',
   avatarCancel: 'Отмена',
   avatarCamera: 'Сделать фото',
   avatarLibrary: 'Выбрать из галереи',

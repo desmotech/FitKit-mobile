@@ -284,6 +284,7 @@ export default function LogWorkoutResultScreen() {
         <FKAmbientBackdrop />
         <FKScreenHeader
           title={L.hubTitle}
+          backLabel={null}
           onBack={() => router.back()}
         />
         <View
@@ -312,6 +313,7 @@ export default function LogWorkoutResultScreen() {
         <FKScreenHeader
           // Workout name as the nav-bar title (iOS form-screen convention).
           title={workout.displayName}
+          backLabel={null}
           onBack={() => router.back()}
           trailing={
             <HeaderSaveButton

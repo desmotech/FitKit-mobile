@@ -155,6 +155,7 @@ export default function LogLiftScreen() {
       >
         <FKScreenHeader
           title={L.liftTitle}
+          backLabel={null}
           onBack={() => router.back()}
           trailing={
             <HeaderSaveButton

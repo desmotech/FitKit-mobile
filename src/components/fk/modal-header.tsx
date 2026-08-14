@@ -32,8 +32,6 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
 import { useFKColors } from './colors';
 
-const BRAND_TEAL = '#0E8C8C';
-const DESTRUCTIVE = '#B84A40';
 
 export type FKModalActionStyle =
   | 'default'
@@ -160,12 +158,14 @@ function ActionButton({
   const isBack = style === 'back';
   const Chevron = isRTL ? ChevronRight : ChevronLeft;
 
+  // Theme-aware inks — the old hardcoded light teal/red never adapted to
+  // dark mode.
   const color =
     style === 'destructive'
-      ? DESTRUCTIVE
+      ? colors.destructive
       : action.disabled
         ? colors.mutedFg
-        : BRAND_TEAL;
+        : colors.primaryText;
   const fontWeight: '400' | '700' = style === 'primary' ? '700' : '400';
 
   return (

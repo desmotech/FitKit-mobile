@@ -50,12 +50,15 @@ export function PerformanceToggle({
     return (
       <View
         key={key}
+        // Geometry matches DatePresetField (h44 / r12 / 1.5 border) — the
+        // two selectors stack on the same log screen and used to differ in
+        // height, radius and border weight.
         style={{
           flex: 1,
-          height: 40,
-          borderRadius: 14,
+          height: 44,
+          borderRadius: 12,
           borderCurve: 'continuous',
-          borderWidth: 2,
+          borderWidth: 1.5,
           borderColor: active ? tone : 'rgba(94,112,130,0.30)',
           backgroundColor: active ? `${tone}1A` : 'rgba(120,120,128,0.10)',
           overflow: 'hidden',
@@ -78,7 +81,7 @@ export function PerformanceToggle({
           <Text
             style={{
               fontSize: 14,
-              fontWeight: '800',
+              fontWeight: '700',
               color: active ? tone : 'rgb(94,112,130)',
               letterSpacing: -0.1,
             }}

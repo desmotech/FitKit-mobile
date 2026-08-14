@@ -18,7 +18,7 @@ export function ScheduleEmptyState({ message }: { message: string }) {
           borderRadius: 16,
           borderCurve: 'continuous',
           backgroundColor: colors.isDark
-            ? 'rgba(54,214,198,0.12)'
+            ? 'rgba(39,200,186,0.12)'
             : 'rgba(14,140,140,0.10)',
           alignItems: 'center',
           justifyContent: 'center',

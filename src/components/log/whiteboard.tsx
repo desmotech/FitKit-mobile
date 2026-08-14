@@ -93,6 +93,26 @@ export function glass(
 
 // ── Kicker — uppercase mono label ────────────────────────────────────
 
+/**
+ * Language-guarded eyebrow styling (mirrors `eyebrow()` in @/lib/type):
+ * Latin gets the uppercase tracked-out mono look; Hebrew must get NEITHER —
+ * letter-spacing shatters Hebrew words, so it renders in Assistant SemiBold,
+ * flush and untracked.
+ */
+function wbEyebrow(lang: string, tracking: number) {
+  return lang === 'he'
+    ? {
+        fontFamily: font.bodySemibold,
+        letterSpacing: 0,
+        textTransform: 'none' as const,
+      }
+    : {
+        fontFamily: MONO,
+        letterSpacing: tracking,
+        textTransform: 'uppercase' as const,
+      };
+}
+
 export function Kicker({
   children,
   color,
@@ -102,14 +122,13 @@ export function Kicker({
   color: string;
   style?: object;
 }) {
+  const { lang } = useI18n();
   return (
     <Text
       style={{
-        fontFamily: MONO,
         fontSize: 11,
-        letterSpacing: 1.4,
-        textTransform: 'uppercase',
         color,
+        ...wbEyebrow(lang, 1.4),
         ...style,
       }}
     >
@@ -129,6 +148,7 @@ export function Stamp({
   t: WBTokens;
   variant?: 'default' | 'primary' | 'accent';
 }) {
+  const { lang } = useI18n();
   const v =
     variant === 'accent'
       ? { fg: t.onAccent, bd: t.accent, bg: t.accent }
@@ -150,12 +170,10 @@ export function Stamp({
     >
       <Text
         style={{
-          fontFamily: MONO,
           fontSize: 10.5,
           lineHeight: 12,
-          letterSpacing: 0.8,
-          textTransform: 'uppercase',
           color: v.fg,
+          ...wbEyebrow(lang, 0.8),
         }}
       >
         {children}
@@ -184,7 +202,7 @@ export function Segmented({
   onChange: (id: string) => void;
   style?: ViewStyle;
 }) {
-  const { dir } = useI18n();
+  const { dir, lang } = useI18n();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const cells = options.map((o) => {
@@ -211,11 +229,9 @@ export function Segmented({
         <Text
           numberOfLines={1}
           style={{
-            fontFamily: MONO,
             fontSize: 12,
-            letterSpacing: 0.4,
-            textTransform: 'uppercase',
             color: on ? t.onPrimary : t.muted,
+            ...wbEyebrow(lang, 0.4),
           }}
         >
           {o.label}
@@ -258,13 +274,17 @@ export function UnitToggle<T extends string>({
   onChange: (u: T) => void;
 }) {
   const haptics = useHaptics();
+  const { dir } = useI18n();
+  const isRTL = dir === 'rtl';
   return (
     <View
+      // RTL-aware — this was the one selector in the app that never
+      // mirrored (kg/lb rendered LTR-ordered in Hebrew).
       style={{
-        flexDirection: 'row',
+        flexDirection: isRTL ? 'row-reverse' : 'row',
         gap: 1,
         padding: 2,
-        borderRadius: 7,
+        borderRadius: 8,
         borderCurve: 'continuous',
         borderWidth: 1,
         borderColor: t.hairline,
@@ -281,16 +301,21 @@ export function UnitToggle<T extends string>({
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
             accessibilityLabel={u}
-            hitSlop={6}
+            // ~28pt cell + generous slop ≈ the 44pt HIG target (the old
+            // 18×14 cell with 6pt slop was nearly untappable).
+            hitSlop={10}
             onPress={() => {
               haptics.select();
               onChange(u);
             }}
             style={{
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              borderRadius: 5,
+              minWidth: 34,
+              paddingHorizontal: 8,
+              paddingVertical: 5,
+              borderRadius: 6,
               borderCurve: 'continuous',
+              alignItems: 'center',
+              justifyContent: 'center',
               backgroundColor: on ? t.primary : 'transparent',
             }}
           >

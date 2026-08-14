@@ -1,6 +1,7 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useColorScheme } from 'nativewind';
 import { View } from 'react-native';
+import { FK_DARK, FK_LIGHT } from '@/components/fk';
 import { AuthGate } from '@/providers/auth-gate';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useAppIconBadge } from '@/hooks/use-badge';
@@ -18,8 +19,11 @@ const Label = NativeTabs.Trigger.Label;
 const Icon = NativeTabs.Trigger.Icon;
 const Badge = NativeTabs.Trigger.Badge;
 
-const PRIMARY_LIGHT = '#0E8C8C';
-const PRIMARY_DARK = '#2AB8B8';
+// Single source of truth for the brand tint — a locally-declared duplicate
+// here once drifted (#2AB8B8) from the FK dark primary (#27C8BA), leaving
+// the tab bar a different teal from every other accent in dark mode.
+const PRIMARY_LIGHT = FK_LIGHT.primary;
+const PRIMARY_DARK = FK_DARK.primary;
 
 // Tabs are org/membership-aware: the Schedule tab shows only when the org
 // runs a class-scheduled program, the Program tab only for members enrolled

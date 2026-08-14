@@ -11,7 +11,7 @@
  * this is the normal state.
  */
 import { useMemo } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import {
@@ -540,6 +540,3 @@ function EmptyState({
   );
 }
 
-// `StyleSheet` import retained for the hairline pattern used elsewhere
-// but not needed here directly. Strip if lint flags it.
-void StyleSheet;

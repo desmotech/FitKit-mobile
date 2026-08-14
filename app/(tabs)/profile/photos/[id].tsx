@@ -11,7 +11,13 @@ import { Image as ExpoImage } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft, ChevronRight, GitCompare, Trash2 } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
@@ -108,9 +114,7 @@ export default function PhotoDetailScreen() {
           justifyContent: 'center',
         }}
       >
-        <Text style={{ color: colors.mutedFg }}>
-          {get(t, 'common.loading') ?? 'Loading…'}
-        </Text>
+        <ActivityIndicator size="small" color={colors.mutedFg} />
       </View>
     );
   }
@@ -137,6 +141,8 @@ export default function PhotoDetailScreen() {
         <Pressable
           onPress={() => router.back()}
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={common.a11yClose}
           style={{
             width: 40,
             height: 40,
@@ -165,6 +171,7 @@ export default function PhotoDetailScreen() {
               alignItems: 'center',
               justifyContent: 'center',
             }}
+            accessibilityRole="button"
             accessibilityLabel={labels.compare}
           >
             <GitCompare size={20} color="#fff" strokeWidth={2.2} />
@@ -180,6 +187,7 @@ export default function PhotoDetailScreen() {
               alignItems: 'center',
               justifyContent: 'center',
             }}
+            accessibilityRole="button"
             accessibilityLabel={labels.delete}
           >
             <Trash2 size={20} color="#fff" strokeWidth={2.2} />

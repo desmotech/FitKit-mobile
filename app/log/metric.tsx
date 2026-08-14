@@ -161,6 +161,7 @@ export default function LogMetricScreen() {
         >
           <FKScreenHeader
             title={L.metricTitle}
+            backLabel={null}
             onBack={() => router.back()}
             trailing={
               <HeaderSaveButton

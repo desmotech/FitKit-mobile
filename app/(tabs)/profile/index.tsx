@@ -479,7 +479,13 @@ export default function ProfileScreen() {
                       backgroundColor: colors.isDark
                         ? 'rgba(53,196,187,0.12)'
                         : 'rgba(14,140,140,0.10)',
-                      boxShadow: '0 8px 28px rgba(14,140,140,0.30)',
+                      // RN shadow props, not the web boxShadow string (which
+                      // the old architecture silently ignores).
+                      shadowColor: colors.primary,
+                      shadowOpacity: 0.3,
+                      shadowRadius: 14,
+                      shadowOffset: { width: 0, height: 8 },
+                      elevation: 8,
                     }}
                   >
                     {avatarUrl ? (
@@ -522,22 +528,30 @@ export default function ProfileScreen() {
                     onPress={onEditAvatar}
                     onPressIn={haptics.tap}
                     disabled={avatarBusy}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={labels.avatarEdit}
+                    accessibilityState={{ disabled: avatarBusy }}
                     style={{
                       position: 'absolute',
                       bottom: 0,
                       [isRTL ? 'left' : 'right']: -2,
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
                       backgroundColor: '#fff',
                       alignItems: 'center',
                       justifyContent: 'center',
                       borderWidth: 1,
                       borderColor: 'rgba(0,0,0,0.06)',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.16)',
+                      shadowColor: '#000',
+                      shadowOpacity: 0.16,
+                      shadowRadius: 4,
+                      shadowOffset: { width: 0, height: 2 },
+                      elevation: 3,
                     }}
                   >
-                    <Pencil size={12} color="#0E8C8C" strokeWidth={2.6} />
+                    <Pencil size={13} color="#0E8C8C" strokeWidth={2.6} />
                   </TouchableOpacity>
                 </View>
 
@@ -961,11 +975,14 @@ export default function ProfileScreen() {
             />
           </SettingsGroup>
 
-          {/* Sign out — quiet destructive: rose-500 tinted button */}
+          {/* Sign out — quiet destructive: tinted soft button on the app's
+              single destructive token (was a drifting rose-500). */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPressIn={haptics.tap}
             onPress={handleSignOut}
+            accessibilityRole="button"
+            accessibilityLabel={labels.settingSignOut}
             style={{
               marginTop: 4,
               paddingVertical: 16,
@@ -973,8 +990,8 @@ export default function ProfileScreen() {
               borderRadius: 16,
               borderCurve: 'continuous',
               borderWidth: 1,
-              borderColor: 'rgba(244,63,94,0.30)',
-              backgroundColor: 'rgba(244,63,94,0.10)',
+              borderColor: `${colors.destructive}4D`,
+              backgroundColor: `${colors.destructive}1A`,
               flexDirection: isRTL ? 'row-reverse' : 'row',
               alignItems: 'center',
               justifyContent: 'center',
@@ -982,7 +999,7 @@ export default function ProfileScreen() {
           >
             <LogOut
               size={16}
-              color="#F43F5E"
+              color={colors.destructive}
               strokeWidth={2.4}
               style={{
                 marginRight: isRTL ? 0 : 10,
@@ -990,7 +1007,13 @@ export default function ProfileScreen() {
                 transform: [{ scaleX: isRTL ? -1 : 1 }],
               }}
             />
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#F43F5E' }}>
+            <Text
+              style={{
+                fontSize: 15,
+                fontWeight: '800',
+                color: colors.destructive,
+              }}
+            >
               {labels.settingSignOut}
             </Text>
           </TouchableOpacity>
@@ -1009,7 +1032,8 @@ export default function ProfileScreen() {
                   haptics.tap();
                   Linking.openURL('https://fitkit.fit/terms-of-use');
                 }}
-                hitSlop={8}
+                hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+                accessibilityRole="link"
               >
                 <Text style={{ fontSize: 10, fontWeight: '700', color: colors.mutedFg }}>
                   {labels.footerTerms}
@@ -1021,7 +1045,8 @@ export default function ProfileScreen() {
                   haptics.tap();
                   Linking.openURL('https://fitkit.fit/privacy-policy');
                 }}
-                hitSlop={8}
+                hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+                accessibilityRole="link"
               >
                 <Text style={{ fontSize: 10, fontWeight: '700', color: colors.mutedFg }}>
                   {labels.footerPrivacy}

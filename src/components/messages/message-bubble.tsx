@@ -17,7 +17,6 @@ import type { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { bodyFamily, eyebrow } from '@/lib/type';
 
-const BRAND_TEAL = '#0E8C8C';
 
 // Memoized: the thread re-renders on every composer keystroke; without memo
 // every visible bubble re-renders per character. `onLongPress` receives the
@@ -46,11 +45,16 @@ export const MessageBubble = memo(function MessageBubble({
 }) {
   const align: 'flex-start' | 'flex-end' = isOwn ? 'flex-end' : 'flex-start';
   // Received bubbles use the same frosted-glass card as the in-workout chat;
-  // own messages stay teal.
+  // own messages take the theme primary (brighter teal + dark ink in dark
+  // mode — the old hardcoded light teal read muddy there).
   const coachBg = isDark ? 'rgba(78,92,100,0.46)' : 'rgba(255,255,255,0.72)';
-  const bubbleBg = isOwn ? BRAND_TEAL : coachBg;
-  const bubbleFg = isOwn ? '#fff' : colors.foreground;
-  const metaFg = isOwn ? 'rgba(255,255,255,0.72)' : colors.mutedFg;
+  const bubbleBg = isOwn ? colors.primary : coachBg;
+  const bubbleFg = isOwn ? colors.onPrimary : colors.foreground;
+  const metaFg = isOwn
+    ? isDark
+      ? 'rgba(4,32,30,0.72)'
+      : 'rgba(255,255,255,0.72)'
+    : colors.mutedFg;
   const hasAttachments = message.attachments.length > 0;
   const hasContent = !!message.content;
   const timeStr = new Date(message.createdAt).toLocaleTimeString(lang, {
@@ -145,7 +149,11 @@ export const MessageBubble = memo(function MessageBubble({
               </Text>
               {isOwn ? (
                 message.readAt ? (
-                  <CheckCheck size={14} color="#fff" strokeWidth={2.4} />
+                  <CheckCheck
+                    size={14}
+                    color={colors.onPrimary}
+                    strokeWidth={2.4}
+                  />
                 ) : (
                   <Check size={14} color={metaFg} strokeWidth={2.4} />
                 )

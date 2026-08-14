@@ -11,6 +11,7 @@ import { Alert, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { GoalResponse } from '@fitkit/shared';
 import {
+  FKEmptyState,
   FKGlassPanel,
   FKSubScreen,
   GoalCard,
@@ -111,48 +112,13 @@ export default function GoalsScreen() {
             <Skeleton style={{ height: 132, borderRadius: 20 }} />
           </View>
         ) : goals.length === 0 ? (
-          <FKGlassPanel
-            radius={20}
-            style={{
-              padding: 28,
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
-            <View
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 18,
-                backgroundColor: 'rgba(14,140,140,0.10)',
-                borderWidth: 1,
-                borderColor: 'rgba(14,140,140,0.30)',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Target size={26} color="#0E8C8C" strokeWidth={2.2} />
-            </View>
-            <Text
-              className="font-display"
-              style={{
-                fontSize: 16,
-                fontWeight: '800',
-                color: colors.foreground,
-                textAlign: 'center',
-              }}
-            >
-              {labels.noGoals}
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: colors.mutedFg,
-                textAlign: 'center',
-              }}
-            >
-              {labels.noGoalsHint}
-            </Text>
+          <FKGlassPanel radius={20}>
+            <FKEmptyState
+              Icon={Target}
+              title={labels.noGoals}
+              hint={labels.noGoalsHint}
+              layout="inline"
+            />
           </FKGlassPanel>
         ) : (
           <>

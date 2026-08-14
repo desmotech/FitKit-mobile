@@ -10,7 +10,8 @@
  */
 import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Text } from '@/components/ui/text';
 import { useKeyboardState } from 'react-native-keyboard-controller';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
@@ -65,19 +66,22 @@ export function FKBtn({
   const colors = useFKColors();
   const haptics = useHaptics();
   const { lang } = useI18n();
-  const rose = colors.isDark ? '#EC7C70' : '#C0524A';
-  const onPrimary = colors.isDark ? '#04201E' : '#FFFFFF';
+  const rose = colors.destructive;
+  const onPrimary = colors.onPrimary;
   const m = {
     primary: { bg: colors.primary, fg: onPrimary, border: 'transparent', shadow: true },
     ghost: { bg: 'transparent', fg: colors.foreground, border: colors.border, shadow: false },
-    danger: { bg: rose, fg: '#FFFFFF', border: 'transparent', shadow: true },
-    dangerSoft: { bg: 'rgba(192,82,74,0.14)', fg: rose, border: `${rose}55`, shadow: false },
+    danger: { bg: rose, fg: colors.isDark ? '#2B0E0B' : '#FFFFFF', border: 'transparent', shadow: true },
+    dangerSoft: { bg: 'rgba(184,74,64,0.14)', fg: rose, border: `${rose}55`, shadow: false },
   }[variant];
   return (
     <Pressable
       onPressIn={() => haptics.tap()}
       onPress={disabled ? undefined : onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      accessibilityLabel={label}
       style={full ? { flex: 1 } : undefined}
     >
       {({ pressed }) => (
@@ -93,7 +97,8 @@ export function FKBtn({
               gap: 8,
               paddingVertical: 14,
               paddingHorizontal: 18,
-              borderRadius: 14,
+              // 16 is the app-wide CTA radius (FKButton lg, booking CTAs).
+              borderRadius: 16,
               borderCurve: 'continuous',
               backgroundColor: m.bg,
               borderWidth: 1,
@@ -111,6 +116,9 @@ export function FKBtn({
         >
           {Icon ? <Icon size={17} color={m.fg} strokeWidth={2.4} /> : null}
           <Text
+            // Cap Dynamic Type growth like FKButton — unbounded scaling
+            // wraps CTA labels into multi-line slabs.
+            maxFontSizeMultiplier={1.4}
             style={{
               fontSize: 14.5,
               color: m.fg,

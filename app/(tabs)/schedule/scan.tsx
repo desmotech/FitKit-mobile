@@ -7,7 +7,7 @@
  * Schedule with a haptic confirmation; on error, surfaces the message inline.
  */
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { CheckCircle2, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -33,7 +33,6 @@ export default function ScanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const haptics = useHaptics();
-  const { id } = useLocalSearchParams<{ id?: string }>();
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
   const { lang, t: dict, dir } = useI18n();
@@ -429,8 +428,6 @@ export default function ScanScreen() {
         </Text>
       </Pressable>
 
-      {/* Hide the unused id param warning */}
-      {id ? null : null}
     </View>
   );
 }

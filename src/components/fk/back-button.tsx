@@ -19,9 +19,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { Pressable } from 'react-native';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
+import { useFKColors } from './colors';
 import { FKGlassSurface } from './glass-surface';
 
-const BRAND_TEAL = '#0E8C8C';
 /** Capsule height — matches iOS 26's 36pt nav-bar glass controls. */
 const HEIGHT = 36;
 
@@ -37,8 +37,12 @@ export function FKBackButton({
 }) {
   const { dir, t } = useI18n();
   const router = useRouter();
+  const colors = useFKColors();
   const isRTL = dir === 'rtl';
   const Chevron = isRTL ? ChevronRight : ChevronLeft;
+  // Theme-aware brand tint — the old hardcoded light teal disappeared
+  // against dark-mode surfaces.
+  const tint = colors.primaryText;
 
   const commonT = (t as unknown as Record<string, Record<string, string>>).common ?? {};
   const resolvedLabel = label === null ? null : (label ?? commonT.back ?? 'Back');
@@ -70,7 +74,7 @@ export function FKBackButton({
             gap: resolvedLabel ? 2 : 0,
           }}
         >
-          <Chevron size={22} color={BRAND_TEAL} strokeWidth={2.6} />
+          <Chevron size={22} color={tint} strokeWidth={2.6} />
           {resolvedLabel ? (
             <Text
               maxFontSizeMultiplier={1.4}
@@ -78,7 +82,7 @@ export function FKBackButton({
                 fontSize: 17,
                 lineHeight: 22,
                 fontWeight: '600',
-                color: BRAND_TEAL,
+                color: tint,
                 letterSpacing: -0.2,
               }}
             >
