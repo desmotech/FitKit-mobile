@@ -59,6 +59,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import {
   getWeekStartDay,
   shiftWeek,
+  useMyProgramEnrollments,
   useMyWeekAssignments,
   weekStartFor,
   type AssignmentDay,
@@ -91,6 +92,23 @@ export default function InboxScreen() {
     isInboxTab(params.tab) ? params.tab : 'messages',
   );
 
+  // Workout threads only exist for members on a coaching program, so the tab
+  // is gated exactly like the Program tab in `(tabs)/_layout` — same hook,
+  // same query key, so this is served from cache and never refetches.
+  const enrollments = useMyProgramEnrollments(orgId);
+  const showWorkouts = (enrollments.data?.data?.length ?? 0) > 0;
+  // `isFetched` covers the error case too. Without waiting for it, a member
+  // who deep-links to `?tab=workouts` would be bounced to Messages on the
+  // first render — before we know whether they're enrolled.
+  const enrollmentResolved = !orgId || enrollments.isFetched;
+  // Derived, not synced state: the control must never point at a segment
+  // that isn't rendered, but `tab` stays whatever the member last chose so
+  // the selection survives an enrollment refetch.
+  const activeTab: InboxTab =
+    tab === 'workouts' && enrollmentResolved && !showWorkouts
+      ? 'messages'
+      : tab;
+
   // ── Per-tab unread counts (segment badges) ─────────────────────────
   const conversationsQuery = useConversations(orgId);
   const conversations = useMemo(
@@ -111,7 +129,11 @@ export default function InboxScreen() {
   const weekStartsOn = getWeekStartDay(lang);
   const thisWeek = weekStartFor(new Date(), weekStartsOn);
   const lastWeek = shiftWeek(thisWeek, -1);
-  const workoutsActive = tab === 'workouts';
+  // `showWorkouts` as well as the tab: a member deep-linked to
+  // `?tab=workouts` renders that tab for one frame, before enrollment
+  // resolves and bounces them. Without this the screen fires two assignment
+  // requests on the way out for a member who cannot have any.
+  const workoutsActive = activeTab === 'workouts' && showWorkouts;
   const thisWeekQuery = useMyWeekAssignments(
     workoutsActive ? orgId : null,
     thisWeek,
@@ -183,24 +205,28 @@ export default function InboxScreen() {
                 label: strings.tabMessages,
                 badge: messagesUnread,
               },
-              {
-                value: 'workouts',
-                label: strings.tabWorkouts,
-                badge: workoutsUnread,
-              },
+              ...(showWorkouts
+                ? [
+                    {
+                      value: 'workouts' as const,
+                      label: strings.tabWorkouts,
+                      badge: workoutsUnread,
+                    },
+                  ]
+                : []),
               {
                 value: 'announcements',
                 label: strings.tabAnnouncements,
                 badge: announcementsUnread,
               },
             ]}
-            value={tab}
+            value={activeTab}
             onChange={setTab}
           />
         </View>
       </SafeAreaView>
 
-      {tab === 'messages' ? (
+      {activeTab === 'messages' ? (
         <ConversationsTab
           conversations={conversations}
           query={conversationsQuery}
@@ -218,7 +244,7 @@ export default function InboxScreen() {
             });
           }}
         />
-      ) : tab === 'workouts' ? (
+      ) : activeTab === 'workouts' ? (
         <WorkoutThreadsTab
           threads={workoutThreads}
           isLoading={thisWeekQuery.isLoading || lastWeekQuery.isLoading}
