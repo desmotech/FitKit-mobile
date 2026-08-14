@@ -30,6 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
+import { useFKColors } from '@/components/fk';
 
 export interface PRCelebrationProps {
   title: string;
@@ -54,6 +55,7 @@ export function PRCelebration({
   onPress,
   autoDismissMs = 3000,
 }: PRCelebrationProps) {
+  const colors = useFKColors();
   // Auto-dismiss so the user never gets "stuck" on the celebration.
   // The confetti runs ~1.8s; 3s leaves a comfortable beat before close.
   useEffect(() => {
@@ -188,7 +190,7 @@ export function PRCelebration({
               borderCurve: 'continuous',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#0E8C8C',
+              backgroundColor: colors.primary,
               shadowColor: '#000',
               shadowOpacity: pressed ? 0.12 : 0.18,
               shadowRadius: 10,
@@ -200,7 +202,7 @@ export function PRCelebration({
               style={{
                 fontSize: 17,
                 fontWeight: '700',
-                color: '#fff',
+                color: colors.onPrimary,
                 letterSpacing: -0.4,
               }}
             >

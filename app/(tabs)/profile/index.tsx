@@ -499,7 +499,7 @@ export default function ProfileScreen() {
                       <Text
                         className="font-display"
                         style={{
-                          color: colors.isDark ? '#35C4BB' : '#0E8C8C',
+                          color: colors.primary,
                           fontSize: 32,
                           lineHeight: 38,
                           fontWeight: '800',
@@ -602,11 +602,10 @@ export default function ProfileScreen() {
                     style={{
                       fontSize: 11,
                       fontWeight: '700',
-                      color: colors.isDark ? '#35C4BB' : '#0E8C8C',
-                      letterSpacing: 0.5,
+                      color: colors.primaryText,
                     }}
                   >
-                    {labels.activeMembership.toUpperCase()}
+                    {labels.activeMembership}
                   </Text>
                 </View>
               </Animated.View>
@@ -693,17 +692,25 @@ export default function ProfileScreen() {
               <Pressable
                 onPressIn={haptics.tap}
                 onPress={() => router.push('/(tabs)/shop')}
+                accessibilityRole="button"
                 style={({ pressed }) => [
                   {
                     paddingHorizontal: 18,
                     paddingVertical: 10,
                     borderRadius: 12,
-                    backgroundColor: '#0E8C8C',
+                    borderCurve: 'continuous',
+                    backgroundColor: colors.primary,
                   },
                   pressed && { opacity: 0.85 },
                 ]}
               >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: colors.onPrimary,
+                  }}
+                >
                   {labels.browsePlans}
                 </Text>
               </Pressable>
@@ -805,7 +812,7 @@ export default function ProfileScreen() {
                   render: (active) => (
                     <Sun
                       size={16}
-                      color={active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg}
+                      color={active ? (isDark ? colors.onPrimary : colors.primaryText) : colors.mutedFg}
                       strokeWidth={2.4}
                     />
                   ),
@@ -815,7 +822,7 @@ export default function ProfileScreen() {
                   render: (active) => (
                     <Moon
                       size={16}
-                      color={active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg}
+                      color={active ? (isDark ? colors.onPrimary : colors.primaryText) : colors.mutedFg}
                       strokeWidth={2.4}
                     />
                   ),
@@ -825,7 +832,7 @@ export default function ProfileScreen() {
                   render: (active) => (
                     <Smartphone
                       size={16}
-                      color={active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg}
+                      color={active ? (isDark ? colors.onPrimary : colors.primaryText) : colors.mutedFg}
                       strokeWidth={2.4}
                     />
                   ),
@@ -850,8 +857,11 @@ export default function ProfileScreen() {
                     style={{
                       fontSize: 13,
                       fontWeight: '700',
-                      color: active ? (isDark ? '#0B0B0D' : '#0E8C8C') : colors.mutedFg,
-                      letterSpacing: 0.5,
+                      color: active
+                        ? isDark
+                          ? colors.onPrimary
+                          : colors.primaryText
+                        : colors.mutedFg,
                     }}
                   >
                     {locale.toUpperCase()}

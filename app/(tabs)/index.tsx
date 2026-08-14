@@ -46,6 +46,7 @@ import {
   FKAmbientBackdrop,
   FKCard,
   FKGlassPanel,
+  FKSectionHeader,
   GoalCard,
   MemberHeader,
   useFKColors,
@@ -78,7 +79,6 @@ import { useHomeStrings } from '@/i18n/use-home-strings';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
-const BRAND_TEAL = '#0E8C8C';
 const BRAND_GOLD = '#C9974D';
 
 export default function HomeScreen() {
@@ -171,7 +171,7 @@ export default function HomeScreen() {
       month: 'short',
       day: 'numeric',
     });
-    return fmt.format(today).toUpperCase();
+    return fmt.format(today);
   }, [today, lang]);
 
   // Refresh — yanks all member-side queries.
@@ -275,11 +275,7 @@ export default function HomeScreen() {
             entering={FadeInDown.delay(100).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 18, gap: 10 }}
           >
-            <SectionKicker
-              title={s.todayKicker}
-              isRTL={isRTL}
-              colors={colors}
-            />
+            <SectionKicker title={s.todayKicker} />
 
             {isLoadingToday ? (
               <Skeleton style={{ height: 132, borderRadius: 20 }} />
@@ -449,11 +445,7 @@ export default function HomeScreen() {
             entering={FadeInDown.delay(150).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 26, gap: 10 }}
           >
-            <SectionKicker
-              title={L.homeQuickActions}
-              isRTL={isRTL}
-              colors={colors}
-            />
+            <SectionKicker title={L.homeQuickActions} />
             <View
               style={{
                 flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -463,7 +455,7 @@ export default function HomeScreen() {
               <QuickActionTile
                 icon={Target}
                 label={s.addGoal}
-                accent={BRAND_TEAL}
+                accent={colors.primary}
                 isDark={colors.isDark}
                 fg={colors.foreground}
                 isRTL={isRTL}
@@ -501,11 +493,7 @@ export default function HomeScreen() {
                 justifyContent: 'space-between',
               }}
             >
-              <SectionKicker
-                title={s.goalsTitle}
-                isRTL={isRTL}
-                colors={colors}
-              />
+              <SectionKicker title={s.goalsTitle} />
               {activeGoals.length > 0 ? (
                 <Pressable
                   onPress={() => {
@@ -587,7 +575,7 @@ export default function HomeScreen() {
                         justifyContent: 'center',
                       }}
                     >
-                      <Target size={20} color={BRAND_TEAL} strokeWidth={2.2} />
+                      <Target size={20} color={colors.primary} strokeWidth={2.2} />
                     </View>
                     <Text
                       style={{
@@ -679,28 +667,8 @@ export default function HomeScreen() {
 
 // ── Subcomponents ────────────────────────────────────────────────────
 
-function SectionKicker({
-  title,
-  isRTL,
-  colors,
-}: {
-  title: string;
-  isRTL: boolean;
-  colors: ReturnType<typeof useFKColors>;
-}) {
-  return (
-    <Text
-      style={{
-        fontSize: 11,
-        fontWeight: '800',
-        color: colors.mutedFg,
-        textAlign: isRTL ? 'right' : 'left',
-        ...eyebrow(isRTL ? 'he' : undefined),
-      }}
-    >
-      {title}
-    </Text>
-  );
+function SectionKicker({ title }: { title: string }) {
+  return <FKSectionHeader>{title}</FKSectionHeader>;
 }
 
 /** A home "quick action" — an icon-in-tint tile that fills half the row.

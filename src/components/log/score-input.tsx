@@ -443,7 +443,8 @@ function InlineUnitSegments({
   const { dir } = useI18n();
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
-  const BRAND_TEAL = '#0E8C8C';
+  const colors = useFKColors();
+  const BRAND_TEAL = colors.primary;
   const chips = options.map((opt) => {
     const active = value === opt;
     return (

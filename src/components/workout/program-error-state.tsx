@@ -54,7 +54,7 @@ export function ProgramErrorState({
             paddingHorizontal: 18,
             borderRadius: 12,
             borderCurve: 'continuous',
-            backgroundColor: '#0E8C8C',
+            backgroundColor: colors.primary,
           },
           pressed && { opacity: 0.85 },
         ]}

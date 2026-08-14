@@ -72,6 +72,7 @@ export function MyHistory({
 }
 
 function HistoryChart({ results }: { results: WorkoutResult[] }) {
+  const colors = useFKColors();
   const points = useMemo(() => {
     return results
       .slice()
@@ -100,14 +101,14 @@ function HistoryChart({ results }: { results: WorkoutResult[] }) {
       <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
         <Path
           d={d}
-          stroke="#0E8C8C"
+          stroke={colors.primary}
           strokeWidth={2}
           fill="none"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         {xs.map((x, i) => (
-          <Circle key={i} cx={x} cy={ys[i]} r={3} fill="#0E8C8C" />
+          <Circle key={i} cx={x} cy={ys[i]} r={3} fill={colors.primary} />
         ))}
       </Svg>
     </View>

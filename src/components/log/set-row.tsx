@@ -377,6 +377,7 @@ function UnitToggle({
   accessibilityLabel: string;
   onPress: () => void;
 }) {
+  const colors = useFKColors();
   return (
     <View
       style={{
@@ -385,7 +386,7 @@ function UnitToggle({
         borderRadius: 10,
         borderCurve: 'continuous',
         borderWidth: 2,
-        borderColor: '#0E8C8C',
+        borderColor: colors.primary,
         backgroundColor: 'rgba(14,140,140,0.12)',
         overflow: 'hidden',
       }}
@@ -401,7 +402,7 @@ function UnitToggle({
           style={{
             fontSize: 13,
             fontWeight: '800',
-            color: '#0E8C8C',
+            color: colors.primaryText,
             fontFamily: 'Assistant-Medium',
             letterSpacing: -0.1,
           }}

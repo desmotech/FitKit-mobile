@@ -26,7 +26,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFKColors } from '@/components/fk';
+import { FKAmbientBackdrop, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -166,7 +166,9 @@ export default function CheckInScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'bottom']}>
+    <View style={{ flex: 1 }}>
+    <FKAmbientBackdrop />
+    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
       <View
         style={{
           flex: 1,
@@ -181,7 +183,7 @@ export default function CheckInScreen() {
             entering={FadeIn.duration(200)}
             style={{ alignItems: 'center', gap: 18 }}
           >
-            <ActivityIndicator size="large" color="#0E8C8C" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <View style={{ alignItems: 'center', gap: 4 }}>
               <Text
                 className="font-display"
@@ -314,14 +316,18 @@ export default function CheckInScreen() {
                     paddingHorizontal: 18,
                     height: 44,
                     borderRadius: 14,
-                    backgroundColor: '#0E8C8C',
+                    backgroundColor: colors.primary,
                     opacity: pressed ? 0.82 : 1,
                   }}
                 >
-                  <CalendarDays size={16} color="#fff" strokeWidth={2.4} />
+                  <CalendarDays
+                    size={16}
+                    color={colors.onPrimary}
+                    strokeWidth={2.4}
+                  />
                   <Text
                     style={{
-                      color: '#fff',
+                      color: colors.onPrimary,
                       fontSize: 14,
                       fontWeight: '800',
                       letterSpacing: -0.1,
@@ -336,5 +342,6 @@ export default function CheckInScreen() {
         ) : null}
       </View>
     </SafeAreaView>
+    </View>
   );
 }

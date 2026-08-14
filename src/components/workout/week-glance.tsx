@@ -27,6 +27,7 @@ import {
 
 const SAGE = '#5A6A3F';
 const TEAL = '#0E8C8C';
+const TEAL_DARK = '#27C8BA';
 const AMBER = '#C9974D';
 
 export interface WeekGlanceProps {
@@ -148,7 +149,8 @@ function ConsistencyChip({
 }) {
   const { done, committed, pct } = consistency;
   if (committed === 0 || pct == null) return null;
-  const color = pct >= 80 ? SAGE : pct >= 50 ? TEAL : AMBER;
+  const color =
+    pct >= 80 ? SAGE : pct >= 50 ? (isDark ? TEAL_DARK : TEAL) : AMBER;
   return (
     <View
       accessibilityRole="text"
@@ -236,7 +238,7 @@ function DayPill({
           fontSize: 11,
           fontFamily: font.mono,
           fontVariant: ['tabular-nums'],
-          color: cell.isToday ? TEAL : colors.mutedFg,
+          color: cell.isToday ? colors.primary : colors.mutedFg,
           fontWeight: cell.isToday ? '800' : '500',
         }}
       >
@@ -249,7 +251,7 @@ function DayPill({
               width: 5,
               height: 5,
               borderRadius: 3,
-              backgroundColor: cell.status === 'done' ? SAGE : TEAL,
+              backgroundColor: cell.status === 'done' ? SAGE : colors.primary,
             }}
           />
         ) : null}
@@ -272,7 +274,9 @@ function visualFor(
 ): CellVisual {
   const { status, isToday, isPast } = cell;
   // Today always wears a teal ring, whatever its underlying state.
-  const todayRing = isToday ? { borderWidth: 2, borderColor: TEAL } : null;
+  const todayRing = isToday
+    ? { borderWidth: 2, borderColor: colors.primary }
+    : null;
   switch (status) {
     case 'done':
       return {
@@ -284,17 +288,23 @@ function visualFor(
       };
     case 'today':
       return {
-        bg: withAlpha(TEAL, 0.12),
+        bg: withAlpha(colors.primary, 0.12),
         borderWidth: 2,
-        borderColor: TEAL,
-        icon: <Dumbbell size={14} color={TEAL} strokeWidth={2.2} />,
+        borderColor: colors.primary,
+        icon: <Dumbbell size={14} color={colors.primary} strokeWidth={2.2} />,
       };
     case 'planned':
       return {
         bg: 'transparent',
         borderWidth: 1,
-        borderColor: withAlpha(TEAL, 0.35),
-        icon: <Dumbbell size={13} color={withAlpha(TEAL, 0.8)} strokeWidth={2} />,
+        borderColor: withAlpha(colors.primary, 0.35),
+        icon: (
+          <Dumbbell
+            size={13}
+            color={withAlpha(colors.primary, 0.8)}
+            strokeWidth={2}
+          />
+        ),
         ...todayRing,
       };
     case 'missed':

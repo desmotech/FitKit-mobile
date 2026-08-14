@@ -66,11 +66,11 @@ export function NotFoundOrError({
                   opacity: pressed ? 0.5 : 1,
                 }}
               >
-                <ChevronStart size={24} color="#0E8C8C" strokeWidth={2.4} />
+                <ChevronStart size={24} color={colors.primaryText} strokeWidth={2.4} />
                 <Text
                   style={{
                     fontSize: 17,
-                    color: '#0E8C8C',
+                    color: colors.primaryText,
                     letterSpacing: -0.2,
                   }}
                 >
@@ -101,7 +101,7 @@ export function NotFoundOrError({
                 : 'rgba(14,140,140,0.10)',
             }}
           >
-            <Icon size={32} color="#0E8C8C" strokeWidth={1.8} />
+            <Icon size={32} color={colors.primary} strokeWidth={1.8} />
           </View>
           <Text
             className="font-display"
@@ -140,13 +140,13 @@ export function NotFoundOrError({
                   paddingHorizontal: 22,
                   paddingVertical: 12,
                   borderRadius: 999,
-                  backgroundColor: '#0E8C8C',
+                  backgroundColor: colors.primary,
                   opacity: pressed ? 0.7 : 1,
                 }}
               >
                 <Text
                   style={{
-                    color: '#fff',
+                    color: colors.onPrimary,
                     fontSize: 16,
                     fontWeight: '700',
                     letterSpacing: -0.1,

@@ -454,7 +454,7 @@ export default function PaymentsScreen() {
                   justifyContent: 'center',
                 }}
               >
-                <CreditCard size={18} color="#0E8C8C" strokeWidth={2.2} />
+                <CreditCard size={18} color={colors.primary} strokeWidth={2.2} />
               </View>
               <View
                 style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}
@@ -488,10 +488,14 @@ export default function PaymentsScreen() {
                 style={{ paddingVertical: 6, paddingHorizontal: 4 }}
               >
                 {cardBusy ? (
-                  <ActivityIndicator size="small" color="#0E8C8C" />
+                  <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <Text
-                    style={{ fontSize: 13, fontWeight: '700', color: '#0E8C8C' }}
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '700',
+                      color: colors.primaryText,
+                    }}
                   >
                     {errorStrings.updateCard}
                   </Text>
@@ -531,7 +535,7 @@ export default function PaymentsScreen() {
                 disabled={cardBusy}
                 trailing={
                   cardBusy ? (
-                    <ActivityIndicator size="small" color="#0E8C8C" />
+                    <ActivityIndicator size="small" color={colors.primary} />
                   ) : undefined
                 }
               />
@@ -865,7 +869,11 @@ function SubscriptionCard({
               style={{ paddingVertical: 6, paddingHorizontal: 4 }}
             >
               <Text
-                style={{ fontSize: 13, fontWeight: '700', color: '#0E8C8C' }}
+                style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: colors.primaryText,
+                }}
               >
                 {changePlanLabel}
               </Text>
@@ -909,7 +917,11 @@ function TransactionCard({
   typeLabel: string;
   lang: string;
 }) {
-  const typeTone = TYPE_TONE[txn.type];
+  // The charge tone's light-teal ink falls below AA on dark cards.
+  const typeTone =
+    txn.type === 'charge' && colors.isDark
+      ? { ...TYPE_TONE.charge, fg: colors.primaryText }
+      : TYPE_TONE[txn.type];
   const statusTone = STATUS_TONE[txn.status];
   const dateStr = new Date(txn.createdAt).toLocaleDateString(lang, {
     year: 'numeric',

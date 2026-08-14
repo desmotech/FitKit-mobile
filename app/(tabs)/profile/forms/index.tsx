@@ -43,6 +43,7 @@ import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const BRAND_TEAL = '#0E8C8C';
+const BRAND_TEAL_DARK = '#27C8BA';
 const STATUS_PILL_FG: Record<string, string> = {
   pending: '#B84A40',
   sent: '#B84A40',
@@ -276,7 +277,9 @@ function FormRow({
   const s = useFormStrings();
   const status = entry.instance.status;
   const actionable = isActionable(status);
-  const pillColor = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
+  const rawPill = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
+  const pillColor =
+    isDark && rawPill === BRAND_TEAL ? BRAND_TEAL_DARK : rawPill;
 
   const StatusIcon = actionable
     ? Circle
@@ -396,7 +399,7 @@ function FormRow({
                   style={{
                     fontSize: 12,
                     fontWeight: '600',
-                    color: 'rgb(14,140,140)',
+                    color: isDark ? BRAND_TEAL_DARK : BRAND_TEAL,
                     writingDirection: isRTL ? 'rtl' : 'ltr',
                   }}
                 >
@@ -468,9 +471,16 @@ function FormRow({
             }}
           >
             {downloading ? (
-              <ActivityIndicator size="small" color={BRAND_TEAL} />
+              <ActivityIndicator
+                size="small"
+                color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+              />
             ) : (
-              <Download size={17} color={BRAND_TEAL} strokeWidth={2.2} />
+              <Download
+                size={17}
+                color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+                strokeWidth={2.2}
+              />
             )}
           </Pressable>
         ) : null}
@@ -509,7 +519,7 @@ function EmptyState({
           justifyContent: 'center',
         }}
       >
-        <FileSignature size={26} color={BRAND_TEAL} strokeWidth={2.2} />
+        <FileSignature size={26} color={colors.primary} strokeWidth={2.2} />
       </View>
       <Text
         style={{

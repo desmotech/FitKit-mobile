@@ -1,7 +1,7 @@
 import { Quote } from 'lucide-react-native';
 import { View } from 'react-native';
 import { Text } from '@/components/ui/text';
-import { FKCard } from '@/components/fk';
+import { FKCard, useFKColors } from '@/components/fk';
 
 /** Coach pre-note banner — a brand-striped quote callout above the day's
  *  workout (shown when the assignment carries a coachPreNote). */
@@ -14,6 +14,7 @@ export function CoachNotesBanner({
   label: string;
   isRTL: boolean;
 }) {
+  const colors = useFKColors();
   return (
     <FKCard
       style={{
@@ -33,8 +34,8 @@ export function CoachNotesBanner({
           bottom: 0,
           [isRTL ? 'right' : 'left']: 0,
           width: 3,
-          backgroundColor: '#0E8C8C',
-          shadowColor: '#0E8C8C',
+          backgroundColor: colors.primary,
+          shadowColor: colors.primary,
           shadowOpacity: 0.4,
           shadowRadius: 8,
           shadowOffset: { width: 0, height: 0 },
@@ -49,16 +50,16 @@ export function CoachNotesBanner({
       >
         <Quote
           size={20}
-          color="#0E8C8C"
+          color={colors.primary}
           strokeWidth={2}
           style={{ opacity: 0.55, marginTop: 2 }}
         />
         <View style={{ flex: 1 }}>
           <Text
             style={{
-              fontSize: 10,
-              fontWeight: '800',
-              color: '#0E8C8C',
+              fontSize: 11,
+              fontWeight: '700',
+              color: colors.primaryText,
               marginBottom: 4,
               textAlign: isRTL ? 'right' : 'left',
             }}

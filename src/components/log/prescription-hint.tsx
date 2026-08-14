@@ -59,7 +59,7 @@ export function PrescriptionHint({
       {computedTarget ? (
         <Text
           style={{
-            color: '#0E8C8C',
+            color: isDark ? '#27C8BA' : '#0A6E6E',
             fontSize: 11,
             fontWeight: '600',
             fontFamily: 'Assistant-Medium',

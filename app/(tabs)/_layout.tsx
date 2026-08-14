@@ -72,10 +72,11 @@ export default function TabsLayout() {
       <View style={{ flex: 1 }} className="bg-background">
         <NativeTabs
           iconColor={inactive as never}
+          // No explicit label color — a fixed color wins over `tintColor` on
+          // iOS, leaving the SELECTED tab's label in the inactive grey.
           labelStyle={{
             fontSize: 11,
             fontWeight: '600',
-            color: inactive,
           }}
           tintColor={tint}>
           <NativeTabs.Trigger name="index">

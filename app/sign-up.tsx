@@ -45,6 +45,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import {
+  FKAmbientBackdrop,
   FKBrandMark,
   FKButton,
   FKGlassPanel,
@@ -318,9 +319,11 @@ export default function SignUpScreen() {
   );
 
   return (
+    <View style={{ flex: 1 }}>
+    <FKAmbientBackdrop />
     <SafeAreaView
       edges={['top', 'bottom']}
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: 'transparent' }}
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -431,6 +434,7 @@ export default function SignUpScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </View>
   );
 }
 
