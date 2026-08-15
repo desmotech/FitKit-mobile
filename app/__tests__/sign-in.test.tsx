@@ -18,6 +18,9 @@ const he = authStringsFor('he');
 
 // The screen navigates via the module-level `router` export (not useRouter).
 const mockReplace = jest.fn();
+// `?next=` is the route AuthGate was sending them to before it bounced them
+// here; empty by default so an ordinary sign-in still lands on the tabs.
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   router: {
     replace: (...args: unknown[]) => mockReplace(...args),
@@ -25,10 +28,12 @@ jest.mock('expo-router', () => ({
     back: jest.fn(),
   },
   useRouter: () => ({ replace: mockReplace, push: jest.fn(), back: jest.fn() }),
+  useLocalSearchParams: () => mockSearchParams,
 }));
 
 beforeEach(() => {
   mockReplace.mockClear();
+  mockSearchParams = {};
 });
 
 function clerkError(code: string) {

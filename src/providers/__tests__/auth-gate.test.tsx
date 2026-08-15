@@ -20,16 +20,24 @@ const he = dictionaries.he as unknown as Record<string, Record<string, string>>;
 
 // Capture where <Redirect/> sends the member instead of mounting a navigator.
 const mockRedirects: string[] = [];
+// The route the member was actually trying to reach, which AuthGate carries
+// through sign-in so a campaign link's ?plan= survives authentication.
+let mockPathname = '/(tabs)';
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   Redirect: ({ href }: { href: string }) => {
     mockRedirects.push(href);
     return null;
   },
   useRouter: () => ({ replace: jest.fn(), push: jest.fn(), back: jest.fn() }),
+  usePathname: () => mockPathname,
+  useGlobalSearchParams: () => mockSearchParams,
 }));
 
 beforeEach(() => {
   mockRedirects.length = 0;
+  mockPathname = '/(tabs)';
+  mockSearchParams = {};
 });
 
 const CONSENT_PATH = api('/legal/consents/status');
@@ -84,8 +92,31 @@ describe('AuthGate', () => {
 
     await renderWithProviders(gate());
 
-    await waitFor(() => expect(mockRedirects).toContain('/(auth)/sign-in'));
+    await waitFor(() =>
+      expect(mockRedirects).toContain(
+        `/(auth)/sign-in?next=${encodeURIComponent('/(tabs)')}`,
+      ),
+    );
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
+  });
+
+  it('carries the attempted route and its params through sign-in', async () => {
+    // A signed-out tap on a campaign link (/shop?plan=...) used to land on
+    // the home tab with the plan silently dropped.
+    mockAuthState.isSignedIn = false;
+    mockAuthState.userId = null;
+    mockPathname = '/(tabs)/shop';
+    mockSearchParams = { plan: 'plan_presale' };
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(mockRedirects).toContain(
+        `/(auth)/sign-in?next=${encodeURIComponent(
+          '/(tabs)/shop?plan=plan_presale',
+        )}`,
+      ),
+    );
   });
 
   it('shows the auth error screen with a retry button when the account fails to load', async () => {

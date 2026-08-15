@@ -20,13 +20,14 @@
  * shell render its own empty state.
  */
 import { useAuth, useClerk } from '@clerk/clerk-expo';
-import { Redirect } from 'expo-router';
+import { Redirect, useGlobalSearchParams, usePathname } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { FKScreenLoader } from '@/components/fk/loading-bar';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useNeedsLegalConsent } from '@/hooks/use-needs-legal-consent';
+import { buildNextRoute } from '@/lib/safe-route';
 
 function LoadingScreen() {
   return <FKScreenLoader />;
@@ -43,9 +44,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
   } = useCurrentUser();
   const { needs: needsLegalConsent, isError: consentError } =
     useNeedsLegalConsent();
+  const pathname = usePathname();
+  const params = useGlobalSearchParams();
 
   if (!isLoaded) return <LoadingScreen />;
-  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+  // Carry the attempted destination through sign-in. A signed-out tap on a
+  // universal link like /shop?plan=<id> used to land on the home tab with the
+  // plan silently dropped — the member arrived from a campaign link and never
+  // saw what they came for.
+  if (!isSignedIn) {
+    const next = buildNextRoute(pathname, params);
+    return (
+      <Redirect
+        href={`/(auth)/sign-in?next=${encodeURIComponent(next)}` as never}
+      />
+    );
+  }
 
   // A hard failure loading the account or consent status — e.g. a 401 that
   // didn't recover after a token refresh, or a Clerk user with no app
