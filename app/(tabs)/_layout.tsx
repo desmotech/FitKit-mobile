@@ -94,9 +94,16 @@ export default function TabsLayout() {
   // Open the realtime socket + keep the inbox/badge live for the session.
   useRealtimeSubscription();
   // Resume the destination lost across an App Store install (join link with a
-  // plan). Waits for the shop gate so it never routes at a tab that isn't
-  // there; `tabsReady` below governs when the shell itself renders.
-  usePendingIntent({ orgId, shopAvailable: shouldShowShop });
+  // plan). Needs BOTH gates: `shouldShowShop` proves the tab exists for this
+  // org, `tabsReady` proves the navigator holding it is actually mounted.
+  // Passing only the former navigated into the loader branch, where no `shop`
+  // route exists yet — the redirect vanished and the member landed on home
+  // with the intent already consumed.
+  usePendingIntent({
+    orgId,
+    shopAvailable: shouldShowShop,
+    navigatorReady: tabsReady,
+  });
   const labels =
     (t as unknown as Record<string, Record<string, string>>).mobileTabs ?? {};
   // `mobileTabs` has no `shop` key — fall back to the shared `nav.shop` label.
