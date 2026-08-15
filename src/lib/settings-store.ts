@@ -124,6 +124,23 @@ export async function loadAnalyticsConsent(): Promise<boolean> {
   }
 }
 
+/**
+ * Three-state read: `null` when this device has never recorded an answer, as
+ * distinct from a stored decline.
+ *
+ * The distinction matters because only an unanswered device may adopt the
+ * consent recorded server-side (e.g. from the web join form). A stored `false`
+ * is a decision and must never be silently overwritten by it.
+ */
+export async function loadAnalyticsConsentRaw(): Promise<boolean | null> {
+  try {
+    const raw = await AsyncStorage.getItem(ANALYTICS_KEY);
+    return raw === null ? null : raw === 'true';
+  } catch {
+    return null;
+  }
+}
+
 export async function saveAnalyticsConsent(granted: boolean): Promise<void> {
   try {
     await AsyncStorage.setItem(ANALYTICS_KEY, granted ? 'true' : 'false');
