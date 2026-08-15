@@ -15,6 +15,7 @@ import { Alert, type AlertButton } from 'react-native';
 import { dictionaries } from '@fitkit/shared';
 import ProfileScreen from '../(tabs)/profile/index';
 import { profileStringsFor } from '@/i18n/profile-strings';
+import { cancelPendingStringsFor } from '@/i18n/cancel-pending-strings';
 import { ThemeProvider } from '@/providers/theme-provider';
 import {
   personalRecord,
@@ -73,6 +74,23 @@ const S = {
   signOutTitle: pick('profile.signOutPrompt') ?? P.signOutTitle,
   signOutCancel: pick('common.cancel') ?? P.signOutCancel,
   signOutConfirm: pick('profile.settings.signOut') ?? P.signOutConfirm,
+};
+
+// Cancel-pending copy: the pinned @fitkit/shared package predates these
+// dictionary keys, so `pick` resolves to undefined and the static table
+// (`cancelPendingStringsFor`) is what the screen actually renders today —
+// same overlay pattern as `S` above, kept future-proof for when the package
+// catches up.
+const CP = cancelPendingStringsFor('he');
+const CPS = {
+  cta: pick('subscriptions.cancelPendingAction') ?? CP.cta,
+  confirmTitle: pick('subscriptions.cancelPendingDialog.title') ?? CP.confirmTitle,
+  confirmDescription:
+    pick('subscriptions.cancelPendingDialog.description') ?? CP.confirmDescription,
+  keepAction: pick('subscriptions.cancelPendingDialog.keepAction') ?? CP.keepAction,
+  confirmAction:
+    pick('subscriptions.cancelPendingDialog.confirmAction') ?? CP.confirmAction,
+  success: pick('subscriptions.cancelPendingDialog.success') ?? CP.success,
 };
 
 /** Stage every read the profile hub performs (header chrome included). */
@@ -253,6 +271,84 @@ describe('Profile hub', () => {
     // is still in flight when MSW handlers reset after the test.
     await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
+    alertSpy.mockRestore();
+  });
+
+  // ── Cancel a pending checkout (member self-serve) ─────────────
+  // `memberAction` is resolved server-side (`resolveMemberAction`) from the
+  // org's cancel-pending flag — the CTA only renders when the API says so,
+  // never from a client-side flag check.
+
+  it('offers to cancel the checkout when the server says cancel_pending', async () => {
+    stageProfile({
+      subs: [
+        subscriptionWithPlan({
+          status: 'pending',
+          memberAction: 'cancel_pending',
+        } as never),
+      ],
+    });
+
+    await renderProfile();
+
+    await waitFor(() => expect(screen.getByText(CPS.cta)).toBeOnTheScreen());
+  });
+
+  it('does not offer it when the org flag is off — only "finish checkout" applies', async () => {
+    stageProfile({
+      subs: [
+        subscriptionWithPlan({
+          status: 'pending',
+          memberAction: 'complete_checkout',
+        } as never),
+      ],
+    });
+
+    await renderProfile();
+
+    await waitFor(() =>
+      expect(screen.getByText('Gold Unlimited')).toBeOnTheScreen(),
+    );
+    expect(screen.queryByText(CPS.cta)).not.toBeOnTheScreen();
+  });
+
+  it('cancels the pending checkout after confirming in the alert', async () => {
+    const pending = subscriptionWithPlan({
+      status: 'pending',
+      memberAction: 'cancel_pending',
+    } as never);
+    stageProfile({ subs: [pending] });
+    const cancelCalls: unknown[] = [];
+    server.use(
+      http.post(
+        api(`/organizations/${TEST_ORG}/subscriptions/my/${pending.id}/cancel-pending`),
+        async () => {
+          cancelCalls.push(true);
+          return HttpResponse.json({ data: { ...pending, status: 'cancelled' } });
+        },
+      ),
+    );
+    const alertSpy = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation(() => undefined);
+
+    await renderProfile();
+    await userEvent.press(await screen.findByText(CPS.cta));
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      CPS.confirmTitle,
+      CPS.confirmDescription.replace('{plan}', 'Gold Unlimited'),
+      expect.any(Array),
+    );
+    const buttons = alertSpy.mock.calls[0][2] as AlertButton[];
+    const confirm = buttons.find((b) => b.style === 'destructive');
+    expect(confirm).toBeDefined();
+
+    await act(async () => {
+      await confirm!.onPress?.();
+    });
+
+    await waitFor(() => expect(cancelCalls).toHaveLength(1));
     alertSpy.mockRestore();
   });
 });
