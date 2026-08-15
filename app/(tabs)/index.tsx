@@ -30,14 +30,7 @@
 import { useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { useFocusEffect, useRouter } from 'expo-router';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Compass,
-  type LucideIcon,
-  Target,
-  Trophy,
-} from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Compass, Target, Trophy, WifiOff, type LucideIcon } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -52,6 +45,8 @@ import {
   useFKColors,
 } from '@/components/fk';
 import { QueryErrorState } from '@/components/error-state';
+import { useIsOnline } from '@/hooks/use-offline';
+import { useOfflineStrings } from '@/i18n/use-offline-strings';
 import {
   OpenDayCard,
   RestDayCard,
@@ -188,6 +183,8 @@ export default function HomeScreen() {
 
   // ── Section state derivations ─────────────────────────────────────
   const hasOrg = !!orgId;
+  const isOnline = useIsOnline();
+  const off = useOfflineStrings();
   const isLoadingToday =
     hasOrg && (weekAssignments.isLoading || weekSessions.isLoading);
   // Read-path failure with nothing cached — rendering the open-day /
@@ -196,6 +193,13 @@ export default function HomeScreen() {
   const todayLoadError =
     (weekAssignments.isError && !weekAssignments.data) ||
     (weekSessions.isError && !weekSessions.data);
+  // Offline with nothing cached. Needs its own branch for the same reason
+  // the error branch above exists, and it is the more common case of the
+  // two: a paused query is neither loading nor errored, so without this the
+  // open-day nudge below wins and greets a member with no signal with
+  // "nothing programmed today" — on the first screen they see.
+  const todayOffline =
+    !isOnline && (!weekAssignments.data || !weekSessions.data);
   const hasWorkoutsToday = todayWorkouts.length > 0;
   // Coach-assigned rest (kind: 'rest') is real recovery → sage "Rest day".
   // An empty board (nothing programmed, nothing booked) is an *open* day,
@@ -279,6 +283,18 @@ export default function HomeScreen() {
 
             {isLoadingToday ? (
               <Skeleton style={{ height: 132, borderRadius: 20 }} />
+            ) : todayOffline ? (
+              <QueryErrorState
+                tone="neutral"
+                icon={WifiOff}
+                title={off.scheduleOfflineTitle}
+                subtitle={off.workoutsOfflineBody}
+                retryLabel={s.tryAgain}
+                onRetry={() => {
+                  weekAssignments.refetch();
+                  weekSessions.refetch();
+                }}
+              />
             ) : todayLoadError ? (
               <QueryErrorState
                 title={s.loadFailedTitle}

@@ -45,6 +45,23 @@ export function useNeedsLegalConsent(): NeedsLegalConsentResult {
 
   return useMemo<NeedsLegalConsentResult>(() => {
     if (status.isLoading) return { needs: null, missing: [], isError: false };
+    // Paused with nothing cached is NOT an answer. A paused query is neither
+    // loading nor errored — `isLoading` is false because nothing is in
+    // flight — so without this it fell straight through to the "no consent
+    // rows" branch below, read an empty list as "all three required docs
+    // missing", and sent every offline member to /onboarding/accept-terms: a
+    // screen they cannot complete without a network, blocking the cached
+    // schedule they opened the app to read.
+    //
+    // The `data` check is what keeps the fix from breaking the case it
+    // exists to serve. A query holding restored data is ALSO paused offline
+    // — it is stale and would like to refetch — and bailing out on
+    // `isPaused` alone would strand a member whose consent status we know
+    // perfectly well. Paused only means "no fresh answer coming"; it says
+    // nothing about whether we already have one.
+    if (status.isPaused && status.data === undefined) {
+      return { needs: null, missing: [], isError: false };
+    }
     // On error return needs=null, NOT true. Previously an errored/empty
     // status list made every required doc look "missing" → needs=true →
     // the gate redirected to /onboarding/accept-terms, which re-hit
@@ -65,5 +82,5 @@ export function useNeedsLegalConsent(): NeedsLegalConsentResult {
       }
     }
     return { needs: missing.length > 0, missing, isError: false };
-  }, [status.isLoading, status.isError, status.data]);
+  }, [status.isLoading, status.isPaused, status.isError, status.data]);
 }

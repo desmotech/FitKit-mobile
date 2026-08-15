@@ -4,6 +4,7 @@ import type {
   UserWithMembershipsResponse,
 } from '@fitkit/shared';
 import { useActiveOrg } from '@/providers/active-org-provider';
+import { OFFLINE_GC_TIME } from '@/lib/query-persister';
 import { useApiQuery } from './use-api-query';
 
 const ROLE_ORDER: MembershipResponse['role'][] = [
@@ -72,8 +73,13 @@ export interface CurrentUserContext {
  * before letting them into the tab shell.
  */
 export function useCurrentUser(): CurrentUserContext {
+  // Long-lived on purpose: this payload is what the boot gate needs before
+  // anything else can render, so if it is not in the restored cache an
+  // offline launch cannot get past AuthGate — and the schedule cached for
+  // exactly that moment is unreachable. At the app-wide 30-minute gcTime,
+  // offline booking only worked within half an hour of last use.
   const { data, isLoading: queryLoading, isError } = useApiQuery<UserMeResponse>(
-    { path: '/users/me' },
+    { path: '/users/me', queryOptions: { gcTime: OFFLINE_GC_TIME } },
   );
   const { isLoaded } = useClerkUser();
   const { activeOrgId } = useActiveOrg();

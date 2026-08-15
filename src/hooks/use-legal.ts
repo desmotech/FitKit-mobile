@@ -14,6 +14,7 @@ import type {
   LegalDocumentType,
 } from '@fitkit/shared';
 import { useApiQuery, useApiSend } from './use-api-query';
+import { OFFLINE_GC_TIME } from '@/lib/query-persister';
 import type { ApiEnvelope } from './use-feed-data';
 
 /** Latest published version of each legal document for a locale.
@@ -32,6 +33,8 @@ export function useConsentStatus() {
   return useApiQuery<ApiEnvelope<ConsentStatusItem[]>>({
     path: '/legal/consents/status',
     queryKey: ['/legal/consents/status'],
+    // Second half of the boot gate — same reasoning as /users/me.
+    queryOptions: { gcTime: OFFLINE_GC_TIME },
   });
 }
 

@@ -4,11 +4,13 @@
  *
  * Order matters:
  *   1. Clerk not loaded → spinner
- *   2. !isSignedIn → /sign-in
- *   3. /users/me OR /legal/consents/status not loaded → spinner
- *   4. needsLegalConsent → /onboarding/accept-terms
- *   5. isProfileIncomplete → /onboarding/complete-profile
- *   6. otherwise → render children
+ *   2. !isSignedIn → /sign-in, carrying the attempted route as ?next=
+ *   3. /users/me OR /legal/consents/status hard-failed → AuthErrorScreen
+ *   4. either still unresolved → spinner; or, when the reason they cannot
+ *      resolve is no network and nothing cached, the offline screen
+ *   5. needsLegalConsent → /onboarding/accept-terms
+ *   6. isProfileIncomplete → /onboarding/complete-profile
+ *   7. otherwise → render children
  *
  * Legal-consent gating uses `useNeedsLegalConsent`, which checks the
  * /legal/consents/status endpoint in addition to the user.pendingLegalConsents
@@ -22,15 +24,55 @@
 import { useAuth, useClerk } from '@clerk/clerk-expo';
 import { Redirect, useGlobalSearchParams, usePathname } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import { WifiOff } from 'lucide-react-native';
+import { View } from 'react-native';
 import type { ReactNode } from 'react';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
+import { QueryErrorState } from '@/components/error-state';
+import { useFKColors } from '@/components/fk';
 import { FKScreenLoader } from '@/components/fk/loading-bar';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { useIsOnline } from '@/hooks/use-offline';
 import { useNeedsLegalConsent } from '@/hooks/use-needs-legal-consent';
+import { useOfflineStrings } from '@/i18n/use-offline-strings';
 import { buildNextRoute } from '@/lib/safe-route';
 
 function LoadingScreen() {
   return <FKScreenLoader />;
+}
+
+/**
+ * Offline on a cold start with no cached account.
+ *
+ * Deliberately not the AuthErrorScreen: nothing went wrong with their
+ * account, and that screen offers "Sign out" — the single worst thing an
+ * offline member could do, since signing back in needs a network they do not
+ * have, and it would erase the cached schedule along with the session.
+ */
+function OfflineBootScreen({ onRetry }: { onRetry: () => void }) {
+  const colors = useFKColors();
+  const s = useOfflineStrings();
+  return (
+    <View
+      testID="auth-offline-screen"
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.background,
+        paddingHorizontal: 28,
+      }}
+    >
+      <QueryErrorState
+        tone="neutral"
+        icon={WifiOff}
+        title={s.bootOfflineTitle}
+        subtitle={s.bootOfflineBody}
+        retryLabel={s.retry}
+        onRetry={onRetry}
+      />
+    </View>
+  );
 }
 
 export function AuthGate({ children }: { children: ReactNode }) {
@@ -44,6 +86,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   } = useCurrentUser();
   const { needs: needsLegalConsent, isError: consentError } =
     useNeedsLegalConsent();
+  const isOnline = useIsOnline();
   const pathname = usePathname();
   const params = useGlobalSearchParams();
 
@@ -85,7 +128,26 @@ export function AuthGate({ children }: { children: ReactNode }) {
   // resolve. Without this the tab shell briefly mounts on slow
   // connections, then the redirect fires — which causes a flash and a
   // wasted /users/me-driven render.
-  if (isLoading || needsLegalConsent === null) return <LoadingScreen />;
+  if (isLoading || needsLegalConsent === null) {
+    // Offline, these two are *paused*, not slow: they will not resolve until
+    // there is a network, so a spinner here spins forever. It only gets this
+    // far when nothing was cached either — with a restored account payload
+    // the gate passes and the member reads their cached schedule, which is
+    // the whole point of the offline cache.
+    if (!isOnline) {
+      return (
+        <OfflineBootScreen
+          onRetry={() => {
+            void queryClient.invalidateQueries({ queryKey: ['/users/me'] });
+            void queryClient.invalidateQueries({
+              queryKey: ['/legal/consents/status'],
+            });
+          }}
+        />
+      );
+    }
+    return <LoadingScreen />;
+  }
 
   if (needsLegalConsent) return <Redirect href="/onboarding/accept-terms" />;
   if (isProfileIncomplete)

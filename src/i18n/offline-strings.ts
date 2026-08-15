@@ -67,6 +67,11 @@ export interface OfflineStrings {
   workoutsOfflineBody: string;
   /** Shown under cached content that may be out of date. */
   showingCached: string;
+
+  // ── Cold start with no cached account ─────────────────────────────
+  bootOfflineTitle: string;
+  bootOfflineBody: string;
+  retry: string;
 }
 
 const EN: OfflineStrings = {
@@ -108,6 +113,11 @@ const EN: OfflineStrings = {
   workoutsOfflineBody:
     "We can't load new workouts right now. Ones you've already opened are still here.",
   showingCached: 'Showing your last update',
+
+  bootOfflineTitle: "You're offline",
+  bootOfflineBody:
+    "We need a connection to open your account the first time. Once you've used the app online, your schedule and workouts stay readable without one.",
+  retry: 'Try again',
 };
 
 const HE: OfflineStrings = {
@@ -149,6 +159,11 @@ const HE: OfflineStrings = {
   workoutsOfflineBody:
     'לא הצלחנו לטעון אימונים חדשים. אימונים שכבר פתחתם עדיין זמינים.',
   showingCached: 'מוצג העדכון האחרון שנשמר',
+
+  bootOfflineTitle: 'אין חיבור לאינטרנט',
+  bootOfflineBody:
+    'נדרש חיבור כדי לטעון את החשבון בפעם הראשונה. אחרי שימוש ראשון עם חיבור, לוח השיעורים והאימונים יישארו זמינים גם בלעדיו.',
+  retry: 'נסו שוב',
 };
 
 const RU: OfflineStrings = {
@@ -190,6 +205,11 @@ const RU: OfflineStrings = {
   workoutsOfflineBody:
     'Не удаётся загрузить новые тренировки. Те, что вы уже открывали, доступны.',
   showingCached: 'Показано последнее обновление',
+
+  bootOfflineTitle: 'Нет соединения',
+  bootOfflineBody:
+    'Чтобы открыть аккаунт в первый раз, нужна сеть. После первого входа с сетью расписание и тренировки останутся доступны и без неё.',
+  retry: 'Повторить',
 };
 
 export function offlineStringsFor(lang: Locale): OfflineStrings {

@@ -5,7 +5,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'FitKit',
   slug: 'fitkit',
   scheme: 'fitkit',
-  version: '1.0.4',
+  // The one place the marketing version lives. iOS `buildNumber` and Android
+  // `versionCode` are NOT set here on purpose — eas.json runs
+  // `appVersionSource: "remote"` with `autoIncrement` on the production
+  // profile, so EAS owns them and setting them locally would fight it.
+  //
+  // Bumping this also moves `runtimeVersion` (see the policy at the bottom of
+  // this file), which is what decides who may receive an OTA update. Read the
+  // note there before shipping a release that touches native code.
+  version: '1.0.5',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'automatic',
@@ -321,6 +329,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         process.env.EAS_PROJECT_ID ?? '1f6bb22c-0649-417b-af9e-9154dd4efda0',
     },
   },
+  // An OTA update is only delivered to installed apps whose runtimeVersion
+  // matches the one it was published under — and under this policy that
+  // string IS `version` above. So the version bump is not bookkeeping when a
+  // release adds or changes native code: it is the mechanism that stops a JS
+  // bundle reaching a binary that cannot run it.
+  //
+  // 1.0.5 is exactly that case. It adds @react-native-community/netinfo, and
+  // `src/lib/network.ts` calls into it from `QueryProvider` — above every
+  // screen — so a 1.0.4 binary pulling this bundle would hit a missing native
+  // module on the first render and fail to boot. Shipping it as an OTA under
+  // an unchanged version would brick every installed copy. It needs a new
+  // store build, which is what the bump forces.
   runtimeVersion: { policy: 'appVersion' },
   updates: {
     url:
