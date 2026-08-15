@@ -18,7 +18,7 @@
  */
 import { useSignIn } from '@clerk/clerk-expo';
 import type { SignInResource } from '@clerk/types';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useState } from 'react';
 import {
@@ -42,6 +42,7 @@ import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useAuthStrings } from '@/i18n/use-auth-strings';
 import { useI18n } from '@/providers/i18n-provider';
+import { safeInternalRoute } from '@/lib/safe-route';
 
 type Stage = 'credentials' | 'second-factor' | 'reset-request' | 'reset-verify';
 
@@ -80,6 +81,11 @@ export default function SignInScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const s = useAuthStrings();
+
+  // Where AuthGate was sending the member before it bounced them here. Falls
+  // back to the tab shell for an ordinary sign-in.
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  const destination = safeInternalRoute(next);
 
   const factorDescription = (() => {
     if (!factor) return s.mfaSubtitle;
@@ -160,7 +166,7 @@ export default function SignInScreen() {
       if (attempt.status === 'complete') {
         await setActive({ session: attempt.createdSessionId });
         haptics.success();
-        router.replace('/(tabs)');
+        router.replace(destination as never);
         return;
       }
 
@@ -203,7 +209,7 @@ export default function SignInScreen() {
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         haptics.success();
-        router.replace('/(tabs)');
+        router.replace(destination as never);
         return;
       }
 
@@ -273,7 +279,7 @@ export default function SignInScreen() {
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         haptics.success();
-        router.replace('/(tabs)');
+        router.replace(destination as never);
         return;
       }
 

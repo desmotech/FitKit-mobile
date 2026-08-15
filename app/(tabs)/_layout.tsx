@@ -15,6 +15,7 @@ import {
   useOrgPrograms,
 } from '@/hooks/use-workouts';
 import { usePaymentConfig, usePlans } from '@/hooks/use-shop';
+import { usePendingIntent } from '@/hooks/use-pending-intent';
 import { useI18n } from '@/providers/i18n-provider';
 
 const Label = NativeTabs.Trigger.Label;
@@ -92,6 +93,10 @@ export default function TabsLayout() {
   useAppIconBadge(activeOrganization?.id);
   // Open the realtime socket + keep the inbox/badge live for the session.
   useRealtimeSubscription();
+  // Resume the destination lost across an App Store install (join link with a
+  // plan). Waits for the shop gate so it never routes at a tab that isn't
+  // there; `tabsReady` below governs when the shell itself renders.
+  usePendingIntent({ orgId, shopAvailable: shouldShowShop });
   const labels =
     (t as unknown as Record<string, Record<string, string>>).mobileTabs ?? {};
   // `mobileTabs` has no `shop` key — fall back to the shared `nav.shop` label.
