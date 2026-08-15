@@ -91,9 +91,15 @@ export function usePendingIntent(options: {
       plan_id: intent.planId,
       kind: intent.kind,
     });
-    // The shop's existing `?plan=` landing takes it from here: spotlight the
-    // plan and confirm before purchase, never auto-checkout.
-    router.replace(`/(tabs)/shop?plan=${encodeURIComponent(intent.planId)}`);
+    // Object form, NOT a path string with the query baked in. The string
+    // `/(tabs)/shop?plan=<id>` silently did nothing in production: the resume
+    // fired, the screen stayed on `/`, and the shop's landing handler never
+    // ran. The object form is what the form-gate resume already uses to reach
+    // this same screen successfully (profile/forms/[instanceId]).
+    router.replace({
+      pathname: '/(tabs)/shop',
+      params: { plan: intent.planId },
+    });
     // Marked handled as soon as it has been acted on, so a later launch
     // doesn't drag the member back into a checkout they already saw.
     consume(intent.id);
