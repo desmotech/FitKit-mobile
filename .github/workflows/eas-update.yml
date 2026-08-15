@@ -88,8 +88,20 @@ jobs:
         env:
           INPUT_BRANCH: ${{ github.event.inputs.branch }}
           INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
-          INPUT_MESSAGE: ${{ github.event.inputs.message || github.event.head_commit.message }}
+          # `github.event.head_commit` only exists on a push payload, so on a
+          # dispatch it resolved to empty whenever the optional message input
+          # was left blank — and `eas update --message ""` is rejected in
+          # non-interactive mode. The fallback could never fire on the one
+          # event it was written for. Fall back to the commit being promoted.
+          INPUT_MESSAGE: ${{ github.event.inputs.message || format('Manual promotion of {0}', github.sha) }}
         run: |
+          # Belt and braces: a blank message fails the run a minute in, after
+          # checkout and install, with an error that reads like a CLI problem
+          # rather than a missing input.
+          if [ -z "${INPUT_MESSAGE// }" ]; then
+            echo "::error::Update message resolved to empty; refusing to publish."
+            exit 1
+          fi
           eas update \
             --branch "$INPUT_BRANCH" \
             --environment "$INPUT_ENVIRONMENT" \
