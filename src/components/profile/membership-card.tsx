@@ -8,6 +8,7 @@ import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 import { useQuotaStrings } from '@/i18n/use-quota-strings';
 import { useEarlyRenewStrings } from '@/i18n/use-early-renew-strings';
+import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
 import { QuotaBalance, type QuotaUsage } from './quota-balance';
 
 type ColorTokens = ReturnType<typeof useFKColors>;
@@ -26,6 +27,8 @@ export function MembershipCard({
   isRenewingEarly,
   onRenewEarly,
   onManage,
+  onCancelPending,
+  isCancellingPending,
 }: {
   sub: {
     id: string;
@@ -44,8 +47,15 @@ export function MembershipCard({
     cancellationEffectiveAt?: string | null;
     /** What the member may actually do, resolved server-side. Status alone
      *  can't say: a gym-cancelled subscription and a member-cancelled one are
-     *  both `cancelled`, but only one is renewable. */
-    memberAction?: 'none' | 'renew' | 'complete_checkout' | 'update_card' | null;
+     *  both `cancelled`, but only one is renewable. `cancel_pending` only
+     *  ever comes back when the org's cancel-pending flag is on. */
+    memberAction?:
+      | 'none'
+      | 'renew'
+      | 'complete_checkout'
+      | 'cancel_pending'
+      | 'update_card'
+      | null;
   };
   isRTL: boolean;
   colors: ColorTokens;
@@ -74,12 +84,19 @@ export function MembershipCard({
   /** Opens subscription management (cancel, resume, change plan, card).
    *  Required for the Manage CTA to do anything — see the note below. */
   onManage?: () => void;
+  /** Cancels a `pending` subscription (abandoned/incomplete checkout).
+   *  Only ever wired up when `memberAction === 'cancel_pending'` renders —
+   *  the parent screen owns the confirm-then-mutate flow (mirrors
+   *  `onRenew`/`onManage`, plain callback props, no mutation state here). */
+  onCancelPending?: () => void;
+  isCancellingPending?: boolean;
 }) {
   const haptics = useHaptics();
   const { isDark } = useFKColors();
   const { lang } = useI18n();
   const quotaT = useQuotaStrings();
   const earlyRenewT = useEarlyRenewStrings();
+  const cancelPendingT = useCancelPendingStrings();
   const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
   const isActive = sub.status === 'active' || sub.status === 'paused';
   // The money CTA follows the server's verdict, not the raw status: a gym
@@ -88,25 +105,32 @@ export function MembershipCard({
   // (or resurrect a superseded plan and pay for two).
   const action = sub.memberAction ?? 'none';
   const isTerminal = sub.status === 'cancelled';
+  const isCancelPendingCta = action === 'cancel_pending';
   const ctaLabel =
     action === 'renew'
       ? labels.renew
       : action === 'complete_checkout'
         ? labels.completePayment
-        : action === 'update_card'
-          ? labels.updateCard
-          : // Nothing to pay: keep Manage for a live membership, and show no
-            // button at all once it has ended.
-            isTerminal
-            ? null
-            : labels.manage;
+        : isCancelPendingCta
+          ? cancelPendingT.cta
+          : action === 'update_card'
+            ? labels.updateCard
+            : // Nothing to pay: keep Manage for a live membership, and show no
+              // button at all once it has ended.
+              isTerminal
+              ? null
+              : labels.manage;
   // The CTA label already switched to "Manage" when there was nothing to pay,
   // but the press still called `onRenew` — so the one button a member with a
   // healthy membership could see said Manage and performed a renewal, and
   // there was no route into cancel/resume/change-plan at all. The label now
   // decides the action.
   const isManageCta = ctaLabel === labels.manage;
-  const onCtaPress = isManageCta ? onManage : onRenew;
+  const onCtaPress = isManageCta
+    ? onManage
+    : isCancelPendingCta
+      ? onCancelPending
+      : onRenew;
 
   // Say why there's no way back, rather than leaving a dead card.
   const endedNote = isTerminal && action === 'none' ? labels.endedByGym : null;
@@ -265,7 +289,11 @@ export function MembershipCard({
             testID="membership-cta"
             onPressIn={haptics.tap}
             onPress={onCtaPress}
-            disabled={isRenewing || (isManageCta && !onManage)}
+            disabled={
+              isRenewing ||
+              (isManageCta && !onManage) ||
+              (isCancelPendingCta && (!onCancelPending || isCancellingPending))
+            }
           >
             {({ pressed }) => (
               <View
@@ -280,11 +308,15 @@ export function MembershipCard({
                   shadowRadius: 8,
                   shadowOffset: { width: 0, height: 3 },
                   elevation: 3,
-                  opacity: pressed || isRenewing ? 0.85 : 1,
+                  opacity: pressed || isRenewing || isCancellingPending ? 0.85 : 1,
                 }}
               >
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
-                  {isRenewing && !isManageCta ? labels.renewing : ctaLabel}
+                  {isCancelPendingCta && isCancellingPending
+                    ? cancelPendingT.cancelling
+                    : isRenewing && !isManageCta
+                      ? labels.renewing
+                      : ctaLabel}
                 </Text>
               </View>
             )}

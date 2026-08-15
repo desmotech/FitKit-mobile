@@ -62,6 +62,7 @@ import { displayFamily } from '@/lib/type';
 import { useAvatarUpload } from '@/hooks/use-avatar-upload';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
+  useCancelPendingSubscription,
   useEarlyRenewSubscription,
   useMyPersonalRecords,
   useMyStats,
@@ -83,6 +84,7 @@ import {
   earlyRenewErrorMessage,
   useEarlyRenewStrings,
 } from '@/i18n/use-early-renew-strings';
+import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
 import { ApiError } from '@/hooks/use-api';
 import { EARLY_RENEWAL_FLAG } from '@/lib/early-renew';
 import { formatPrice } from '@/lib/format-price';
@@ -137,6 +139,7 @@ export default function ProfileScreen() {
   const labels = useProfileStrings();
   const errorStrings = usePaymentErrorStrings();
   const earlyRenewT = useEarlyRenewStrings();
+  const cancelPendingT = useCancelPendingStrings();
 
   const orgId = activeOrganization?.id;
   const incompleteForms = useIncompleteFormsCount(orgId);
@@ -145,6 +148,7 @@ export default function ProfileScreen() {
   const subs = useMySubscription(orgId);
   const renew = useRenewSubscription(orgId);
   const earlyRenew = useEarlyRenewSubscription(orgId);
+  const cancelPending = useCancelPendingSubscription(orgId);
   // Shares FIT-282's presale-terms flag rather than getting its own — see
   // src/lib/early-renew.ts.
   const earlyRenewalEnabled = useFeatureFlag(EARLY_RENEWAL_FLAG);
@@ -271,6 +275,42 @@ export default function ProfileScreen() {
                 haptics.error();
                 const code = err instanceof ApiError ? err.code : undefined;
                 Alert.alert('', earlyRenewErrorMessage(earlyRenewT, code));
+              },
+            });
+          },
+        },
+      ],
+    );
+  };
+
+  // Cancel a `pending` subscription (abandoned/incomplete checkout) — the
+  // member's card, mirrors web's cancel-pending-checkout-dialog.tsx. Only
+  // ever reachable when the server's memberAction says so (flag-gated
+  // per-org on the API); no reason field, since a pending checkout was
+  // never charged and there's no billing period to schedule around.
+  const handleCancelPending = () => {
+    if (!primarySub || cancelPending.isPending) return;
+    haptics.tap();
+    Alert.alert(
+      cancelPendingT.confirmTitle,
+      cancelPendingT.confirmDescription.replace('{plan}', primarySub.plan.name),
+      [
+        { text: cancelPendingT.keepAction, style: 'cancel' },
+        {
+          text: cancelPendingT.confirmAction,
+          style: 'destructive',
+          onPress: () => {
+            cancelPending.mutate(primarySub.id, {
+              onSuccess: () => {
+                haptics.success();
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.subscriptions.all(orgId!, { mine: true }),
+                });
+                Alert.alert('', cancelPendingT.success);
+              },
+              onError: () => {
+                haptics.error();
+                Alert.alert('', cancelPendingT.error);
               },
             });
           },
@@ -796,6 +836,8 @@ export default function ProfileScreen() {
               onRenewEarly={handleRenewEarly}
               // Where cancel, resume, change plan and card management live.
               onManage={() => router.push('/(tabs)/profile/payments')}
+              onCancelPending={handleCancelPending}
+              isCancellingPending={cancelPending.isPending}
             />
           )}
 

@@ -38,6 +38,7 @@ import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
   type SubscriptionLite,
+  useCancelPendingSubscription,
   useMySubscription,
   useRegisterPaymentMethod,
   useRenewSubscription,
@@ -48,6 +49,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { usePlans } from '@/hooks/use-shop';
 import { ScheduledPlanChangeBanner } from '@/components/profile/scheduled-plan-change-banner';
 import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
+import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
 import {
   paymentErrorMessage,
   usePaymentErrorStrings,
@@ -147,6 +149,8 @@ export default function PaymentsScreen() {
   const subs = useMySubscription(orgId);
   const renew = useRenewSubscription(orgId);
   const resume = useResumeCancellation(orgId);
+  const cancelPending = useCancelPendingSubscription(orgId);
+  const cancelPendingT = useCancelPendingStrings();
   const registerCard = useRegisterPaymentMethod(orgId);
   const [resolving, setResolving] = useState(false);
 
@@ -173,6 +177,14 @@ export default function PaymentsScreen() {
     ) ?? [];
   const activeSub =
     liveSubs.find((s) => s.plan.type === 'subscription') ?? liveSubs[0];
+  // A pending checkout (abandoned/incomplete) with nothing else live to
+  // show — same "only when nothing else exists" precedent as the
+  // consumables fallback above. Deliberately gated on `!activeSub`: a stray
+  // pending retry (e.g. a second plan's checkout) must never hide an
+  // already-active subscription just because it happens to be more recent.
+  const pendingSub = !activeSub
+    ? subs.data?.data?.find((s) => s.status === 'pending')
+    : undefined;
 
   // Member plan-change (FIT-271) — same PostHog per-org gate as web
   // (fail-closed; entry points render nothing until the flag resolves true).
@@ -281,6 +293,42 @@ export default function PaymentsScreen() {
       // returns, which is one month from the notice and not knowable here.
       params: { id: activeSub.id, plan: activeSub.plan.name },
     });
+  };
+
+  // Cancel a `pending` subscription (abandoned/incomplete checkout) — mirrors
+  // web's cancel-pending-checkout-dialog.tsx and profile/index.tsx's own
+  // handleCancelPending. A single Alert confirm, not the pageSheet
+  // `handleCancel` above uses: a pending checkout was never charged, so
+  // there's no billing period to schedule around and no reason field to ask.
+  const handleCancelPending = () => {
+    if (!pendingSub || !orgId || cancelPending.isPending) return;
+    haptics.tap();
+    Alert.alert(
+      cancelPendingT.confirmTitle,
+      cancelPendingT.confirmDescription.replace('{plan}', pendingSub.plan.name),
+      [
+        { text: cancelPendingT.keepAction, style: 'cancel' },
+        {
+          text: cancelPendingT.confirmAction,
+          style: 'destructive',
+          onPress: () => {
+            cancelPending.mutate(pendingSub.id, {
+              onSuccess: () => {
+                haptics.success();
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+                });
+                Alert.alert('', cancelPendingT.success);
+              },
+              onError: () => {
+                haptics.error();
+                Alert.alert('', cancelPendingT.error);
+              },
+            });
+          },
+        },
+      ],
+    );
   };
 
   // Card registration / debt resolution: open the hosted page, then refetch.
@@ -427,6 +475,26 @@ export default function PaymentsScreen() {
               />
             ) : null}
           </>
+        ) : pendingSub ? (
+          <SubscriptionCard
+            sub={pendingSub}
+            isRTL={isRTL}
+            colors={colors}
+            labels={labels}
+            statusLabels={membershipStatus}
+            onRenew={() => {}}
+            isRenewing={false}
+            onCancel={() => {}}
+            onResume={() => {}}
+            isResuming={false}
+            intervalLabel={intervalLabel}
+            formatAmount={formatAmount}
+            lang={lang}
+            onChangePlan={null}
+            onCancelPending={handleCancelPending}
+            isCancellingPending={cancelPending.isPending}
+            cancelPendingLabel={cancelPendingT.cta}
+          />
         ) : null}
 
         {/* ── Payment method. Card on file → details + "Update card";
@@ -621,6 +689,9 @@ function SubscriptionCard({
   lang,
   onChangePlan,
   changePlanLabel,
+  onCancelPending,
+  isCancellingPending,
+  cancelPendingLabel,
 }: {
   sub: SubscriptionLite | SubscriptionWithPlan;
   isRTL: boolean;
@@ -648,6 +719,12 @@ function SubscriptionCard({
    *  or the sub isn't an active recurring subscription). */
   onChangePlan?: (() => void) | null;
   changePlanLabel?: string;
+  /** Cancels a `pending` subscription (abandoned/incomplete checkout).
+   *  Only rendered when the sub is `pending` AND the server's memberAction
+   *  says `cancel_pending` — see `showCancelPending` below. */
+  onCancelPending?: () => void;
+  isCancellingPending?: boolean;
+  cancelPendingLabel?: string;
 }) {
   const status = sub.status;
   const showRenew = status === 'past_due' || status === 'cancelled';
@@ -661,6 +738,14 @@ function SubscriptionCard({
       status === 'past_due' ||
       status === 'debt');
   const scheduledToCancel = scheduledToCancelOf(sub);
+  // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @fitkit/shared) predate
+  // `memberAction` — same cast precedent as `scheduledToCancelOf` above.
+  // `cancel_pending` only ever comes back when the org's cancel-pending flag
+  // is on, so no separate client-side flag check is needed here.
+  const showCancelPending =
+    status === 'pending' &&
+    (sub as unknown as { memberAction?: string }).memberAction ===
+      'cancel_pending';
 
   const fmtDate = (iso?: string | null) =>
     iso
@@ -853,7 +938,7 @@ function SubscriptionCard({
         />
       )}
 
-      {(onChangePlan || (showCancel && !scheduledToCancel)) && (
+      {(onChangePlan || (showCancel && !scheduledToCancel) || showCancelPending) && (
         <View
           style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -891,6 +976,20 @@ function SubscriptionCard({
                 style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}
               >
                 {labels.cancelAction}
+              </Text>
+            </Pressable>
+          ) : showCancelPending ? (
+            <Pressable
+              onPress={onCancelPending}
+              hitSlop={8}
+              testID="cancel-pending-btn"
+              disabled={isCancellingPending}
+              style={{ paddingVertical: 6, paddingHorizontal: 4 }}
+            >
+              <Text
+                style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}
+              >
+                {cancelPendingLabel}
               </Text>
             </Pressable>
           ) : null}

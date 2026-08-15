@@ -297,6 +297,22 @@ export function useResumeCancellation(orgId: string | undefined | null) {
 }
 
 /**
+ * Member: cancel their OWN `pending` subscription — a checkout they started
+ * and never finished. Mirrors web's cancel-pending-checkout-dialog.tsx.
+ * Flag-gated on the API side (`subscription-member-cancel-pending`,
+ * per-org, default off) — the button that calls this only ever renders when
+ * the API's `memberAction` on the subscription is `'cancel_pending'`, so no
+ * client-side flag check is needed here.
+ */
+export function useCancelPendingSubscription(orgId: string | undefined | null) {
+  return useApiAction<ApiEnvelope<SubscriptionLite>, string>({
+    path: (id: string) =>
+      `/organizations/${orgId}/subscriptions/my/${id}/cancel-pending`,
+    method: 'POST',
+  });
+}
+
+/**
  * Member self-service card registration. Returns a hosted payment-page URL to
  * open in the in-app browser (same pattern as plan checkout).
  */
