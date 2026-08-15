@@ -25,6 +25,8 @@ import { useHaptics } from '@/hooks/use-haptics';
 import {
   useSelfCheckin,
 } from '@/hooks/use-schedule';
+import { useIsOnline } from '@/hooks/use-offline';
+import { useOfflineStrings } from '@/i18n/use-offline-strings';
 import { getWeekStartDay, weekStartFor } from '@/hooks/use-workouts';
 import { useScheduleStrings } from '@/i18n/use-schedule-strings';
 import { useI18n } from '@/providers/i18n-provider';
@@ -77,6 +79,8 @@ export default function ScanScreen() {
   const handled = useRef(false);
 
   const checkin = useSelfCheckin(orgId, weekStart);
+  const isOnline = useIsOnline();
+  const off = useOfflineStrings();
 
   useEffect(() => {
     if (permission && !permission.granted && permission.canAskAgain) {
@@ -109,6 +113,15 @@ export default function ScanScreen() {
           return;
         }
 
+        // Offline the POST fails fast (check-in is never queued — the token
+        // expires and a GPS fix proves nothing after the fact), and the
+        // generic refusal copy below would blame the member for a rule they
+        // did not break. Name the actual problem.
+        if (!isOnline) {
+          setError(off.checkinNeedsConnectionBody);
+          return;
+        }
+
         handled.current = true;
         setBusy(true);
         setError(null);
@@ -137,7 +150,16 @@ export default function ScanScreen() {
         setError(labels.unreadable);
       }
     },
-    [busy, checkin, haptics, router, labels, sched.checkInRefusedBody],
+    [
+      busy,
+      checkin,
+      haptics,
+      router,
+      labels,
+      sched.checkInRefusedBody,
+      isOnline,
+      off.checkinNeedsConnectionBody,
+    ],
   );
 
   function handleClose() {

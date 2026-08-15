@@ -31,6 +31,7 @@ import React, {
   useState,
 } from 'react';
 import { AppState } from 'react-native';
+import { onlineManager } from '@tanstack/react-query';
 import { io, type Socket } from 'socket.io-client';
 import type { AnnouncementResponse, MessageResponse } from '@fitkit/shared';
 import { wsUrl } from '@/lib/api';
@@ -119,6 +120,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Socket.IO's own backoff caps at 30s, so a member who loses signal for a
+    // few minutes can sit up to half a minute past the moment the network
+    // returns before messages start arriving again — with the app open in
+    // front of them. Nudging it the instant connectivity is restored closes
+    // that window; a `connect()` on an already-connected socket is a no-op.
+    const stopWatchingNetwork = onlineManager.subscribe((online) => {
+      if (online) connectIfNeeded();
+    });
+
     if (isSignedIn) {
       connectIfNeeded();
     } else {
@@ -135,7 +145,10 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       else socket.disconnect();
     });
 
-    return () => sub.remove();
+    return () => {
+      sub.remove();
+      stopWatchingNetwork();
+    };
   }, [isSignedIn]);
 
   // Fully tear down on provider unmount.

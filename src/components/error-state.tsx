@@ -12,7 +12,7 @@
  * useFKColors (dark-aware) and layout direction via useI18n (RTL-aware);
  * pass `isRTL` only to override.
  */
-import { AlertCircle, RotateCw } from 'lucide-react-native';
+import { AlertCircle, RotateCw, type LucideIcon } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import { FKGlassPanel, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
@@ -25,6 +25,8 @@ export function QueryErrorState({
   retryLabel,
   onRetry,
   isRTL: isRTLProp,
+  tone = 'error',
+  icon: Icon = AlertCircle,
 }: {
   title: string;
   /** Optional: some surfaces have a title and a retry but no dictionary
@@ -35,10 +37,20 @@ export function QueryErrorState({
   onRetry: () => void;
   /** Overrides the locale-derived direction (rarely needed). */
   isRTL?: boolean;
+  /**
+   * `'neutral'` for conditions that are not the app's fault and not
+   * actionable-by-alarm — being offline, chiefly. A red alert plate for "you
+   * walked into a lift" reads as breakage and sends members to support for
+   * something that fixes itself.
+   */
+  tone?: 'error' | 'neutral';
+  /** Defaults to the alert circle; pass e.g. `WifiOff` for offline. */
+  icon?: LucideIcon;
 }) {
   const colors = useFKColors();
   const { dir } = useI18n();
   const isRTL = isRTLProp ?? dir === 'rtl';
+  const isNeutral = tone === 'neutral';
 
   return (
     <FKGlassPanel
@@ -51,14 +63,22 @@ export function QueryErrorState({
           height: 56,
           borderRadius: 18,
           borderCurve: 'continuous',
-          backgroundColor: 'rgba(184,74,64,0.10)',
+          backgroundColor: isNeutral
+            ? 'rgba(120,120,128,0.12)'
+            : 'rgba(184,74,64,0.10)',
           borderWidth: 1,
-          borderColor: 'rgba(184,74,64,0.28)',
+          borderColor: isNeutral
+            ? 'rgba(120,120,128,0.24)'
+            : 'rgba(184,74,64,0.28)',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <AlertCircle size={26} color={colors.destructive} strokeWidth={2.2} />
+        <Icon
+          size={26}
+          color={isNeutral ? colors.mutedFg : colors.destructive}
+          strokeWidth={2.2}
+        />
       </View>
       <Text
         style={{

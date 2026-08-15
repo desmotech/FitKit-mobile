@@ -35,6 +35,7 @@ import { useAnalyticsIdentify } from '@/hooks/use-analytics-identify';
 import { useScreenTracking } from '@/hooks/use-screen-tracking';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 import { AnimatedSplash } from '@/components/animated-splash';
+import { OfflineBanner } from '@/components/offline-banner';
 
 // Sentry — initialized once at module load, per the Expo manual-setup
 // guide (docs.sentry.io/platforms/react-native/manual-setup/expo/). The
@@ -255,6 +256,12 @@ function RootLayout() {
                       options={{ headerShown: true, title: 'Not found' }}
                     />
                     </Stack>
+                    {/* Connectivity + offline-queue status. Root-mounted on
+                        purpose: a booking queued on the schedule tab can
+                        finish syncing — or be refused — while the member is
+                        somewhere else entirely, or seconds after a cold
+                        start with no screen involved. */}
+                    <OfflineBanner />
                     </RealtimeProvider>
                   </QueryProvider>
                 </ActiveOrgProvider>

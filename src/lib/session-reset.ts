@@ -15,6 +15,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { QueryClient } from '@tanstack/react-query';
 import { queryPersister } from '@/lib/query-persister';
+import { clearSyncFailures } from '@/lib/offline-sync-store';
 import { clearActiveOrgId } from '@/lib/settings-store';
 
 const SESSION_OWNER_KEY = 'fitkit:auth:cacheOwner';
@@ -57,7 +58,13 @@ export async function clearSessionOwner(): Promise<void> {
  * exactly what we just deleted.
  */
 export async function resetClientSession(queryClient: QueryClient): Promise<void> {
+  // `clear()` empties the mutation cache as well as the query cache, which is
+  // what drops any booking the outgoing member had queued offline (FIT-171).
+  // That is deliberate: a queued booking is an instruction to spend *their*
+  // credits, and replaying it under whoever signs in next would book the
+  // wrong person into a class on the wrong plan.
   queryClient.clear();
+  clearSyncFailures();
   await Promise.all([
     queryPersister.removeClient(),
     clearActiveOrgId(),

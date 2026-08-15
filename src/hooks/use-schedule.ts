@@ -1,12 +1,19 @@
 /**
  * Schedule hooks — class sessions, bookings, check-in.
  */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { onlineManager, useMutation, useQueryClient } from '@tanstack/react-query';
 import { analytics } from '@/lib/analytics';
 import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
 import type { WorkoutLite } from './use-workouts';
+import {
+  offlineMutationKeys,
+  type BookSessionVars,
+  type CancelBookingVars,
+  type QueuedMutationContext,
+} from '@/lib/offline-queue';
+import { OFFLINE_GC_TIME } from '@/lib/query-persister';
 import { queryKeys } from '@/lib/query-keys';
 
 // Mirrors the canonical `ClassSessionResponse` from
@@ -189,7 +196,7 @@ export function useSessionDetail(
       orgId && sessionId
         ? queryKeys.sessions.byId(orgId, sessionId)
         : ['/sessions/:id', 'noop'],
-    queryOptions: { enabled: !!orgId && !!sessionId },
+    queryOptions: { enabled: !!orgId && !!sessionId, gcTime: OFFLINE_GC_TIME },
   });
 }
 
@@ -212,7 +219,8 @@ export function useMyWeekSessions(
       orgId && weekStart
         ? queryKeys.sessions.week(orgId, weekStart)
         : ['/sessions', 'noop'],
-    queryOptions: { enabled: !!orgId && !!weekStart },
+    // Readable with no signal — see OFFLINE_GC_TIME.
+    queryOptions: { enabled: !!orgId && !!weekStart, gcTime: OFFLINE_GC_TIME },
   });
 }
 
@@ -292,25 +300,60 @@ export function classBookState(
 
 // ── Booking mutations ───────────────────────────────────────────────
 
+/**
+ * Both booking mutations are queued when the device is offline: React Query
+ * pauses them, the persister writes them to disk, and they replay on
+ * reconnect — even across an app kill (FIT-171). That imposes two rules on
+ * everything below.
+ *
+ *  1. **Variables carry `orgId`.** A mutation restored from disk has no
+ *     closure to read it from. This is why callers pass `orgId` explicitly
+ *     rather than it being baked in by the hook.
+ *
+ *  2. **The request, the analytics and the cache reconciliation live in the
+ *     mutation *defaults*** (`src/lib/offline-queue.ts`), not here — a
+ *     restored mutation never runs this hook, so anything defined here would
+ *     simply not happen for the case the queue exists to serve. What stays
+ *     here is the part that only makes sense with a live screen attached:
+ *     the optimistic write and its rollback.
+ *
+ * Per-call callbacks passed to `mutate(vars, { onSuccess … })` still run in
+ * addition to the defaults', so screens keep their own alerts and spinners.
+ */
+
 export interface BookSessionInput {
   /** Optional — server picks the default eligible plan if omitted. */
   subscriptionId?: string;
 }
 
+type SessionsSnapshot = ApiEnvelope<ClassSession[]> | undefined;
+
+/**
+ * What `onMutate` hands to the shared outcome handler in offline-queue.ts.
+ *
+ * `queuedOffline` is the flag that tells a queued replay (nobody is looking;
+ * a refusal has to surface in the banner) from a live tap (the screen alerts
+ * it). `previous` is the optimistic rollback snapshot, absent offline because
+ * nothing was written optimistically.
+ */
+type BookingMutationContext = QueuedMutationContext & {
+  previous: SessionsSnapshot;
+};
+
 /**
  * POST /organizations/:orgId/sessions/:sessionId/book
  *
- * Optimistically flips `myBookingStatus` on the cached week list so the
- * UI reflects the new state before the server response lands. On error
- * the previous snapshot is restored; on settle we refetch to reconcile
- * with the canonical server state (booking vs waitlist depends on
- * capacity — server decides).
+ * Optimistically flips `myBookingStatus` on the cached week list so the UI
+ * reflects the new state before the server response lands — but ONLY while
+ * online. Offline, the flip would be a promise the app cannot keep: capacity
+ * and quota are server-authoritative, and a class can fill while the member
+ * is underground. The row shows a "queued" stamp instead, driven by the
+ * mutation's own paused state (see `useQueuedBookings`).
  */
 export function useBookSession(
   orgId: string | undefined | null,
   weekStart: string | undefined,
 ) {
-  const { fetchWithAuth } = useApi();
   const queryClient = useQueryClient();
   const queryKey =
     orgId && weekStart
@@ -320,63 +363,40 @@ export function useBookSession(
   return useMutation<
     ApiEnvelope<unknown>,
     Error,
-    { sessionId: string; body?: BookSessionInput },
-    { previous: ApiEnvelope<ClassSession[]> | undefined }
+    BookSessionVars,
+    BookingMutationContext
   >({
-    mutationFn: ({ sessionId, body }) =>
-      fetchWithAuth(`/organizations/${orgId}/sessions/${sessionId}/book`, {
-        method: 'POST',
-        body: JSON.stringify(body ?? {}),
-      }) as Promise<ApiEnvelope<unknown>>,
+    mutationKey: [...offlineMutationKeys.bookSession],
     onMutate: async ({ sessionId }) => {
+      if (!onlineManager.isOnline()) {
+        return { previous: undefined, queuedOffline: true };
+      }
       await queryClient.cancelQueries({ queryKey });
       const previous =
         queryClient.getQueryData<ApiEnvelope<ClassSession[]>>(queryKey);
-      queryClient.setQueryData<ApiEnvelope<ClassSession[]> | undefined>(
-        queryKey,
-        (prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            data: prev.data.map((s) => {
-              if (s.id !== sessionId) return s;
-              const isFull =
-                s.capacity != null && s.capacityRemaining === 0;
-              return {
-                ...s,
-                myBookingStatus: isFull ? 'waitlisted' : 'confirmed',
-                bookingCount: s.bookingCount + (isFull ? 0 : 1),
-                capacityRemaining:
-                  s.capacityRemaining != null
-                    ? Math.max(0, s.capacityRemaining - (isFull ? 0 : 1))
-                    : s.capacityRemaining,
-              };
-            }),
-          };
-        },
-      );
-      return { previous };
+      queryClient.setQueryData<SessionsSnapshot>(queryKey, (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          data: prev.data.map((s) => {
+            if (s.id !== sessionId) return s;
+            const isFull = s.capacity != null && s.capacityRemaining === 0;
+            return {
+              ...s,
+              myBookingStatus: isFull ? 'waitlisted' : 'confirmed',
+              bookingCount: s.bookingCount + (isFull ? 0 : 1),
+              capacityRemaining:
+                s.capacityRemaining != null
+                  ? Math.max(0, s.capacityRemaining - (isFull ? 0 : 1))
+                  : s.capacityRemaining,
+            };
+          }),
+        };
+      });
+      return { previous, queuedOffline: false };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
-    },
-    onSuccess: (_data, { sessionId }) => {
-      analytics.track('member_booking_created', {
-        org_id: orgId,
-        session_id: sessionId,
-        platform: 'mobile',
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-      // A booking consumes quota — the Membership card's "X of Y used"
-      // reads off this query too, or it's stuck showing pre-booking numbers
-      // until something else happens to refetch it (e.g. reopening the app).
-      if (orgId) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
-        });
-      }
     },
   });
 }
@@ -384,14 +404,13 @@ export function useBookSession(
 /**
  * DELETE /organizations/:orgId/sessions/:sessionId/book
  *
- * Optimistic in the same shape as booking — flips status back to null
- * and restores capacity. On error rollback; on settle re-fetch.
+ * Optimistic in the same shape as booking, and offline-silent for the same
+ * reason — see `useBookSession`.
  */
 export function useCancelBooking(
   orgId: string | undefined | null,
   weekStart: string | undefined,
 ) {
-  const { fetchWithAuth } = useApi();
   const queryClient = useQueryClient();
   const queryKey =
     orgId && weekStart
@@ -401,64 +420,67 @@ export function useCancelBooking(
   return useMutation<
     ApiEnvelope<unknown>,
     Error,
-    { sessionId: string },
-    { previous: ApiEnvelope<ClassSession[]> | undefined }
+    CancelBookingVars,
+    BookingMutationContext
   >({
-    mutationFn: ({ sessionId }) =>
-      fetchWithAuth(`/organizations/${orgId}/sessions/${sessionId}/book`, {
-        method: 'DELETE',
-      }) as Promise<ApiEnvelope<unknown>>,
+    mutationKey: [...offlineMutationKeys.cancelBooking],
     onMutate: async ({ sessionId }) => {
+      if (!onlineManager.isOnline()) {
+        return { previous: undefined, queuedOffline: true };
+      }
       await queryClient.cancelQueries({ queryKey });
       const previous =
         queryClient.getQueryData<ApiEnvelope<ClassSession[]>>(queryKey);
-      queryClient.setQueryData<ApiEnvelope<ClassSession[]> | undefined>(
-        queryKey,
-        (prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            data: prev.data.map((s) => {
-              if (s.id !== sessionId) return s;
-              const wasConfirmed = s.myBookingStatus === 'confirmed';
-              return {
-                ...s,
-                myBookingStatus: null,
-                bookingCount: Math.max(
-                  0,
-                  s.bookingCount - (wasConfirmed ? 1 : 0),
-                ),
-                capacityRemaining:
-                  s.capacityRemaining != null && wasConfirmed
-                    ? s.capacityRemaining + 1
-                    : s.capacityRemaining,
-              };
-            }),
-          };
-        },
-      );
-      return { previous };
+      queryClient.setQueryData<SessionsSnapshot>(queryKey, (prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          data: prev.data.map((s) => {
+            if (s.id !== sessionId) return s;
+            const wasConfirmed = s.myBookingStatus === 'confirmed';
+            return {
+              ...s,
+              myBookingStatus: null,
+              bookingCount: Math.max(0, s.bookingCount - (wasConfirmed ? 1 : 0)),
+              capacityRemaining:
+                s.capacityRemaining != null && wasConfirmed
+                  ? s.capacityRemaining + 1
+                  : s.capacityRemaining,
+            };
+          }),
+        };
+      });
+      return { previous, queuedOffline: false };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(queryKey, ctx.previous);
     },
-    onSuccess: (_data, { sessionId }) => {
-      analytics.track('member_booking_cancelled', {
-        org_id: orgId,
-        session_id: sessionId,
-        platform: 'mobile',
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
-      // Cancelling frees a quota slot — same staleness gap as booking.
-      if (orgId) {
-        queryClient.invalidateQueries({
-          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
-        });
-      }
-    },
   });
+}
+
+/**
+ * Whether a cancellation is safe to queue for later replay.
+ *
+ * Booking offline is a bet on capacity; cancelling offline is a bet on the
+ * clock, and the clock is the one thing we can check. A cancellation replayed
+ * after its deadline is refused — and worse, the member believes they are no
+ * longer on the list and does not show up. So a cancellation whose window
+ * closes before the member is plausibly back online is refused *locally*,
+ * immediately, while there is still a screen to say so.
+ *
+ * The horizon is deliberately generous: an hour of walking out of a basement
+ * gym, not a guess at how long the tube ride is.
+ */
+export const OFFLINE_CANCEL_HORIZON_MS = 60 * 60_000;
+
+export function canQueueCancellation(
+  session: ClassSession,
+  now: number = Date.now(),
+): boolean {
+  if (session.allowLateCancellation) return true;
+  if (!session.cancellationDeadline) return true;
+  const deadline = new Date(session.cancellationDeadline).getTime();
+  return deadline - now > OFFLINE_CANCEL_HORIZON_MS;
 }
 
 // ── Self check-in ───────────────────────────────────────────────────

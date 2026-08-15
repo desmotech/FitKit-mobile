@@ -40,6 +40,8 @@ export function SessionRow({
   labels,
   colors,
   pending,
+  queued = null,
+  queuedLabels,
   onPress,
   onPressBook,
 }: {
@@ -50,6 +52,13 @@ export function SessionRow({
   labels: SessionRowLabels;
   colors: ReturnType<typeof useFKColors>;
   pending: boolean;
+  /**
+   * A booking change made offline that has not reached the server yet. The
+   * row must NOT render it as "Booked": capacity is the server's call and
+   * the class can fill before the queue drains (FIT-171).
+   */
+  queued?: 'book' | 'cancel' | null;
+  queuedLabels?: { book: string; cancel: string };
   onPress: () => void;
   onPressBook: () => void;
 }) {
@@ -104,6 +113,15 @@ export function SessionRow({
     tone = 'muted';
   }
 
+  // A pending sync outranks every stamp above: whatever the cache says the
+  // booking state is, the member's own last action has not landed yet, and
+  // that is the more useful thing to tell them. Gold, not green — this is
+  // "in progress", not "done".
+  if (queued && queuedLabels) {
+    stampText = queued === 'book' ? queuedLabels.book : queuedLabels.cancel;
+    tone = 'gold';
+  }
+
   // Start-side accent rule — reads availability at a glance (the design's
   // SessionCard accent, themed by booking state).
   const accentColor = isClosed
@@ -125,9 +143,12 @@ export function SessionRow({
             : '#5E7E3E';
 
   // Only book / waitlist / cancel / leave are actionable; full / closed /
-  // checked-in show their reason via the stamp (no dead button).
+  // checked-in show their reason via the stamp (no dead button). A row with
+  // a change already queued has nothing to offer either — the action it
+  // would show is the one still waiting to sync.
   const showAction =
-    bs === 'book' || bs === 'waitlist' || bs === 'cancel' || bs === 'leave';
+    !queued &&
+    (bs === 'book' || bs === 'waitlist' || bs === 'cancel' || bs === 'leave');
   const actionLabel =
     bs === 'cancel'
       ? labels.cancelBooking

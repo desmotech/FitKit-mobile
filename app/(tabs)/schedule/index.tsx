@@ -3,7 +3,7 @@
 // then the day's classes as glass-ds SessionCards. Booking happens in the
 // pushed session detail (tap a card) — the design has no inline book button.
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, WifiOff } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -23,11 +23,14 @@ import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
   type ClassSession,
   canCancelBooking,
+  canQueueCancellation,
   decideBookingPlan,
   useBookSession,
   useCancelBooking,
   useMyWeekSessions,
 } from '@/hooks/use-schedule';
+import { useIsOnline, useQueuedBookings } from '@/hooks/use-offline';
+import { useOfflineStrings } from '@/i18n/use-offline-strings';
 import {
   blockReasonText,
   usePlanPicker,
@@ -80,6 +83,23 @@ export default function ScheduleScreen() {
   // the whole list.
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  const isOnline = useIsOnline();
+  const off = useOfflineStrings();
+  // `placeholderData: keepPreviousData` means `data` can still be the
+  // PREVIOUS week's while a newly selected one loads. Online that gap closes
+  // in a moment; offline it never does — so `data` alone reads as "we have
+  // this week" and would render last week's classes under this week's dates.
+  const hasThisWeek =
+    !!sessionsQuery.data && !sessionsQuery.isPlaceholderData;
+  // Sessions with a booking change still waiting to reach the server. Keyed
+  // so a row can stamp itself "will book" / "will cancel" instead of claiming
+  // a confirmation the server has not given.
+  const queuedBookings = useQueuedBookings();
+  const queuedBySession = useMemo(
+    () => new Map(queuedBookings.map((q) => [q.sessionId, q.kind])),
+    [queuedBookings],
+  );
 
   // Lang-aware formatters for the selected-day header ("WED · Jun 3").
   const monthDayFmt = useMemo(
@@ -151,6 +171,7 @@ export default function ScheduleScreen() {
   // confirm first; the server is the source of truth (optimistic cache).
   const handleSessionAction = async (session: ClassSession) => {
     haptics.tap();
+    if (!orgId) return;
     const now = Date.now();
     const startsAt = new Date(session.startsAt).getTime();
     const isBooked = session.myBookingStatus === 'confirmed';
@@ -159,6 +180,9 @@ export default function ScheduleScreen() {
       session.myBookingStatus === 'attended' || !!session.myCheckedInAt;
     const hasMyBooking = isBooked || isWaitlisted;
     if (isCheckedIn) return;
+    // Already waiting to sync — a second tap would queue a duplicate the
+    // server would refuse, and the member has no way to tell them apart.
+    if (queuedBySession.has(session.id)) return;
     if (!hasMyBooking && startsAt < now) {
       Alert.alert(s.classStarted);
       return;
@@ -168,6 +192,17 @@ export default function ScheduleScreen() {
       // waitlist is always allowed.
       if (isBooked && !canCancelBooking(session, now)) {
         Alert.alert(s.cancellationWindowClosed);
+        return;
+      }
+      // A cancellation queued offline is a bet on the clock. If the window
+      // closes before the member is plausibly back online the replay is
+      // refused — and they walk away believing they are off the list. Refuse
+      // it here instead, while there is still a screen to explain.
+      if (!isOnline && !canQueueCancellation(session, now)) {
+        Alert.alert(
+          off.cancelNeedsConnectionTitle,
+          off.cancelNeedsConnectionBody,
+        );
         return;
       }
       const policyMsg = s.cancelPolicy.replace(
@@ -180,9 +215,18 @@ export default function ScheduleScreen() {
           text: s.cancelBooking,
           style: 'destructive',
           onPress: () => {
+            if (!isOnline) {
+              // No spinner: a paused mutation fires no callback until it
+              // replays, so `pendingSessionId` would spin until the member
+              // found signal again. The queued stamp carries the state.
+              cancelMutation.mutate({ orgId, sessionId: session.id });
+              haptics.success();
+              Alert.alert(off.cancelQueuedTitle, off.cancelQueuedBody);
+              return;
+            }
             setPendingSessionId(session.id);
             cancelMutation.mutate(
-              { sessionId: session.id },
+              { orgId, sessionId: session.id },
               {
                 onSuccess: () => haptics.success(),
                 onError: (err) =>
@@ -223,12 +267,18 @@ export default function ScheduleScreen() {
     } else {
       subscriptionId = decision.subscriptionId;
     }
+    if (!isOnline) {
+      // Queued, not booked — and said so plainly. Capacity and quota are the
+      // server's call, so "Booked" here would be a promise the app cannot
+      // keep: the class can fill while the member is underground.
+      bookMutation.mutate({ orgId, sessionId: session.id, subscriptionId });
+      haptics.success();
+      Alert.alert(off.bookQueuedTitle, off.bookQueuedBody);
+      return;
+    }
     setPendingSessionId(session.id);
     bookMutation.mutate(
-      {
-        sessionId: session.id,
-        body: subscriptionId ? { subscriptionId } : undefined,
-      },
+      { orgId, sessionId: session.id, subscriptionId },
       {
         onSuccess: () => haptics.success(),
         onError: (err) => {
@@ -407,12 +457,43 @@ export default function ScheduleScreen() {
             ) : null}
           </View>
 
+          {/* Cached classes, read with no signal. The spots-left counts below
+              are as stale as this line says they are — without it a member
+              acts on a "2 spots left" that was true at breakfast. */}
+          {!isOnline && hasThisWeek ? (
+            <Text
+              style={{
+                ...type.caption,
+                fontFamily: font.mono,
+                color: colors.mutedFg,
+                marginBottom: 12,
+                textAlign: isRTL ? 'right' : 'left',
+              }}
+            >
+              {off.showingCached}
+            </Text>
+          ) : null}
+
           {sessionsQuery.isLoading && all.length === 0 ? (
             <View style={{ gap: 12 }}>
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
               <Skeleton style={{ height: 74, borderRadius: 16 }} />
             </View>
+          ) : !isOnline && !hasThisWeek ? (
+            // Offline with nothing cached for this week. Distinct from the
+            // error state below on purpose: nothing is broken, the member
+            // just walked out of range, and weeks they already opened are
+            // still readable. Telling them "no classes today" would be the
+            // worst of the three — it is the only one that is false.
+            <QueryErrorState
+              tone="neutral"
+              icon={WifiOff}
+              title={off.scheduleOfflineTitle}
+              subtitle={off.scheduleOfflineBody}
+              retryLabel={s.tryAgain}
+              onRetry={() => sessionsQuery.refetch()}
+            />
           ) : sessionsQuery.isError && !sessionsQuery.data ? (
             // Fetch failed with nothing cached — "no classes scheduled"
             // here would be a lie. Cached weeks keep rendering below.
@@ -439,6 +520,11 @@ export default function ScheduleScreen() {
                   labels={s}
                   colors={colors}
                   pending={pendingSessionId === session.id}
+                  queued={queuedBySession.get(session.id) ?? null}
+                  queuedLabels={{
+                    book: off.queuedBook,
+                    cancel: off.queuedCancel,
+                  }}
                   onPress={() => handleCardPress(session)}
                   onPressBook={() => handleSessionAction(session)}
                 />

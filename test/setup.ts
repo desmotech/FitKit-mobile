@@ -196,3 +196,14 @@ jest.mock('posthog-react-native', () => {
     usePostHog: () => client,
   };
 });
+
+// NetInfo is a native module — it has no JS implementation under Jest. The
+// package's own mock reports a connected wifi interface, which is the right
+// default: every existing spec assumes requests go through, and react-query's
+// `onlineManager` (bound to NetInfo in src/lib/network.ts) would otherwise
+// pause every query the moment a suite touched the real module. Specs that
+// exercise the offline queue drive `onlineManager` directly instead of
+// simulating an interface — it is the boundary the app actually reads.
+jest.mock('@react-native-community/netinfo', () =>
+  require('@react-native-community/netinfo/jest/netinfo-mock'),
+);

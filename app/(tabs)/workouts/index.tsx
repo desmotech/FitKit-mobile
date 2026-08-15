@@ -14,7 +14,7 @@
  *   5. Sticky daily-progress dock above the OS tab bar (ring + Log CTA)
  */
 import { useRouter } from 'expo-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, WifiOff } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -31,10 +31,13 @@ import {
   RestDayCard,
   WorkoutSummaryCard,
 } from '@/components/workout/workout-summary-card';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useIsOnline } from '@/hooks/use-offline';
+import { useOfflineStrings } from '@/i18n/use-offline-strings';
 import { useWeekStrip } from '@/hooks/use-week-strip';
 import {
   type AssignmentDay,
@@ -62,6 +65,8 @@ export default function WhiteboardScreen() {
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const colors = useFKColors();
+  const isOnline = useIsOnline();
+  const off = useOfflineStrings();
   const scrollBottomPad = useTabBarPadding();
   // Pull-to-refresh state, kept separate from React Query's `isFetching` so a
   // background refetch on tab focus doesn't strand the RefreshControl spinner.
@@ -249,6 +254,23 @@ export default function WhiteboardScreen() {
               <Skeleton style={{ height: 120, borderRadius: 18 }} />
               <Skeleton style={{ height: 120, borderRadius: 18 }} />
             </View>
+          ) : !isOnline && !hasDayContent ? (
+            // Offline with nothing cached for this week. Distinct from the
+            // error state below: nothing failed, and the rest-day copy
+            // ("nothing programmed today") would be a claim about the
+            // programming rather than about the network.
+            <QueryErrorState
+              tone="neutral"
+              icon={WifiOff}
+              title={off.workoutsOfflineTitle}
+              subtitle={off.workoutsOfflineBody}
+              retryLabel={s.errorRetry}
+              isRTL={isRTL}
+              onRetry={() => {
+                haptics.tap();
+                week.refetch();
+              }}
+            />
           ) : week.isError && !hasDayContent ? (
             <ProgramErrorState
               title={s.errorTitle}

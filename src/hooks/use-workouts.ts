@@ -6,6 +6,7 @@ import type {
 import { parseYmdLocal } from '@/lib/week';
 import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
+import { OFFLINE_GC_TIME } from '@/lib/query-persister';
 import { queryKeys } from '@/lib/query-keys';
 
 // ── Types (mirror what /assignments/my-week returns) ─────────────────
@@ -187,7 +188,9 @@ export function useMyWeekAssignments(
     queryKey: orgId && weekStart
       ? queryKeys.assignments.myWeek(orgId, weekStart)
       : ['/assignments/my-week', 'noop'],
-    queryOptions: { enabled: !!orgId && !!weekStart },
+    // Readable with no signal — this is the "recent WODs" half of FIT-171.
+    // See OFFLINE_GC_TIME.
+    queryOptions: { enabled: !!orgId && !!weekStart, gcTime: OFFLINE_GC_TIME },
   });
 }
 
@@ -217,7 +220,12 @@ export function useWorkoutAssignment(
       orgId && assignmentId
         ? queryKeys.assignments.byId(orgId, assignmentId)
         : ['/assignments/:id', 'noop'],
-    queryOptions: { enabled: !!orgId && !!assignmentId },
+    // The workout a member opened this morning has to still open on the gym
+    // floor this evening, where the signal is worst. See OFFLINE_GC_TIME.
+    queryOptions: {
+      enabled: !!orgId && !!assignmentId,
+      gcTime: OFFLINE_GC_TIME,
+    },
   });
 }
 

@@ -6,10 +6,12 @@
  *
  * Hook-level: no screens — the cached week list IS what the schedule renders.
  */
-import type { ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { registerOfflineMutationDefaults } from '@/lib/offline-queue';
 import { queryKeys } from '@/lib/query-keys';
+import { useApi } from '../use-api';
 import { ActiveOrgProvider } from '@/providers/active-org-provider';
 import { I18nProvider } from '@/providers/i18n-provider';
 import {
@@ -77,13 +79,43 @@ function session(overrides: Partial<ClassSession> = {}): ClassSession {
   };
 }
 
+/**
+ * Registers the booking mutations' defaults on the test client, exactly as
+ * `QueryProvider` does in the app.
+ *
+ * The request itself lives in the mutation *defaults* now, not in the hook,
+ * so that a booking restored from disk on a cold start — with no hook and no
+ * closure — still has a function to run (FIT-171). These specs therefore have
+ * to register them too, and they do it through the real `useApi`, so the
+ * request under test is the one the app sends: same base URL, same auth
+ * header, same `ApiError` on a non-2xx.
+ */
+function OfflineDefaults({
+  queryClient,
+  children,
+}: {
+  queryClient: QueryClient;
+  children: ReactNode;
+}) {
+  const { fetchWithAuth } = useApi();
+  const fetchRef = useRef(fetchWithAuth);
+  fetchRef.current = fetchWithAuth;
+  useState(() => {
+    registerOfflineMutationDefaults(queryClient, () => fetchRef.current);
+    return true;
+  });
+  return <>{children}</>;
+}
+
 function makeWrapper(queryClient: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <I18nProvider initialOverride="he">
         <ActiveOrgProvider initialActiveOrgId={TEST_ORG}>
           <QueryClientProvider client={queryClient}>
-            {children}
+            <OfflineDefaults queryClient={queryClient}>
+              {children}
+            </OfflineDefaults>
           </QueryClientProvider>
         </ActiveOrgProvider>
       </I18nProvider>
@@ -148,7 +180,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
     );
 
     await act(async () => {
-      result.current.mutate({ sessionId: 'sess_1' });
+      result.current.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     // Optimistic: the flip lands while the request is still in flight.
@@ -183,7 +215,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
     );
 
     await act(async () => {
-      result.current.mutate({ sessionId: 'sess_1' });
+      result.current.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.isPending).toBe(true));
@@ -214,7 +246,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
     );
 
     await act(async () => {
-      result.current.mutate({ sessionId: 'sess_1' });
+      result.current.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -257,7 +289,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
     );
 
     await act(async () => {
-      result.current.book.mutate({ sessionId: 'sess_1' });
+      result.current.book.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.book.isSuccess).toBe(true));
@@ -291,7 +323,7 @@ describe('useBookSession — optimistic booking on the week list', () => {
     expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(5);
 
     await act(async () => {
-      result.current.book.mutate({ sessionId: 'sess_1' });
+      result.current.book.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.book.isSuccess).toBe(true));
@@ -327,7 +359,7 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
     );
 
     await act(async () => {
-      result.current.mutate({ sessionId: 'sess_1' });
+      result.current.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.isPending).toBe(true));
@@ -363,7 +395,7 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
     );
 
     await act(async () => {
-      result.current.mutate({ sessionId: 'sess_1' });
+      result.current.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() =>
@@ -395,7 +427,7 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
     );
 
     await act(async () => {
-      result.current.mutate({ sessionId: 'sess_1' });
+      result.current.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
@@ -423,7 +455,7 @@ describe('useCancelBooking — optimistic cancellation on the week list', () => 
     expect(result.current.subs.data?.data[0]?.quotas?.[0]?.remaining).toBe(4);
 
     await act(async () => {
-      result.current.cancel.mutate({ sessionId: 'sess_1' });
+      result.current.cancel.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
     });
 
     await waitFor(() => expect(result.current.cancel.isSuccess).toBe(true));

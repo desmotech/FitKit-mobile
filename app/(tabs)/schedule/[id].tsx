@@ -33,6 +33,7 @@ import {
 import {
   type ClassSession,
   canCancelBooking,
+  canQueueCancellation,
   classBookState,
   decideBookingPlan,
   differenceInMinutes,
@@ -43,6 +44,8 @@ import {
   useSelfCheckin,
   useSessionDetail,
 } from '@/hooks/use-schedule';
+import { useIsOnline } from '@/hooks/use-offline';
+import { useOfflineStrings } from '@/i18n/use-offline-strings';
 import {
   blockReasonText,
   usePlanPicker,
@@ -119,6 +122,8 @@ export default function SessionDetailScreen() {
   const cancelMutation = useCancelBooking(orgId, weekStart);
   const checkinMutation = useSelfCheckin(orgId, weekStart);
   const [pending, setPending] = useState<'book' | 'cancel' | 'gps' | null>(null);
+  const isOnline = useIsOnline();
+  const off = useOfflineStrings();
 
   // ── Labels ─────────────────────────────────────────────────────────
   const dict = t as unknown as Record<string, Record<string, unknown>>;
@@ -319,12 +324,18 @@ export default function SessionDetailScreen() {
     } else {
       subscriptionId = planDecision.subscriptionId;
     }
+    if (!orgId) return;
+    if (!isOnline) {
+      // Queued, not booked. No spinner either: a paused mutation fires no
+      // callback until it replays, so `pending` would never clear.
+      bookMutation.mutate({ orgId, sessionId: session.id, subscriptionId });
+      haptics.success();
+      Alert.alert(off.bookQueuedTitle, off.bookQueuedBody);
+      return;
+    }
     setPending('book');
     bookMutation.mutate(
-      {
-        sessionId: session.id,
-        body: subscriptionId ? { subscriptionId } : undefined,
-      },
+      { orgId, sessionId: session.id, subscriptionId },
       {
         onSuccess: () => haptics.success(),
         onError: (err) => {
@@ -367,6 +378,13 @@ export default function SessionDetailScreen() {
       Alert.alert(labels.cancellationWindowClosed);
       return;
     }
+    // Queueing a cancellation whose window closes before the member is
+    // plausibly back online would leave them believing they are off the list
+    // while the replay gets refused. Say so now, while there is a screen.
+    if (!isOnline && !canQueueCancellation(session, now)) {
+      Alert.alert(off.cancelNeedsConnectionTitle, off.cancelNeedsConnectionBody);
+      return;
+    }
     Alert.alert(
       labels.cancelBooking,
       labels.cancelPolicy.replace(
@@ -379,9 +397,18 @@ export default function SessionDetailScreen() {
           text: labels.cancelBooking,
           style: 'destructive',
           onPress: () => {
+            if (!orgId) return;
+            if (!isOnline) {
+              cancelMutation.mutate({ orgId, sessionId: session.id });
+              haptics.success();
+              Alert.alert(off.cancelQueuedTitle, off.cancelQueuedBody, [
+                { text: off.dismiss, onPress: () => router.back() },
+              ]);
+              return;
+            }
             setPending('cancel');
             cancelMutation.mutate(
-              { sessionId: session.id },
+              { orgId, sessionId: session.id },
               {
                 onSuccess: () => {
                   haptics.success();
@@ -426,6 +453,16 @@ export default function SessionDetailScreen() {
 
   const handleGpsCheckin = async () => {
     haptics.tap();
+    // Check-in is never queued: a GPS fix proves presence at a moment in
+    // time, so replaying it later is at best refused and at worst a lie.
+    // Say so before spending a location permission prompt on it.
+    if (!isOnline) {
+      Alert.alert(
+        off.checkinNeedsConnectionTitle,
+        off.checkinNeedsConnectionBody,
+      );
+      return;
+    }
     setPending('gps');
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
