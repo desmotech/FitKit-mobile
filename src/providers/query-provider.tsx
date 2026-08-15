@@ -2,6 +2,7 @@ import {
   MutationCache,
   QueryCache,
   QueryClient,
+  defaultShouldDehydrateQuery,
   focusManager,
   keepPreviousData,
 } from '@tanstack/react-query';
@@ -16,6 +17,12 @@ import {
 import { useApi } from '@/hooks/use-api';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
+
+/**
+ * Query keys whose value is a one-shot instruction rather than cacheable
+ * state, so restoring them from disk would replay something already spent.
+ */
+const NEVER_PERSIST_QUERY_KEYS = ['/users/me/pending-intent'];
 
 const ONE_MINUTE = 60_000;
 const THIRTY_MINUTES = 30 * ONE_MINUTE;
@@ -131,6 +138,15 @@ export function QueryProvider({ children }: { children: ReactNode }) {
           // avatar upload — base64 payload and all — to AsyncStorage and
           // replay it days later. See src/lib/offline-queue.ts.
           shouldDehydrateMutation: shouldPersistMutation,
+          // One-shot server state must never be restored from disk. The
+          // pending intent is consumed the moment it is acted on, so a
+          // persisted copy outlives its own validity: in production it came
+          // back on later launches and fired a second consume for an id the
+          // server had already closed. Everything else keeps the default.
+          shouldDehydrateQuery: (query) =>
+            !NEVER_PERSIST_QUERY_KEYS.some((key) =>
+              String(query.queryKey[0] ?? '').startsWith(key),
+            ) && defaultShouldDehydrateQuery(query),
         },
       }}
       onSuccess={() => {

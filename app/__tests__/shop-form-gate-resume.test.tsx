@@ -28,12 +28,14 @@ import { renderWithProviders, TEST_ORG } from '../../test/render';
 
 const mockRouterPush = jest.fn();
 const mockRouterReplace = jest.fn();
+const mockRouterNavigate = jest.fn();
 const mockRouterBack = jest.fn();
 let mockParams: Record<string, string> = {};
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: mockRouterPush,
     replace: mockRouterReplace,
+    navigate: mockRouterNavigate,
     back: mockRouterBack,
     setParams: jest.fn(),
   }),
@@ -156,6 +158,7 @@ beforeEach(() => {
   mockParams = {};
   mockRouterPush.mockClear();
   mockRouterReplace.mockClear();
+  mockRouterNavigate.mockClear();
   mockRouterBack.mockClear();
   (WebBrowser.openAuthSessionAsync as jest.Mock).mockClear();
   (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
@@ -290,10 +293,16 @@ describe('Sign screen → back to the purchase', () => {
     const user = userEvent.setup();
 
     await user.press(await screen.findByText(RESUME_CTA));
-    expect(mockRouterReplace).toHaveBeenCalledWith({
+    // `navigate`, not `replace`: neither @react-navigation's TabRouter nor
+    // expo-router's NativeBottomTabsRouter implements REPLACE, so replacing
+    // onto a tab route is silently unhandled and the member never leaves this
+    // screen. This assertion passed against `replace` for as long as the mock
+    // accepted either — the defect only ever showed on a device.
+    expect(mockRouterNavigate).toHaveBeenCalledWith({
       pathname: '/(tabs)/shop',
       params: { plan: PLAN.id },
     });
+    expect(mockRouterReplace).not.toHaveBeenCalled();
     expect(mockRouterBack).not.toHaveBeenCalled();
   });
 
@@ -305,6 +314,6 @@ describe('Sign screen → back to the purchase', () => {
 
     await user.press(await screen.findByText(DONE_CTA));
     expect(mockRouterBack).toHaveBeenCalled();
-    expect(mockRouterReplace).not.toHaveBeenCalled();
+    expect(mockRouterNavigate).not.toHaveBeenCalled();
   });
 });
