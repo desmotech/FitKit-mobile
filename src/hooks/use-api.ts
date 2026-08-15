@@ -128,7 +128,16 @@ export function useApi() {
         throw new ApiError(message, res.status, code, details);
       }
 
-      return res.json();
+      // A successful response is not guaranteed to carry a body. `204 No
+      // Content` (and any 2xx with an empty body) used to reach `res.json()`
+      // and throw `SyntaxError: JSON Parse error: Unexpected end of input`,
+      // surfacing as a mutation failure for a call the server had in fact
+      // completed — see FITKIT-MOBILE-4, where a consumed pending intent
+      // reported failure after the server had already consumed it.
+      if (res.status === 204 || res.status === 205) return undefined;
+      const raw = await res.text();
+      if (raw.length === 0) return undefined;
+      return JSON.parse(raw);
     },
     [getCachedToken, lang],
   );

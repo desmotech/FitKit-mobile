@@ -40,8 +40,19 @@ export function usePendingIntent(options: {
   orgId: string | null | undefined;
   /** Whether the shop tab exists for this org. */
   shopAvailable: boolean;
+  /**
+   * Whether the tab navigator is actually mounted.
+   *
+   * Not the same condition as `shopAvailable`, which is what the first cut of
+   * this got wrong: the shop gate needs only the plans and payment-config
+   * queries, while the shell additionally waits on enrollments and programs.
+   * In that window the layout is still rendering its loader, so there is no
+   * `shop` route to replace onto — the navigation went nowhere and the member
+   * stayed on home with the intent already burned.
+   */
+  navigatorReady: boolean;
 }) {
-  const { orgId, shopAvailable } = options;
+  const { orgId, shopAvailable, navigatorReady } = options;
   const router = useRouter();
   const handledRef = useRef(false);
 
@@ -70,6 +81,9 @@ export function usePendingIntent(options: {
     // org is active rather than switching under them.
     if (intent.organizationId !== orgId) return;
     if (!shopAvailable) return;
+    // Nothing to navigate onto yet. Returning without latching leaves the
+    // effect free to run again once the shell is up.
+    if (!navigatorReady) return;
 
     handledRef.current = true;
     analytics.track('member_pending_intent_resumed', {
@@ -83,5 +97,5 @@ export function usePendingIntent(options: {
     // Marked handled as soon as it has been acted on, so a later launch
     // doesn't drag the member back into a checkout they already saw.
     consume(intent.id);
-  }, [intent, orgId, shopAvailable, router, consume]);
+  }, [intent, orgId, shopAvailable, navigatorReady, router, consume]);
 }

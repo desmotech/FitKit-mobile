@@ -29,11 +29,13 @@ const INTENT_PATH = '/users/me/pending-intent';
 function Probe({
   orgId = TEST_ORG,
   shopAvailable = true,
+  navigatorReady = true,
 }: {
   orgId?: string | null;
   shopAvailable?: boolean;
+  navigatorReady?: boolean;
 }) {
-  usePendingIntent({ orgId, shopAvailable });
+  usePendingIntent({ orgId, shopAvailable, navigatorReady });
   return <Text>probe</Text>;
 }
 
@@ -55,6 +57,9 @@ describe('usePendingIntent', () => {
       organizationId: TEST_ORG,
       planId: 'plan_presale',
     });
+    // Answered 204 on purpose: the endpoint returns a body now, but builds
+    // already in the field talk to whichever version is deployed, and an empty
+    // 2xx must not blow up the client (FITKIT-MOBILE-4).
     server.use(
       http.post(api(`${INTENT_PATH}/intent_1/consume`), () => {
         consumed();
@@ -100,6 +105,43 @@ describe('usePendingIntent', () => {
 
     await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
     expect(consumed).not.toHaveBeenCalled();
+  });
+
+  it('waits for the navigator instead of routing into an unmounted shell', async () => {
+    // The prod failure (saarku+pa, 1.0.5+39): the shop gate needs only plans +
+    // payment-config, but the tab shell also waits on enrollments + programs.
+    // In that window the layout renders a loader with no `shop` route, so the
+    // replace went nowhere — and because the intent had already been consumed,
+    // the member landed on home with nothing left to resume.
+    const consumed = jest.fn();
+    stageIntent({
+      id: 'intent_1',
+      kind: 'shop_plan',
+      organizationId: TEST_ORG,
+      planId: 'plan_presale',
+    });
+    server.use(
+      http.post(api(`${INTENT_PATH}/intent_1/consume`), () => {
+        consumed();
+        return HttpResponse.json({ data: { consumed: true } });
+      }),
+    );
+
+    const { rerender } = await renderWithProviders(
+      <Probe navigatorReady={false} />,
+    );
+
+    await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
+    // Critically the one-shot is NOT burned while waiting.
+    expect(consumed).not.toHaveBeenCalled();
+
+    // Shell comes up — now it resumes.
+    rerender(<Probe navigatorReady={true} />);
+
+    await waitFor(() =>
+      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/shop?plan=plan_presale'),
+    );
+    await waitFor(() => expect(consumed).toHaveBeenCalled());
   });
 
   it("ignores an intent belonging to a different org", async () => {
