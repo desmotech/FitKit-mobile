@@ -233,12 +233,17 @@ describe('PaymentsScreen', () => {
     const btn = await screen.findByTestId('cancel-pending-btn');
     await userEvent.press(btn);
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      CPS.confirmTitle,
-      CPS.confirmDescription.replace('{plan}', 'Gold Unlimited'),
-      expect.any(Array),
-    );
-    const buttons = alertSpy.mock.calls[0][2] as AlertButton[];
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        CPS.confirmTitle,
+        CPS.confirmDescription.replace('{plan}', 'Gold Unlimited'),
+        expect.any(Array),
+      );
+    });
+    // The LAST call, not the first: this screen can fire an unrelated Alert
+    // on mount (same reason the pre-existing no-card-renew test above reads
+    // `.at(-1)` rather than `calls[0]`), so index 0 isn't reliably ours.
+    const buttons = alertSpy.mock.calls.at(-1)?.[2] as AlertButton[];
     const confirm = buttons.find((b) => b.style === 'destructive');
     expect(confirm).toBeDefined();
 
