@@ -70,10 +70,42 @@ describe('usePendingIntent', () => {
     await renderWithProviders(<Probe />);
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/shop?plan=plan_presale'),
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: '/(tabs)/shop',
+        params: { plan: 'plan_presale' },
+      }),
     );
     // Marked handled so a later launch can't drag them back into checkout.
     await waitFor(() => expect(consumed).toHaveBeenCalled());
+  });
+
+  it('navigates by object, never a path string with the query baked in', async () => {
+    // The production no-op (saarku+sa, 1.0.5+39): `member_pending_intent_resumed`
+    // fired, the screen stayed on `/`, and the shop's landing handler never ran
+    // — `router.replace('/(tabs)/shop?plan=<id>')` resolved to nothing. The
+    // object form is what the form-gate resume already uses to reach this same
+    // screen. Guarded explicitly so the string form cannot creep back.
+    stageIntent({
+      id: 'intent_1',
+      kind: 'shop_plan',
+      organizationId: TEST_ORG,
+      planId: 'plan_presale',
+    });
+    server.use(
+      http.post(api(`${INTENT_PATH}/intent_1/consume`), () =>
+        HttpResponse.json({ data: { consumed: true } }),
+      ),
+    );
+
+    await renderWithProviders(<Probe />);
+
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+    const arg = mockReplace.mock.calls[0][0];
+    expect(typeof arg).toBe('object');
+    expect(arg).toEqual({
+      pathname: '/(tabs)/shop',
+      params: { plan: 'plan_presale' },
+    });
   });
 
   it('does nothing when there is no intent', async () => {
@@ -139,7 +171,10 @@ describe('usePendingIntent', () => {
     rerender(<Probe navigatorReady={true} />);
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('/(tabs)/shop?plan=plan_presale'),
+      expect(mockReplace).toHaveBeenCalledWith({
+        pathname: '/(tabs)/shop',
+        params: { plan: 'plan_presale' },
+      }),
     );
     await waitFor(() => expect(consumed).toHaveBeenCalled());
   });
