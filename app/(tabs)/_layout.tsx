@@ -16,6 +16,7 @@ import {
 } from '@/hooks/use-workouts';
 import { usePaymentConfig, usePlans } from '@/hooks/use-shop';
 import { usePendingIntent } from '@/hooks/use-pending-intent';
+import { useAnalyticsConsentSync } from '@/hooks/use-analytics-consent-sync';
 import { useI18n } from '@/providers/i18n-provider';
 
 const Label = NativeTabs.Trigger.Label;
@@ -93,6 +94,10 @@ export default function TabsLayout() {
   useAppIconBadge(activeOrganization?.id);
   // Open the realtime socket + keep the inbox/badge live for the session.
   useRealtimeSubscription();
+  // Honour the analytics answer given during web quick-registration. Those
+  // members skip /accept-terms (their legal consent was recorded server-side),
+  // so the in-app prompt never runs for them.
+  useAnalyticsConsentSync();
   // Resume the destination lost across an App Store install (join link with a
   // plan). Needs BOTH gates: `shouldShowShop` proves the tab exists for this
   // org, `tabsReady` proves the navigator holding it is actually mounted.

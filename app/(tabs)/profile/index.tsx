@@ -18,6 +18,7 @@
 import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
+import * as Updates from 'expo-updates';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
@@ -209,6 +210,18 @@ export default function ProfileScreen() {
   const isDark = colorScheme === 'dark';
 
   const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
+  // Which JS bundle is actually running: the one embedded in the binary, or an
+  // OTA update on top of it. Surfaced because "did the OTA reach this device?"
+  // was otherwise unanswerable without provoking a crash to read Sentry's
+  // `ota_updates` context — which cost a full afternoon of testing against an
+  // unknown bundle. `updateId` is also the embedded bundle's id, so
+  // `isEmbeddedLaunch` is what distinguishes them.
+  const bundleLabel = Updates.isEmbeddedLaunch
+    ? 'embedded'
+    : `OTA ${(Updates.updateId ?? 'unknown').slice(0, 8)}`;
+  const buildLabel = `v${appVersion} (${
+    Application.nativeBuildVersion ?? '?'
+  }) · ${bundleLabel}`;
   const FITKIT_SUPPORT_EMAIL = 'support@fitkit.fit';
   const FITKIT_WEBSITE = 'https://fitkit.fit';
 
@@ -424,7 +437,9 @@ export default function ProfileScreen() {
       onPress: () =>
         Linking.openURL(
           `mailto:${FITKIT_SUPPORT_EMAIL}?subject=${encodeURIComponent(
-            `FitKit support — v${appVersion}`,
+            // Carries the exact bundle into the subject, so a bug report says
+            // which build and update it came from without having to ask.
+            `FitKit support — ${buildLabel}`,
           )}`,
         ),
     },
@@ -1070,7 +1085,7 @@ export default function ProfileScreen() {
                 fontFamily: 'Assistant-Medium',
               }}
             >
-              FitKit v{appVersion}
+              FitKit {buildLabel}
             </Text>
           </View>
         </View>
