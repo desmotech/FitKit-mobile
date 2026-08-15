@@ -19,6 +19,8 @@ interface PendingIntentEnvelope {
   data: PendingIntent | null;
 }
 
+const INTENT_PATH = '/users/me/pending-intent';
+
 /**
  * Recovers the destination a member was heading for before they left for the
  * App Store.
@@ -57,19 +59,28 @@ export function usePendingIntent(options: {
   const handledRef = useRef(false);
 
   const { data } = useApiQuery<PendingIntentEnvelope>({
-    path: '/users/me/pending-intent',
+    path: INTENT_PATH,
     queryOptions: {
-      // A one-shot launch hint: refetching it would risk re-firing a
-      // navigation the member has already been given.
-      staleTime: Infinity,
-      refetchOnMount: false,
+      // Always ask the server. The first cut pinned this with
+      // `staleTime: Infinity` + `refetchOnMount: false` to avoid re-firing a
+      // navigation, but the query cache is PERSISTED — so a consumed intent
+      // survived in storage and re-fired on later launches, calling consume
+      // again for an id the server had already closed (seen in prod: two
+      // consumes for cb9be10b eleven seconds apart, no GET between them).
+      //
+      // The server is the authority on whether an intent is still live, so a
+      // fresh read on mount is both cheaper and safer than trusting a cached
+      // one-shot. The key is also excluded from persistence outright — see
+      // NEVER_PERSIST_QUERY_KEYS in query-provider.
+      staleTime: 0,
+      refetchOnMount: 'always',
       refetchOnWindowFocus: false,
       retry: false,
     },
   });
 
   const { mutate: consume } = useApiAction({
-    path: (id: string) => `/users/me/pending-intent/${id}/consume`,
+    path: (id: string) => `${INTENT_PATH}/${id}/consume`,
   });
 
   const intent = data?.data ?? null;
@@ -91,12 +102,17 @@ export function usePendingIntent(options: {
       plan_id: intent.planId,
       kind: intent.kind,
     });
-    // Object form, NOT a path string with the query baked in. The string
-    // `/(tabs)/shop?plan=<id>` silently did nothing in production: the resume
-    // fired, the screen stayed on `/`, and the shop's landing handler never
-    // ran. The object form is what the form-gate resume already uses to reach
-    // this same screen successfully (profile/forms/[instanceId]).
-    router.replace({
+    // `navigate`, NEVER `replace`. Switching a native tab is a NAVIGATE
+    // action: @react-navigation's TabRouter implements JUMP_TO, NAVIGATE,
+    // SET_PARAMS, GO_BACK and PRELOAD, and expo-router's
+    // NativeBottomTabsRouter only extends NAVIGATE. There is no REPLACE case
+    // anywhere in that chain, so `router.replace` to a tab route is silently
+    // unhandled — it throws nothing, logs nothing, and switches nothing.
+    //
+    // That is what three production attempts hit: the resume fired with the
+    // right plan, the screen stayed on `/`, and the shop's landing handler
+    // never ran.
+    router.navigate({
       pathname: '/(tabs)/shop',
       params: { plan: intent.planId },
     });

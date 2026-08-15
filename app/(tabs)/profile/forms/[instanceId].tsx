@@ -114,7 +114,13 @@ export default function SignFormInstanceScreen() {
   const resumesPurchase = reason === 'purchase' && !!resumePlanId;
   const leaveScreen = () => {
     if (resumesPurchase) {
-      router.replace({
+      // `navigate`, not `replace` — switching a native tab is a NAVIGATE
+      // action, and neither TabRouter nor NativeBottomTabsRouter implements
+      // REPLACE, so `replace` here was silently doing nothing and stranding
+      // the member on this screen's parent instead of the shop. Same defect
+      // the pending-intent resume hit; `member_shop_deeplink` has never once
+      // fired from mobile, which is the corroborating evidence.
+      router.navigate({
         pathname: '/(tabs)/shop',
         params: { plan: resumePlanId },
       });

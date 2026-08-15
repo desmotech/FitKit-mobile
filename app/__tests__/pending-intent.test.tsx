@@ -14,11 +14,13 @@ import { stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
 
+const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
   useRouter: () => ({
     push: jest.fn(),
     replace: mockReplace,
+    navigate: mockNavigate,
     back: jest.fn(),
     setParams: jest.fn(),
   }),
@@ -70,7 +72,7 @@ describe('usePendingIntent', () => {
     await renderWithProviders(<Probe />);
 
     await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith({
+      expect(mockNavigate).toHaveBeenCalledWith({
         pathname: '/(tabs)/shop',
         params: { plan: 'plan_presale' },
       }),
@@ -79,12 +81,13 @@ describe('usePendingIntent', () => {
     await waitFor(() => expect(consumed).toHaveBeenCalled());
   });
 
-  it('navigates by object, never a path string with the query baked in', async () => {
-    // The production no-op (saarku+sa, 1.0.5+39): `member_pending_intent_resumed`
-    // fired, the screen stayed on `/`, and the shop's landing handler never ran
-    // — `router.replace('/(tabs)/shop?plan=<id>')` resolved to nothing. The
-    // object form is what the form-gate resume already uses to reach this same
-    // screen. Guarded explicitly so the string form cannot creep back.
+  it('switches tabs with navigate and never with replace', async () => {
+    // Three production attempts died here. Switching a native tab is a
+    // NAVIGATE action: @react-navigation's TabRouter implements JUMP_TO,
+    // NAVIGATE, SET_PARAMS, GO_BACK and PRELOAD, and expo-router's
+    // NativeBottomTabsRouter only extends NAVIGATE. Nothing in that chain
+    // handles REPLACE, so `router.replace` to a tab route is silently
+    // unhandled — no throw, no log, no navigation, member stays on `/`.
     stageIntent({
       id: 'intent_1',
       kind: 'shop_plan',
@@ -99,8 +102,10 @@ describe('usePendingIntent', () => {
 
     await renderWithProviders(<Probe />);
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
-    const arg = mockReplace.mock.calls[0][0];
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalled());
+    // The invariant that actually failed in production.
+    expect(mockReplace).not.toHaveBeenCalled();
+    const arg = mockNavigate.mock.calls[0][0];
     expect(typeof arg).toBe('object');
     expect(arg).toEqual({
       pathname: '/(tabs)/shop',
@@ -108,12 +113,53 @@ describe('usePendingIntent', () => {
     });
   });
 
+  it('re-reads the server rather than replaying a cached intent', async () => {
+    // Seen in prod: two consumes for cb9be10b eleven seconds apart with NO GET
+    // between them. The query was pinned `staleTime: Infinity` +
+    // `refetchOnMount: false`, and the query cache is PERSISTED — so a consumed
+    // intent survived in storage and re-fired on later launches, against an id
+    // the server had already closed. The server is the authority here.
+    let served = 0;
+    server.use(
+      http.get(api(INTENT_PATH), () => {
+        served += 1;
+        // Live on the first read, already consumed on every read after.
+        return HttpResponse.json({
+          data:
+            served === 1
+              ? {
+                  id: 'intent_1',
+                  kind: 'shop_plan',
+                  organizationId: TEST_ORG,
+                  planId: 'plan_presale',
+                }
+              : null,
+        });
+      }),
+      http.post(api(`${INTENT_PATH}/intent_1/consume`), () =>
+        HttpResponse.json({ data: { consumed: true } }),
+      ),
+    );
+
+    const first = await renderWithProviders(<Probe />);
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    mockNavigate.mockClear();
+
+    // A later launch: the server now says there is nothing pending, so the
+    // member must NOT be dragged back into a checkout they already saw.
+    await renderWithProviders(<Probe />);
+    await waitFor(() => expect(served).toBeGreaterThan(1));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('does nothing when there is no intent', async () => {
     stageIntent(null);
 
     await renderWithProviders(<Probe />);
 
-    await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
   });
 
   it('leaves the intent pending when the org has no shop', async () => {
@@ -135,7 +181,7 @@ describe('usePendingIntent', () => {
 
     await renderWithProviders(<Probe shopAvailable={false} />);
 
-    await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
     expect(consumed).not.toHaveBeenCalled();
   });
 
@@ -159,24 +205,15 @@ describe('usePendingIntent', () => {
       }),
     );
 
-    const { rerender } = await renderWithProviders(
-      <Probe navigatorReady={false} />,
-    );
+    await renderWithProviders(<Probe navigatorReady={false} />);
 
-    await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
-    // Critically the one-shot is NOT burned while waiting.
+    // Neither half fires while the shell is down. The second half is the one
+    // that cost a member their redirect: consuming here would burn the
+    // one-shot for a navigation that never happened, leaving nothing to
+    // resume on the launch where the shell IS up. That the resume works once
+    // ready is covered by the first case in this file.
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
     expect(consumed).not.toHaveBeenCalled();
-
-    // Shell comes up — now it resumes.
-    rerender(<Probe navigatorReady={true} />);
-
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith({
-        pathname: '/(tabs)/shop',
-        params: { plan: 'plan_presale' },
-      }),
-    );
-    await waitFor(() => expect(consumed).toHaveBeenCalled());
   });
 
   it("ignores an intent belonging to a different org", async () => {
@@ -189,7 +226,7 @@ describe('usePendingIntent', () => {
 
     await renderWithProviders(<Probe />);
 
-    await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
   });
 
   it('ignores a shop_plan whose plan was archived', async () => {
@@ -202,6 +239,6 @@ describe('usePendingIntent', () => {
 
     await renderWithProviders(<Probe />);
 
-    await waitFor(() => expect(mockReplace).not.toHaveBeenCalled());
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
   });
 });
