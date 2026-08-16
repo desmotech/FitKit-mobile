@@ -51,6 +51,13 @@ export interface ProfileStrings {
   updateCard: string;
   /** Why there's no action: the gym ended this membership. */
   endedByGym: string;
+  /** Terminal chip for a checkout that was never completed. The server sends
+   *  `displayStatus: 'checkout_abandoned'`; `status` alone still says
+   *  `cancelled`, which reads as a membership that ended. */
+  checkoutNotCompleted: string;
+  /** Why there's no action on one: nothing was ever bought, so "ended by the
+   *  gym" would blame the gym for a payment the member never finished. */
+  checkoutNotCompletedNote: string;
 
   // ── Settings rows ─────────────────────────────────────────────────
   settingPersonal: string;
@@ -132,6 +139,8 @@ const HE: ProfileStrings = {
   completePayment: 'השלמת תשלום',
   updateCard: 'עדכון כרטיס',
   endedByGym: 'המנוי הופסק על ידי המועדון',
+  checkoutNotCompleted: 'התשלום לא הושלם',
+  checkoutNotCompletedNote: 'התשלום לא הושלם, ולכן לא נפתח מנוי.',
 
   settingPersonal: 'פרטים אישיים',
   settingPayment: 'תשלומים',
@@ -206,6 +215,9 @@ const EN: ProfileStrings = {
   completePayment: 'Complete payment',
   updateCard: 'Update card',
   endedByGym: 'This membership was ended by the gym',
+  checkoutNotCompleted: 'Checkout not completed',
+  checkoutNotCompletedNote:
+    'This checkout was never completed, so no membership started.',
 
   settingPersonal: 'Personal Details',
   settingPayment: 'Payments',
@@ -280,6 +292,9 @@ const RU: ProfileStrings = {
   completePayment: 'Завершить оплату',
   updateCard: 'Обновить карту',
   endedByGym: 'Клуб завершил это членство',
+  checkoutNotCompleted: 'Оплата не завершена',
+  checkoutNotCompletedNote:
+    'Эта оплата не была завершена, поэтому абонемент не начался.',
 
   settingPersonal: 'Личные данные',
   settingPayment: 'Платежи',
