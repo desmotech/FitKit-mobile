@@ -49,6 +49,7 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { usePlans } from '@/hooks/use-shop';
 import { ScheduledPlanChangeBanner } from '@/components/profile/scheduled-plan-change-banner';
 import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
+import { useProfileStrings } from '@/i18n/use-profile-strings';
 import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
 import {
   paymentErrorMessage,
@@ -112,6 +113,7 @@ export default function PaymentsScreen() {
   const phStatus = (phT.status ?? {}) as Record<TransactionStatus, string>;
   const phType = (phT.type ?? {}) as Record<TransactionType, string>;
   const membershipT = (profileT.membership ?? {}) as Record<string, unknown>;
+  const profileStrings = useProfileStrings();
   const membershipStatus = (membershipT.status ?? {}) as Record<string, string>;
   const subscriptionsT = ((t as unknown as Record<string, Record<string, unknown>>)
     .subscriptions ?? {}) as Record<string, string>;
@@ -137,6 +139,11 @@ export default function PaymentsScreen() {
       (phT.debtDesc as string) ??
       'You cannot book classes until the balance is resolved.',
     resolve: (phT.resolve as string) ?? 'Resolve',
+    // From the merged profile strings, not an inline English fallback: this
+    // key does not exist in the pinned `@fitkit/shared` dictionary yet, and
+    // `useProfileStrings` already resolves exactly that case to a translated
+    // static value.
+    checkoutNotCompleted: profileStrings.checkoutNotCompleted,
   };
 
   const txnPath = orgId ? `/organizations/${orgId}/payments/my` : '';
@@ -705,6 +712,7 @@ function SubscriptionCard({
     renewing: string;
     cancelAction: string;
     resumeAction: string;
+    checkoutNotCompleted: string;
   };
   statusLabels: Record<string, string>;
   onRenew: () => void;
@@ -727,7 +735,24 @@ function SubscriptionCard({
   cancelPendingLabel?: string;
 }) {
   const status = sub.status;
-  const showRenew = status === 'past_due' || status === 'cancelled';
+  // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @fitkit/shared) predate
+  // both of these — same cast precedent as `scheduledToCancelOf` below.
+  const memberAction = (sub as unknown as { memberAction?: string })
+    .memberAction;
+  const displayStatus =
+    (sub as unknown as { displayStatus?: string }).displayStatus ?? status;
+  const isAbandonedCheckout = displayStatus === 'checkout_abandoned';
+  // Follow the server's verdict rather than re-deriving it from `status`.
+  // Deriving it here meant this screen offered Renew on rows the API refuses:
+  // a gym cancellation, a plan-change ghost, and a checkout that was never
+  // completed are all `cancelled`, and none of them is renewable — the tap
+  // just came back 409. The membership card on the profile tab has read
+  // `memberAction` since it landed; this screen never caught up.
+  // Falling back to the old predicate keeps an API build without the field
+  // behaving exactly as before.
+  const showRenew = memberAction
+    ? memberAction === 'renew'
+    : status === 'past_due' || status === 'cancelled';
   // A member may give notice from any live state. Requiring `active` locked out
   // paused, past_due and debt members — the ones most likely to want out — and
   // the API no longer refuses them either.
@@ -771,7 +796,10 @@ function SubscriptionCard({
   const isActive = status === 'active' || status === 'paused';
   const statusTone = isActive
     ? { bg: 'rgba(122,138,92,0.16)', fg: '#5A6A3F', border: 'rgba(122,138,92,0.28)' }
-    : status === 'past_due' || status === 'cancelled' || status === 'debt'
+    : // A checkout nobody completed is a non-event, not a loss — it takes the
+      // neutral tone rather than the destructive one a lapsed membership gets.
+      !isAbandonedCheckout &&
+        (status === 'past_due' || status === 'cancelled' || status === 'debt')
       ? { bg: 'rgba(184,74,64,0.12)', fg: '#B84A40', border: 'rgba(184,74,64,0.28)' }
       : { bg: 'rgba(120,120,128,0.12)', fg: '#5E7082', border: 'transparent' };
 
@@ -823,7 +851,12 @@ function SubscriptionCard({
               color: statusTone.fg,
             }}
           >
-            {(statusLabels[status] ?? status.replace('_', ' ')).toUpperCase()}
+            {(
+              statusLabels[displayStatus] ??
+              (isAbandonedCheckout
+                ? labels.checkoutNotCompleted
+                : status.replace('_', ' '))
+            ).toUpperCase()}
           </Text>
         </View>
       </View>

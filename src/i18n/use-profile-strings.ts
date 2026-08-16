@@ -33,6 +33,10 @@ const DICT_PATHS: Partial<Record<keyof ProfileStrings, string>> = {
   expires: 'profile.membership.expires',
   renew: 'profile.membership.renew',
   renewing: 'profile.membership.renewing',
+  // Lands once `@fitkit/shared` publishes the `checkout_abandoned` status
+  // key; until then the static per-language table above supplies it, so the
+  // label is translated either way.
+  checkoutNotCompleted: 'profile.membership.status.checkout_abandoned',
   managePlan: 'profile.values.managePlan',
 
   settingPersonal: 'profile.settings.personal',

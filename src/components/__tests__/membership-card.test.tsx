@@ -22,6 +22,9 @@ const LABELS = {
   completePayment: 'Complete payment',
   updateCard: 'Update card',
   endedByGym: 'Your gym ended this membership.',
+  checkoutNotCompleted: 'Checkout not completed',
+  checkoutNotCompletedNote:
+    'This checkout was never completed, so no membership started.',
 };
 
 const STATUS_LABELS = { active: 'Active', cancelled: 'Cancelled' };

@@ -45,6 +45,13 @@ export function MembershipCard({
     /** When it actually ends — one month from the notice, computed server-side.
      *  Distinct from `currentPeriodEnd`, which is only the next billing date. */
     cancellationEffectiveAt?: string | null;
+    /** How the state READS to a human, resolved server-side. `status`
+     *  collapses three unrelated endings into `cancelled` — a membership that
+     *  ran its course, one somebody ended, and a checkout nobody completed —
+     *  and this splits the last one out. Optional: absent on an API build
+     *  that predates it, and on the pinned `@fitkit/shared` types, which is
+     *  why it is declared here rather than imported. */
+    displayStatus?: string | null;
     /** What the member may actually do, resolved server-side. Status alone
      *  can't say: a gym-cancelled subscription and a member-cancelled one are
      *  both `cancelled`, but only one is renewable. `cancel_pending` only
@@ -72,6 +79,8 @@ export function MembershipCard({
     completePayment: string;
     updateCard: string;
     endedByGym: string;
+    checkoutNotCompleted: string;
+    checkoutNotCompletedNote: string;
   };
   isRenewing: boolean;
   onRenew: () => void;
@@ -105,6 +114,10 @@ export function MembershipCard({
   // (or resurrect a superseded plan and pay for two).
   const action = sub.memberAction ?? 'none';
   const isTerminal = sub.status === 'cancelled';
+  // The server's reading of the same row. Falling back to `status` keeps an
+  // older API build rendering exactly as it did before this field existed.
+  const displayStatus = sub.displayStatus ?? sub.status;
+  const isAbandonedCheckout = displayStatus === 'checkout_abandoned';
   const isCancelPendingCta = action === 'cancel_pending';
   const ctaLabel =
     action === 'renew'
@@ -133,7 +146,16 @@ export function MembershipCard({
       : onRenew;
 
   // Say why there's no way back, rather than leaving a dead card.
-  const endedNote = isTerminal && action === 'none' ? labels.endedByGym : null;
+  //
+  // A checkout that was never completed is terminal AND has no member action,
+  // so it matches the gym-cancelled shape exactly — but nobody ended anything
+  // and no membership ever started. Blaming the gym for a payment the member
+  // walked away from is worse than saying nothing, so it gets its own note.
+  const endedNote = isAbandonedCheckout
+    ? labels.checkoutNotCompletedNote
+    : isTerminal && action === 'none'
+      ? labels.endedByGym
+      : null;
 
   const introLeft = sub.introCyclesRemaining ?? 0;
   const introRemaining =
@@ -231,8 +253,12 @@ export function MembershipCard({
             }}
           >
             {(
-              statusLabels[sub.status] ??
-              (isActive ? labels.active : sub.status)
+              statusLabels[displayStatus] ??
+              (isAbandonedCheckout
+                ? labels.checkoutNotCompleted
+                : isActive
+                  ? labels.active
+                  : sub.status)
             ).toUpperCase()}
           </Text>
         </View>

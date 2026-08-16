@@ -19,6 +19,9 @@ const LABELS = {
   completePayment: 'Complete payment',
   updateCard: 'Update card',
   endedByGym: 'This membership was ended by the gym',
+  checkoutNotCompleted: 'Checkout not completed',
+  checkoutNotCompletedNote:
+    'This checkout was never completed, so no membership started.',
 };
 
 const STATUS = {
@@ -82,6 +85,71 @@ describe('MembershipCard CTA', () => {
     await renderCard({ status: 'cancelled', memberAction: 'renew' });
     expect(screen.getByText('Renew')).toBeOnTheScreen();
     expect(screen.queryByTestId('membership-ended-note')).toBeNull();
+  });
+});
+
+/**
+ * An abandoned checkout arrives as `status: 'cancelled'` with no member
+ * action — byte-for-byte the shape of a gym cancellation. Only
+ * `displayStatus` tells them apart, and getting it wrong tells a member the
+ * gym ended a membership they never actually bought.
+ */
+describe('MembershipCard — abandoned checkout vs ended membership', () => {
+  const abandoned = {
+    status: 'cancelled',
+    displayStatus: 'checkout_abandoned',
+    memberAction: 'none',
+  };
+
+  it('does NOT blame the gym for a checkout the member never completed', async () => {
+    await renderCard(abandoned);
+
+    expect(
+      screen.getByText('This checkout was never completed, so no membership started.'),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByText('This membership was ended by the gym'),
+    ).toBeNull();
+  });
+
+  it('offers no money CTA on one', async () => {
+    await renderCard(abandoned);
+    expect(screen.queryByText('Renew')).toBeNull();
+    expect(screen.queryByTestId('membership-cta')).toBeNull();
+  });
+
+  it('labels the chip from the static strings when the dictionary lacks the key', async () => {
+    // Pre-publish state: `@fitkit/shared` has no `checkout_abandoned` status
+    // key yet, so STATUS here has no entry and the card must still not fall
+    // through to "Ended".
+    await renderCard(abandoned);
+    expect(screen.getByText('CHECKOUT NOT COMPLETED')).toBeOnTheScreen();
+    expect(screen.queryByText('ENDED')).toBeNull();
+  });
+
+  it('prefers the dictionary label once it ships', async () => {
+    await renderWithProviders(
+      <MembershipCard
+        sub={{ id: 's1', plan: { name: 'Monthly' }, ...abandoned } as never}
+        isRTL={false}
+        colors={{} as never}
+        statusLabels={{ ...STATUS, checkout_abandoned: 'Not completed' }}
+        labels={LABELS}
+        isRenewing={false}
+        onRenew={jest.fn()}
+      />,
+    );
+    expect(screen.getByText('NOT COMPLETED')).toBeOnTheScreen();
+  });
+
+  it('keeps blaming nobody but the gym when displayStatus is absent', async () => {
+    // Older API build: no `displayStatus` at all. Behaviour must be exactly
+    // what it was before this field existed.
+    await renderCard({ status: 'cancelled', memberAction: 'none' });
+    expect(
+      screen.getByText('This membership was ended by the gym'),
+    ).toBeOnTheScreen();
+    expect(screen.getByText('ENDED')).toBeOnTheScreen();
   });
 });
 

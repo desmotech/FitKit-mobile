@@ -791,6 +791,8 @@ export default function ProfileScreen() {
                 completePayment: labels.completePayment,
                 updateCard: labels.updateCard,
                 endedByGym: labels.endedByGym,
+                checkoutNotCompleted: labels.checkoutNotCompleted,
+                checkoutNotCompletedNote: labels.checkoutNotCompletedNote,
               }}
               isRenewing={renew.isPending && renew.variables === subList[0].id}
               onRenew={() => {
