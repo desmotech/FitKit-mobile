@@ -280,9 +280,7 @@ export default function SignUpScreen() {
 
   const renderHero = (titleKey: 'welcome' | 'noTicketTitle' | 'errorTitle', sub?: string) => (
     <View style={{ alignItems: 'center', gap: 14, paddingBottom: 4 }}>
-      <View style={{ paddingBottom: 12 }}>
-        <FKBrandMark size={40} />
-      </View>
+      <FKBrandMark size={56} />
       <View style={{ alignItems: 'center', gap: 4 }}>
         <Text
           style={{

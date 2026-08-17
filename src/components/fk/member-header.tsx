@@ -19,6 +19,7 @@ import { type ReactNode } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { OrgSwitcher } from '@/components/fk/org-switcher';
+import { FKBrandMark } from './brand-mark';
 import { FKIconButton } from './icon-button';
 import { Text } from '@/components/ui/text';
 import { useBadgeTotal } from '@/hooks/use-badge';
@@ -62,7 +63,10 @@ export function MemberHeader({ onPressQR, qrLabel, trailing }: MemberHeaderProps
   const orgLogo =
     (activeOrganization as unknown as { logoUrl?: string | null })?.logoUrl ??
     null;
-  const orgInitial = (orgName?.[0] ?? 'F').toUpperCase();
+  // Initial tile stands in for a gym that hasn't uploaded a logo. With no org
+  // at all (still loading, or between orgs) the name falls back to FitKit, so
+  // show the actual FitKit mark rather than an "F" tile.
+  const orgInitial = orgName[0]?.toUpperCase() ?? '';
 
   return (
     <SafeAreaView edges={['top']} style={{ backgroundColor: 'transparent' }}>
@@ -97,37 +101,41 @@ export function MemberHeader({ onPressQR, qrLabel, trailing }: MemberHeaderProps
               minWidth: 0,
             }}
           >
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 10,
-                borderCurve: 'continuous',
-                overflow: 'hidden',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.primary,
-              }}
-            >
-              {orgLogo ? (
-                <Image
-                  source={{ uri: orgLogo }}
-                  style={{ width: 32, height: 32 }}
-                  contentFit="cover"
-                />
-              ) : (
-                <Text
-                  className="font-display"
-                  style={{
-                    color: colors.isDark ? '#04201E' : '#fff',
-                    fontSize: 14,
-                    fontWeight: '800',
-                  }}
-                >
-                  {orgInitial}
-                </Text>
-              )}
-            </View>
+            {!activeOrganization ? (
+              <FKBrandMark size={32} />
+            ) : (
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 10,
+                  borderCurve: 'continuous',
+                  overflow: 'hidden',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.primary,
+                }}
+              >
+                {orgLogo ? (
+                  <Image
+                    source={{ uri: orgLogo }}
+                    style={{ width: 32, height: 32 }}
+                    contentFit="cover"
+                  />
+                ) : (
+                  <Text
+                    className="font-display"
+                    style={{
+                      color: colors.isDark ? '#04201E' : '#fff',
+                      fontSize: 14,
+                      fontWeight: '800',
+                    }}
+                  >
+                    {orgInitial}
+                  </Text>
+                )}
+              </View>
+            )}
             <Text
               className="font-display"
               numberOfLines={1}

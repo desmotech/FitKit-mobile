@@ -331,14 +331,9 @@ export default function SignInScreen() {
               title, system fonts). No font-display: ClashGrotesk isn't
               loaded in this build (see app/_layout.tsx font require).
               writingDirection: ltr keeps Latin glyphs from getting
-              BiDi-mirrored when the device locale is RTL.
-              Extra paddingBottom on the brand-mark wrapper absorbs the
-              FKBrandMark's 12pt cyan glow so it doesn't bleed onto the
-              form card below it. */}
+              BiDi-mirrored when the device locale is RTL. */}
           <View style={{ alignItems: 'center', gap: 14, paddingBottom: 4 }}>
-            <View style={{ paddingBottom: 12 }}>
-              <FKBrandMark size={40} />
-            </View>
+            <FKBrandMark size={56} />
             <View style={{ alignItems: 'center', gap: 4 }}>
               <Text
                 style={{
