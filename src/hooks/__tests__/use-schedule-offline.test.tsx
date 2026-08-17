@@ -105,6 +105,16 @@ function makeWrapper(queryClient: QueryClient) {
   };
 }
 
+/** A response the test releases by hand, so "in flight" is not a race against
+ *  the test body. */
+function responseGate() {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { held, release: () => release() };
+}
+
 function seedWeek(queryClient: QueryClient, sessions: ClassSession[]) {
   queryClient.setQueryData<ApiEnvelope<ClassSession[]>>(WEEK_KEY, {
     data: sessions,
@@ -193,6 +203,46 @@ describe('booking offline', () => {
       kind: 'book',
       waiting: true,
     });
+  });
+
+  it('does not count an ordinary online booking as queued work', async () => {
+    // `status: 'pending'` is equally true of a normal in-flight request, so
+    // counting it flashed "Syncing your changes…" across the screen on every
+    // tap and stamped the row "Will book" while its own button spinner was
+    // already saying so. Only genuinely queued work belongs here.
+    const queryClient = makeTestQueryClient();
+    seedWeek(queryClient, [session()]);
+    const gate = responseGate();
+    server.use(
+      http.post(BOOK_PATH, async () => {
+        await gate.held;
+        return HttpResponse.json({ data: { status: 'confirmed' } });
+      }),
+    );
+
+    const { result } = await renderHook(
+      () => ({
+        book: useBookSession(TEST_ORG, WEEK_START),
+        queued: useQueuedBookings(),
+      }),
+      { wrapper: makeWrapper(queryClient) },
+    );
+
+    await act(async () => {
+      result.current.book.mutate({ orgId: TEST_ORG, sessionId: 'sess_1' });
+    });
+
+    // In flight, online: the request is pending and the optimistic flip has
+    // landed, but nothing is queued.
+    await waitFor(() => expect(result.current.book.isPending).toBe(true));
+    expect(cachedSession(queryClient).myBookingStatus).toBe('confirmed');
+    expect(result.current.queued).toEqual([]);
+
+    await act(async () => {
+      gate.release();
+    });
+    await waitFor(() => expect(result.current.book.isSuccess).toBe(true));
+    expect(result.current.queued).toEqual([]);
   });
 
   it('is eligible for persistence, so it survives an app kill', async () => {

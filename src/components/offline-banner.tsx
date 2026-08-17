@@ -20,6 +20,7 @@
  * a member on a gym floor with patchy signal should not be interrupted for it.
  */
 import { AlertTriangle, RefreshCw, WifiOff } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,7 +46,52 @@ import { bodyFamily, type } from '@/lib/type';
  */
 const TAB_BAR_CLEARANCE = 56;
 
+/**
+ * How long a condition must hold before the banner appears.
+ *
+ * Connectivity is noisy in exactly the moments the banner would be most
+ * distracting: NetInfo reports a blip walking between a gym's access points,
+ * a replay drains in 200ms, the safe-area insets settle a frame after mount
+ * so an instantly-shown pill visibly jumps as it repositions. None of that is
+ * worth telling anyone about, and a chip that appears and vanishes reads as a
+ * glitch in the app rather than a fact about the network.
+ *
+ * So nothing that resolves on its own inside this window is ever painted.
+ * The cost is that a real disconnection is announced a beat late, which is
+ * the right trade: the member is not blocked in the meantime — the queue has
+ * already taken their booking, and the alert confirming it fires immediately.
+ */
+const SETTLE_MS = 2_500;
+
 type BannerState = 'refused' | 'offline' | 'syncing' | null;
+
+/**
+ * Holds back a state until it has been stable for `delayMs`.
+ *
+ * Clearing is immediate and deliberately not debounced: when connectivity
+ * returns the banner should go at once, and making someone watch a stale "No
+ * connection" for another two seconds would be the same glitch in reverse.
+ */
+function useSettled(state: BannerState, delayMs: number): BannerState {
+  const [settled, setSettled] = useState<BannerState>(null);
+
+  useEffect(() => {
+    if (state === null) {
+      setSettled(null);
+      return;
+    }
+    const id = setTimeout(() => setSettled(state), delayMs);
+    return () => clearTimeout(id);
+  }, [state, delayMs]);
+
+  // Only ever report a state that is *still* true. A transition (offline →
+  // syncing on reconnect) hides the pill at once and re-arms the timer, so
+  // the new state has to earn its place the same way. Without this equality
+  // check the banner could paint a settled state against counts that had
+  // already moved on — "0 changes didn't go through", from a refusal the
+  // member dismissed a moment ago.
+  return settled === state ? settled : null;
+}
 
 export function OfflineBanner() {
   const insets = useSafeAreaInsets();
@@ -58,13 +104,14 @@ export function OfflineBanner() {
   const queued = useQueuedBookings();
   const failures = useSyncFailures();
 
-  const state: BannerState = failures.length
+  const live: BannerState = failures.length
     ? 'refused'
     : !isOnline
       ? 'offline'
       : queued.length
         ? 'syncing'
         : null;
+  const state = useSettled(live, SETTLE_MS);
 
   if (state === null) return null;
 
