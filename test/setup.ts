@@ -42,6 +42,10 @@ jest.mock('expo-constants', () => {
         extra: {
           ...(base.expoConfig?.extra ?? {}),
           posthogKey: 'phc_test',
+          // The real app always has one (app.config.ts). Without it
+          // `usePushNotifications` bails before it can mint a token, so any
+          // test of registration would silently exercise nothing.
+          eas: { ...(base.expoConfig?.extra?.eas ?? {}), projectId: 'proj_test' },
         },
       },
     },

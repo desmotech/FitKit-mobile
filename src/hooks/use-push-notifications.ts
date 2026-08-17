@@ -26,6 +26,16 @@ const PROJECT_ID =
   (Constants.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)
     ?.eas?.projectId;
 
+/**
+ * Registration attempts before giving up for this session. The effect has no
+ * natural re-trigger, so this is the only thing standing between a transient
+ * failure and a member who receives no notifications until they restart.
+ */
+const REGISTER_ATTEMPTS = 4;
+/** Waits BEFORE attempts 2..4. Covers the first-launch window (the user row
+ *  appears within a second) without hammering a genuinely down API. */
+const REGISTER_BACKOFF_MS = [1_000, 3_000, 8_000];
+
 // Foreground notification behaviour — banner + sound, and let the OS apply
 // the badge count from the payload. `shouldSetBadge: false` was the reason
 // the app icon never showed a count: it told the OS to drop the badge for
@@ -132,24 +142,68 @@ export function usePushNotifications() {
         const registrationKey = `${userId}:${token}:${lang}`;
         if (registeredFor.current === registrationKey) return;
 
-        const jwt = await getToken();
-        if (!jwt) return;
         const platform: 'ios' | 'android' =
           Platform.OS === 'ios' ? 'ios' : 'android';
-        const res = await fetch(`${apiUrl}/devices/register`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${jwt}`,
-          },
-          body: JSON.stringify({ expoPushToken: token, platform, locale: lang }),
-        });
-        // Only latch the guard on confirmed success. Latching before the
-        // request (or on a failed response) silently killed push delivery
-        // for the install until the user/token/locale changed.
-        if (res.ok) {
-          registeredFor.current = registrationKey;
+
+        // Retried, because this effect never runs again on its own: its deps
+        // are [isLoaded, isSignedIn, getToken, lang, userId] and none of them
+        // change after a failure. A single failed attempt therefore left the
+        // device unregistered for the WHOLE session — no pushes until the app
+        // was restarted or the language changed.
+        //
+        // That is not hypothetical for the case it matters most. On a brand
+        // new member's first launch the API answers 403 until their user row
+        // exists, which is precisely when this effect runs. The API-side fix
+        // narrowed that window to a few hundred ms; this makes us survive it
+        // rather than depend on winning the race.
+        //
+        // Safe to repeat: /devices/register upserts on the push token.
+        for (let attempt = 0; attempt < REGISTER_ATTEMPTS; attempt++) {
+          if (cancelled) return;
+          if (attempt > 0) {
+            await new Promise((r) =>
+              setTimeout(r, REGISTER_BACKOFF_MS[attempt - 1]),
+            );
+            if (cancelled) return;
+          }
+
+          const jwt = await getToken();
+          if (!jwt) return;
+
+          const res = await fetch(`${apiUrl}/devices/register`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${jwt}`,
+            },
+            body: JSON.stringify({
+              expoPushToken: token,
+              platform,
+              locale: lang,
+            }),
+          });
+
+          // Only latch the guard on confirmed success. Latching before the
+          // request (or on a failed response) silently killed push delivery
+          // for the install until the user/token/locale changed.
+          if (res.ok) {
+            registeredFor.current = registrationKey;
+            return;
+          }
+
+          // 401 means the token itself is rejected and `getToken` has already
+          // refreshed once — same reasoning as use-api-query's retry gate.
+          // Backing off would only hammer the API on the way to the same
+          // answer.
+          if (res.status === 401) {
+            console.warn('[push] registration unauthorized — not retrying');
+            return;
+          }
         }
+
+        console.warn(
+          `[push] registration failed after ${REGISTER_ATTEMPTS} attempts — no pushes this session`,
+        );
       } catch (err) {
         console.warn(
           '[push] registration failed:',
