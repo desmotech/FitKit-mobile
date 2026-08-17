@@ -18,6 +18,7 @@ import {
   offlineMutationKeys,
   type BookSessionVars,
   type CancelBookingVars,
+  type QueuedMutationContext,
 } from '@/lib/offline-queue';
 
 /** Live connectivity. Re-renders on every transition. */
@@ -69,9 +70,34 @@ function useQueuedFor(
         sessionId: vars?.sessionId ?? '',
         kind,
         waiting: mutation.state.isPaused,
+        queued: wasQueued(mutation.state.isPaused, mutation.state.context),
       };
     },
-  }).filter((q) => q.sessionId !== '');
+  })
+    .filter((q) => q.sessionId !== '' && q.queued)
+    .map(({ queued: _queued, ...q }) => q);
+}
+
+/**
+ * Whether a pending mutation represents *queued* work rather than a request
+ * the member is watching happen.
+ *
+ * `status: 'pending'` alone does not answer this — it is equally true of an
+ * ordinary online booking, which is in flight for a few hundred milliseconds.
+ * Counting those made the banner flash "Syncing your changes…" on every
+ * normal tap, and made the row stamp itself "Will book" while its own button
+ * spinner was already saying so.
+ *
+ * Paused is the unambiguous case. Beyond that we read the context the hook's
+ * `onMutate` left behind: `queuedOffline` stays true for the whole life of a
+ * mutation that was queued, including while it replays, which is exactly the
+ * window "Syncing" should cover. A mutation restored from disk has no context
+ * at all (no hook ran, so no `onMutate` did) — it is paused until the moment
+ * it replays, so it is counted for as long as it is genuinely waiting.
+ */
+function wasQueued(isPaused: boolean, context: unknown): boolean {
+  if (isPaused) return true;
+  return (context as QueuedMutationContext | undefined)?.queuedOffline === true;
 }
 
 /** Queued changes the server refused on replay. See offline-sync-store. */
