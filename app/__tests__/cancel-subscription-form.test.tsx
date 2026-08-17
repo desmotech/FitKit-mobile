@@ -48,6 +48,23 @@ const cd = dictionaries.he.subscriptions.cancelDialog;
 const CONFIRM_CTA = cd.confirmPeriodEnd;
 const SIGN_CTA = formStringsFor('he').signCancellationNow;
 
+/**
+ * The date as the screen renders it, derived rather than hardcoded.
+ *
+ * CI runs this suite under a timezone matrix, and `EFFECTIVE_AT` is UTC
+ * midnight — so in any negative-offset zone (`America/New_York`) it renders as
+ * the PREVIOUS day. Asserting on a literal day number passed locally and
+ * failed in CI; formatting it the same way the screen does is the assertion
+ * that actually holds everywhere.
+ */
+function renderedDate(): string {
+  return new Date(EFFECTIVE_AT).toLocaleDateString('he', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 /** Buttons handed to the last Alert.alert call (undefined for a bare alert). */
 function alertButtons(): AlertButton[] | undefined {
   return alertSpy.mock.calls.at(-1)?.[2] as AlertButton[] | undefined;
@@ -100,7 +117,9 @@ describe('Cancel subscription → cancellation form', () => {
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
     // The end date still leads — it's what the member came to find out — with
     // the signature named as the remaining step, not as a condition.
-    expect(alertBody()).toContain('17');
+    expect(alertBody()).toBe(
+      cd.periodEndScheduledSignForm.replace('{date}', renderedDate()),
+    );
     const sign = alertButtons()?.[0];
     expect(sign?.text).toBe(SIGN_CTA);
 
@@ -130,14 +149,7 @@ describe('Cancel subscription → cancellation form', () => {
     // for every org that publishes no cancellation form.
     expect(alertButtons()).toBeUndefined();
     expect(alertBody()).toBe(
-      cd.periodEndScheduled.replace(
-        '{date}',
-        new Date(EFFECTIVE_AT).toLocaleDateString('he', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        }),
-      ),
+      cd.periodEndScheduled.replace('{date}', renderedDate()),
     );
     expect(mockRouterDismissTo).not.toHaveBeenCalled();
   });
