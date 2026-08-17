@@ -20,7 +20,7 @@ import { useSignIn } from '@clerk/clerk-expo';
 import type { SignInResource } from '@clerk/types';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -60,6 +60,9 @@ interface ChosenFactor {
 }
 
 const BRAND_TEAL = '#0E8C8C';
+const MFA_CODE_LENGTH = 6;
+// Matches Clerk's own resend rate limit for email/SMS verification codes.
+const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -79,8 +82,15 @@ export default function SignInScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const s = useAuthStrings();
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown((sec) => sec - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
 
   // Where AuthGate was sending the member before it bounced them here. Falls
   // back to the tab shell for an ordinary sign-in.
@@ -107,6 +117,7 @@ export default function SignInScreen() {
     setCode('');
     setNewPassword('');
     setError(null);
+    setResendCooldown(0);
   };
 
   const enterSecondFactor = async (attempt: SignInResource) => {
@@ -150,6 +161,7 @@ export default function SignInScreen() {
     });
     setCode('');
     setStage('second-factor');
+    setResendCooldown(RESEND_COOLDOWN_SECONDS);
   };
 
   const handleSignIn = async () => {
@@ -195,7 +207,7 @@ export default function SignInScreen() {
     }
   };
 
-  const handleVerifyCode = async () => {
+  const handleVerifyCode = async (codeOverride?: string) => {
     if (!isLoaded || submitting || !factor) return;
     haptics.tap();
     setError(null);
@@ -203,7 +215,7 @@ export default function SignInScreen() {
     try {
       const result = await signIn.attemptSecondFactor({
         strategy: factor.strategy,
-        code: code.trim(),
+        code: (codeOverride ?? code).trim(),
       });
 
       if (result.status === 'complete') {
@@ -219,13 +231,49 @@ export default function SignInScreen() {
       const clerkError = (err as {
         errors?: { code?: string; message: string; longMessage?: string }[];
       }).errors?.[0];
-      const detail = clerkError
-        ? `${clerkError.code ?? 'unknown'}: ${clerkError.longMessage ?? clerkError.message}`
-        : 'Verification failed.';
+      let detail = clerkError?.longMessage ?? clerkError?.message ?? 'Verification failed.';
+      if (clerkError?.code === 'form_code_incorrect') {
+        detail = s.wrongCode;
+      }
       setError(detail);
       haptics.error();
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!isLoaded || resendCooldown > 0) return;
+    haptics.tap();
+    setError(null);
+    try {
+      if (stage === 'second-factor' && factor) {
+        if (factor.strategy === 'phone_code') {
+          await signIn.prepareSecondFactor({
+            strategy: 'phone_code',
+            phoneNumberId: factor.phoneNumberId,
+          });
+        } else if (factor.strategy === 'email_code') {
+          await signIn.prepareSecondFactor({
+            strategy: 'email_code',
+            emailAddressId: factor.emailAddressId,
+          });
+        }
+      } else if (stage === 'reset-verify') {
+        await signIn.create({
+          strategy: 'reset_password_email_code',
+          identifier: email.trim(),
+        });
+      }
+      setCode('');
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
+      haptics.success();
+    } catch (err: unknown) {
+      const clerkError = (err as {
+        errors?: { message: string; longMessage?: string }[];
+      }).errors?.[0];
+      setError(clerkError?.longMessage ?? clerkError?.message ?? 'Could not resend code.');
+      haptics.error();
     }
   };
 
@@ -248,6 +296,7 @@ export default function SignInScreen() {
       setCode('');
       setNewPassword('');
       setStage('reset-verify');
+      setResendCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (err: unknown) {
       const clerkError = (err as {
         errors?: { code?: string; message: string; longMessage?: string }[];
@@ -299,6 +348,8 @@ export default function SignInScreen() {
         : 'Password reset failed.';
       if (clerkError?.code === 'form_password_pwned') {
         detail = s.passwordPwned;
+      } else if (clerkError?.code === 'form_code_incorrect') {
+        detail = s.wrongCode;
       }
       setError(detail);
       haptics.error();
@@ -462,7 +513,18 @@ export default function SignInScreen() {
               <Field label={s.mfaCodeLabel} isRTL={isRTL}>
                 <BigTextInput
                   value={code}
-                  onChangeText={setCode}
+                  onChangeText={(text) => {
+                    setCode(text);
+                    // Auto-submit once a full numeric code lands — backup
+                    // codes are alphanumeric/variable-length, so those
+                    // still require an explicit tap.
+                    if (
+                      factor?.strategy !== 'backup_code' &&
+                      text.trim().length === MFA_CODE_LENGTH
+                    ) {
+                      void handleVerifyCode(text.trim());
+                    }
+                  }}
                   placeholder={s.mfaCodePlaceholder}
                   autoCapitalize="none"
                   autoComplete={
@@ -482,6 +544,16 @@ export default function SignInScreen() {
                 />
               </Field>
 
+              {factor?.strategy === 'phone_code' ||
+              factor?.strategy === 'email_code' ? (
+                <ResendLink
+                  label={s.resendCode}
+                  cooldown={resendCooldown}
+                  mutedFg={colors.mutedFg}
+                  onPress={handleResendCode}
+                />
+              ) : null}
+
               {error ? <ErrorBanner text={error} isDark={isDark} isRTL={isRTL} /> : null}
 
               <FKButton
@@ -490,7 +562,7 @@ export default function SignInScreen() {
                 size="lg"
                 fullWidth
                 disabled={submitting || !code}
-                onPress={handleVerifyCode}
+                onPress={() => handleVerifyCode()}
               />
 
               <FKButton
@@ -558,6 +630,13 @@ export default function SignInScreen() {
                   centered
                 />
               </Field>
+
+              <ResendLink
+                label={s.resendCode}
+                cooldown={resendCooldown}
+                mutedFg={colors.mutedFg}
+                onPress={handleResendCode}
+              />
 
               <Field label={s.newPassword} isRTL={isRTL}>
                 <PasswordInput
@@ -803,6 +882,41 @@ function PasswordInput({
         />
       </Pressable>
     </View>
+  );
+}
+
+function ResendLink({
+  label,
+  cooldown,
+  mutedFg,
+  onPress,
+}: {
+  label: string;
+  cooldown: number;
+  mutedFg: string;
+  onPress: () => void;
+}) {
+  const disabled = cooldown > 0;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      hitSlop={8}
+      disabled={disabled}
+      onPress={onPress}
+      style={{ alignSelf: 'center' }}
+    >
+      <Text
+        style={{
+          fontSize: 13,
+          fontWeight: '600',
+          color: disabled ? mutedFg : BRAND_TEAL,
+        }}
+      >
+        {disabled ? `${label} · ${cooldown}s` : label}
+      </Text>
+    </Pressable>
   );
 }
 

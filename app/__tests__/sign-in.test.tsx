@@ -113,6 +113,90 @@ describe('Sign-in screen', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
+  it('auto-submits the second-factor code once 6 digits are entered', async () => {
+    mockSignIn.signIn.create.mockResolvedValue({
+      status: 'needs_second_factor',
+      supportedSecondFactors: [{ strategy: 'email_code', emailAddressId: 'idn_1' }],
+    });
+    mockSignIn.signIn.attemptSecondFactor.mockResolvedValue({
+      status: 'complete',
+      createdSessionId: 'sess_mfa',
+    });
+
+    await renderWithProviders(<SignInScreen />);
+    await typeCredentials();
+    await userEvent.press(submitButton());
+
+    const codeInput = await screen.findByPlaceholderText(he.mfaCodePlaceholder);
+    await userEvent.type(codeInput, '123456');
+
+    await waitFor(() =>
+      expect(mockSignIn.signIn.attemptSecondFactor).toHaveBeenCalledWith({
+        strategy: 'email_code',
+        code: '123456',
+      }),
+    );
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/(tabs)'));
+    expect(mockSignIn.setActive).toHaveBeenCalledWith({ session: 'sess_mfa' });
+  });
+
+  it('shows the localized wrong-code message, not the raw Clerk error, on a bad MFA code', async () => {
+    mockSignIn.signIn.create.mockResolvedValue({
+      status: 'needs_second_factor',
+      supportedSecondFactors: [{ strategy: 'totp' }],
+    });
+    mockSignIn.signIn.attemptSecondFactor.mockRejectedValue(
+      clerkError('form_code_incorrect'),
+    );
+
+    await renderWithProviders(<SignInScreen />);
+    await typeCredentials();
+    await userEvent.press(submitButton());
+
+    const codeInput = await screen.findByPlaceholderText(he.mfaCodePlaceholder);
+    await userEvent.type(codeInput, '000000');
+
+    expect(await screen.findByText(he.wrongCode)).toBeOnTheScreen();
+  });
+
+  it('does not auto-submit a backup code — it requires an explicit tap', async () => {
+    mockSignIn.signIn.create.mockResolvedValue({
+      status: 'needs_second_factor',
+      supportedSecondFactors: [{ strategy: 'backup_code' }],
+    });
+
+    await renderWithProviders(<SignInScreen />);
+    await typeCredentials();
+    await userEvent.press(submitButton());
+
+    const codeInput = await screen.findByPlaceholderText(he.mfaCodePlaceholder);
+    await userEvent.type(codeInput, '123456');
+
+    expect(mockSignIn.signIn.attemptSecondFactor).not.toHaveBeenCalled();
+  });
+
+  it('lets the member resend an email code after the cooldown, but not during it', async () => {
+    mockSignIn.signIn.create.mockResolvedValue({
+      status: 'needs_second_factor',
+      supportedSecondFactors: [{ strategy: 'email_code', emailAddressId: 'idn_1' }],
+    });
+
+    await renderWithProviders(<SignInScreen />);
+    await typeCredentials();
+    await userEvent.press(submitButton());
+
+    const resendLink = await screen.findByRole('button', {
+      name: he.resendCode,
+    });
+    expect(resendLink).toBeDisabled();
+    // The initial code send (inside enterSecondFactor) already fired once.
+    expect(mockSignIn.signIn.prepareSecondFactor).toHaveBeenCalledTimes(1);
+
+    await userEvent.press(resendLink);
+    // Still just the one call — the cooldown guard blocked the resend tap.
+    expect(mockSignIn.signIn.prepareSecondFactor).toHaveBeenCalledTimes(1);
+  });
+
   it('disables the CTA and shows busy copy while sign-in is in flight', async () => {
     let resolveCreate!: (value: unknown) => void;
     mockSignIn.signIn.create.mockImplementation(

@@ -484,11 +484,16 @@ function FormRow({
             )}
           </Pressable>
         ) : null}
-        <ChevronRight
-          size={18}
-          color={isDark ? 'rgba(235,235,245,0.4)' : 'rgba(60,60,67,0.4)'}
-          style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}
-        />
+        {/* Transform must live on a wrapping View, not the icon itself —
+            lucide-react-native forwards `style` to every child SVG shape,
+            and react-native-svg applies a per-shape transform around the
+            viewBox origin (0,0), pushing a mirrored icon off-canvas. */}
+        <View style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}>
+          <ChevronRight
+            size={18}
+            color={isDark ? 'rgba(235,235,245,0.4)' : 'rgba(60,60,67,0.4)'}
+          />
+        </View>
       </Pressable>
     </FKCard>
   );

@@ -34,6 +34,7 @@ export interface AuthStrings {
   mfaPhoneDesc: string;
   mfaEmailDesc: string;
   mfaBackupDesc: string;
+  resendCode: string;
 
   // ── Password reset ────────────────────────────────────────────────
   resetTitle: string;
@@ -51,6 +52,7 @@ export interface AuthStrings {
   wrongCredentials: string;
   accountNotFound: string;
   passwordPwned: string;
+  wrongCode: string;
 }
 
 const HE: AuthStrings = {
@@ -78,6 +80,7 @@ const HE: AuthStrings = {
   mfaPhoneDesc: 'הזן את הקוד ששלחנו אליך זה עתה ב-SMS.',
   mfaEmailDesc: 'הזן את הקוד ששלחנו אליך זה עתה באימייל.',
   mfaBackupDesc: 'הזן אחד מקודי הגיבוי שלך.',
+  resendCode: 'שליחת קוד חדש',
 
   resetTitle: 'איפוס סיסמה',
   resetRequestDesc: 'הזן את האימייל שלך ונשלח לך קוד איפוס.',
@@ -93,6 +96,7 @@ const HE: AuthStrings = {
   wrongCredentials: 'אימייל או סיסמה שגויים.',
   accountNotFound: 'לא מצאנו חשבון כזה.',
   passwordPwned: 'הסיסמה הזו הופיעה בדליפת מידע. אנא בחר סיסמה אחרת.',
+  wrongCode: 'קוד שגוי. נסה שוב.',
 };
 
 const EN: AuthStrings = {
@@ -120,6 +124,7 @@ const EN: AuthStrings = {
   mfaPhoneDesc: 'Enter the code we just texted you.',
   mfaEmailDesc: 'Enter the code we just emailed you.',
   mfaBackupDesc: 'Enter one of your backup codes.',
+  resendCode: 'Resend code',
 
   resetTitle: 'Reset your password',
   resetRequestDesc: "Enter your email and we'll send you a reset code.",
@@ -136,6 +141,7 @@ const EN: AuthStrings = {
   accountNotFound: "We couldn't find that account.",
   passwordPwned:
     'This password has appeared in a data breach. Please choose a different one.',
+  wrongCode: 'Incorrect code. Please try again.',
 };
 
 const RU: AuthStrings = {
@@ -164,6 +170,7 @@ const RU: AuthStrings = {
   mfaPhoneDesc: 'Введите код из SMS, которое мы только что отправили.',
   mfaEmailDesc: 'Введите код, который мы только что отправили на почту.',
   mfaBackupDesc: 'Введите один из ваших резервных кодов.',
+  resendCode: 'Отправить код повторно',
 
   resetTitle: 'Сброс пароля',
   resetRequestDesc: 'Введите вашу почту, и мы отправим код для сброса.',
@@ -180,6 +187,7 @@ const RU: AuthStrings = {
   accountNotFound: 'Мы не нашли такой аккаунт.',
   passwordPwned:
     'Этот пароль встречался в утечке данных. Пожалуйста, выберите другой.',
+  wrongCode: 'Неверный код. Попробуйте снова.',
 };
 
 export function authStringsFor(lang: Locale): AuthStrings {

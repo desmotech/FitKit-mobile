@@ -49,7 +49,8 @@ function useDeadline(ms: number, settled: boolean): boolean {
 // runs a class-scheduled program, the Program tab only for members enrolled
 // in a coaching program, and the Shop tab only when the org sells plans.
 export default function TabsLayout() {
-  const { t } = useI18n();
+  const { t, dir } = useI18n();
+  const isRTL = dir === 'rtl';
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { activeOrganization } = useCurrentUser();
@@ -129,6 +130,58 @@ export default function TabsLayout() {
     );
   }
 
+  // expo-router's NativeTabs renders the real platform tab bar, but
+  // `I18nManager.allowRTL(false)` (see i18n-provider) opts this app out of
+  // the OS's automatic RTL mirroring everywhere — including here — so the
+  // trigger order below is plain left-to-right JSX order regardless of
+  // locale unless we reverse it ourselves, same as every other `isRTL`
+  // flexDirection flip in this codebase.
+  const tabs = [
+    <NativeTabs.Trigger key="index" name="index">
+      <Label>{labels.home ?? 'Home'}</Label>
+      <Icon
+        sf={{ default: 'house', selected: 'house.fill' }}
+        drawable="ic_menu_home"
+      />
+    </NativeTabs.Trigger>,
+    showSchedule ? (
+      <NativeTabs.Trigger key="schedule" name="schedule">
+        <Label>{labels.schedule ?? 'Schedule'}</Label>
+        <Icon
+          sf={{ default: 'calendar', selected: 'calendar' }}
+          drawable="ic_menu_my_calendar"
+        />
+      </NativeTabs.Trigger>
+    ) : null,
+    isEnrolledInProgram ? (
+      <NativeTabs.Trigger key="workouts" name="workouts">
+        <Label>{labels.program ?? 'Program'}</Label>
+        <Icon
+          sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
+          drawable="ic_menu_compass"
+        />
+      </NativeTabs.Trigger>
+    ) : null,
+    shouldShowShop ? (
+      <NativeTabs.Trigger key="shop" name="shop">
+        <Label>{labels.shop ?? navLabels.shop ?? 'Shop'}</Label>
+        <Icon
+          sf={{ default: 'bag', selected: 'bag.fill' }}
+          drawable="ic_menu_agenda"
+        />
+      </NativeTabs.Trigger>
+    ) : null,
+    <NativeTabs.Trigger key="profile" name="profile">
+      <Label>{labels.profile ?? 'Profile'}</Label>
+      <Icon
+        sf={{ default: 'person', selected: 'person.fill' }}
+        drawable="ic_menu_myplaces"
+      />
+      {incompleteForms > 0 ? <Badge>{String(incompleteForms)}</Badge> : null}
+    </NativeTabs.Trigger>,
+  ].filter(Boolean);
+  const orderedTabs = isRTL ? [...tabs].reverse() : tabs;
+
   return (
     <AuthGate>
       <View style={{ flex: 1 }} className="bg-background">
@@ -141,48 +194,7 @@ export default function TabsLayout() {
             fontWeight: '600',
           }}
           tintColor={tint}>
-          <NativeTabs.Trigger name="index">
-            <Label>{labels.home ?? 'Home'}</Label>
-            <Icon
-              sf={{ default: 'house', selected: 'house.fill' }}
-              drawable="ic_menu_home"
-            />
-          </NativeTabs.Trigger>
-          {showSchedule ? (
-            <NativeTabs.Trigger name="schedule">
-              <Label>{labels.schedule ?? 'Schedule'}</Label>
-              <Icon
-                sf={{ default: 'calendar', selected: 'calendar' }}
-                drawable="ic_menu_my_calendar"
-              />
-            </NativeTabs.Trigger>
-          ) : null}
-          {isEnrolledInProgram ? (
-            <NativeTabs.Trigger name="workouts">
-              <Label>{labels.program ?? 'Program'}</Label>
-              <Icon
-                sf={{ default: 'dumbbell', selected: 'dumbbell.fill' }}
-                drawable="ic_menu_compass"
-              />
-            </NativeTabs.Trigger>
-          ) : null}
-          {shouldShowShop ? (
-            <NativeTabs.Trigger name="shop">
-              <Label>{labels.shop ?? navLabels.shop ?? 'Shop'}</Label>
-              <Icon
-                sf={{ default: 'bag', selected: 'bag.fill' }}
-                drawable="ic_menu_agenda"
-              />
-            </NativeTabs.Trigger>
-          ) : null}
-          <NativeTabs.Trigger name="profile">
-            <Label>{labels.profile ?? 'Profile'}</Label>
-            <Icon
-              sf={{ default: 'person', selected: 'person.fill' }}
-              drawable="ic_menu_myplaces"
-            />
-            {incompleteForms > 0 ? <Badge>{String(incompleteForms)}</Badge> : null}
-          </NativeTabs.Trigger>
+          {orderedTabs}
         </NativeTabs>
       </View>
     </AuthGate>

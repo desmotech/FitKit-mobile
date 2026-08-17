@@ -133,12 +133,13 @@ export function RestDayState({
                 ? labels.jumpTo.replace('{day}', nextDayName)
                 : labels.nextWeek}
             </Text>
-            <ChevronRight
-              size={16}
-              color={onPrimary}
-              strokeWidth={2.6}
-              style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}
-            />
+            {/* Transform must live on a wrapping View, not the icon —
+                lucide-react-native forwards `style` to every child SVG
+                shape, and react-native-svg mirrors each shape around the
+                viewBox origin (0,0), pushing it off-canvas. */}
+            <View style={{ transform: [{ scaleX: isRTL ? -1 : 1 }] }}>
+              <ChevronRight size={16} color={onPrimary} strokeWidth={2.6} />
+            </View>
           </TouchableOpacity>
 
           {/* Secondary ghost links — quiet, centered. */}
@@ -375,12 +376,15 @@ function UpcomingPreviewRow({
             ) : null}
           </View>
         </View>
-        <ChevronRight
-          size={16}
-          color={colors.mutedFg}
-          strokeWidth={2.2}
+        {/* Transform must live on a wrapping View, not the icon — see
+            comment above (lucide-react-native forwards `style` to every
+            child SVG shape, and react-native-svg mirrors each one around
+            the viewBox origin (0,0), pushing it off-canvas). */}
+        <View
           style={{ transform: [{ scaleX: isRTL ? -1 : 1 }], flexShrink: 0 }}
-        />
+        >
+          <ChevronRight size={16} color={colors.mutedFg} strokeWidth={2.2} />
+        </View>
       </Pressable>
     </>
   );

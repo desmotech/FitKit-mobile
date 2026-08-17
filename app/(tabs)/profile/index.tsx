@@ -1066,16 +1066,20 @@ export default function ProfileScreen() {
               justifyContent: 'center',
             }}
           >
-            <LogOut
-              size={16}
-              color={colors.destructive}
-              strokeWidth={2.4}
+            <View
               style={{
                 marginRight: isRTL ? 0 : 10,
                 marginLeft: isRTL ? 10 : 0,
                 transform: [{ scaleX: isRTL ? -1 : 1 }],
               }}
-            />
+            >
+              {/* lucide-react-native forwards unrecognized props (like
+                  `style`) to every child shape, not just the outer <Svg> —
+                  a multi-path icon like LogOut needs the transform on a
+                  wrapping View, or RTL mirroring scatters its shapes off
+                  canvas instead of flipping the icon as a whole. */}
+              <LogOut size={16} color={colors.destructive} strokeWidth={2.4} />
+            </View>
             <Text
               style={{
                 fontSize: 15,
