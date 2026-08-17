@@ -11,7 +11,16 @@
  * stays because it is useful to the gym, but it never blocks: the member owes
  * their name and ID, nothing more.
  *
- * Reached from the Payments screen's subscription card.
+ * Reached from the Payments screen's subscription card — which only ever
+ * offers it for a live subscription (active/past_due/debt), never a `pending`
+ * checkout: that one has its own cancel-pending path, and the API refuses a
+ * notice on it outright since a checkout that never activated has no
+ * membership to give a month's notice on.
+ *
+ * When the org publishes a `membership_cancellation` form, the API answers
+ * with its instance id and this hands the member straight to signing it. That
+ * is a courtesy, not a gate — the cancellation committed server-side before
+ * the response came back, so abandoning the form changes nothing about it.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -33,6 +42,7 @@ import {
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
 import { useCancelAtPeriodEnd } from '@/hooks/use-feed-data';
+import { useFormStrings } from '@/i18n/use-form-strings';
 import { useHaptics } from '@/hooks/use-haptics';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
@@ -61,6 +71,7 @@ export default function CancelSubscriptionScreen() {
 
   const cancelMut = useCancelAtPeriodEnd(orgId);
   const errorStrings = usePaymentErrorStrings();
+  const formStrings = useFormStrings();
 
   const [reason, setReason] = useState('');
 
@@ -83,6 +94,9 @@ export default function CancelSubscriptionScreen() {
       scheduled:
         get(t, cd + 'periodEndScheduled') ??
         'Your membership will end on {date}',
+      scheduledSignForm:
+        get(t, cd + 'periodEndScheduledSignForm') ??
+        'Your membership will end on {date}. One last step: sign the cancellation form.',
       error:
         get(t, cd + 'error') ??
         "Couldn't process your cancellation. Please try again.",
@@ -106,31 +120,54 @@ export default function CancelSubscriptionScreen() {
 
       // The end date is the server's answer, computed from the notice — never
       // derived here from a billing period, which is a different date.
-      const effectiveAt = (
-        result as
-          | { data?: { cancellationEffectiveAt?: string | null } }
-          | undefined
-      )?.data?.cancellationEffectiveAt;
+      const effectiveAt = result?.data?.cancellationEffectiveAt;
+      // The gym's written cancellation form, when it publishes one and the
+      // org has `cancellation-form-prompt` on. Null (the common case) keeps
+      // the plain confirm-and-dismiss this screen has always done.
+      const formInstanceId = result?.data?.cancellationFormInstanceId;
 
-      Alert.alert(
-        '',
-        effectiveAt
-          ? L.scheduled.replace(
-              '{date}',
-              new Date(effectiveAt).toLocaleDateString(lang, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              }),
-            )
-          : L.title,
-      );
+      const dateStr = effectiveAt
+        ? new Date(effectiveAt).toLocaleDateString(lang, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : null;
+      const body = dateStr
+        ? (formInstanceId ? L.scheduledSignForm : L.scheduled).replace(
+            '{date}',
+            dateStr,
+          )
+        : L.title;
+
       haptics.success();
       if (orgId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
         });
       }
+
+      if (formInstanceId) {
+        // Navigate on the alert's own dismissal rather than alongside it: the
+        // sheet is still up while the alert shows, and this codebase has been
+        // bitten twice by navigations racing a transition (the shop's spent
+        // intent, the tab replace-vs-navigate fix). `dismissTo` is one atomic
+        // action — the form route isn't in this stack, so it replaces the
+        // sheet — leaving Back on the form returning to Payments.
+        Alert.alert('', body, [
+          {
+            text: formStrings.signCancellationNow,
+            onPress: () =>
+              router.dismissTo({
+                pathname: '/(tabs)/profile/forms/[instanceId]',
+                params: { instanceId: formInstanceId, reason: 'cancellation' },
+              }),
+          },
+        ]);
+        return;
+      }
+
+      Alert.alert('', body);
       router.back();
     } catch (e) {
       haptics.error();

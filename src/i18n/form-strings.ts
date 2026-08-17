@@ -45,6 +45,18 @@ export interface FormStrings {
   wrongAccountSubtitle: string;
   gateBookingBanner: string;
   gatePurchaseBanner: string;
+  /**
+   * Shown when a cancellation notice sent the member here. Unlike the two
+   * above this is NOT a gate — the cancellation already committed server-side
+   * before this screen opened, so the copy must never imply the membership is
+   * still hanging on a signature. A member who backs out unsigned is still
+   * cancelled; the form is the written record the law asks for, not a
+   * condition of leaving.
+   */
+  gateCancellationBanner: string;
+  /** CTA on the cancellation confirmation that opens the form the member now
+   *  owes a signature on. */
+  signCancellationNow: string;
   loadingTitle: string;
   loadingSubtitle: string;
   notFoundTitle: string;
@@ -147,6 +159,9 @@ const HE: FormStrings = {
   wrongAccountSubtitle: 'התחברו עם החשבון שאליו נשלח הטופס ופתחו שוב את הקישור.',
   gateBookingBanner: 'רגע לפני ההרשמה — יש לחתום על התקנון הבא.',
   gatePurchaseBanner: 'רגע לפני הרכישה — יש לחתום על התקנון הבא.',
+  gateCancellationBanner:
+    'הביטול נקלט. נשאר רק לחתום על טופס הביטול, שמתעד אותו בכתב.',
+  signCancellationNow: 'חתימה על הטופס',
   loadingTitle: 'פותח את הטופס…',
   loadingSubtitle: 'רגע — מאמתים את הקישור.',
   notFoundTitle: 'הטופס לא נמצא',
@@ -238,6 +253,9 @@ const EN: FormStrings = {
   wrongAccountSubtitle: 'Sign in as the member this form was sent to, then open the link again.',
   gateBookingBanner: 'One quick step before booking — please sign the form below.',
   gatePurchaseBanner: 'One quick step before your purchase — please sign the form below.',
+  gateCancellationBanner:
+    'Your cancellation is recorded. One last step: sign the form below, which puts it in writing.',
+  signCancellationNow: 'Sign the form',
   loadingTitle: 'Opening your form…',
   loadingSubtitle: 'Just a moment — verifying your link.',
   notFoundTitle: 'Form not found',
@@ -336,6 +354,9 @@ const RU: FormStrings = {
   wrongAccountSubtitle: 'Войдите под аккаунтом, которому отправлена форма, и откройте ссылку снова.',
   gateBookingBanner: 'Один шаг до записи — подпишите форму ниже.',
   gatePurchaseBanner: 'Один шаг до покупки — подпишите форму ниже.',
+  gateCancellationBanner:
+    'Отмена зарегистрирована. Остался последний шаг: подпишите форму ниже, она фиксирует отмену письменно.',
+  signCancellationNow: 'Подписать форму',
   loadingTitle: 'Открываем вашу форму…',
   loadingSubtitle: 'Минутку — проверяем ссылку.',
   notFoundTitle: 'Форма не найдена',

@@ -38,8 +38,10 @@ export default function SignFormInstanceScreen() {
     instanceId: string;
     /** Plan the member was buying when the gate stopped them. */
     resumePlanId?: string;
-    /** Set when a gated flow (booking / purchase) pushed us here, so the
-     *  member sees why they were interrupted instead of a bare form. */
+    /** Set when another flow pushed us here, so the member sees why they
+     *  arrived instead of a bare form. `booking`/`purchase` are gates — the
+     *  action is blocked until they sign. `cancellation` is NOT: the notice
+     *  already committed, and this is the written record of it. */
     reason?: string;
   }>();
   const { dir } = useI18n();
@@ -49,12 +51,18 @@ export default function SignFormInstanceScreen() {
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
 
+  // `cancellation` shares the banner slot but is not a gate: nothing is
+  // waiting on this signature. The API recorded the notice before it handed
+  // back the instance id that routed us here, so the copy reads "recorded,
+  // now sign it" rather than "sign to proceed".
   const gateBanner =
     reason === 'booking'
       ? s.gateBookingBanner
       : reason === 'purchase'
         ? s.gatePurchaseBanner
-        : null;
+        : reason === 'cancellation'
+          ? s.gateCancellationBanner
+          : null;
   const id = typeof instanceId === 'string' ? instanceId : '';
   const query = useFormInstance(orgId, id);
   const submit = useSubmitFormInstance(orgId, id);

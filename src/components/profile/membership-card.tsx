@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Star } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
+import type { SubscriptionDisplayStatus } from '@fitkit/shared';
 import { Text } from '@/components/ui/text';
 import { useFKColors } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -48,10 +49,12 @@ export function MembershipCard({
     /** How the state READS to a human, resolved server-side. `status`
      *  collapses three unrelated endings into `cancelled` — a membership that
      *  ran its course, one somebody ended, and a checkout nobody completed —
-     *  and this splits the last one out. Optional: absent on an API build
-     *  that predates it, and on the pinned `@fitkit/shared` types, which is
-     *  why it is declared here rather than imported. */
-    displayStatus?: string | null;
+     *  and this splits the last one out. Optional: still absent on an API
+     *  build that predates it, which is why every read falls back to `status`.
+     *  Typed off the shared union now that the pinned `@fitkit/shared` carries
+     *  it (0.1.53), so the `checkout_abandoned` test below cannot drift into a
+     *  silent typo. */
+    displayStatus?: SubscriptionDisplayStatus | null;
     /** What the member may actually do, resolved server-side. Status alone
      *  can't say: a gym-cancelled subscription and a member-cancelled one are
      *  both `cancelled`, but only one is renewable. `cancel_pending` only
