@@ -18,8 +18,8 @@ importers:
         specifier: ^15.0.3
         version: 15.1.1(expo-font@55.0.8)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.15)(bufferutil@4.1.0)(react@19.2.0)(utf-8-validate@6.0.6))(react@19.2.0)
       '@fitkit/shared':
-        specifier: npm:@desmotech/fitkit-shared@^0.1.50
-        version: '@desmotech/fitkit-shared@0.1.50'
+        specifier: npm:@desmotech/fitkit-shared@^0.1.53
+        version: '@desmotech/fitkit-shared@0.1.53'
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.15)(bufferutil@4.1.0)(react@19.2.0)(utf-8-validate@6.0.6))
@@ -855,8 +855,8 @@ packages:
   '@coinbase/wallet-sdk@4.3.0':
     resolution: {integrity: sha512-T3+SNmiCw4HzDm4we9wCHCxlP0pqCiwKe4sOwPH3YAK2KSKjxPRydKu6UQJrdONFVLG7ujXvbd/6ZqmvJb8rkw==}
 
-  '@desmotech/fitkit-shared@0.1.50':
-    resolution: {integrity: sha512-vhyOg3tzgpMdGQih6Kasxh73CP97SPtbXaOo4pcd82y5pNaGB/eAKI9RgQ36aMeI0xWYiwOXNAEPqMGyCJlWrA==, tarball: https://npm.pkg.github.com/download/@desmotech/fitkit-shared/0.1.50/a67d31bee8b913203b7accf33913be4b16ff9755}
+  '@desmotech/fitkit-shared@0.1.53':
+    resolution: {integrity: sha512-a77v+gTqYVV8tFG7DAmufYT8q65O1CvMW/2pEr3AIIR9LfZw1VzQZwn6aEMb7Gy1KGB4QOGXZiP935v7G82Eyg==, tarball: https://npm.pkg.github.com/download/@desmotech/fitkit-shared/0.1.53/1226a975d4338f798b720c0d9c11bfd53fbca69d}
 
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
@@ -2089,9 +2089,6 @@ packages:
   '@stripe/stripe-js@5.6.0':
     resolution: {integrity: sha512-w8CEY73X/7tw2KKlL3iOk679V9bWseE4GzNz3zlaYxcTjmcmWOathRb0emgo/QQ3eoNzmq68+2Y2gxluAv3xGw==}
     engines: {node: '>=12.16'}
-
-  '@swc/helpers@0.5.21':
-    resolution: {integrity: sha512-jI/VAmtdjB/RnI8GTnokyX7Ug8c+g+ffD6QRLa6XQewtnGyukKkKSk3wLTM3b5cjt1jNh9x0jfVlagdN2gDKQg==}
 
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
@@ -7318,7 +7315,7 @@ snapshots:
       '@solana/wallet-adapter-react': 0.15.39(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bs58@6.0.0)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.15)(bufferutil@4.1.0)(react@19.2.0)(utf-8-validate@6.0.6))(react@19.2.0)(typescript@5.9.3)
       '@solana/wallet-standard': 1.1.4(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(bs58@6.0.0)(react@19.2.0)
       '@stripe/stripe-js': 5.6.0
-      '@swc/helpers': 0.5.21
+      '@swc/helpers': 0.5.23
       '@tanstack/query-core': 5.87.4
       '@wallet-standard/core': 1.1.1
       '@zxcvbn-ts/core': 3.0.4
@@ -7395,7 +7392,7 @@ snapshots:
       eventemitter3: 5.0.4
       preact: 10.29.2
 
-  '@desmotech/fitkit-shared@0.1.50':
+  '@desmotech/fitkit-shared@0.1.53':
     dependencies:
       '@swc/helpers': 0.5.23
       zod: 4.4.3
@@ -9064,10 +9061,6 @@ snapshots:
       - utf-8-validate
 
   '@stripe/stripe-js@5.6.0': {}
-
-  '@swc/helpers@0.5.21':
-    dependencies:
-      tslib: 2.8.1
 
   '@swc/helpers@0.5.23':
     dependencies:

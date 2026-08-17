@@ -1,6 +1,7 @@
 import { useApiQuery, useApiAction, useApiSend } from './use-api-query';
 import { queryKeys } from '@/lib/query-keys';
 import type {
+  MemberCancellationResponse,
   PersonalRecordResponse,
   BodyMetricSummaryResponse,
   SubscriptionWithPlan,
@@ -276,10 +277,19 @@ export function useEarlyRenewSubscription(orgId: string | undefined | null) {
  * callers should display rather than deriving an end date from a billing
  * period. `reason` is optional. Reversible via {@link useResumeCancellation}
  * until it takes effect.
+ *
+ * Answers with `MemberCancellationResponse`, NOT `SubscriptionLite`: this
+ * endpoint serializes the subscription without its plan, and it carries the
+ * extra `cancellationFormInstanceId` — the gym's written cancellation form,
+ * which the caller routes the member into signing. Null means there is
+ * nothing to sign (no template published by the org, issuance failed, or the
+ * org's `cancellation-form-prompt` flag is off), and the caller just confirms
+ * the end date. Never a reason to hold anything up: the notice is already
+ * recorded by the time this resolves.
  */
 export function useCancelAtPeriodEnd(orgId: string | undefined | null) {
   return useApiSend<
-    ApiEnvelope<SubscriptionLite>,
+    ApiEnvelope<MemberCancellationResponse>,
     { id: string; reason?: string }
   >({
     path: (b) =>
