@@ -2,9 +2,10 @@
  * Payment / subscription error-code localization (FIT-272).
  *
  * Static per-language tables mapping the API's structured error codes
- * (`payments.errorCodes.*` in `@fitkit/shared`) plus the card add/update
- * labels (`profile.paymentHistory.updateCard` / `addCard`) — for the renew
- * buttons, the booking-horizon guard, and the cancel-flow conflict.
+ * (`payments.errorCodes.*` in `@fitkit/shared`) plus the card-panel labels
+ * (`profile.paymentHistory.updateCard` / `addCard`, and the expired-card
+ * badge `members.paymentMethods.expiredBadge`) — for the renew buttons, the
+ * booking-horizon guard, and the cancel-flow conflict.
  *
  * Values are copied VERBATIM from the shared dictionaries; the pinned
  * published package predates some keys, so `usePaymentErrorStrings`
@@ -59,6 +60,8 @@ export interface PaymentErrorStrings {
   cardRegistrationFailed: string;
   /** payments.errorCodes.generic */
   generic: string;
+  /** members.paymentMethods.expiredBadge — badge on a card past its expiry */
+  cardExpired: string;
   /** profile.paymentHistory.updateCard */
   updateCard: string;
   /** profile.paymentHistory.addCard */
@@ -96,6 +99,7 @@ const en: PaymentErrorStrings = {
   renewFailed:
     "The renewal didn't go through and you have not been charged. Try again in a moment.",
   generic: 'Something went wrong. Please try again.',
+  cardExpired: 'Expired',
   updateCard: 'Update card',
   addCard: 'Add card',
   cancel: 'Cancel',
@@ -124,6 +128,7 @@ const he: PaymentErrorStrings = {
     'המנוי לא נרכש ולא בוצע חיוב. כדאי לנסות שוב, ואם זה חוזר — דברו איתנו במועדון.',
   renewFailed: 'החידוש לא בוצע ולא בוצע חיוב. כדאי לנסות שוב בעוד רגע.',
   generic: 'משהו השתבש. נסו שוב.',
+  cardExpired: 'פג תוקף',
   updateCard: 'עדכון כרטיס',
   addCard: 'הוספת כרטיס',
   cancel: 'ביטול',
@@ -156,6 +161,7 @@ const ru: PaymentErrorStrings = {
   renewFailed:
     'Продление не прошло, списания не было. Попробуйте через минуту.',
   generic: 'Что-то пошло не так. Попробуйте ещё раз.',
+  cardExpired: 'Истекла',
   updateCard: 'Обновить карту',
   addCard: 'Добавить карту',
   cancel: 'Отмена',

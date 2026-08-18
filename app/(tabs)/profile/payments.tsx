@@ -57,6 +57,7 @@ import {
 } from '@/i18n/use-payment-error-strings';
 import { ApiError } from '@/hooks/use-api';
 import { paymentReturnUrl } from '@/lib/api';
+import { isCardExpired } from '@/lib/payment-method';
 import { MEMBER_PLAN_CHANGE_FLAG, getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
@@ -168,6 +169,7 @@ export default function PaymentsScreen() {
     queryOptions: { enabled: !!orgId },
   });
   const activeMethod = methodsData?.data?.find((m) => m.isActive);
+  const cardExpired = isCardExpired(activeMethod);
   const errorStrings = usePaymentErrorStrings();
 
   // The "Membership" card anchors on the member's recurring subscription.
@@ -534,16 +536,62 @@ export default function PaymentsScreen() {
               <View
                 style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}
               >
-                <Text
+                <View
                   style={{
-                    fontSize: 14,
-                    fontWeight: '700',
-                    color: colors.foreground,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 6,
                   }}
                 >
-                  {activeMethod.cardBrand ?? 'Card'} ····{' '}
-                  {activeMethod.cardSuffix ?? '••••'}
-                </Text>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '700',
+                      color: colors.foreground,
+                    }}
+                  >
+                    {activeMethod.cardBrand ?? 'Card'} ····{' '}
+                    {activeMethod.cardSuffix ?? '••••'}
+                  </Text>
+                  {/* Expired card (parity with web's payment-methods-card).
+                      "Expires 04/2024" is a date, not a verdict — the member
+                      reads it as fine while every recurring charge on it is
+                      already failing. "Update card" is right beside it. */}
+                  {cardExpired ? (
+                    <View
+                      testID="card-expired-badge"
+                      accessibilityRole="text"
+                      style={{
+                        flexDirection: isRTL ? 'row-reverse' : 'row',
+                        alignItems: 'center',
+                        gap: 4,
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                        borderCurve: 'continuous',
+                        backgroundColor: 'rgba(184,74,64,0.12)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(184,74,64,0.28)',
+                      }}
+                    >
+                      <AlertTriangle
+                        size={10}
+                        color="#B84A40"
+                        strokeWidth={2.6}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 9,
+                          fontWeight: '800',
+                          color: '#B84A40',
+                        }}
+                      >
+                        {errorStrings.cardExpired}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
                 {activeMethod.expiryMonth && activeMethod.expiryYear ? (
                   <Text
                     style={{ fontSize: 11, color: colors.mutedFg, marginTop: 2 }}
