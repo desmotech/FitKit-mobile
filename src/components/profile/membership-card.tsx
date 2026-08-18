@@ -66,6 +66,21 @@ export function MembershipCard({
       | 'cancel_pending'
       | 'update_card'
       | null;
+    /** Whether any more money is ever coming off the member's card, resolved
+     *  server-side from the charge cron's own predicate. Nothing else on the
+     *  row can answer it: a member who has given notice still reads `active`,
+     *  still has a future `currentPeriodEnd`, and still carries a non-zero
+     *  `introCyclesRemaining` — which is exactly how this card came to tell
+     *  cancelled members that N more payments were on the way. Optional:
+     *  absent on an API build that predates it, and the read below falls back
+     *  to `cancelAtPeriodEnd`, which is the flag the cron actually excludes on. */
+    billingState?:
+      | 'recurring'
+      | 'paused'
+      | 'ending'
+      | 'stopped'
+      | 'external'
+      | null;
   };
   isRTL: boolean;
   colors: ColorTokens;
@@ -84,6 +99,8 @@ export function MembershipCard({
     endedByGym: string;
     checkoutNotCompleted: string;
     checkoutNotCompletedNote: string;
+    /** Said once notice is given, in place of the intro-payments count. */
+    noFurtherCharges?: string;
   };
   isRenewing: boolean;
   onRenew: () => void;
@@ -160,14 +177,39 @@ export function MembershipCard({
       ? labels.endedByGym
       : null;
 
+  // Is anything ever going to be charged on this subscription again? The
+  // server's verdict when it sends one. The fallback is the same rule minus
+  // the external-provider case the client can't see, so an API build without
+  // the field still stops short of promising payments on a membership that
+  // has ended or been given notice on.
+  const billingState =
+    sub.billingState ??
+    (sub.cancelAtPeriodEnd
+      ? 'ending'
+      : sub.status === 'cancelled' || sub.status === 'pending'
+        ? 'stopped'
+        : sub.status === 'paused'
+          ? 'paused'
+          : 'recurring');
+  const billingContinues = billingState === 'recurring';
+  // `introCyclesRemaining` counts the discounted cycles the PLAN still has to
+  // give, not charges that are still coming. On a membership that is ending
+  // the two are different numbers, and this line was rendering the wrong one:
+  // "2 intro payments remaining" under an "Ends 5 Oct" date, on a
+  // subscription the cron will never charge again.
   const introLeft = sub.introCyclesRemaining ?? 0;
   const introRemaining =
-    introLeft > 0
+    introLeft > 0 && billingContinues
       ? (introLeft === 1
           ? quotaT.introPaymentsRemainingOne
           : quotaT.introPaymentsRemaining
         ).replace('{count}', String(introLeft))
       : null;
+  // Notice given: say the reassuring true thing instead of the alarming
+  // false one. Only for `ending` — `stopped` is already covered by the
+  // ended/abandoned note above, and `external` means we genuinely can't say.
+  const noChargesNote =
+    billingState === 'ending' ? labels.noFurtherCharges ?? null : null;
   // Once notice is given the meaningful date is when the membership ENDS, not
   // when it would next have billed. Those differ by up to a month.
   const endsOn = sub.cancelAtPeriodEnd ? sub.cancellationEffectiveAt : null;
@@ -431,6 +473,20 @@ export function MembershipCard({
           }}
         >
           {endedNote}
+        </Text>
+      ) : null}
+
+      {noChargesNote ? (
+        <Text
+          testID="no-further-charges"
+          style={{
+            fontSize: 11.5,
+            color: 'rgba(255,255,255,0.78)',
+            fontFamily: 'Assistant-Medium',
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {noChargesNote}
         </Text>
       ) : null}
 

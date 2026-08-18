@@ -58,6 +58,10 @@ export interface ProfileStrings {
   /** Why there's no action on one: nothing was ever bought, so "ended by the
    *  gym" would blame the gym for a payment the member never finished. */
   checkoutNotCompletedNote: string;
+  /** Shown once notice has been given: the membership runs to `endsOn` and
+   *  no further charge is ever taken. Says out loud what the card used to
+   *  contradict by counting intro payments that will never happen. */
+  noFurtherCharges: string;
 
   // ── Settings rows ─────────────────────────────────────────────────
   settingPersonal: string;
@@ -141,6 +145,7 @@ const HE: ProfileStrings = {
   endedByGym: 'המנוי הופסק על ידי המועדון',
   checkoutNotCompleted: 'התשלום לא הושלם',
   checkoutNotCompletedNote: 'התשלום לא הושלם, ולכן לא נפתח מנוי.',
+  noFurtherCharges: 'לא ייגבו תשלומים נוספים.',
 
   settingPersonal: 'פרטים אישיים',
   settingPayment: 'תשלומים',
@@ -218,6 +223,7 @@ const EN: ProfileStrings = {
   checkoutNotCompleted: 'Checkout not completed',
   checkoutNotCompletedNote:
     'This checkout was never completed, so no membership started.',
+  noFurtherCharges: 'No further payments will be charged.',
 
   settingPersonal: 'Personal Details',
   settingPayment: 'Payments',
@@ -295,6 +301,7 @@ const RU: ProfileStrings = {
   checkoutNotCompleted: 'Оплата не завершена',
   checkoutNotCompletedNote:
     'Эта оплата не была завершена, поэтому абонемент не начался.',
+  noFurtherCharges: 'Дальнейшие списания не производятся.',
 
   settingPersonal: 'Личные данные',
   settingPayment: 'Платежи',
