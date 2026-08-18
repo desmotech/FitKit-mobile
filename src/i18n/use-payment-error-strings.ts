@@ -32,6 +32,9 @@ const DICT_PATHS: Record<keyof PaymentErrorStrings, string> = {
   purchaseRefusedBody: 'payments.errorCodes.purchase_refused_body',
   renewFailed: 'payments.errorCodes.renew_failed',
   generic: 'payments.errorCodes.generic',
+  // Staff-side key, but the copy is the card's, not the console's — one
+  // word for a card past its expiry date, identical for either audience.
+  cardExpired: 'members.paymentMethods.expiredBadge',
   updateCard: 'profile.paymentHistory.updateCard',
   addCard: 'profile.paymentHistory.addCard',
   cancel: 'common.cancel',

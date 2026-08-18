@@ -53,6 +53,10 @@ const CPS = {
     pick('subscriptions.cancelPendingDialog.confirmAction') ?? CP.confirmAction,
 };
 
+// Same overlay convention as CPS above: the dictionary wins when the pinned
+// package carries the key, the static table is the fallback.
+const EXPIRED_BADGE = pick('members.paymentMethods.expiredBadge') ?? S.cardExpired;
+
 const CARD = {
   id: 'pm_test',
   cardBrand: 'Visa',
@@ -92,6 +96,35 @@ describe('PaymentsScreen', () => {
       expect(screen.getByTestId('update-card-btn')).toBeTruthy();
     });
     expect(screen.getByText(S.updateCard)).toBeTruthy();
+  });
+
+  it('badges the card on file once it is past its expiry month', async () => {
+    // The month boundary itself is pinned in payment-method.test.ts; here a
+    // long-dead year keeps the screen test free of clock mocking.
+    stagePayments({ methods: [{ ...CARD, expiryMonth: 1, expiryYear: 2020 }] });
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('card-expired-badge')).toBeTruthy();
+    });
+    expect(screen.getByText(EXPIRED_BADGE)).toBeTruthy();
+    // The fix stays one tap away — the badge explains the button, it does
+    // not replace it.
+    expect(screen.getByTestId('update-card-btn')).toBeTruthy();
+  });
+
+  it('leaves a card that is still in date unbadged', async () => {
+    // Rolling year, not a literal: a fixture that quietly ages into "expired"
+    // would turn this assertion green for the wrong reason.
+    stagePayments({
+      methods: [{ ...CARD, expiryMonth: 12, expiryYear: new Date().getFullYear() + 2 }],
+    });
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('update-card-btn')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('card-expired-badge')).toBeNull();
   });
 
   it('offers "Add card" when no payment method is on file', async () => {
