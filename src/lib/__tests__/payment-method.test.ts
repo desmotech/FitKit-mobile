@@ -1,8 +1,12 @@
 import { isCardExpired } from '../payment-method';
 
-// A card is valid THROUGH the last day of its stated month, so every case
-// below is anchored on an explicit "now" rather than the wall clock.
-const MID_MARCH_2026 = new Date('2026-03-15T12:00:00Z');
+// `isCardExpired` compares against the LOCAL calendar (getFullYear/getMonth) —
+// a card expires by the member's own calendar, not UTC. So every clock here is
+// built with the local-time constructor, never a `Z` string: CI runs this suite
+// under a timezone matrix (UTC, Asia/Jerusalem, America/New_York), and
+// `new Date('2026-03-31T23:59:00Z')` is already April in Jerusalem.
+// Month is 0-indexed in the constructor: 2 = March.
+const MID_MARCH_2026 = new Date(2026, 2, 15, 12, 0);
 
 describe('isCardExpired', () => {
   it('treats a month already past as expired', () => {
@@ -21,19 +25,13 @@ describe('isCardExpired', () => {
     expect(
       isCardExpired({ expiryMonth: 3, expiryYear: 2026 }, MID_MARCH_2026),
     ).toBe(false);
-    // …right up to its last day.
+    // …right up to its last local minute.
     expect(
-      isCardExpired(
-        { expiryMonth: 3, expiryYear: 2026 },
-        new Date('2026-03-31T23:59:00Z'),
-      ),
+      isCardExpired({ expiryMonth: 3, expiryYear: 2026 }, new Date(2026, 2, 31, 23, 59)),
     ).toBe(false);
     // …and no further.
     expect(
-      isCardExpired(
-        { expiryMonth: 3, expiryYear: 2026 },
-        new Date('2026-04-01T00:01:00Z'),
-      ),
+      isCardExpired({ expiryMonth: 3, expiryYear: 2026 }, new Date(2026, 3, 1, 0, 1)),
     ).toBe(true);
   });
 
