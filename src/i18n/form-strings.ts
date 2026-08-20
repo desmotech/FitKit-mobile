@@ -37,6 +37,16 @@ export interface FormStrings {
   downloadPdf: string;
   downloadPdfPending: string;
   downloadPdfFailed: string;
+  /** "v3" chip — which version of the template an instance is pinned to. */
+  versionLabel: (n: number) => string;
+  /** On a pending row whose family was already signed once — says why the
+   *  same form shows up again. */
+  replacesSigned: (date: string) => string;
+  /** A signed compliance instance whose validity window has lapsed. */
+  signatureExpired: (date: string) => string;
+  /** Toggle revealing a family's older completed submissions. */
+  showPrevious: (n: number) => string;
+  hidePrevious: string;
 
   // ── Sign screen chrome (shared by auth + token) ───────────────────
   /** Why the member was brought here straight from another flow. */
@@ -154,6 +164,11 @@ const HE: FormStrings = {
   downloadPdf: 'הורדת המסמך',
   downloadPdfPending: 'פותח את המסמך…',
   downloadPdfFailed: 'לא הצלחנו לפתוח את המסמך. נסו שוב.',
+  versionLabel: (n) => `גרסה ${n}`,
+  replacesSigned: (date) => `מחליף את הגרסה שנחתמה ב־${date}`,
+  signatureExpired: (date) => `פג תוקף ב־${date}`,
+  showPrevious: (n) => (n === 1 ? 'הגשה קודמת אחת' : `${n} הגשות קודמות`),
+  hidePrevious: 'הסתרת הגשות קודמות',
 
   wrongAccountTitle: 'הקישור שייך למישהו אחר',
   wrongAccountSubtitle: 'התחברו עם החשבון שאליו נשלח הטופס ופתחו שוב את הקישור.',
@@ -248,6 +263,12 @@ const EN: FormStrings = {
   downloadPdf: 'Download PDF',
   downloadPdfPending: 'Opening PDF…',
   downloadPdfFailed: "We couldn't open the document. Try again.",
+  versionLabel: (n) => `v${n}`,
+  replacesSigned: (date) => `Replaces the version you signed on ${date}`,
+  signatureExpired: (date) => `Expired on ${date}`,
+  showPrevious: (n) =>
+    n === 1 ? '1 earlier submission' : `${n} earlier submissions`,
+  hidePrevious: 'Hide earlier submissions',
 
   wrongAccountTitle: 'This link is for someone else',
   wrongAccountSubtitle: 'Sign in as the member this form was sent to, then open the link again.',
@@ -349,6 +370,11 @@ const RU: FormStrings = {
   downloadPdf: 'Скачать PDF',
   downloadPdfPending: 'Открываем PDF…',
   downloadPdfFailed: 'Не удалось открыть документ. Попробуйте снова.',
+  versionLabel: (n) => `версия ${n}`,
+  replacesSigned: (date) => `Заменяет версию, подписанную ${date}`,
+  signatureExpired: (date) => `Истекла ${date}`,
+  showPrevious: (n) => `Предыдущие отправки (${n})`,
+  hidePrevious: 'Скрыть предыдущие отправки',
 
   wrongAccountTitle: 'Эта ссылка для другого человека',
   wrongAccountSubtitle: 'Войдите под аккаунтом, которому отправлена форма, и откройте ссылку снова.',
