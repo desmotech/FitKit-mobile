@@ -1,27 +1,37 @@
 /**
- * <MembershipInactiveScreen> — shown by AuthGate when the member's
- * memberships all resolve to cancelled/suspended: the gym removed or
- * deleted the client. Mirrors the web's RoleRouter inline state
- * (apps/web/src/components/role-router.tsx, `isMembershipInactive`).
+ * <MembershipInactiveScreen> — shown by AuthGate when the signed-in user
+ * holds no ACTIVE membership, so there is nothing in this member-only app
+ * for them to see.
  *
- * Replaces the previous behavior where the tab shell mounted with no
- * active org and the home screen sat on its "Loading…" placeholder
- * forever — a removed client saw an app that never finished loading
- * instead of being told their membership is no longer active.
+ * Two variants, because the two states need different words:
+ *   - 'inactive' — cancelled / suspended / erased, or no membership rows at
+ *     all. The gym removed them (or never added them). Nothing they do in
+ *     the app changes it; they need to talk to the gym.
+ *   - 'pending'  — an invite exists but hasn't converted yet. /users/me
+ *     retries acceptance on every call, so Retry genuinely resolves this.
  *
- * Strings reuse the existing `auth.*` dictionary keys the web already
- * ships (membershipInactive, membershipInactiveHint, retry, signOut) —
- * no new i18n keys, so no @fitkit/shared republish.
+ * Replaces the previous behavior where these users passed the gate into the
+ * tab shell, where the home screen's no-active-org placeholder renders the
+ * literal string "Loading…" — an app that appears to load forever when in
+ * fact nothing was ever going to arrive.
+ *
+ * Strings reuse the `auth.*` dictionary keys the web already ships in
+ * en/he/ru (membershipInactive, processingInvitation, retry, signOut) — no
+ * new i18n keys, so no @fitkit/shared republish.
  */
 import { Pressable, View } from 'react-native';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
 
+export type MembershipBlockVariant = 'inactive' | 'pending';
+
 export function MembershipInactiveScreen({
+  variant = 'inactive',
   onRetry,
   onSignOut,
 }: {
+  variant?: MembershipBlockVariant;
   onRetry: () => void;
   onSignOut: () => void;
 }) {
@@ -31,17 +41,23 @@ export function MembershipInactiveScreen({
 
   const authT =
     (t as unknown as Record<string, Record<string, string>>).auth ?? {};
-  const message =
-    authT.membershipInactive ?? 'Your membership is currently inactive.';
-  const hint =
-    authT.membershipInactiveHint ??
-    'Please contact your organization admin for assistance.';
+  const isPending = variant === 'pending';
+  const message = isPending
+    ? authT.processingInvitation ?? 'Processing your invitation...'
+    : authT.membershipInactive ?? 'Your membership is currently inactive.';
+  const hint = isPending
+    ? authT.processingInvitationHint ??
+      'If this takes too long, please try signing out and back in.'
+    : authT.membershipInactiveHint ??
+      'Please contact your organization admin for assistance.';
   const retryLabel = authT.retry ?? 'Retry';
   const signOutLabel = authT.signOut ?? 'Sign Out';
 
   return (
     <View
-      testID="membership-inactive-screen"
+      testID={
+        isPending ? 'membership-pending-screen' : 'membership-inactive-screen'
+      }
       style={{
         flex: 1,
         alignItems: 'center',

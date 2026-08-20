@@ -229,13 +229,20 @@ describe('AuthGate', () => {
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
   });
 
-  it('tells a cancelled client their membership is inactive instead of loading forever', async () => {
-    // The gym removed/deleted this client: memberships exist but every one
-    // is cancelled. The tab shell used to mount with no active org and the
-    // home screen's no-org placeholder read "Loading…" indefinitely.
-    stageSignedInMember(
-      userMe({ memberships: [membership({ status: 'cancelled' })] }),
-    );
+  // Every way a member can end up with no ACTIVE membership. All of them
+  // used to reach the tab shell, where the home screen's no-active-org card
+  // renders the literal string "Loading…" and never resolves — the app
+  // looked like it was loading forever. Zero-memberships is the case the
+  // first fix missed: it only covered rows that existed but were inactive.
+  it.each([
+    ['cancelled by the gym', [membership({ status: 'cancelled' })]],
+    ['suspended by the gym', [membership({ status: 'suspended' })]],
+    ['no membership rows at all', []],
+  ])('tells a member with no access (%s) instead of loading forever', async (
+    _label,
+    memberships,
+  ) => {
+    stageSignedInMember(userMe({ memberships }));
     stageConsentStatus(ALL_CONSENTED);
 
     await renderWithProviders(gate());
@@ -252,6 +259,21 @@ describe('AuthGate', () => {
     ).toBeOnTheScreen();
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
     expect(mockRedirects).toHaveLength(0);
+  });
+
+  it('tells a member whose invite is still converting that it is processing', async () => {
+    stageSignedInMember(
+      userMe({ memberships: [membership({ status: 'pending_invitation' })] }),
+    );
+    stageConsentStatus(ALL_CONSENTED);
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(screen.getByTestId('membership-pending-screen')).toBeOnTheScreen(),
+    );
+    expect(screen.getByText(he.auth.processingInvitation)).toBeOnTheScreen();
+    expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
   });
 
   it('holds a suspended member at the inactive screen, not onboarding', async () => {
@@ -274,6 +296,30 @@ describe('AuthGate', () => {
       ).toBeOnTheScreen(),
     );
     expect(mockRedirects).toHaveLength(0);
+  });
+
+  it('names the real problem when the consent check fails for a removed client', async () => {
+    // Consent status is meaningless for someone with no active membership.
+    // While it was checked first, a removed client whose /legal/consents/status
+    // errored got the generic "something went wrong" screen, and one whose
+    // request hung sat on a spinner — the loads-forever this fix is about.
+    stageSignedInMember(
+      userMe({ memberships: [membership({ status: 'cancelled' })] }),
+    );
+    server.use(
+      http.get(CONSENT_PATH, () =>
+        HttpResponse.json({ message: 'forbidden' }, { status: 403 }),
+      ),
+    );
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('membership-inactive-screen'),
+      ).toBeOnTheScreen(),
+    );
+    expect(screen.queryByTestId('auth-error-screen')).not.toBeOnTheScreen();
   });
 
   it('renders the app for a consented member with a complete profile', async () => {
