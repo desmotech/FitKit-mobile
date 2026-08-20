@@ -99,8 +99,8 @@ export default function TabsLayout() {
   // members skip /accept-terms (their legal consent was recorded server-side),
   // so the in-app prompt never runs for them.
   useAnalyticsConsentSync();
-  // Resume the destination lost across an App Store install (join link with a
-  // plan). Needs BOTH gates: `shouldShowShop` proves the tab exists for this
+  // Resume the destination lost across an App Store install (any join link —
+  // with a plan to spotlight, or without). Needs BOTH gates: `shouldShowShop` proves the tab exists for this
   // org, `tabsReady` proves the navigator holding it is actually mounted.
   // Passing only the former navigated into the loader branch, where no `shop`
   // route exists yet — the redirect vanished and the member landed on home
