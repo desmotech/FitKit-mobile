@@ -49,6 +49,17 @@ export const mockSignIn = {
   setActive: jest.fn(async () => undefined),
 };
 
+export const mockSignUp = {
+  isLoaded: true,
+  signUp: {
+    create: jest.fn(),
+    update: jest.fn(),
+    status: null as string | null,
+    missingFields: [] as string[],
+  },
+  setActive: jest.fn(async () => undefined),
+};
+
 export function resetClerkMocks() {
   Object.assign(mockAuthState, defaultAuth());
   mockUserState.user = {
@@ -67,4 +78,10 @@ export function resetClerkMocks() {
   mockSignIn.signIn.attemptFirstFactor = jest.fn();
   mockSignIn.signIn.supportedSecondFactors = [];
   mockSignIn.setActive = jest.fn(async () => undefined);
+  mockSignUp.isLoaded = true;
+  mockSignUp.signUp.create = jest.fn();
+  mockSignUp.signUp.update = jest.fn();
+  mockSignUp.signUp.status = null;
+  mockSignUp.signUp.missingFields = [];
+  mockSignUp.setActive = jest.fn(async () => undefined);
 }
