@@ -55,6 +55,10 @@ export interface CurrentUserContext {
   isNewUser: boolean;
   /** True when user has memberships but none are active (only pending invites). */
   hasPendingMembership: boolean;
+  /** True when user has memberships but none are active or pending — the
+   *  client was cancelled/suspended (or soft-deleted) by the gym. Gates the
+   *  membership-inactive screen instead of the tab shell. */
+  isMembershipInactive: boolean;
   /** True when user is signed in + has an active membership but profile is not yet
    *  filled in (name / phone / national-id / birth-date). Gates /complete-profile. */
   isProfileIncomplete: boolean;
@@ -111,6 +115,11 @@ export function useCurrentUser(): CurrentUserContext {
       !isLoading &&
       activeMemberships.length === 0 &&
       pendingMemberships.length > 0,
+    isMembershipInactive:
+      !isLoading &&
+      memberships.length > 0 &&
+      activeMemberships.length === 0 &&
+      pendingMemberships.length === 0,
     isProfileIncomplete:
       !isLoading &&
       !!user &&

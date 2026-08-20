@@ -13,7 +13,11 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineStringsFor } from '@/i18n/offline-strings';
 import { dictionaries } from '@fitkit/shared';
 import { AuthGate } from '../auth-gate';
-import { stageSignedInMember, userMe } from '../../../test/fixtures';
+import {
+  membership,
+  stageSignedInMember,
+  userMe,
+} from '../../../test/fixtures';
 import { mockAuthState } from '../../../test/mocks/clerk';
 import { api, http, HttpResponse, server } from '../../../test/msw';
 import { makeTestQueryClient, renderWithProviders } from '../../../test/render';
@@ -223,6 +227,53 @@ describe('AuthGate', () => {
       expect(mockRedirects).toContain('/onboarding/complete-profile'),
     );
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
+  });
+
+  it('tells a cancelled client their membership is inactive instead of loading forever', async () => {
+    // The gym removed/deleted this client: memberships exist but every one
+    // is cancelled. The tab shell used to mount with no active org and the
+    // home screen's no-org placeholder read "Loading…" indefinitely.
+    stageSignedInMember(
+      userMe({ memberships: [membership({ status: 'cancelled' })] }),
+    );
+    stageConsentStatus(ALL_CONSENTED);
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('membership-inactive-screen'),
+      ).toBeOnTheScreen(),
+    );
+    expect(screen.getByText(he.auth.membershipInactive)).toBeOnTheScreen();
+    expect(screen.getByTestId('membership-inactive-retry')).toBeOnTheScreen();
+    expect(
+      screen.getByTestId('membership-inactive-sign-out'),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
+    expect(mockRedirects).toHaveLength(0);
+  });
+
+  it('holds a suspended member at the inactive screen, not onboarding', async () => {
+    // A suspended membership must not fall through to accept-terms /
+    // complete-profile — those flows cannot fix a membership the gym turned
+    // off, and the web's RoleRouter skips them for this state too.
+    stageSignedInMember(
+      userMe({
+        profileComplete: false,
+        memberships: [membership({ status: 'suspended' })],
+      }),
+    );
+    stageConsentStatus([]);
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(
+        screen.getByTestId('membership-inactive-screen'),
+      ).toBeOnTheScreen(),
+    );
+    expect(mockRedirects).toHaveLength(0);
   });
 
   it('renders the app for a consented member with a complete profile', async () => {

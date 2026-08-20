@@ -8,9 +8,15 @@
  *   3. /users/me OR /legal/consents/status hard-failed → AuthErrorScreen
  *   4. either still unresolved → spinner; or, when the reason they cannot
  *      resolve is no network and nothing cached, the offline screen
- *   5. needsLegalConsent → /onboarding/accept-terms
- *   6. isProfileIncomplete → /onboarding/complete-profile
- *   7. otherwise → render children
+ *   5. isMembershipInactive (memberships exist, all cancelled/suspended —
+ *      the gym removed the client) → MembershipInactiveScreen. Checked
+ *      before the consent/profile gates, like the web's RoleRouter: an
+ *      inactive member must never be routed into onboarding they cannot
+ *      complete, and previously fell through to the tab shell where the
+ *      home screen's no-org placeholder spun forever.
+ *   6. needsLegalConsent → /onboarding/accept-terms
+ *   7. isProfileIncomplete → /onboarding/complete-profile
+ *   8. otherwise → render children
  *
  * Legal-consent gating uses `useNeedsLegalConsent`, which checks the
  * /legal/consents/status endpoint in addition to the user.pendingLegalConsents
@@ -28,6 +34,7 @@ import { WifiOff } from 'lucide-react-native';
 import { View } from 'react-native';
 import type { ReactNode } from 'react';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
+import { MembershipInactiveScreen } from '@/components/auth/membership-inactive-screen';
 import { QueryErrorState } from '@/components/error-state';
 import { useFKColors } from '@/components/fk';
 import { FKScreenLoader } from '@/components/fk/loading-bar';
@@ -81,6 +88,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const {
     isProfileIncomplete,
+    isMembershipInactive,
     isLoading,
     isError: userError,
   } = useCurrentUser();
@@ -147,6 +155,23 @@ export function AuthGate({ children }: { children: ReactNode }) {
       );
     }
     return <LoadingScreen />;
+  }
+
+  // All memberships cancelled/suspended — the gym removed this client.
+  // Stop here, explain, and offer Retry (the gym may reactivate them) /
+  // Sign out. Without this the tab shell mounted with no active org and
+  // the home screen's placeholder read as an app stuck loading forever.
+  if (isMembershipInactive) {
+    return (
+      <MembershipInactiveScreen
+        onRetry={() => {
+          void queryClient.invalidateQueries({ queryKey: ['/users/me'] });
+        }}
+        onSignOut={() => {
+          void signOut();
+        }}
+      />
+    );
   }
 
   if (needsLegalConsent) return <Redirect href="/onboarding/accept-terms" />;
