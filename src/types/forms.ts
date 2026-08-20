@@ -129,6 +129,11 @@ export const formResponseSchema = z.object({
   fields: formFieldsSchema,
   version: z.number().int(),
   bodyRichtext: z.string().nullable(),
+  // Family identity (FIT-289): all versions of "the same form" share
+  // (typeKey, planId | planGroupId). Optional so responses from older API
+  // builds still parse; absent and null both mean "org-wide".
+  planId: z.string().uuid().nullable().optional(),
+  planGroupId: z.string().uuid().nullable().optional(),
   validityPeriodDays: z.number().int().nullable(),
   recurrence: recurrenceSchema.nullable(),
   publishedAt: z.string().nullable(),

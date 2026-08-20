@@ -168,3 +168,96 @@ describe('My Forms — signed PDF', () => {
     expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
   });
 });
+
+/** The screen renders dates with the member's UI language (he in tests). */
+const fmtHe = (iso: string) =>
+  new Date(iso).toLocaleDateString('he', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+describe('My Forms — one card per form family', () => {
+  it('consolidates signed versions into one card: latest up front, older behind a disclosure with its own PDF', async () => {
+    stageForms([
+      {
+        instance: instance({
+          id: 'inst_v2',
+          formId: 'form_2',
+          formVersion: 2,
+          answeredAt: '2026-08-01T10:00:00.000Z',
+          createdAt: '2026-08-01T09:00:00.000Z',
+        }),
+        form: form({ id: 'form_2', version: 2 }),
+      },
+      {
+        instance: instance({ id: 'inst_v1' }),
+        form: form(),
+      },
+    ]);
+    const user = userEvent.setup();
+    await renderWithProviders(<MyFormsScreen />);
+
+    // One card, not two identically-named rows: latest version + date shown.
+    expect(await screen.findByText(S.versionLabel(2))).toBeOnTheScreen();
+    expect(
+      screen.getByText(fmtHe('2026-08-01T10:00:00.000Z')),
+    ).toBeOnTheScreen();
+    expect(screen.getAllByText('הצהרת בריאות')).toHaveLength(1);
+    expect(screen.queryByText(S.versionLabel(1))).toBeNull();
+
+    // The earlier signed copy is one tap away, download included.
+    await user.press(screen.getByText(S.showPrevious(1)));
+    expect(await screen.findByText(S.versionLabel(1))).toBeOnTheScreen();
+    expect(screen.getAllByLabelText(S.downloadPdf)).toHaveLength(2);
+  });
+
+  it('says a pending form replaces the version the member already signed', async () => {
+    stageForms([
+      {
+        instance: instance({
+          id: 'inst_v3',
+          formId: 'form_3',
+          formVersion: 3,
+          status: 'pending',
+          answeredAt: null,
+          createdAt: '2026-08-10T09:00:00.000Z',
+        }),
+        form: form({ id: 'form_3', version: 3 }),
+      },
+      {
+        instance: instance({
+          id: 'inst_v2',
+          formId: 'form_2',
+          formVersion: 2,
+          answeredAt: '2026-08-01T10:00:00.000Z',
+        }),
+        form: form({ id: 'form_2', version: 2 }),
+      },
+    ]);
+    await renderWithProviders(<MyFormsScreen />);
+
+    // The re-ask names its reason — no more "why is this here twice?".
+    expect(
+      await screen.findByText(
+        S.replacesSigned(fmtHe('2026-08-01T10:00:00.000Z')),
+      ),
+    ).toBeOnTheScreen();
+  });
+
+  it('marks a signed form whose validity window lapsed as expired', async () => {
+    stageForms([
+      {
+        instance: instance({ expiresAt: '2026-01-01T00:00:00.000Z' }),
+        form: form({ validityPeriodDays: 365 }),
+      },
+    ]);
+    await renderWithProviders(<MyFormsScreen />);
+
+    expect(
+      await screen.findByText(
+        S.signatureExpired(fmtHe('2026-01-01T00:00:00.000Z')),
+      ),
+    ).toBeOnTheScreen();
+  });
+});
