@@ -10,7 +10,12 @@ import { useApiQuery, useApiAction } from './use-api-query';
  */
 interface PendingIntent {
   id: string;
-  kind: 'shop_plan';
+  /**
+   * `shop_plan` — the shop with `planId` spotlighted (the join link carried an
+   * offer). `shop_browse` — the shop with nothing preselected, for a join link
+   * that carried no plan; `planId` is always null there.
+   */
+  kind: 'shop_plan' | 'shop_browse';
   organizationId: string;
   planId: string | null;
 }
@@ -31,6 +36,11 @@ const INTENT_PATH = '/users/me/pending-intent';
  * The API records the destination against their account at hand-off (they have
  * already signed up by then, so we know who they are); this reads it back on
  * the first authenticated launch and routes them there.
+ *
+ * Both kinds land on the shop tab: `shop_plan` with the offer preselected,
+ * `shop_browse` (a join link with no plan attached) on the plain list. The
+ * member signed up to buy something at this org either way — home is the wrong
+ * first screen for them.
  *
  * Only navigates once per launch, and only when the destination is reachable:
  * an org with no shop tab has nowhere to send them, so the intent is left
@@ -87,7 +97,14 @@ export function usePendingIntent(options: {
 
   useEffect(() => {
     if (handledRef.current || !intent || !orgId) return;
-    if (intent.kind !== 'shop_plan' || !intent.planId) return;
+    // Allowlist rather than a catch-all, so a kind added server-side after
+    // this build shipped is ignored instead of routed somewhere arbitrary.
+    if (intent.kind !== 'shop_plan' && intent.kind !== 'shop_browse') return;
+    // A `shop_plan` that lost its plan is a stale intent (the plan was
+    // archived) with nowhere to go. Scoped to that kind on purpose:
+    // `shop_browse` is *defined* by carrying no plan, so the same check would
+    // throw every one of them away.
+    if (intent.kind === 'shop_plan' && !intent.planId) return;
     // Someone else's org (multi-org member): leave it for a launch where that
     // org is active rather than switching under them.
     if (intent.organizationId !== orgId) return;
@@ -112,10 +129,15 @@ export function usePendingIntent(options: {
     // That is what three production attempts hit: the resume fired with the
     // right plan, the screen stayed on `/`, and the shop's landing handler
     // never ran.
-    router.navigate({
-      pathname: '/(tabs)/shop',
-      params: { plan: intent.planId },
-    });
+    //
+    // A `shop_browse` carries no plan, so it goes without the param — the
+    // shop's landing handler no-ops on a missing `?plan=` and the member gets
+    // the plain list, which is exactly the intent.
+    router.navigate(
+      intent.planId
+        ? { pathname: '/(tabs)/shop', params: { plan: intent.planId } }
+        : { pathname: '/(tabs)/shop' },
+    );
     // Marked handled as soon as it has been acted on, so a later launch
     // doesn't drag the member back into a checkout they already saw.
     consume(intent.id);

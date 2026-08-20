@@ -6,6 +6,9 @@
  * the funnel was carrying is gone. The API holds the destination against their
  * account; this pins that the app picks it up on first launch, routes to the
  * shop landing, and marks it consumed so it never fires twice.
+ *
+ * Two kinds land there: `shop_plan` spotlights the offer the link carried,
+ * `shop_browse` (a link with no plan attached) opens the plain list.
  */
 import { waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
@@ -143,15 +146,89 @@ describe('usePendingIntent', () => {
 
     const first = await renderWithProviders(<Probe />);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledTimes(1));
-    first.unmount();
+    // AWAITED. RNTL v14 made `unmount` async (it returns Promise<void>);
+    // calling it bare leaves its act() scope open, and the next `render` in
+    // the file — this test's second one, or the first one of the NEXT test —
+    // collides with it ("overlapping act() calls") and never mounts. Every
+    // test that followed this one asserted a negative, so a permanently
+    // unmounting suite looked green.
+    await first.unmount();
 
     mockNavigate.mockClear();
 
     // A later launch: the server now says there is nothing pending, so the
     // member must NOT be dragged back into a checkout they already saw.
-    await renderWithProviders(<Probe />);
+    const second = await renderWithProviders(<Probe />);
     await waitFor(() => expect(served).toBeGreaterThan(1));
     expect(mockNavigate).not.toHaveBeenCalled();
+    await second.unmount();
+  });
+
+  it('routes to the plain shop list for a plan-less join link', async () => {
+    // A join link with no plan attached still means the member signed up to
+    // buy something here — the shop is the right first screen, there is just
+    // no offer to spotlight. Navigating WITH a `plan` param would send the
+    // shop's landing handler after an id that doesn't exist.
+    const consumed = jest.fn();
+    stageIntent({
+      id: 'intent_1',
+      kind: 'shop_browse',
+      organizationId: TEST_ORG,
+      planId: null,
+    });
+    server.use(
+      http.post(api(`${INTENT_PATH}/intent_1/consume`), () => {
+        consumed();
+        return HttpResponse.json({ data: { consumed: true } });
+      }),
+    );
+
+    await renderWithProviders(<Probe />);
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({ pathname: '/(tabs)/shop' }),
+    );
+    expect(mockReplace).not.toHaveBeenCalled();
+    // One-shot either way — a later launch must not re-open the shop.
+    await waitFor(() => expect(consumed).toHaveBeenCalled());
+  });
+
+  it('leaves a shop_browse pending when the org has no shop', async () => {
+    // Same rule as shop_plan: nowhere to send them yet, so don't burn the
+    // one-shot on a navigation that cannot happen.
+    const consumed = jest.fn();
+    stageIntent({
+      id: 'intent_1',
+      kind: 'shop_browse',
+      organizationId: TEST_ORG,
+      planId: null,
+    });
+    server.use(
+      http.post(api(`${INTENT_PATH}/intent_1/consume`), () => {
+        consumed();
+        return HttpResponse.json({ data: { consumed: true } });
+      }),
+    );
+
+    await renderWithProviders(<Probe shopAvailable={false} />);
+
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
+    expect(consumed).not.toHaveBeenCalled();
+  });
+
+  it('ignores an intent kind this build does not know', async () => {
+    // Forward compatibility: a kind added server-side after this build shipped
+    // must be left alone rather than routed somewhere arbitrary.
+    stageIntent({
+      id: 'intent_1',
+      kind: 'something_new',
+      organizationId: TEST_ORG,
+      planId: null,
+    });
+
+    await renderWithProviders(<Probe />);
+
+    await waitFor(() => expect(mockNavigate).not.toHaveBeenCalled());
   });
 
   it('does nothing when there is no intent', async () => {
