@@ -32,7 +32,7 @@
 import { useAuth, useSignIn, useSignUp } from '@clerk/clerk-expo';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Eye, EyeOff } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -125,6 +125,41 @@ export default function SignUpScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // The ticket is ONE-TIME: exactly one exchange attempt per ticket value.
+  // Clerk hands back new hook identities on every client state change —
+  // including our own create call resolving, and the boot-time client
+  // refresh a previously-signed-in device always does — so the effect
+  // below re-runs while the first exchange is still in flight. Without
+  // this guard the re-run called signUp.create with the already-spent
+  // ticket and a perfectly valid invite landed on the "invite link
+  // unavailable" screen; on the instant-complete path the isSignedIn
+  // re-run even signed the brand-new session straight back out.
+  const exchangedTicketRef = useRef<string | null>(null);
+  // Unmount-only cancellation. The old per-run `cancelled` flag flipped on
+  // every dependency identity churn, which is why the first run's results
+  // were silently dropped and the duplicate run's error won.
+  const unmountedRef = useRef(false);
+  useEffect(
+    () => () => {
+      unmountedRef.current = true;
+    },
+    [],
+  );
+
+  // A fresh invite link can land while this screen still shows a previous
+  // ticket's outcome (the router reuses the mounted route). Reset so the
+  // new ticket gets its own exchange instead of the stale error.
+  useEffect(() => {
+    if (
+      ticket &&
+      exchangedTicketRef.current &&
+      exchangedTicketRef.current !== ticket
+    ) {
+      setError(null);
+      setPhase('processing-ticket');
+    }
+  }, [ticket]);
+
   // Step 1 — exchange the ticket. Runs once when Clerk SDKs load.
   useEffect(() => {
     if (
@@ -135,7 +170,10 @@ export default function SignUpScreen() {
       phase !== 'processing-ticket'
     )
       return;
-    let cancelled = false;
+    if (exchangedTicketRef.current === ticket) return;
+    // Claim synchronously, before any await, so a re-render mid-exchange
+    // can't start a second attempt with the same ticket.
+    exchangedTicketRef.current = ticket;
 
     const run = async () => {
       try {
@@ -158,7 +196,7 @@ export default function SignUpScreen() {
             strategy: 'ticket',
             ticket,
           });
-          if (cancelled) return;
+          if (unmountedRef.current) return;
           if (result.status === 'complete') {
             await setActiveSignIn({ session: result.createdSessionId });
             haptics.success();
@@ -176,7 +214,7 @@ export default function SignUpScreen() {
           strategy: 'ticket',
           ticket,
         });
-        if (cancelled) return;
+        if (unmountedRef.current) return;
         if (attempt.status === 'complete') {
           // Clerk pre-set a password — straight in.
           await setActiveSignUp({ session: attempt.createdSessionId });
@@ -200,7 +238,7 @@ export default function SignUpScreen() {
         );
         setPhase('error');
       } catch (err: unknown) {
-        if (cancelled) return;
+        if (unmountedRef.current) return;
         const clerkError = (err as {
           errors?: { code?: string; message: string; longMessage?: string }[];
         }).errors?.[0];
@@ -215,9 +253,6 @@ export default function SignUpScreen() {
     };
 
     run();
-    return () => {
-      cancelled = true;
-    };
   }, [
     ticket,
     status,

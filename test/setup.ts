@@ -79,7 +79,7 @@ jest.mock('react-native-reanimated', () => {
 // event loop open, and tests must never talk to Clerk anyway. Hook results
 // are driven by the mutable state in test/mocks/clerk.ts.
 jest.mock('@clerk/clerk-expo', () => {
-  const { mockAuthState, mockUserState, mockSignIn } =
+  const { mockAuthState, mockUserState, mockSignIn, mockSignUp } =
     require('./mocks/clerk') as typeof import('./mocks/clerk');
   return {
     ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -91,6 +91,7 @@ jest.mock('@clerk/clerk-expo', () => {
       user: mockUserState.user,
     }),
     useSignIn: () => mockSignIn,
+    useSignUp: () => mockSignUp,
     useClerk: () => ({ signOut: mockAuthState.signOut }),
   };
 });
