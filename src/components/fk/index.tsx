@@ -219,6 +219,7 @@ export function FKButton({
   className,
   style,
   accessibilityLabel,
+  testID,
 }: {
   label?: string;
   variant?: BtnVariant;
@@ -232,6 +233,9 @@ export function FKButton({
   style?: ViewStyle | ViewStyle[];
   /** Override for icon-only buttons; defaults to `label` when set. */
   accessibilityLabel?: string;
+  /** Selector for tests. The repo's testing policy is testID-only, and a
+   *  label-based lookup would break the moment the copy is translated. */
+  testID?: string;
 }) {
   const haptics = useHaptics();
   const scale = useSharedValue(1);
@@ -314,6 +318,7 @@ export function FKButton({
 
   return (
     <AnimatedPressable
+      testID={testID}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!disabled }}

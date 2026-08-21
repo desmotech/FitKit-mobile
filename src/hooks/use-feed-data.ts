@@ -318,15 +318,53 @@ export function useResumeCancellation(orgId: string | undefined | null) {
 /**
  * Member: cancel their OWN `pending` subscription — a checkout they started
  * and never finished. Mirrors web's cancel-pending-checkout-dialog.tsx.
- * Flag-gated on the API side (`subscription-member-cancel-pending`,
- * per-org, default off) — the button that calls this only ever renders when
- * the API's `memberAction` on the subscription is `'cancel_pending'`, so no
- * client-side flag check is needed here.
+ *
+ * No longer flag-gated: the API dropped the per-org
+ * `subscription-member-cancel-pending` gate, so every `pending` row comes
+ * back with `cancel_pending` among its actions. The client still renders off
+ * what the server says the member may do rather than assuming it.
  */
 export function useCancelPendingSubscription(orgId: string | undefined | null) {
+  return useApiSend<ApiEnvelope<SubscriptionLite>, CancelPendingBody>({
+    path: (b) =>
+      `/organizations/${orgId}/subscriptions/my/${b.id}/cancel-pending`,
+    method: 'POST',
+  });
+}
+
+/**
+ * `intent` / `source` are optional and additive — omitting them keeps the
+ * endpoint's original behavior byte for byte.
+ *
+ * `'regret'` says the member deliberately rolled their OWN checkout back (as
+ * opposed to the 24h sweep or a staff void). The row is still stamped
+ * `abandoned_checkout` server-side so a late webhook can revive it, but a
+ * regretted one is hidden from the member's own lists: they said they did not
+ * want it, and leaving the ghost "complete payment" membership on their
+ * profile is the bug this whole flow exists to fix.
+ */
+export interface CancelPendingBody {
+  id: string;
+  intent?: 'regret' | 'abandon';
+  source?: 'return_page' | 'profile' | 'shop';
+}
+
+/**
+ * Member: withdraw from a membership that has not started yet (presale /
+ * future-start, `status: 'scheduled'`).
+ *
+ * NOT {@link useCancelAtPeriodEnd}, which the API refuses on a scheduled row
+ * (409 `USE_WITHDRAW`) — and which used to leave one stuck forever: it
+ * stamped a notice date that the due-cancellations sweep never looked at, so
+ * the row held its seat with `cancelAtPeriodEnd` set and no way out. There is
+ * no period to run out here, nothing was ever charged, so there is no notice
+ * month, no refund math and no cancellation form. The seat is released
+ * immediately and the member can buy the plan again.
+ */
+export function useWithdrawScheduled(orgId: string | undefined | null) {
   return useApiAction<ApiEnvelope<SubscriptionLite>, string>({
     path: (id: string) =>
-      `/organizations/${orgId}/subscriptions/my/${id}/cancel-pending`,
+      `/organizations/${orgId}/subscriptions/my/${id}/withdraw`,
     method: 'POST',
   });
 }

@@ -13,7 +13,6 @@
  *   - downgrade → `mode: 'scheduled'` → swap at period end; no money moves.
  */
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { Check } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
@@ -37,6 +36,7 @@ import {
 } from '@/i18n/use-plan-change-strings';
 import * as analytics from '@/lib/analytics';
 import { paymentReturnUrl } from '@/lib/api';
+import { checkoutReturnOf, returnParamFor } from '@/lib/checkout-return';
 import { formatPrice } from '@/lib/format-price';
 import { getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
@@ -154,14 +154,42 @@ export default function ChangePlanScreen() {
           result.paymentPageUrl,
           RETURN_URL,
         );
-        let status = 'cancelled';
-        if (browser.type === 'success' && browser.url) {
-          const returned = Linking.parse(browser.url).queryParams?.status;
-          status = returned === 'cancelled' ? 'cancelled' : 'success';
+        // Same three-way mapping as the shop: a declined card comes back on
+        // its own `status=failed` leg and must not read as "you cancelled".
+        // A plan-change checkout has no client-side subscription id to carry
+        // (the upgrade replaces the row), so the `sub` the API now appends to
+        // every leg is the only one there is — pass it through so the return
+        // screen can report the landing against the right row.
+        const { outcome, subId: returnedSubId } = checkoutReturnOf(browser);
+        // The subscription list decides what the return screen and every
+        // membership surface show — refetch it before routing, whatever the
+        // outcome, so a half-finished upgrade can't be rendered from a cached
+        // pre-checkout list.
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.plans.all(orgId) });
+        if (outcome !== 'success') {
+          analytics.track(
+            outcome === 'failed'
+              ? 'member_checkout_failed'
+              : 'member_checkout_cancelled',
+            {
+              org_id: orgId,
+              subscription_id: subId,
+              plan_id: newPlanId,
+              plan_change: true,
+            },
+          );
         }
         router.replace({
           pathname: '/(tabs)/shop/payment-return',
-          params: { status, planChange: '1', plan: newPlanId },
+          params: {
+            status: returnParamFor(outcome),
+            planChange: '1',
+            plan: newPlanId,
+            ...(returnedSubId ? { sub: returnedSubId } : {}),
+          },
         });
         return;
       }

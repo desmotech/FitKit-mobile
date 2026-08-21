@@ -19,6 +19,7 @@ import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import {
   Bell,
   Building2,
@@ -44,7 +45,7 @@ import {
   User as UserIcon,
   type LucideIcon,
 } from 'lucide-react-native';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { useColorScheme } from 'nativewind';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -73,6 +74,7 @@ import {
   useRenewSubscription,
 } from '@/hooks/use-feed-data';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
+import { useResumeCheckout } from '@/hooks/use-shop';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useHaptics } from '@/hooks/use-haptics';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
@@ -88,7 +90,11 @@ import {
   useEarlyRenewStrings,
 } from '@/i18n/use-early-renew-strings';
 import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
+import { useCheckoutDecisionStrings } from '@/i18n/use-checkout-decision-strings';
 import { ApiError } from '@/hooks/use-api';
+import * as analytics from '@/lib/analytics';
+import { paymentReturnUrl } from '@/lib/api';
+import { checkoutOutcomeOf, returnParamFor } from '@/lib/checkout-return';
 import { EARLY_RENEWAL_FLAG } from '@/lib/early-renew';
 import { formatPrice } from '@/lib/format-price';
 import { getPlanChangeSchedule } from '@/lib/plan-change';
@@ -107,6 +113,11 @@ import {
   SettingsRow,
   SettingsSectionHeader,
 } from '@/components/profile/settings';
+
+// Finishing an abandoned checkout from this card lands on the shop's
+// verification / decision screen, exactly like starting one from the shop.
+const CHECKOUT_RETURN_PATH = 'shop/payment-return';
+const CHECKOUT_RETURN_URL = `fitkit://${CHECKOUT_RETURN_PATH}`;
 
 /** One tappable row in a settings group — see `renderRows` in the screen. */
 type SettingsRowConfig = {
@@ -143,6 +154,7 @@ export default function ProfileScreen() {
   const errorStrings = usePaymentErrorStrings();
   const earlyRenewT = useEarlyRenewStrings();
   const cancelPendingT = useCancelPendingStrings();
+  const decisionT = useCheckoutDecisionStrings();
 
   const orgId = activeOrganization?.id;
   const incompleteForms = useIncompleteFormsCount(orgId);
@@ -152,6 +164,8 @@ export default function ProfileScreen() {
   const renew = useRenewSubscription(orgId);
   const earlyRenew = useEarlyRenewSubscription(orgId);
   const cancelPending = useCancelPendingSubscription(orgId);
+  const resumeCheckout = useResumeCheckout(orgId);
+  const [completingCheckout, setCompletingCheckout] = useState(false);
   // Shares FIT-282's presale-terms flag rather than getting its own — see
   // src/lib/early-renew.ts.
   const earlyRenewalEnabled = useFeatureFlag(EARLY_RENEWAL_FLAG);
@@ -312,6 +326,76 @@ export default function ProfileScreen() {
   // ever reachable when the server's memberAction says so (flag-gated
   // per-org on the API); no reason field, since a pending checkout was
   // never charged and there's no billing period to schedule around.
+  /**
+   * Finish an abandoned checkout from the membership card. NOT `onRenew`,
+   * which is what this CTA used to call: the renew endpoint rejects a
+   * `pending` subscription (400), so "Complete payment" was a button that
+   * could only fail. This re-issues a hosted page for the same row.
+   */
+  const handleCompleteCheckout = async () => {
+    if (!primarySub || !orgId || completingCheckout) return;
+    haptics.tap();
+    setCompletingCheckout(true);
+    try {
+      const res = await resumeCheckout.mutateAsync({
+        subscriptionId: primarySub.id,
+        successUrl: paymentReturnUrl(CHECKOUT_RETURN_PATH, {
+          status: 'success',
+        }),
+        cancelUrl: paymentReturnUrl(CHECKOUT_RETURN_PATH, {
+          status: 'cancelled',
+        }),
+      });
+      analytics.track('member_checkout_resumed', {
+        org_id: orgId,
+        subscription_id: primarySub.id,
+        source: 'profile',
+      });
+      const url = res.data?.paymentPageUrl;
+      const invalidate = () =>
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+        });
+      if (!url) {
+        invalidate();
+        router.push({
+          pathname: '/(tabs)/shop/payment-return',
+          params: { status: 'success', sub: primarySub.id },
+        });
+        return;
+      }
+      const result = await WebBrowser.openAuthSessionAsync(
+        url,
+        CHECKOUT_RETURN_URL,
+      );
+      invalidate();
+      router.push({
+        pathname: '/(tabs)/shop/payment-return',
+        params: {
+          status: returnParamFor(checkoutOutcomeOf(result)),
+          sub: primarySub.id,
+        },
+      });
+    } catch (e) {
+      haptics.error();
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.subscriptions.all(orgId!, { mine: true }),
+      });
+      Alert.alert(
+        '',
+        paymentErrorMessage(
+          errorStrings,
+          e,
+          lang,
+          decisionT.resumeError,
+          'checkout-resume',
+        ),
+      );
+    } finally {
+      setCompletingCheckout(false);
+    }
+  };
+
   const handleCancelPending = () => {
     if (!primarySub || cancelPending.isPending) return;
     haptics.tap();
@@ -324,19 +408,32 @@ export default function ProfileScreen() {
           text: cancelPendingT.confirmAction,
           style: 'destructive',
           onPress: () => {
-            cancelPending.mutate(primarySub.id, {
-              onSuccess: () => {
-                haptics.success();
-                queryClient.invalidateQueries({
-                  queryKey: queryKeys.subscriptions.all(orgId!, { mine: true }),
-                });
-                Alert.alert('', cancelPendingT.success);
+            cancelPending.mutate(
+              // `intent: 'regret'` marks a rollback the member chose, which
+              // is what hides the row from their own lists; the server still
+              // stamps `abandoned_checkout` so a late webhook can revive it.
+              { id: primarySub.id, intent: 'regret', source: 'profile' },
+              {
+                onSuccess: () => {
+                  haptics.success();
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.subscriptions.all(orgId!, {
+                      mine: true,
+                    }),
+                  });
+                  analytics.track('member_checkout_rolled_back', {
+                    org_id: orgId,
+                    subscription_id: primarySub.id,
+                    source: 'profile',
+                  });
+                  Alert.alert('', cancelPendingT.success);
+                },
+                onError: () => {
+                  haptics.error();
+                  Alert.alert('', cancelPendingT.error);
+                },
               },
-              onError: () => {
-                haptics.error();
-                Alert.alert('', cancelPendingT.error);
-              },
-            });
+            );
           },
         },
       ],
@@ -867,6 +964,8 @@ export default function ProfileScreen() {
               onManage={() => router.push('/(tabs)/profile/payments')}
               onCancelPending={handleCancelPending}
               isCancellingPending={cancelPending.isPending}
+              onCompleteCheckout={() => void handleCompleteCheckout()}
+              isCompletingCheckout={completingCheckout}
             />
           )}
 

@@ -3,7 +3,7 @@
 // cards; tapping Subscribe runs hosted checkout and routes to the
 // payment-return verification screen.
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
+import { useQueryClient } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import { Info, ShoppingBag } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,13 +23,20 @@ import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
-import { usePaymentConfig, usePlans, usePurchasePlan } from '@/hooks/use-shop';
+import {
+  usePaymentConfig,
+  usePlans,
+  usePurchasePlan,
+  useResumeCheckout,
+} from '@/hooks/use-shop';
 import {
   paymentErrorMessage,
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
 import { readFormGate } from '@/lib/form-gate';
 import { paymentReturnUrl } from '@/lib/api';
+import { checkoutReturnOf, returnParamFor } from '@/lib/checkout-return';
+import { queryKeys } from '@/lib/query-keys';
 import { formatPrice } from '@/lib/format-price';
 import { MEMBER_PLAN_CHANGE_FLAG } from '@/lib/plan-change';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
@@ -59,6 +66,23 @@ export default function ShopScreen() {
   const payQ = usePaymentConfig(orgId);
   const subsQ = useMySubscription(orgId);
   const purchase = usePurchasePlan(orgId);
+  const resumeCheckout = useResumeCheckout(orgId);
+  const queryClient = useQueryClient();
+
+  /**
+   * Everything a checkout attempt can change, success or not. A cancelled or
+   * failed attempt still leaves a `pending` subscription behind, and the
+   * decision screen the member lands on reads exactly that list — so it has
+   * to be refetched on the way out of the browser, not only on the happy
+   * path. Mirrors the invalidation set in shop/payment-return.tsx.
+   */
+  const invalidateAfterCheckout = useCallback(() => {
+    if (!orgId) return;
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+    });
+    queryClient.invalidateQueries({ queryKey: queryKeys.plans.all(orgId) });
+  }, [orgId, queryClient]);
 
   // TODO(FIT-203): course-type plans need the dedicated course checkout +
   // a library player that mobile doesn't have yet — hide them until
@@ -93,11 +117,20 @@ export default function ShopScreen() {
     }
     return m;
   }, [subs]);
-  const pendingByPlanId = useMemo(() => {
-    const m: Record<string, true> = {};
-    for (const s of subs) if (s.status === 'pending') m[s.planId] = true;
+  // The pending checkout itself, not just a flag: "Resume Payment" has to
+  // re-open a page for THAT subscription. Buying again would mint a second
+  // pending row for the same plan (or be refused), which is what the old
+  // resume did — it just called purchase a second time.
+  const pendingSubIdByPlanId = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of subs) if (s.status === 'pending') m[s.planId] = s.id;
     return m;
   }, [subs]);
+  const pendingByPlanId = useMemo(() => {
+    const m: Record<string, true> = {};
+    for (const planId of Object.keys(pendingSubIdByPlanId)) m[planId] = true;
+    return m;
+  }, [pendingSubIdByPlanId]);
   // Class packs / drop-ins are consumable: never "current", always
   // re-purchasable. Show how many credits the member still holds (summed
   // across stacked packs of the same plan).
@@ -177,22 +210,44 @@ export default function ShopScreen() {
   const handleSelect = useCallback(
     async (plan: PlanResponse) => {
       if (!orgId || pendingPlanId) return;
+      const resumeSubId = pendingSubIdByPlanId[plan.id];
       analytics.track('member_checkout_initiated', {
         org_id: orgId,
         plan_id: plan.id,
         plan_name: plan.name,
         amount: plan.priceInCents,
         plan_type: plan.type,
+        resuming: !!resumeSubId,
       });
       setPendingPlanId(plan.id);
       try {
-        const res = await purchase.mutateAsync({
-          planId: plan.id,
-          successUrl: paymentReturnUrl(RETURN_PATH, { status: 'success' }),
-          cancelUrl: paymentReturnUrl(RETURN_PATH, { status: 'cancelled' }),
+        const successUrl = paymentReturnUrl(RETURN_PATH, {
+          status: 'success',
         });
+        const cancelUrl = paymentReturnUrl(RETURN_PATH, {
+          status: 'cancelled',
+        });
+        const res = resumeSubId
+          ? await resumeCheckout.mutateAsync({
+              subscriptionId: resumeSubId,
+              successUrl,
+              cancelUrl,
+            })
+          : await purchase.mutateAsync({
+              planId: plan.id,
+              successUrl,
+              cancelUrl,
+            });
         const sub = res.data.subscription;
         const paymentPageUrl = res.data.paymentPageUrl;
+        if (resumeSubId) {
+          analytics.track('member_checkout_resumed', {
+            org_id: orgId,
+            plan_id: plan.id,
+            subscription_id: resumeSubId,
+            source: 'shop',
+          });
+        }
 
         // Free / already-active plan: backend activates immediately, no
         // hosted page. Go straight to the return screen (it confirms).
@@ -208,14 +263,39 @@ export default function ShopScreen() {
           paymentPageUrl,
           RETURN_URL,
         );
-        let status = 'cancelled';
-        if (result.type === 'success' && result.url) {
-          const returned = Linking.parse(result.url).queryParams?.status;
-          status = returned === 'cancelled' ? 'cancelled' : 'success';
+        // Three outcomes, not two: a declined card comes back on its own
+        // `status=failed` leg now, and telling that member they "cancelled"
+        // sent them looking for a mistake they never made.
+        //
+        // The subscription id comes off the return leg when the API sends one
+        // (it appends `sub=` to cancel and failed as well as success) and
+        // falls back to the row we opened the checkout with. Never anything
+        // else: guessing at "the pending one" would hand the decision screen
+        // a subscription the member never touched.
+        const { outcome, subId: returnedSubId } = checkoutReturnOf(result);
+        const decisionSubId = returnedSubId ?? sub.id;
+        // Refetch BEFORE routing. The return screen renders the member's
+        // decision off the subscription list, and a stale list there shows
+        // the plan as still purchasable while a pending row exists (or the
+        // reverse). The session queries ride along for the same reason the
+        // success path invalidates them.
+        invalidateAfterCheckout();
+        if (outcome !== 'success') {
+          analytics.track(
+            outcome === 'failed'
+              ? 'member_checkout_failed'
+              : 'member_checkout_cancelled',
+            {
+              org_id: orgId,
+              plan_id: plan.id,
+              subscription_id: decisionSubId,
+              resuming: !!resumeSubId,
+            },
+          );
         }
         router.push({
           pathname: '/(tabs)/shop/payment-return',
-          params: { status, sub: sub.id },
+          params: { status: returnParamFor(outcome), sub: decisionSubId },
         });
       } catch (e) {
         // Compliance gate (plan regulations / consent): open the pending
@@ -251,7 +331,17 @@ export default function ShopScreen() {
         setPendingPlanId(null);
       }
     },
-    [orgId, pendingPlanId, purchase, router, errorStrings, lang],
+    [
+      orgId,
+      pendingPlanId,
+      pendingSubIdByPlanId,
+      purchase,
+      resumeCheckout,
+      invalidateAfterCheckout,
+      router,
+      errorStrings,
+      lang,
+    ],
   );
 
   // ── Deep-link landing (`/shop?plan=<id>`) ───────────────────────────
