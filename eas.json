@@ -59,6 +59,12 @@
     }
   },
   "submit": {
+    "alpha": {
+      "android": {
+        "track": "alpha",
+        "releaseStatus": "completed"
+      }
+    },
     "production": {
       "ios": {
         "appleId": "saarku@gmail.com",
