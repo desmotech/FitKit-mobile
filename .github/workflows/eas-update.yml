@@ -7,6 +7,12 @@ name: EAS Update (OTA)
 # Push to main auto-publishes to the `preview` branch (internal/TestFlight
 # only). Shipping to production is a deliberate workflow_dispatch run so a
 # merge never reaches App Store users without a conscious promotion.
+#
+# Every update is published with its commit SHA leading the message. The
+# update's own id is a UUID EAS mints at publish time and maps to nothing in
+# this repo, so the message is the only field on the dashboard (and in
+# `eas update:list`) that ties an update back to source. The app stamps the
+# same SHA into `extra.commit`, so the device and the dashboard agree.
 
 on:
   push:
@@ -72,10 +78,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PACKAGES_READ_TOKEN }}
         run: pnpm install --frozen-lockfile
 
+      # `github.event.head_commit` exists only on push events, so the
+      # dispatch path's fallback resolved to an empty string — every manual
+      # promotion to production published with no message at all. Git is
+      # checked out either way (fetch-depth: 0 above), so resolve from it.
+      #
+      # `head_commit.message` was also the FULL message, which for the merge
+      # commits this repo lands is three lines; the subject alone is what
+      # belongs in a one-line dashboard column.
+      - name: Resolve update message
+        env:
+          INPUT_MESSAGE: ${{ github.event.inputs.message }}
+        run: |
+          SHA=$(git rev-parse --short=7 HEAD)
+          SUBJECT=$(git log -1 --pretty=%s)
+          {
+            echo "UPDATE_MESSAGE<<EOF_UPDATE_MESSAGE"
+            echo "$SHA ${INPUT_MESSAGE:-$SUBJECT}"
+            echo "EOF_UPDATE_MESSAGE"
+          } >> "$GITHUB_ENV"
+
       - name: Publish update (push to main → preview)
         if: github.event_name == 'push'
-        env:
-          UPDATE_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
           eas update \
             --branch preview \
@@ -88,10 +112,9 @@ jobs:
         env:
           INPUT_BRANCH: ${{ github.event.inputs.branch }}
           INPUT_ENVIRONMENT: ${{ github.event.inputs.environment }}
-          INPUT_MESSAGE: ${{ github.event.inputs.message || github.event.head_commit.message }}
         run: |
           eas update \
             --branch "$INPUT_BRANCH" \
             --environment "$INPUT_ENVIRONMENT" \
-            --message "$INPUT_MESSAGE" \
+            --message "$UPDATE_MESSAGE" \
             --non-interactive

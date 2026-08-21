@@ -1,4 +1,32 @@
+import { execSync } from 'node:child_process';
 import { ExpoConfig, ConfigContext } from 'expo/config';
+
+/**
+ * The commit this JS bundle was built from.
+ *
+ * `Updates.updateId` identifies an update but says nothing about what is in
+ * it — it is a UUID the EAS servers mint at publish time, unrelated to this
+ * repo. Stamping the SHA into `extra` is what makes a running bundle
+ * self-identifying: `eas update` evaluates this config at publish time and
+ * embeds `extra` in the manifest, so a device on an OTA reports the commit
+ * that produced it, not the commit its binary was built from.
+ *
+ * EAS builds get the SHA from the environment; a local build or a local
+ * `eas update` reads git directly. Unknown is a fine answer for neither —
+ * it must never fail a build.
+ */
+function resolveCommit(): string {
+  const fromEas = process.env.EAS_BUILD_GIT_COMMIT_HASH;
+  if (fromEas) return fromEas.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short=7 HEAD', {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return 'unknown';
+  }
+}
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -324,6 +352,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Local/preview feature-flag seed ("flag-a:true,flag-b:false"). Empty
     // in prod, where PostHog is the source of truth.
     featureFlags: process.env.EXPO_PUBLIC_FEATURE_FLAGS ?? '',
+    // Which commit this bundle came from — see `resolveCommit` above.
+    commit: resolveCommit(),
     eas: {
       projectId:
         process.env.EAS_PROJECT_ID ?? '1f6bb22c-0649-417b-af9e-9154dd4efda0',

@@ -17,8 +17,6 @@
  */
 import { useAuth, useClerk, useUser } from '@clerk/clerk-expo';
 import { useQueryClient } from '@tanstack/react-query';
-import * as Application from 'expo-application';
-import * as Updates from 'expo-updates';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import {
@@ -48,7 +46,7 @@ import {
 } from 'lucide-react-native';
 import { Fragment } from 'react';
 import { useColorScheme } from 'nativewind';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Share, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   FKAmbientBackdrop,
@@ -58,6 +56,11 @@ import {
 } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import {
+  buildInfoLine,
+  buildInfoReport,
+  getBuildInfo,
+} from '@/lib/build-info';
 import { displayFamily } from '@/lib/type';
 import { useAvatarUpload } from '@/hooks/use-avatar-upload';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -213,19 +216,40 @@ export default function ProfileScreen() {
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
 
-  const appVersion = Application.nativeApplicationVersion ?? '1.0.0';
-  // Which JS bundle is actually running: the one embedded in the binary, or an
-  // OTA update on top of it. Surfaced because "did the OTA reach this device?"
-  // was otherwise unanswerable without provoking a crash to read Sentry's
-  // `ota_updates` context — which cost a full afternoon of testing against an
-  // unknown bundle. `updateId` is also the embedded bundle's id, so
-  // `isEmbeddedLaunch` is what distinguishes them.
-  const bundleLabel = Updates.isEmbeddedLaunch
-    ? 'embedded'
-    : `OTA ${(Updates.updateId ?? 'unknown').slice(0, 8)}`;
-  const buildLabel = `v${appVersion} (${
-    Application.nativeBuildVersion ?? '?'
-  }) · ${bundleLabel}`;
+  // Exactly which bundle is running, and — the part the old label left out —
+  // the two fields that decide WHICH bundle a device is even eligible for:
+  // its channel and its runtimeVersion. See src/lib/build-info.ts.
+  const buildInfo = getBuildInfo();
+  const buildLabel = buildInfoLine(buildInfo);
+  const buildLabels = {
+    title: labels.buildTitle,
+    version: labels.buildVersion,
+    channel: labels.buildChannel,
+    runtime: labels.buildRuntime,
+    commit: labels.buildCommit,
+    bundle: labels.buildBundle,
+    embedded: labels.buildEmbedded,
+    updateId: labels.buildUpdateId,
+    published: labels.buildPublished,
+    share: labels.buildShare,
+    close: labels.avatarCancel,
+  };
+  // Tapping the footer version line opens the full report — the thing a
+  // member reads out (or shares) when "it works on my phone" turns out to be
+  // two different bundles.
+  const showBuildInfo = () => {
+    haptics.tap();
+    const report = buildInfoReport(buildInfo, buildLabels);
+    Alert.alert(labels.buildTitle, report, [
+      {
+        text: labels.buildShare,
+        onPress: () => {
+          Share.share({ message: report }).catch(() => undefined);
+        },
+      },
+      { text: labels.avatarCancel, style: 'cancel' },
+    ]);
+  };
   const FITKIT_SUPPORT_EMAIL = 'support@fitkit.fit';
   const FITKIT_WEBSITE = 'https://fitkit.fit';
 
@@ -1129,15 +1153,22 @@ export default function ProfileScreen() {
                 </Text>
               </Pressable>
             </View>
-            <Text
-              style={{
-                fontSize: 9,
-                color: colors.mutedFg,
-                fontFamily: 'Assistant-Medium',
-              }}
+            <Pressable
+              onPress={showBuildInfo}
+              hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={labels.buildTitle}
             >
-              FitKit {buildLabel}
-            </Text>
+              <Text
+                style={{
+                  fontSize: 9,
+                  color: colors.mutedFg,
+                  fontFamily: 'Assistant-Medium',
+                }}
+              >
+                FitKit {buildLabel}
+              </Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>

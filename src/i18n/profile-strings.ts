@@ -69,6 +69,18 @@ export interface ProfileStrings {
   /** Same, with `{amount}` when the server sent an effective price. */
   presalePurchasedWithAmount: string;
 
+  // ── Build / OTA diagnostics (tap the footer version line) ─────────
+  buildTitle: string;
+  buildVersion: string;
+  buildChannel: string;
+  buildRuntime: string;
+  buildCommit: string;
+  buildBundle: string;
+  buildEmbedded: string;
+  buildUpdateId: string;
+  buildPublished: string;
+  buildShare: string;
+
   // ── Settings rows ─────────────────────────────────────────────────
   settingPersonal: string;
   settingPayment: string;
@@ -156,6 +168,17 @@ const HE: ProfileStrings = {
   presalePurchasedWithAmount:
     'הרכישה הושלמה. החיוב הראשון, {amount}, יתבצע ב-{date} — ביום הפתיחה.',
 
+  buildTitle: 'גרסת האפליקציה',
+  buildVersion: 'גרסה',
+  buildChannel: 'ערוץ',
+  buildRuntime: 'גרסת ריצה',
+  buildCommit: 'קומיט',
+  buildBundle: 'חבילה',
+  buildEmbedded: 'מוטמעת',
+  buildUpdateId: 'מזהה עדכון',
+  buildPublished: 'פורסם',
+  buildShare: 'שיתוף',
+
   settingPersonal: 'פרטים אישיים',
   settingPayment: 'תשלומים',
   settingHistory: 'היסטוריית אימונים',
@@ -238,6 +261,17 @@ const EN: ProfileStrings = {
   presalePurchasedWithAmount:
     'Purchase confirmed. Your first charge of {amount} is on {date}, the day we open.',
 
+  buildTitle: 'App build',
+  buildVersion: 'Version',
+  buildChannel: 'Channel',
+  buildRuntime: 'Runtime',
+  buildCommit: 'Commit',
+  buildBundle: 'Bundle',
+  buildEmbedded: 'Embedded',
+  buildUpdateId: 'Update ID',
+  buildPublished: 'Published',
+  buildShare: 'Share',
+
   settingPersonal: 'Personal Details',
   settingPayment: 'Payments',
   settingHistory: 'Workout History',
@@ -319,6 +353,17 @@ const RU: ProfileStrings = {
     'Покупка подтверждена. Первое списание — {date}, в день открытия.',
   presalePurchasedWithAmount:
     'Покупка подтверждена. Первое списание {amount} — {date}, в день открытия.',
+
+  buildTitle: 'Сборка приложения',
+  buildVersion: 'Версия',
+  buildChannel: 'Канал',
+  buildRuntime: 'Среда выполнения',
+  buildCommit: 'Коммит',
+  buildBundle: 'Пакет',
+  buildEmbedded: 'Встроенный',
+  buildUpdateId: 'ID обновления',
+  buildPublished: 'Опубликовано',
+  buildShare: 'Поделиться',
 
   settingPersonal: 'Личные данные',
   settingPayment: 'Платежи',
