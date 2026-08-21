@@ -73,6 +73,7 @@ describe('MembershipCard CTA', () => {
   });
 
   it('asks a pending subscription to finish checkout', async () => {
+    // Legacy singular shape (an API build that predates `memberActions`).
     await renderCard({ status: 'pending', memberAction: 'complete_checkout' });
     expect(screen.getByText('Complete payment')).toBeOnTheScreen();
   });
@@ -267,5 +268,109 @@ describe('MembershipCard — presale purchase', () => {
     await renderCard({ status: 'active', memberAction: 'none' });
 
     expect(screen.queryByTestId('membership-presale-note')).toBeNull();
+  });
+});
+
+/**
+ * A `pending` checkout offers two things at once — finish paying, or roll it
+ * back — and the singular `memberAction` could only ever name one. The card
+ * reads the plural `memberActions` where the server sends it, and the money
+ * CTA no longer calls `onRenew` for a pending row: the renew endpoint 400s on
+ * one, so "Complete payment" was a button that could only fail.
+ */
+describe('MembershipCard — unfinished checkout', () => {
+  function renderPending(
+    sub: Record<string, unknown>,
+    handlers: Record<string, unknown> = {},
+  ) {
+    return renderWithProviders(
+      <MembershipCard
+        sub={
+          {
+            id: 's1',
+            status: 'pending',
+            plan: { name: 'Monthly' },
+            ...sub,
+          } as never
+        }
+        isRTL={false}
+        colors={{} as never}
+        statusLabels={STATUS}
+        labels={LABELS}
+        isRenewing={false}
+        onRenew={jest.fn()}
+        {...handlers}
+      />,
+    );
+  }
+
+  it('completes the checkout instead of calling renew, which the API refuses', async () => {
+    const onCompleteCheckout = jest.fn();
+    const onRenew = jest.fn();
+    await renderPending(
+      { memberActions: ['complete_checkout', 'cancel_pending'] },
+      { onCompleteCheckout, onRenew },
+    );
+
+    fireEvent.press(screen.getByTestId('membership-cta'));
+    expect(onCompleteCheckout).toHaveBeenCalledTimes(1);
+    expect(onRenew).not.toHaveBeenCalled();
+  });
+
+  it('offers the rollback alongside it, not instead of it', async () => {
+    const onCancelPending = jest.fn();
+    await renderPending(
+      { memberActions: ['complete_checkout', 'cancel_pending'] },
+      { onCompleteCheckout: jest.fn(), onCancelPending },
+    );
+
+    expect(screen.getByText('Complete payment')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('membership-cancel-pending'));
+    expect(onCancelPending).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows both halves for the payload the API always sends now', async () => {
+    // The per-org cancel-pending gate is gone: every pending row comes back
+    // as memberAction 'cancel_pending' PLUS the full action list. Reading
+    // only the singular would show the rollback and hide the way to pay.
+    const onCompleteCheckout = jest.fn();
+    const onCancelPending = jest.fn();
+    await renderPending(
+      {
+        memberAction: 'cancel_pending',
+        memberActions: ['complete_checkout', 'cancel_pending'],
+      },
+      { onCompleteCheckout, onCancelPending },
+    );
+
+    expect(screen.getByText('Complete payment')).toBeOnTheScreen();
+    expect(screen.getByTestId('membership-cancel-pending')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('membership-cta'));
+    expect(onCompleteCheckout).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps rollback as the primary CTA when it is the only action offered', async () => {
+    // Older API deployment: singular field only, no action list.
+    const onCancelPending = jest.fn();
+    await renderPending(
+      { memberAction: 'cancel_pending' },
+      { onCancelPending },
+    );
+
+    fireEvent.press(screen.getByTestId('membership-cta'));
+    expect(onCancelPending).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('membership-cancel-pending')).toBeNull();
+  });
+
+  it('still honours a legacy complete_checkout singular', async () => {
+    const onCompleteCheckout = jest.fn();
+    await renderPending(
+      { memberAction: 'complete_checkout' },
+      { onCompleteCheckout },
+    );
+
+    expect(screen.getByText('Complete payment')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('membership-cta'));
+    expect(onCompleteCheckout).toHaveBeenCalledTimes(1);
   });
 });

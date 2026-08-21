@@ -11,6 +11,7 @@ import { useI18n } from '@/providers/i18n-provider';
 import { useQuotaStrings } from '@/i18n/use-quota-strings';
 import { useEarlyRenewStrings } from '@/i18n/use-early-renew-strings';
 import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
+import { memberActionsOf, type MemberSubscriptionAction } from '@/lib/member-actions';
 import { QuotaBalance, type QuotaUsage } from './quota-balance';
 
 type ColorTokens = ReturnType<typeof useFKColors>;
@@ -31,6 +32,8 @@ export function MembershipCard({
   onManage,
   onCancelPending,
   isCancellingPending,
+  onCompleteCheckout,
+  isCompletingCheckout,
 }: {
   sub: {
     id: string;
@@ -72,15 +75,24 @@ export function MembershipCard({
     displayStatus?: SubscriptionDisplayStatus | null;
     /** What the member may actually do, resolved server-side. Status alone
      *  can't say: a gym-cancelled subscription and a member-cancelled one are
-     *  both `cancelled`, but only one is renewable. `cancel_pending` only
-     *  ever comes back when the org's cancel-pending flag is on. */
+     *  both `cancelled`, but only one is renewable. Since the API dropped its
+     *  per-org gate, a `pending` row always carries `cancel_pending` here and
+     *  `['complete_checkout', 'cancel_pending']` in `memberActions`. */
     memberAction?:
       | 'none'
       | 'renew'
       | 'complete_checkout'
       | 'cancel_pending'
       | 'update_card'
+      | 'withdraw_scheduled'
       | null;
+    /** Every action the member may take, authoritative where present. The
+     *  singular `memberAction` above can only name one, which forced the API
+     *  to choose between them on a `pending` row that genuinely offers two:
+     *  finish paying, or roll the purchase back. Optional — absent on an API
+     *  build that predates it, and `memberActionsOf` falls back to the
+     *  singular so nothing changes there. */
+    memberActions?: string[] | null;
     /** Whether any more money is ever coming off the member's card, resolved
      *  server-side from the charge cron's own predicate. Nothing else on the
      *  row can answer it: a member who has given notice still reads `active`,
@@ -139,6 +151,12 @@ export function MembershipCard({
    *  `onRenew`/`onManage`, plain callback props, no mutation state here). */
   onCancelPending?: () => void;
   isCancellingPending?: boolean;
+  /** Re-opens a hosted payment page for THIS pending subscription. Distinct
+   *  from `onRenew`, which is what "Complete payment" used to call: the renew
+   *  endpoint 400s on a `pending` row, so the one CTA a member with an
+   *  unfinished checkout could see did nothing at all. */
+  onCompleteCheckout?: () => void;
+  isCompletingCheckout?: boolean;
 }) {
   const haptics = useHaptics();
   const { isDark } = useFKColors();
@@ -152,27 +170,41 @@ export function MembershipCard({
   // cancellation and a plan-change ghost are both `cancelled` yet neither is
   // renewable, and offering Renew there let a member undo a staff decision
   // (or resurrect a superseded plan and pay for two).
-  const action = sub.memberAction ?? 'none';
+  //
+  // Read as a LIST (`memberActions`, falling back to the legacy singular):
+  // a pending checkout offers two things at once, and collapsing them to one
+  // is what left members choosing between a button that 400s and no button.
+  const actions = memberActionsOf(sub);
+  const can = (a: MemberSubscriptionAction) => actions.includes(a);
   const isTerminal = sub.status === 'cancelled';
   // The server's reading of the same row. Falling back to `status` keeps an
   // older API build rendering exactly as it did before this field existed.
   const displayStatus = sub.displayStatus ?? sub.status;
   const isAbandonedCheckout = displayStatus === 'checkout_abandoned';
-  const isCancelPendingCta = action === 'cancel_pending';
-  const ctaLabel =
-    action === 'renew'
+  // One primary pill, in the order the member cares about: finishing a
+  // payment beats renewing beats fixing a card beats abandoning. Rolling a
+  // checkout back is offered alongside (below), never instead of finishing
+  // it.
+  const isCompleteCheckoutCta = can('complete_checkout');
+  const isCancelPendingCta = !isCompleteCheckoutCta && can('cancel_pending');
+  const ctaLabel = isCompleteCheckoutCta
+    ? labels.completePayment
+    : can('renew')
       ? labels.renew
-      : action === 'complete_checkout'
-        ? labels.completePayment
+      : can('update_card')
+        ? labels.updateCard
         : isCancelPendingCta
           ? cancelPendingT.cta
-          : action === 'update_card'
-            ? labels.updateCard
-            : // Nothing to pay: keep Manage for a live membership, and show no
-              // button at all once it has ended.
-              isTerminal
-              ? null
-              : labels.manage;
+          : // Nothing to pay: keep Manage for a live membership, and show no
+            // button at all once it has ended.
+            isTerminal
+            ? null
+            : labels.manage;
+  // The secondary way out of an unfinished checkout. Only rendered next to
+  // "Complete payment" — when rolling back is the ONLY action the server
+  // offers it is the primary pill instead.
+  const showCancelPendingLink =
+    isCompleteCheckoutCta && can('cancel_pending') && !!onCancelPending;
   // The CTA label already switched to "Manage" when there was nothing to pay,
   // but the press still called `onRenew` — so the one button a member with a
   // healthy membership could see said Manage and performed a renewal, and
@@ -181,9 +213,11 @@ export function MembershipCard({
   const isManageCta = ctaLabel === labels.manage;
   const onCtaPress = isManageCta
     ? onManage
-    : isCancelPendingCta
-      ? onCancelPending
-      : onRenew;
+    : isCompleteCheckoutCta
+      ? onCompleteCheckout
+      : isCancelPendingCta
+        ? onCancelPending
+        : onRenew;
 
   // Say why there's no way back, rather than leaving a dead card.
   //
@@ -193,7 +227,7 @@ export function MembershipCard({
   // walked away from is worse than saying nothing, so it gets its own note.
   const endedNote = isAbandonedCheckout
     ? labels.checkoutNotCompletedNote
-    : isTerminal && action === 'none'
+    : isTerminal && actions.length === 0
       ? labels.endedByGym
       : null;
 
@@ -406,6 +440,8 @@ export function MembershipCard({
             disabled={
               isRenewing ||
               (isManageCta && !onManage) ||
+              (isCompleteCheckoutCta &&
+                (!onCompleteCheckout || !!isCompletingCheckout)) ||
               (isCancelPendingCta && (!onCancelPending || isCancellingPending))
             }
           >
@@ -422,7 +458,13 @@ export function MembershipCard({
                   shadowRadius: 8,
                   shadowOffset: { width: 0, height: 3 },
                   elevation: 3,
-                  opacity: pressed || isRenewing || isCancellingPending ? 0.85 : 1,
+                  opacity:
+                    pressed ||
+                    isRenewing ||
+                    isCancellingPending ||
+                    isCompletingCheckout
+                      ? 0.85
+                      : 1,
                 }}
               >
                 <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
@@ -475,6 +517,34 @@ export function MembershipCard({
             {presaleNote}
           </Text>
         </View>
+      ) : null}
+
+      {/* The other half of the decision. A member who walked away from a
+          checkout needs a way to say so — without it the ghost membership
+          sits on the card forever, asking for a payment they already
+          declined to make. */}
+      {showCancelPendingLink ? (
+        <Pressable
+          testID="membership-cancel-pending"
+          onPressIn={haptics.tap}
+          onPress={onCancelPending}
+          disabled={isCancellingPending}
+          hitSlop={8}
+          style={{ alignSelf: isRTL ? 'flex-end' : 'flex-start' }}
+        >
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: '700',
+              color: 'rgba(255,255,255,0.86)',
+              textDecorationLine: 'underline',
+            }}
+          >
+            {isCancellingPending
+              ? cancelPendingT.cancelling
+              : cancelPendingT.cta}
+          </Text>
+        </Pressable>
       ) : null}
 
       {/* What's left to book and when it resets — the two questions a member

@@ -12,6 +12,7 @@ import { dictionaries } from '@fitkit/shared';
 import PaymentsScreen from '../(tabs)/profile/payments';
 import { paymentErrorStringsFor } from '@/i18n/payment-error-strings';
 import { cancelPendingStringsFor } from '@/i18n/cancel-pending-strings';
+import { withdrawScheduledStringsFor } from '@/i18n/withdraw-scheduled-strings';
 import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
@@ -56,6 +57,17 @@ const CPS = {
 // Same overlay convention as CPS above: the dictionary wins when the pinned
 // package carries the key, the static table is the fallback.
 const EXPIRED_BADGE = pick('members.paymentMethods.expiredBadge') ?? S.cardExpired;
+
+const W = withdrawScheduledStringsFor('he');
+const WS = {
+  cta: pick('subscriptions.withdrawScheduledAction') ?? W.cta,
+  confirmTitle: pick('subscriptions.withdrawScheduledDialog.title') ?? W.confirmTitle,
+  confirmDescription:
+    pick('subscriptions.withdrawScheduledDialog.description') ??
+    W.confirmDescription,
+  confirmAction:
+    pick('subscriptions.withdrawScheduledDialog.confirmAction') ?? W.confirmAction,
+};
 
 const CARD = {
   id: 'pm_test',
@@ -230,6 +242,10 @@ describe('PaymentsScreen', () => {
   // that slot when there's nothing live to show (never hides an active sub
   // behind a newer pending retry).
 
+  // The three specs below stage the LEGACY singular payload (an API build
+  // that sends `memberAction` without `memberActions`). The live API now
+  // always sends both actions — that payload is covered in its own describe
+  // at the end of this file.
   it('shows a cancel-pending action when the only subscription is a cancellable pending checkout', async () => {
     const pending = subscriptionWithPlan({
       status: 'pending',
@@ -297,5 +313,173 @@ describe('PaymentsScreen', () => {
       expect(screen.getByText(/Renew|חידוש|Продлить/i)).toBeTruthy();
     });
     expect(screen.queryByTestId('cancel-pending-btn')).toBeNull();
+  });
+});
+
+/**
+ * Presale / future-start memberships (`status: 'scheduled'`).
+ *
+ * This screen only ever selected `active | past_due | debt`, so a member who
+ * bought into a club that has not opened yet saw NOTHING here — no status, no
+ * way out. Worse, the only cancel path that did exist (cancel-at-period-end)
+ * stamped a notice date the due-cancellations sweep never looked at, so the
+ * row sat there holding its seat forever. Withdrawing costs nothing and has
+ * to be one tap away.
+ */
+describe('PaymentsScreen — not-yet-started membership', () => {
+  const scheduled = () =>
+    subscriptionWithPlan({
+      id: 'sub_presale',
+      status: 'scheduled',
+      memberAction: 'none',
+      memberActions: ['withdraw_scheduled'],
+    } as never);
+
+  it('shows the membership and a free-of-charge way out', async () => {
+    stagePayments({ subs: [scheduled()] });
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('withdraw-scheduled-btn')).toBeTruthy();
+    });
+    expect(screen.getByText(WS.cta)).toBeTruthy();
+  });
+
+  it('withdraws after confirming, releasing the seat', async () => {
+    const sub = scheduled();
+    stagePayments({ subs: [sub] });
+    const calls: unknown[] = [];
+    server.use(
+      http.post(
+        api(`/organizations/${TEST_ORG}/subscriptions/my/${sub.id}/withdraw`),
+        () => {
+          calls.push(true);
+          return HttpResponse.json({ data: { ...sub, status: 'cancelled' } });
+        },
+      ),
+    );
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    await renderWithProviders(<PaymentsScreen />);
+    await userEvent.press(
+      await screen.findByTestId('withdraw-scheduled-btn'),
+    );
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith(
+        WS.confirmTitle,
+        WS.confirmDescription.replace('{plan}', 'Gold Unlimited'),
+        expect.any(Array),
+      );
+    });
+    const buttons = alertSpy.mock.calls.at(-1)?.[2] as AlertButton[];
+    const confirm = buttons.find((b) => b.style === 'destructive');
+    await act(async () => {
+      await confirm!.onPress?.();
+    });
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    alertSpy.mockRestore();
+  });
+
+  it('never offers the notice-period cancel on one, which the API refuses', async () => {
+    stagePayments({ subs: [scheduled()] });
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('withdraw-scheduled-btn')).toBeTruthy();
+    });
+    expect(screen.queryByText(/Renew|חידוש|Продлить/i)).toBeNull();
+  });
+});
+
+/**
+ * The other half of the pending-checkout decision on this screen: finishing
+ * the payment. It used to be unreachable here — the card offered only the
+ * rollback — and on the profile tab the equivalent CTA called `renew`, which
+ * the API rejects on a pending row.
+ */
+describe('PaymentsScreen — finish an unfinished checkout', () => {
+  const pending = () =>
+    subscriptionWithPlan({
+      id: 'sub_pending',
+      status: 'pending',
+      memberAction: 'cancel_pending',
+      memberActions: ['complete_checkout', 'cancel_pending'],
+    } as never);
+
+  it('offers both finishing and rolling back on the payload the API always sends', async () => {
+    stagePayments({ subs: [pending()] });
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('complete-checkout-btn')).toBeTruthy();
+    });
+    expect(screen.getByTestId('cancel-pending-btn')).toBeTruthy();
+  });
+
+  it('resumes the SAME checkout rather than starting a new purchase', async () => {
+    const sub = pending();
+    stagePayments({ subs: [sub] });
+    const calls: unknown[] = [];
+    server.use(
+      http.post(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/my/${sub.id}/resume-checkout`,
+        ),
+        async ({ request }) => {
+          calls.push(await request.json());
+          return HttpResponse.json({
+            data: {
+              subscription: sub,
+              paymentPageUrl: 'https://pay.example/redo',
+              resuming: true,
+            },
+          });
+        },
+      ),
+    );
+
+    await renderWithProviders(<PaymentsScreen />);
+    await userEvent.press(await screen.findByTestId('complete-checkout-btn'));
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]).toMatchObject({ subscriptionId: sub.id });
+  });
+
+  it('sends the rollback as a member regret from the profile', async () => {
+    const sub = pending();
+    stagePayments({ subs: [sub] });
+    const bodies: unknown[] = [];
+    server.use(
+      http.post(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/my/${sub.id}/cancel-pending`,
+        ),
+        async ({ request }) => {
+          bodies.push(await request.json());
+          return HttpResponse.json({ data: { ...sub, status: 'cancelled' } });
+        },
+      ),
+    );
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+
+    await renderWithProviders(<PaymentsScreen />);
+    await userEvent.press(await screen.findByTestId('cancel-pending-btn'));
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    const buttons = alertSpy.mock.calls.at(-1)?.[2] as AlertButton[];
+    const confirm = buttons.find((b) => b.style === 'destructive');
+    await act(async () => {
+      await confirm!.onPress?.();
+    });
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({
+      id: sub.id,
+      intent: 'regret',
+      source: 'profile',
+    });
+    alertSpy.mockRestore();
   });
 });

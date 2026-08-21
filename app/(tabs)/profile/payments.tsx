@@ -43,20 +43,26 @@ import {
   useRegisterPaymentMethod,
   useRenewSubscription,
   useResumeCancellation,
+  useWithdrawScheduled,
 } from '@/hooks/use-feed-data';
 import { useGatedFeature } from '@/hooks/use-feature-flag';
 import { useHaptics } from '@/hooks/use-haptics';
-import { usePlans } from '@/hooks/use-shop';
+import { usePlans, useResumeCheckout } from '@/hooks/use-shop';
 import { ScheduledPlanChangeBanner } from '@/components/profile/scheduled-plan-change-banner';
 import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
 import { useProfileStrings } from '@/i18n/use-profile-strings';
 import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
+import { useWithdrawScheduledStrings } from '@/i18n/use-withdraw-scheduled-strings';
+import { useCheckoutDecisionStrings } from '@/i18n/use-checkout-decision-strings';
 import {
   paymentErrorMessage,
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
 import { ApiError } from '@/hooks/use-api';
 import { paymentReturnUrl } from '@/lib/api';
+import { checkoutOutcomeOf, returnParamFor } from '@/lib/checkout-return';
+import { memberActionsOf } from '@/lib/member-actions';
+import * as analytics from '@/lib/analytics';
 import { isCardExpired } from '@/lib/payment-method';
 import { MEMBER_PLAN_CHANGE_FLAG, getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
@@ -64,6 +70,10 @@ import { useI18n } from '@/providers/i18n-provider';
 
 const CARD_RETURN_PATH = 'profile/payments';
 const CARD_RETURN_URL = `fitkit://${CARD_RETURN_PATH}`;
+// Finishing a checkout from here lands on the shop's verification /
+// decision screen, exactly like starting one from the shop does.
+const CHECKOUT_RETURN_PATH = 'shop/payment-return';
+const CHECKOUT_RETURN_URL = `fitkit://${CHECKOUT_RETURN_PATH}`;
 
 interface Transaction {
   id: string;
@@ -145,6 +155,7 @@ export default function PaymentsScreen() {
     // `useProfileStrings` already resolves exactly that case to a translated
     // static value.
     checkoutNotCompleted: profileStrings.checkoutNotCompleted,
+    completePayment: profileStrings.completePayment,
   };
 
   const txnPath = orgId ? `/organizations/${orgId}/payments/my` : '';
@@ -159,6 +170,11 @@ export default function PaymentsScreen() {
   const resume = useResumeCancellation(orgId);
   const cancelPending = useCancelPendingSubscription(orgId);
   const cancelPendingT = useCancelPendingStrings();
+  const withdraw = useWithdrawScheduled(orgId);
+  const withdrawT = useWithdrawScheduledStrings();
+  const resumeCheckout = useResumeCheckout(orgId);
+  const decisionT = useCheckoutDecisionStrings();
+  const [completingCheckout, setCompletingCheckout] = useState(false);
   const registerCard = useRegisterPaymentMethod(orgId);
   const [resolving, setResolving] = useState(false);
 
@@ -194,6 +210,17 @@ export default function PaymentsScreen() {
   const pendingSub = !activeSub
     ? subs.data?.data?.find((s) => s.status === 'pending')
     : undefined;
+  // A presale / future-start membership: bought (or reserved) for a club
+  // that has not opened yet. It is not `active`, so this screen used to show
+  // nothing for it at all — no status, and no way out. Withdrawing from one
+  // costs nothing and has to be reachable, so it takes the card slot ahead
+  // of a pending checkout when both exist.
+  const scheduledSub = !activeSub
+    ? subs.data?.data?.find(
+        (s) => (s as unknown as { status: string }).status === 'scheduled',
+      )
+    : undefined;
+  const cardSub = activeSub ?? scheduledSub ?? pendingSub;
 
   // Member plan-change (FIT-271) — same PostHog per-org gate as web
   // (fail-closed; entry points render nothing until the flag resolves true).
@@ -238,6 +265,14 @@ export default function PaymentsScreen() {
 
   const formatAmount = (cents: number, currency: string) =>
     (cents / 100).toLocaleString(lang, { style: 'currency', currency });
+
+  const invalidateSubscriptions = () => {
+    if (!orgId) return;
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+    });
+    queryClient.invalidateQueries({ queryKey: queryKeys.plans.all(orgId) });
+  };
 
   const handleRenew = () => {
     if (!activeSub || !orgId || renew.isPending) return;
@@ -321,17 +356,137 @@ export default function PaymentsScreen() {
           text: cancelPendingT.confirmAction,
           style: 'destructive',
           onPress: () => {
-            cancelPending.mutate(pendingSub.id, {
+            cancelPending.mutate(
+              // `intent: 'regret'` says the member rolled their own checkout
+              // back, which is what hides the row from their lists; the
+              // server still stamps `abandoned_checkout` so a late webhook
+              // can revive it.
+              { id: pendingSub.id, intent: 'regret', source: 'profile' },
+              {
+                onSuccess: () => {
+                  haptics.success();
+                  invalidateSubscriptions();
+                  analytics.track('member_checkout_rolled_back', {
+                    org_id: orgId,
+                    subscription_id: pendingSub.id,
+                    source: 'profile',
+                  });
+                  Alert.alert('', cancelPendingT.success);
+                },
+                onError: () => {
+                  haptics.error();
+                  Alert.alert('', cancelPendingT.error);
+                },
+              },
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  /**
+   * Finish a checkout that was started and abandoned. NOT `renew`, which is
+   * what the old "Complete payment" CTA called and which the API rejects on
+   * a `pending` row (400) — the member was left tapping a button that could
+   * only ever fail. This re-issues a hosted page for the SAME subscription.
+   */
+  const handleCompleteCheckout = async () => {
+    if (!pendingSub || !orgId || completingCheckout) return;
+    haptics.tap();
+    setCompletingCheckout(true);
+    try {
+      const res = await resumeCheckout.mutateAsync({
+        subscriptionId: pendingSub.id,
+        successUrl: paymentReturnUrl(CHECKOUT_RETURN_PATH, {
+          status: 'success',
+        }),
+        cancelUrl: paymentReturnUrl(CHECKOUT_RETURN_PATH, {
+          status: 'cancelled',
+        }),
+      });
+      analytics.track('member_checkout_resumed', {
+        org_id: orgId,
+        subscription_id: pendingSub.id,
+        source: 'profile',
+      });
+      const url = res.data?.paymentPageUrl;
+      if (!url) {
+        // Free plan or externally-billed org: nothing to open, the server
+        // already did what it could. Land on the verification screen.
+        invalidateSubscriptions();
+        router.push({
+          pathname: '/(tabs)/shop/payment-return',
+          params: { status: 'success', sub: pendingSub.id },
+        });
+        return;
+      }
+      const result = await WebBrowser.openAuthSessionAsync(
+        url,
+        CHECKOUT_RETURN_URL,
+      );
+      const outcome = checkoutOutcomeOf(result);
+      invalidateSubscriptions();
+      router.push({
+        pathname: '/(tabs)/shop/payment-return',
+        params: { status: returnParamFor(outcome), sub: pendingSub.id },
+      });
+    } catch (e) {
+      haptics.error();
+      // 409 CHECKOUT_NOT_RESUMABLE (paid, swept or voided meanwhile) among
+      // others — refetch so the dead row stops offering a resume.
+      invalidateSubscriptions();
+      Alert.alert(
+        '',
+        paymentErrorMessage(
+          errorStrings,
+          e,
+          lang,
+          decisionT.resumeError,
+          'checkout-resume',
+        ),
+      );
+    } finally {
+      setCompletingCheckout(false);
+    }
+  };
+
+  /**
+   * Withdraw from a membership that has not started yet. No notice period,
+   * no refund math, no cancellation form: nothing was charged. The seat is
+   * released immediately and the plan becomes purchasable again.
+   *
+   * Deliberately NOT the cancel-with-notice pageSheet `handleCancel` opens —
+   * that endpoint refuses a `scheduled` row (409 `USE_WITHDRAW`), and before
+   * this existed it accepted one and stamped a notice date no sweep ever
+   * acted on, so the membership sat there holding its seat forever.
+   */
+  const handleWithdraw = () => {
+    if (!scheduledSub || !orgId || withdraw.isPending) return;
+    haptics.tap();
+    Alert.alert(
+      withdrawT.confirmTitle,
+      withdrawT.confirmDescription.replace('{plan}', scheduledSub.plan.name),
+      [
+        { text: withdrawT.keepAction, style: 'cancel' },
+        {
+          text: withdrawT.confirmAction,
+          style: 'destructive',
+          onPress: () => {
+            withdraw.mutate(scheduledSub.id, {
               onSuccess: () => {
                 haptics.success();
-                queryClient.invalidateQueries({
-                  queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+                invalidateSubscriptions();
+                analytics.track('member_presale_withdrawn', {
+                  org_id: orgId,
+                  subscription_id: scheduledSub.id,
+                  plan_id: scheduledSub.planId,
                 });
-                Alert.alert('', cancelPendingT.success);
+                Alert.alert('', withdrawT.success);
               },
               onError: () => {
                 haptics.error();
-                Alert.alert('', cancelPendingT.error);
+                Alert.alert('', withdrawT.error);
               },
             });
           },
@@ -484,9 +639,9 @@ export default function PaymentsScreen() {
               />
             ) : null}
           </>
-        ) : pendingSub ? (
+        ) : cardSub ? (
           <SubscriptionCard
-            sub={pendingSub}
+            sub={cardSub}
             isRTL={isRTL}
             colors={colors}
             labels={labels}
@@ -503,6 +658,12 @@ export default function PaymentsScreen() {
             onCancelPending={handleCancelPending}
             isCancellingPending={cancelPending.isPending}
             cancelPendingLabel={cancelPendingT.cta}
+            onCompleteCheckout={() => void handleCompleteCheckout()}
+            isCompletingCheckout={completingCheckout}
+            cancelPurchaseLabel={decisionT.cancelPurchaseAction}
+            onWithdraw={handleWithdraw}
+            isWithdrawing={withdraw.isPending}
+            withdrawLabel={withdrawT.cta}
           />
         ) : null}
 
@@ -747,6 +908,12 @@ function SubscriptionCard({
   onCancelPending,
   isCancellingPending,
   cancelPendingLabel,
+  onCompleteCheckout,
+  isCompletingCheckout,
+  cancelPurchaseLabel,
+  onWithdraw,
+  isWithdrawing,
+  withdrawLabel,
 }: {
   sub: SubscriptionLite | SubscriptionWithPlan;
   isRTL: boolean;
@@ -761,6 +928,7 @@ function SubscriptionCard({
     cancelAction: string;
     resumeAction: string;
     checkoutNotCompleted: string;
+    completePayment: string;
   };
   statusLabels: Record<string, string>;
   onRenew: () => void;
@@ -776,17 +944,36 @@ function SubscriptionCard({
   onChangePlan?: (() => void) | null;
   changePlanLabel?: string;
   /** Cancels a `pending` subscription (abandoned/incomplete checkout).
-   *  Only rendered when the sub is `pending` AND the server's memberAction
-   *  says `cancel_pending` — see `showCancelPending` below. */
+   *  Only rendered when the sub is `pending` AND the server lists
+   *  `cancel_pending` among its actions — see `showCancelPending` below.
+   *  That is now every pending row (the per-org gate is gone), alongside
+   *  `complete_checkout`. */
   onCancelPending?: () => void;
   isCancellingPending?: boolean;
   cancelPendingLabel?: string;
+  /** Re-opens a hosted payment page for a `pending` subscription. Distinct
+   *  from `onRenew`: the renew endpoint 400s on a pending row. */
+  onCompleteCheckout?: () => void;
+  isCompletingCheckout?: boolean;
+  /** Rolls the pending purchase back. Sits beside Complete payment, so it
+   *  reads as the other half of a decision rather than the only way out. */
+  cancelPurchaseLabel?: string;
+  /** Walks away from a membership that has not started yet (presale). No
+   *  notice period and nothing charged — see `handleWithdraw`. */
+  onWithdraw?: () => void;
+  isWithdrawing?: boolean;
+  withdrawLabel?: string;
 }) {
   const status = sub.status;
   // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @fitkit/shared) predate
   // both of these — same cast precedent as `scheduledToCancelOf` below.
   const memberAction = (sub as unknown as { memberAction?: string })
     .memberAction;
+  // The full list where the server sends one (`memberActions`), falling back
+  // to the legacy singular. A pending checkout genuinely offers two actions
+  // at once — finish paying or roll it back — and the singular field could
+  // only ever name one of them.
+  const actions = memberActionsOf(sub as never);
   const displayStatus =
     (sub as unknown as { displayStatus?: string }).displayStatus ?? status;
   const isAbandonedCheckout = displayStatus === 'checkout_abandoned';
@@ -813,12 +1000,21 @@ function SubscriptionCard({
   const scheduledToCancel = scheduledToCancelOf(sub);
   // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @fitkit/shared) predate
   // `memberAction` — same cast precedent as `scheduledToCancelOf` above.
-  // `cancel_pending` only ever comes back when the org's cancel-pending flag
-  // is on, so no separate client-side flag check is needed here.
+  // The API's per-org gate on cancel-pending is gone, so a pending row now
+  // offers BOTH finishing and rolling back; no client-side flag check exists
+  // or is needed.
   const showCancelPending =
+    status === 'pending' && actions.includes('cancel_pending');
+  const showCompleteCheckout =
     status === 'pending' &&
-    (sub as unknown as { memberAction?: string }).memberAction ===
-      'cancel_pending';
+    actions.includes('complete_checkout') &&
+    !!onCompleteCheckout;
+  // Presale withdraw. Falls back to the raw status when the server sends no
+  // action list at all, so a stuck scheduled row still gets its way out.
+  const showWithdraw =
+    !!onWithdraw &&
+    status === 'scheduled' &&
+    (actions.length === 0 || actions.includes('withdraw_scheduled'));
 
   const fmtDate = (iso?: string | null) =>
     iso
@@ -932,7 +1128,12 @@ function SubscriptionCard({
           {formatAmount(sub.plan.priceInCents, sub.plan.currency)}
           {intervalLabel}
         </Text>
-        {!scheduledToCancel && nextBillingStr ? (
+        {/* A membership that has not started has no NEXT billing date —
+            `currentPeriodEnd` there is the far end of a period that never
+            began, and labelling it "next billing" states a charge that is
+            not scheduled. The status chip already says "Starts when we
+            open". */}
+        {!scheduledToCancel && status !== 'scheduled' && nextBillingStr ? (
           <Text
             style={{
               fontSize: 12,
@@ -1007,6 +1208,40 @@ function SubscriptionCard({
         </View>
       )}
 
+      {showCompleteCheckout && (
+        <FKButton
+          testID="complete-checkout-btn"
+          label={labels.completePayment}
+          variant="primary"
+          size="md"
+          fullWidth
+          onPress={onCompleteCheckout}
+          disabled={isCompletingCheckout}
+          trailing={
+            isCompletingCheckout ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : undefined
+          }
+        />
+      )}
+
+      {showWithdraw && (
+        <FKButton
+          testID="withdraw-scheduled-btn"
+          label={withdrawLabel ?? ''}
+          variant="outline"
+          size="md"
+          fullWidth
+          onPress={onWithdraw}
+          disabled={isWithdrawing}
+          trailing={
+            isWithdrawing ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : undefined
+          }
+        />
+      )}
+
       {showRenew && (
         <FKButton
           label={isRenewing ? labels.renewing : labels.renew}
@@ -1070,7 +1305,9 @@ function SubscriptionCard({
               <Text
                 style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}
               >
-                {cancelPendingLabel}
+                {showCompleteCheckout
+                  ? (cancelPurchaseLabel ?? cancelPendingLabel)
+                  : cancelPendingLabel}
               </Text>
             </Pressable>
           ) : null}

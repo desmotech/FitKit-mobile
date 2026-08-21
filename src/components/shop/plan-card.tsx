@@ -413,6 +413,27 @@ export function PlanCard({
         </Text>
       ) : null}
 
+      {/* Why the CTA says "Resume Payment" and the plan isn't active yet.
+          Without it the member sees a purchase button that reads as a
+          second charge, on a plan they believe they already bought. */}
+      {isPending && !isCurrent ? (
+        <Text
+          testID="plan-pending-hint"
+          style={{
+            fontFamily: font.bodyMedium,
+            fontSize: 13,
+            lineHeight: 18,
+            marginTop: 10,
+            color: colors.mutedFg,
+            textAlign: isRTL ? 'right' : 'left',
+            writingDirection: isRTL ? 'rtl' : 'ltr',
+          }}
+        >
+          {pc.pendingPayment ??
+            'Payment pending. Complete your purchase to activate this plan.'}
+        </Text>
+      ) : null}
+
       {showCta ? (
         <>
           {/* A hairline between what the plan is and the button that buys it
@@ -428,6 +449,7 @@ export function PlanCard({
 
           <View style={{ marginTop: 14 }}>
             <FKButton
+              testID={`plan-cta-${plan.id}`}
               fullWidth
               label={ctaLabel}
               variant="primary"
