@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Star } from 'lucide-react-native';
+import { CheckCircle2, Star } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import type { SubscriptionDisplayStatus } from '@fitkit/shared';
 import { Text } from '@/components/ui/text';
 import { useFKColors } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
+import { formatPrice } from '@/lib/format-price';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 import { useQuotaStrings } from '@/i18n/use-quota-strings';
@@ -34,13 +35,27 @@ export function MembershipCard({
   sub: {
     id: string;
     status: string;
-    plan: { name: string; type?: string; classCredits?: number | null };
+    plan: {
+      name: string;
+      type?: string;
+      classCredits?: number | null;
+      currency?: string;
+    };
     remainingCredits?: number | null;
     currentPeriodEnd?: string | null;
     /** Anchored booking-allowance windows (absent on unlimited plans). */
     quotas?: QuotaUsage[] | null;
     /** Discounted charges left on a presale plan; 0/null = standard price. */
     introCyclesRemaining?: number | null;
+    /** When the next charge is actually taken — for a `scheduled` presale
+     *  purchase, that is the FIRST charge, deferred to the gym's opening day.
+     *  Distinct from `currentPeriodEnd`, which is a period boundary. Null
+     *  whenever nothing is scheduled. */
+    nextChargeAt?: string | null;
+    /** What that charge comes to, resolved server-side (intro price, a desk
+     *  discount). Absent on API builds that predate it — the note then names
+     *  the date without the amount rather than guessing from the plan. */
+    effectivePriceInCents?: number | null;
     /** Member has given notice; the membership ends on the date below. */
     cancelAtPeriodEnd?: boolean | null;
     /** When it actually ends — one month from the notice, computed server-side.
@@ -101,6 +116,11 @@ export function MembershipCard({
     checkoutNotCompletedNote: string;
     /** Said once notice is given, in place of the intro-payments count. */
     noFurtherCharges?: string;
+    /** Presale purchase: bought before opening day, nothing charged yet.
+     *  Template with `{date}`. */
+    presalePurchased?: string;
+    /** Same with `{amount}`, used when the server sent an effective price. */
+    presalePurchasedWithAmount?: string;
   };
   isRenewing: boolean;
   onRenew: () => void;
@@ -210,16 +230,39 @@ export function MembershipCard({
   // ended/abandoned note above, and `external` means we genuinely can't say.
   const noChargesNote =
     billingState === 'ending' ? labels.noFurtherCharges ?? null : null;
+  // FIT-287 presale: sold before the gym opened. The card is on file, no
+  // money has moved, and the first charge waits for opening day — a state
+  // that otherwise renders as a membership that did nothing. The chip
+  // already says "starts when we open"; this says what happens to the card,
+  // which is the part a member actually worries about.
+  const isPresalePurchase = displayStatus === 'scheduled';
+  const firstChargeAt = isPresalePurchase ? sub.nextChargeAt : null;
+  const priceCents = sub.effectivePriceInCents;
+  const presaleNote =
+    isPresalePurchase && firstChargeAt
+      ? (priceCents != null && labels.presalePurchasedWithAmount
+          ? labels.presalePurchasedWithAmount.replace(
+              '{amount}',
+              formatPrice(priceCents, sub.plan.currency ?? 'ILS', lang),
+            )
+          : labels.presalePurchased ?? ''
+        ).replace('{date}', new Date(firstChargeAt).toLocaleDateString(lang))
+      : null;
+
   // Once notice is given the meaningful date is when the membership ENDS, not
   // when it would next have billed. Those differ by up to a month.
   const endsOn = sub.cancelAtPeriodEnd ? sub.cancellationEffectiveAt : null;
   const shownDate = endsOn ?? sub.currentPeriodEnd;
-  const expiresStr = shownDate
-    ? (endsOn ? labels.endsOn ?? labels.expires : labels.expires).replace(
-        '{date}',
-        new Date(shownDate).toLocaleDateString(),
-      )
-    : '';
+  // A presale purchase has no period yet; `currentPeriodEnd` is either null
+  // or a boundary that hasn't started, and "Expires {date}" under a
+  // membership that has not begun is the wrong sentence entirely.
+  const expiresStr =
+    shownDate && !isPresalePurchase
+      ? (endsOn ? labels.endsOn ?? labels.expires : labels.expires).replace(
+          '{date}',
+          new Date(shownDate).toLocaleDateString(),
+        )
+      : '';
 
   return (
     <View
@@ -394,6 +437,45 @@ export function MembershipCard({
           </Pressable>
         ) : null}
       </View>
+
+      {/* Presale: the purchase went through, the card is on file, and the
+          first charge is opening day. Reads as reassurance rather than a
+          warning — nothing here needs the member to act. */}
+      {presaleNote ? (
+        <View
+          testID="membership-presale-note"
+          style={{
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'flex-start',
+            gap: 9,
+            padding: 11,
+            borderRadius: 12,
+            borderCurve: 'continuous',
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.24)',
+          }}
+        >
+          <CheckCircle2
+            size={15}
+            color="#fff"
+            strokeWidth={2.4}
+            style={{ marginTop: 1 }}
+          />
+          <Text
+            style={{
+              flex: 1,
+              fontSize: 11.5,
+              lineHeight: 17,
+              color: 'rgba(255,255,255,0.92)',
+              fontFamily: 'Assistant-Medium',
+              textAlign: isRTL ? 'right' : 'left',
+            }}
+          >
+            {presaleNote}
+          </Text>
+        </View>
+      ) : null}
 
       {/* What's left to book and when it resets — the two questions a member
           has, answered before they hit the limit. */}

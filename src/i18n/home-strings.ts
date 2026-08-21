@@ -11,6 +11,7 @@ import { type Locale } from '@/i18n/config';
 export interface HomeStrings {
   // ── Section chrome ────────────────────────────────────────────────
   todayKicker: string;
+  classesTodayKicker: string;
   goalsTitle: string;
   addGoal: string;
   viewAllGoals: string;
@@ -22,14 +23,23 @@ export interface HomeStrings {
   openDaySubtitle: string;
   browseWeek: string;
 
-  // ── Today's class card ────────────────────────────────────────────
+  // ── Presale welcome (gym sold, hasn't opened yet) ─────────────────
+  presaleTitle: string;
+  /** Template with `{date}` — the gym's opening day. */
+  presaleBody: string;
+  /** Template with `{days}`. */
+  presaleCountdown: string;
+  presaleCountdownTomorrow: string;
+
+  // ── Today's class card + the class-tile peek sheet ────────────────
   booked: string;
   waitlisted: string;
   attended: string;
   coach: string;
+  peekTitle: string;
+  openClass: string;
 
   // ── Goals ─────────────────────────────────────────────────────────
-  noGoals: string;
   bodyMetric: string;
   exercisePr: string;
   achieved: string;
@@ -55,6 +65,7 @@ export interface HomeStrings {
 
 const HE: HomeStrings = {
   todayKicker: 'היום',
+  classesTodayKicker: 'מה יש היום במועדון',
   goalsTitle: 'יעדים',
   addGoal: 'הוספת יעד',
   viewAllGoals: 'הצג הכל',
@@ -68,12 +79,21 @@ const HE: HomeStrings = {
   openDaySubtitle: 'זמן טוב לתנועה קלה — הליכה, מתיחות או מוביליטי.',
   browseWeek: 'מה יש השבוע',
 
+  // Verb-free and plural, like the rest of the Hebrew here — no masculine
+  // imperative, and nothing that assumes the gym is already running.
+  presaleTitle: 'שמחים שהצטרפתם!',
+  presaleBody:
+    'המועדון נפתח ב-{date}, ומסלול החברות שלכם מתחיל בדיוק אז. עד אז אין מה לעשות — הכול מוכן.',
+  presaleCountdown: 'עוד {days} ימים לפתיחה',
+  presaleCountdownTomorrow: 'נפתחים מחר',
+
   booked: 'רשום',
   waitlisted: 'המתנה',
   attended: 'נרשמה הגעה',
   coach: 'מאמן',
+  peekTitle: 'הצצה לאימון',
+  openClass: 'לפרטי השיעור',
 
-  noGoals: 'הגדר את יעד הכושר הראשון שלך',
   bodyMetric: 'מדד גוף',
   exercisePr: 'שיא בתרגיל',
   achieved: 'הושג',
@@ -97,6 +117,7 @@ const HE: HomeStrings = {
 
 const EN: HomeStrings = {
   todayKicker: 'TODAY',
+  classesTodayKicker: 'ON TODAY',
   goalsTitle: 'Goals',
   addGoal: 'Add goal',
   viewAllGoals: 'View all',
@@ -107,12 +128,19 @@ const EN: HomeStrings = {
   openDaySubtitle: 'A good day for easy movement — a walk, a stretch, mobility.',
   browseWeek: "See what's on this week",
 
+  presaleTitle: 'Welcome aboard!',
+  presaleBody:
+    "We open on {date}, and your membership starts that day. Nothing to do until then — you're all set.",
+  presaleCountdown: '{days} days to opening',
+  presaleCountdownTomorrow: 'Opening tomorrow',
+
   booked: 'Booked',
   waitlisted: 'Waitlist',
   attended: 'Checked in',
   coach: 'Coach',
+  peekTitle: 'Workout preview',
+  openClass: 'Open class',
 
-  noGoals: 'Set your first fitness goal',
   bodyMetric: 'Body Metric',
   exercisePr: 'Exercise PR',
   achieved: 'Achieved',
@@ -136,6 +164,7 @@ const EN: HomeStrings = {
 
 const RU: HomeStrings = {
   todayKicker: 'СЕГОДНЯ',
+  classesTodayKicker: 'СЕГОДНЯ В ЗАЛЕ',
   goalsTitle: 'Цели',
   addGoal: 'Добавить цель',
   viewAllGoals: 'Показать все',
@@ -147,12 +176,19 @@ const RU: HomeStrings = {
     'Хороший день для лёгкого движения — прогулка, растяжка, мобильность.',
   browseWeek: 'Что на этой неделе',
 
+  presaleTitle: 'Рады, что вы с нами!',
+  presaleBody:
+    'Мы открываемся {date}, тогда же начнётся ваш абонемент. До этого ничего делать не нужно — всё готово.',
+  presaleCountdown: 'До открытия {days} дн.',
+  presaleCountdownTomorrow: 'Открываемся завтра',
+
   booked: 'Запись',
   waitlisted: 'Лист ожидания',
   attended: 'Отмечено',
   coach: 'Тренер',
+  peekTitle: 'Превью тренировки',
+  openClass: 'Открыть занятие',
 
-  noGoals: 'Поставьте свою первую фитнес-цель',
   bodyMetric: 'Показатель тела',
   exercisePr: 'Рекорд в упражнении',
   achieved: 'Достигнута',

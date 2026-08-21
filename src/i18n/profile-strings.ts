@@ -62,6 +62,12 @@ export interface ProfileStrings {
    *  no further charge is ever taken. Says out loud what the card used to
    *  contradict by counting intro payments that will never happen. */
   noFurtherCharges: string;
+  /** Presale purchase (FIT-287): bought before the gym opened, card on file,
+   *  nothing charged yet. Template with `{date}` — the first charge, which is
+   *  opening day. */
+  presalePurchased: string;
+  /** Same, with `{amount}` when the server sent an effective price. */
+  presalePurchasedWithAmount: string;
 
   // ── Settings rows ─────────────────────────────────────────────────
   settingPersonal: string;
@@ -146,6 +152,9 @@ const HE: ProfileStrings = {
   checkoutNotCompleted: 'התשלום לא הושלם',
   checkoutNotCompletedNote: 'התשלום לא הושלם, ולכן לא נפתח מנוי.',
   noFurtherCharges: 'לא ייגבו תשלומים נוספים.',
+  presalePurchased: 'הרכישה הושלמה. החיוב הראשון יתבצע ב-{date}, ביום הפתיחה.',
+  presalePurchasedWithAmount:
+    'הרכישה הושלמה. החיוב הראשון, {amount}, יתבצע ב-{date} — ביום הפתיחה.',
 
   settingPersonal: 'פרטים אישיים',
   settingPayment: 'תשלומים',
@@ -224,6 +233,10 @@ const EN: ProfileStrings = {
   checkoutNotCompletedNote:
     'This checkout was never completed, so no membership started.',
   noFurtherCharges: 'No further payments will be charged.',
+  presalePurchased:
+    'Purchase confirmed. Your first charge is on {date}, the day we open.',
+  presalePurchasedWithAmount:
+    'Purchase confirmed. Your first charge of {amount} is on {date}, the day we open.',
 
   settingPersonal: 'Personal Details',
   settingPayment: 'Payments',
@@ -302,6 +315,10 @@ const RU: ProfileStrings = {
   checkoutNotCompletedNote:
     'Эта оплата не была завершена, поэтому абонемент не начался.',
   noFurtherCharges: 'Дальнейшие списания не производятся.',
+  presalePurchased:
+    'Покупка подтверждена. Первое списание — {date}, в день открытия.',
+  presalePurchasedWithAmount:
+    'Покупка подтверждена. Первое списание {amount} — {date}, в день открытия.',
 
   settingPersonal: 'Личные данные',
   settingPayment: 'Платежи',

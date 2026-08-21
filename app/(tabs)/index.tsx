@@ -1,5 +1,5 @@
 /**
- * Home — member dashboard. Three concerns, in this order:
+ * Home — member dashboard. Five concerns, in this order:
  *
  *   1. Greeting        — kicker date + "Good morning, {firstName}".
  *                        A motivational sub-greeting used to sit under it,
@@ -9,13 +9,25 @@
  *                        opportunity") was written for a morning it had no
  *                        way of knowing it was in. One message now, the
  *                        contextual one.
- *   2. Today           — today's program workout AND today's booked
+ *   2. Presale welcome — only for a member who bought into a gym that has
+ *                        not opened yet (FIT-287): their board is empty and
+ *                        their card is untouched, both correctly, and this
+ *                        says so with the opening date and a countdown. It
+ *                        stands in for the Today/This-week sections while
+ *                        there is genuinely nothing to show.
+ *   3. Today           — today's program workout AND today's booked
  *                        class(es), each rendered with their shared
  *                        card primitive (no inline duplication).
  *                        Rest branch when neither exists.
- *   3. Goals           — top-3 active goals by progress descending,
+ *   4. On today        — every published class the gym runs today, as a
+ *                        rail of tiles. Tapping one with a programmed
+ *                        workout peeks at the whiteboard; without one it
+ *                        opens the class. Absent when the day is empty.
+ *   5. Goals           — top-3 active goals by progress descending,
  *                        compact GoalCards taps through to the goal
- *                        detail. Empty state nudges to /goals/new.
+ *                        detail. The section is absent until there is a
+ *                        goal — Quick actions already owns "Add goal", and
+ *                        an empty-state nudge to /goals/new made two of it.
  *
  * Explicitly NOT here:
  *   - XP / streak / classes-this-month → moved to Profile.
@@ -38,7 +50,6 @@ import type { GoalResponse } from '@fitkit/shared';
 import {
   FKAmbientBackdrop,
   FKCard,
-  FKGlassPanel,
   FKSectionHeader,
   GoalCard,
   MemberHeader,
@@ -53,7 +64,12 @@ import {
   WorkoutSummaryCard,
 } from '@/components/workout/workout-summary-card';
 import { WeekGlance } from '@/components/workout/week-glance';
+import { PresaleWelcomeCard } from '@/components/home/presale-welcome-card';
 import { TodayClassCard } from '@/components/schedule/today-class-card';
+import {
+  TodayClassesRail,
+  useTodayClassesLabels,
+} from '@/components/schedule/today-classes-rail';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { displayFamily, eyebrow } from '@/lib/type';
@@ -61,6 +77,12 @@ import { isCancelled, isMyBooking } from '@/lib/week-glance';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { useMySubscription } from '@/hooks/use-feed-data';
+import {
+  isScheduledPurchase,
+  parseCalendarDate,
+  useOpeningDay,
+} from '@/hooks/use-opening-day';
 import { useMyWeekSessions } from '@/hooks/use-schedule';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import {
@@ -92,6 +114,7 @@ export default function HomeScreen() {
 
   // ── Labels ────────────────────────────────────────────────────────
   const s = useHomeStrings();
+  const classTileLabels = useTodayClassesLabels();
   // Body-metric type names still come from the shared runtime dictionary —
   // the key set is defined server-side alongside the goal data.
   const bmTypes = (((t as unknown as Record<string, Record<string, unknown>>)
@@ -115,6 +138,24 @@ export default function HomeScreen() {
 
   const weekAssignments = useMyWeekAssignments(orgId, weekStart);
   const weekSessions = useMyWeekSessions(orgId, weekStart);
+  // FIT-287 presale. The subscriptions read only fires for a gym that hasn't
+  // opened yet — for every other org this costs nothing.
+  const openingDay = useOpeningDay();
+  const presaleSubs = useMySubscription(orgId, openingDay.isPresale);
+  const presalePurchase = useMemo(
+    () => (presaleSubs.data?.data ?? []).some(isScheduledPurchase),
+    [presaleSubs.data],
+  );
+  const opensOnDate = openingDay.opensOn
+    ? parseCalendarDate(openingDay.opensOn)
+    : null;
+  // Bought, paid for on opening day, nothing to do until then. Members of the
+  // same pre-open gym who haven't bought get the ordinary screen — the card
+  // thanks them for a purchase, so it must not greet someone who didn't make
+  // one.
+  const showPresaleWelcome =
+    openingDay.isPresale && presalePurchase && !!opensOnDate;
+
   const goalsQuery = useApiQuery<{ data: GoalResponse[] }>({
     path: orgId ? `/organizations/${orgId}/goals/me` : '',
     queryOptions: { enabled: !!orgId },
@@ -144,6 +185,21 @@ export default function HomeScreen() {
           isMyBooking(s) &&
           ymd(new Date(s.startsAt)) === todayYMD,
       ),
+    [weekSessions.data, todayYMD],
+  );
+  // Every published class today, booked or not — "what's on at the gym",
+  // as opposed to `todaySessions` above, which is only what the member holds
+  // a seat in. Same query, so the rail costs nothing extra.
+  const todayClasses = useMemo(
+    () =>
+      (weekSessions.data?.data ?? [])
+        .filter(
+          (s) =>
+            !isCancelled(s) &&
+            s.status === 'published' &&
+            ymd(new Date(s.startsAt)) === todayYMD,
+        )
+        .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
     [weekSessions.data, todayYMD],
   );
   const activeGoals = useMemo(
@@ -201,6 +257,15 @@ export default function HomeScreen() {
   const todayOffline =
     !isOnline && (!weekAssignments.data || !weekSessions.data);
   const hasWorkoutsToday = todayWorkouts.length > 0;
+  // With the "set your first goal" nudge gone (Quick actions already offers
+  // Add goal), an empty Goals section would be a heading over nothing — so
+  // the section only exists once there is something in it, or something to
+  // say about why there isn't yet.
+  const showGoals =
+    hasOrg &&
+    (goalsQuery.isLoading ||
+      (goalsQuery.isError && !goalsQuery.data) ||
+      activeGoals.length > 0);
   // Coach-assigned rest (kind: 'rest') is real recovery → sage "Rest day".
   // An empty board (nothing programmed, nothing booked) is an *open* day,
   // not rest → teal "keep moving" nudge instead of mislabeling it as rest.
@@ -211,6 +276,16 @@ export default function HomeScreen() {
     !isAssignedRest &&
     todaySessions.length === 0 &&
     !isLoadingToday;
+  // A gym that hasn't opened has no board to be empty and no week to browse.
+  // The presale card above already says why, so the Today section steps
+  // aside rather than nudging toward a schedule that doesn't exist yet.
+  const hideTodaySection = showPresaleWelcome && isOpenDay;
+  // Same for the week rail: seven empty cells under a "we open on the 1st"
+  // card is the same non-answer twice.
+  const hideWeekGlance =
+    showPresaleWelcome &&
+    (weekAssignments.data?.data ?? []).length === 0 &&
+    (weekSessions.data?.data ?? []).length === 0;
 
   return (
     <View className="flex-1">
@@ -273,8 +348,28 @@ export default function HomeScreen() {
           </Text>
         </Animated.View>
 
+        {/* ── Presale welcome ──────────────────────────────────────── */}
+        {showPresaleWelcome && opensOnDate ? (
+          <Animated.View
+            entering={FadeInDown.delay(70).duration(380).springify()}
+            style={{ paddingHorizontal: 20, paddingTop: 12 }}
+          >
+            <PresaleWelcomeCard
+              opensOnDate={opensOnDate}
+              daysUntil={openingDay.daysUntil}
+              isRTL={isRTL}
+              labels={{
+                title: s.presaleTitle,
+                body: s.presaleBody,
+                countdown: s.presaleCountdown,
+                countdownTomorrow: s.presaleCountdownTomorrow,
+              }}
+            />
+          </Animated.View>
+        ) : null}
+
         {/* ── Today ────────────────────────────────────────────────── */}
-        {hasOrg ? (
+        {hasOrg && !hideTodaySection ? (
           <Animated.View
             entering={FadeInDown.delay(100).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 18, gap: 10 }}
@@ -433,7 +528,7 @@ export default function HomeScreen() {
         ) : null}
 
         {/* ── This week ────────────────────────────────────────────── */}
-        {hasOrg ? (
+        {hasOrg && !hideWeekGlance ? (
           <Animated.View
             entering={FadeInDown.delay(120).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 22, gap: 10 }}
@@ -452,6 +547,30 @@ export default function HomeScreen() {
                 title={L.homeThisWeek}
               />
             )}
+          </Animated.View>
+        ) : null}
+
+        {/* ── On today ─────────────────────────────────────────────── */}
+        {hasOrg && !todayLoadError && todayClasses.length > 0 ? (
+          <Animated.View
+            entering={FadeInDown.delay(135).duration(380).springify()}
+            style={{ paddingTop: 22, gap: 10 }}
+          >
+            <View style={{ paddingHorizontal: 20 }}>
+              <SectionKicker title={s.classesTodayKicker} />
+            </View>
+            <TodayClassesRail
+              sessions={todayClasses}
+              orgId={orgId}
+              isRTL={isRTL}
+              labels={classTileLabels}
+              onOpenSession={(id) =>
+                router.push({
+                  pathname: '/(tabs)/schedule/[id]',
+                  params: { id },
+                })
+              }
+            />
           </Animated.View>
         ) : null}
 
@@ -497,7 +616,7 @@ export default function HomeScreen() {
         ) : null}
 
         {/* ── Goals ────────────────────────────────────────────────── */}
-        {hasOrg ? (
+        {showGoals ? (
           <Animated.View
             entering={FadeInDown.delay(180).duration(380).springify()}
             style={{ paddingHorizontal: 20, paddingTop: 26, gap: 10 }}
@@ -557,57 +676,6 @@ export default function HomeScreen() {
                 retryLabel={s.tryAgain}
                 onRetry={() => goalsQuery.refetch()}
               />
-            ) : activeGoals.length === 0 ? (
-              <Pressable
-                onPress={() => {
-                  haptics.tap();
-                  router.push('/(tabs)/profile/goals/new');
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={s.noGoals}
-              >
-                {({ pressed }) => (
-                  <FKGlassPanel
-                    radius={16}
-                    style={{
-                      padding: 14,
-                      flexDirection: isRTL ? 'row-reverse' : 'row',
-                      alignItems: 'center',
-                      gap: 12,
-                      borderStyle: 'dashed',
-                      opacity: pressed ? 0.85 : 1,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 12,
-                        borderCurve: 'continuous',
-                        backgroundColor: 'rgba(14,140,140,0.10)',
-                        borderWidth: 1,
-                        borderColor: 'rgba(14,140,140,0.30)',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Target size={20} color={colors.primary} strokeWidth={2.2} />
-                    </View>
-                    <Text
-                      style={{
-                        flex: 1,
-                        fontSize: 13.5,
-                        fontWeight: '600',
-                        color: colors.mutedFg,
-                        textAlign: isRTL ? 'right' : 'left',
-                      }}
-                    >
-                      {s.noGoals}
-                    </Text>
-                    <Chevron size={18} color={colors.mutedFg} strokeWidth={2.2} />
-                  </FKGlassPanel>
-                )}
-              </Pressable>
             ) : (
               <View style={{ gap: 10 }}>
                 {activeGoals.map((goal, i) => (

@@ -233,13 +233,22 @@ export type SubscriptionLite = SubscriptionWithPlan & {
   daysRemaining?: number | null;
 };
 
-export function useMySubscription(orgId: string | undefined | null) {
+/**
+ * `enabled` gates the request beyond having an org — Home only needs this
+ * payload for a gym that hasn't opened yet, and paying for it on every other
+ * home render would be a request the screen never reads. Defaults to on, so
+ * existing callers are unchanged.
+ */
+export function useMySubscription(
+  orgId: string | undefined | null,
+  enabled = true,
+) {
   return useApiQuery<ApiEnvelope<SubscriptionLite[]>>({
     path: orgId ? `/organizations/${orgId}/subscriptions/my` : '',
     queryKey: orgId
       ? queryKeys.subscriptions.all(orgId, { mine: true })
       : ['/subscriptions/my', 'noop'],
-    queryOptions: { enabled: !!orgId },
+    queryOptions: { enabled: !!orgId && enabled },
   });
 }
 
