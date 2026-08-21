@@ -35,6 +35,7 @@ import {
   useFKColors,
 } from '@/components/fk';
 import { Input } from '@/components/ui/input';
+import { autofill } from '@/lib/autofill';
 import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -278,9 +279,7 @@ export default function CompleteProfileScreen() {
                 <Input
                   value={form.firstName}
                   onChangeText={(v) => update('firstName', v)}
-                  autoCapitalize="words"
-                  autoComplete="given-name"
-                  textContentType="givenName"
+                  {...autofill('givenName')}
                   style={{ textAlign: isRTL ? 'right' : 'left' }}
                 />
               </Field>
@@ -292,9 +291,7 @@ export default function CompleteProfileScreen() {
                 <Input
                   value={form.lastName}
                   onChangeText={(v) => update('lastName', v)}
-                  autoCapitalize="words"
-                  autoComplete="family-name"
-                  textContentType="familyName"
+                  {...autofill('familyName')}
                   style={{ textAlign: isRTL ? 'right' : 'left' }}
                 />
               </Field>
@@ -305,9 +302,7 @@ export default function CompleteProfileScreen() {
                 value={form.phone}
                 onChangeText={(v) => update('phone', v)}
                 onBlur={() => handleBlur('phone')}
-                keyboardType="phone-pad"
-                autoComplete="tel"
-                textContentType="telephoneNumber"
+                {...autofill('tel')}
                 placeholder={labels.phonePlaceholder}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
               />
@@ -324,7 +319,7 @@ export default function CompleteProfileScreen() {
                   update('nationalId', v.replace(/\D/g, '').slice(0, 9))
                 }
                 onBlur={() => handleBlur('nationalId')}
-                keyboardType="number-pad"
+                {...autofill('nationalId')}
                 placeholder={labels.nationalIdPlaceholder}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
               />

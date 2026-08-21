@@ -3,10 +3,15 @@
  *
  *   text       — single-line, optional maxLength up to 2000
  *   free_text  — multiline, optional maxLength up to 10000
+ *
+ * Templates are coach-authored, so the field's autofill hint is inferred
+ * from its id/label — compliance forms ask for the same name / phone / ID
+ * / address the OS already has.
  */
 import { useColorScheme } from 'nativewind';
 import { TextInput } from 'react-native';
 import { useFKColors } from '@/components/fk';
+import { autofill, inferAutofillHint } from '@/lib/autofill';
 import type { FormField } from '@/types/forms';
 import { useFormRTL } from '../form-rtl-context';
 import { FieldShell } from './field-shell';
@@ -31,6 +36,11 @@ export function TextFieldRenderer({
   const isDark = colorScheme === 'dark';
   const colors = useFKColors();
   const multiline = field.type === 'free_text';
+  const hint = inferAutofillHint(field.id, field.label);
+  const autofillProps = hint
+    ? autofill(hint)
+    : // Prose: no hint to give, and Android's heuristics guess badly here.
+      ({ autoCapitalize: 'sentences', autoCorrect: true } as const);
 
   return (
     <FieldShell
@@ -44,8 +54,7 @@ export function TextFieldRenderer({
         onChangeText={onChange}
         onBlur={onBlur}
         accessibilityLabel={field.label}
-        autoCapitalize="sentences"
-        autoCorrect
+        {...autofillProps}
         maxLength={field.maxLength}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}

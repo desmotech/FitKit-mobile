@@ -38,11 +38,13 @@ import {
   FKGlassPanel,
   useFKColors,
 } from '@/components/fk';
+import { OtpPasteButton } from '@/components/auth/otp-paste-button';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useAuthStrings } from '@/i18n/use-auth-strings';
 import { useI18n } from '@/providers/i18n-provider';
 import { safeInternalRoute } from '@/lib/safe-route';
+import { type AutofillHint, autofill } from '@/lib/autofill';
 
 type Stage = 'credentials' | 'second-factor' | 'reset-request' | 'reset-verify';
 
@@ -61,6 +63,9 @@ interface ChosenFactor {
 
 const BRAND_TEAL = '#0E8C8C';
 const MFA_CODE_LENGTH = 6;
+// Keeps iOS's generated strong password inside what Clerk accepts.
+const PASSWORD_RULES =
+  'minlength: 8; required: lower; required: upper; required: digit;';
 // Matches Clerk's own resend rate limit for email/SMS verification codes.
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -441,11 +446,7 @@ export default function SignInScreen() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder={s.emailPlaceholder}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
+                  hint="username"
                   returnKeyType="next"
                   isDark={isDark}
                   isRTL={isRTL}
@@ -526,16 +527,12 @@ export default function SignInScreen() {
                     }
                   }}
                   placeholder={s.mfaCodePlaceholder}
-                  autoCapitalize="none"
-                  autoComplete={
-                    factor?.strategy === 'phone_code'
-                      ? 'sms-otp'
-                      : 'one-time-code'
+                  hint={
+                    factor?.strategy === 'phone_code' ? 'smsCode' : 'oneTimeCode'
                   }
                   keyboardType={
                     factor?.strategy === 'backup_code' ? 'default' : 'number-pad'
                   }
-                  textContentType="oneTimeCode"
                   isDark={isDark}
                   isRTL={isRTL}
                   fg={colors.foreground}
@@ -543,6 +540,18 @@ export default function SignInScreen() {
                   centered
                 />
               </Field>
+
+              {factor?.strategy !== 'backup_code' ? (
+                <OtpPasteButton
+                  codeLength={MFA_CODE_LENGTH}
+                  label={s.pasteCode}
+                  enabled={code.trim().length < MFA_CODE_LENGTH}
+                  onPaste={(pasted) => {
+                    setCode(pasted);
+                    void handleVerifyCode(pasted);
+                  }}
+                />
+              ) : null}
 
               {factor?.strategy === 'phone_code' ||
               factor?.strategy === 'email_code' ? (
@@ -580,11 +589,7 @@ export default function SignInScreen() {
                   value={email}
                   onChangeText={setEmail}
                   placeholder={s.emailPlaceholder}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  autoCorrect={false}
-                  keyboardType="email-address"
-                  textContentType="emailAddress"
+                  hint="username"
                   returnKeyType="go"
                   onSubmitEditing={handleRequestReset}
                   isDark={isDark}
@@ -619,10 +624,7 @@ export default function SignInScreen() {
                   value={code}
                   onChangeText={setCode}
                   placeholder="------"
-                  autoCapitalize="none"
-                  autoComplete="one-time-code"
-                  keyboardType="number-pad"
-                  textContentType="oneTimeCode"
+                  hint="oneTimeCode"
                   isDark={isDark}
                   isRTL={isRTL}
                   fg={colors.foreground}
@@ -630,6 +632,13 @@ export default function SignInScreen() {
                   centered
                 />
               </Field>
+
+              <OtpPasteButton
+                codeLength={MFA_CODE_LENGTH}
+                label={s.pasteCode}
+                enabled={code.trim().length < MFA_CODE_LENGTH}
+                onPaste={setCode}
+              />
 
               <ResendLink
                 label={s.resendCode}
@@ -736,11 +745,8 @@ function BigTextInput({
   value,
   onChangeText,
   placeholder,
-  autoCapitalize,
-  autoComplete,
-  autoCorrect,
+  hint,
   keyboardType,
-  textContentType,
   returnKeyType,
   onSubmitEditing,
   isDark,
@@ -752,11 +758,9 @@ function BigTextInput({
   value: string;
   onChangeText: (s: string) => void;
   placeholder?: string;
-  autoCapitalize?: 'none' | 'words' | 'characters' | 'sentences';
-  autoComplete?: React.ComponentProps<typeof TextInput>['autoComplete'];
-  autoCorrect?: boolean;
+  hint: AutofillHint;
+  /** Overrides the hint's keyboard (backup codes are alphanumeric). */
   keyboardType?: React.ComponentProps<typeof TextInput>['keyboardType'];
-  textContentType?: React.ComponentProps<typeof TextInput>['textContentType'];
   returnKeyType?: React.ComponentProps<typeof TextInput>['returnKeyType'];
   onSubmitEditing?: () => void;
   isDark: boolean;
@@ -765,6 +769,7 @@ function BigTextInput({
   monoFont?: boolean;
   centered?: boolean;
 }) {
+  const autofillProps = autofill(hint);
   return (
     <TextInput
       value={value}
@@ -773,11 +778,8 @@ function BigTextInput({
       placeholderTextColor={
         isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
       }
-      autoCapitalize={autoCapitalize}
-      autoComplete={autoComplete}
-      autoCorrect={autoCorrect}
-      keyboardType={keyboardType}
-      textContentType={textContentType}
+      {...autofillProps}
+      keyboardType={keyboardType ?? autofillProps.keyboardType}
       returnKeyType={returnKeyType}
       onSubmitEditing={onSubmitEditing}
       style={{
@@ -852,11 +854,9 @@ function PasswordInput({
         placeholderTextColor={
           isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
         }
-        autoCapitalize="none"
-        autoComplete={isNewPassword ? 'new-password' : 'password'}
-        autoCorrect={false}
+        {...autofill(isNewPassword ? 'newPassword' : 'password')}
         secureTextEntry={!visible}
-        textContentType={isNewPassword ? 'newPassword' : 'password'}
+        passwordRules={isNewPassword ? PASSWORD_RULES : undefined}
         returnKeyType="go"
         onSubmitEditing={onSubmit}
         style={{

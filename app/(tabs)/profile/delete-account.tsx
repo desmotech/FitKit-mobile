@@ -29,6 +29,7 @@ import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useHaptics } from '@/hooks/use-haptics';
 import { revokeCurrentDeviceToken } from '@/hooks/use-push-notifications';
+import { autofill } from '@/lib/autofill';
 import { reportHandledError } from '@/lib/error-reporting';
 import { resetClientSession } from '@/lib/session-reset';
 import { useActiveOrg } from '@/providers/active-org-provider';
@@ -190,6 +191,7 @@ export default function DeleteAccountScreen() {
             <TextInput
               value={typed}
               onChangeText={setTyped}
+              {...autofill('off')}
               autoCapitalize="characters"
               autoCorrect={false}
               spellCheck={false}

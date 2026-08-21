@@ -54,9 +54,13 @@ import {
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
+import { autofill } from '@/lib/autofill';
 
 const BRAND_TEAL = '#0E8C8C';
 const MIN_PASSWORD = 8;
+// Keeps iOS's generated strong password inside what Clerk accepts.
+const PASSWORD_RULES =
+  'minlength: 8; required: lower; required: upper; required: digit;';
 
 type Phase =
   | 'processing-ticket' // running signUp.create or signIn.create
@@ -107,6 +111,7 @@ export default function SignUpScreen() {
     errorSubtitle:
       auth?.inviteErrorSubtitle ??
       "This invite is no longer valid. It may have expired or already been used. Ask your gym for a new link.",
+    email: auth?.email ?? 'Email',
     password: auth?.password ?? 'Password',
     passwordPlaceholder:
       auth?.passwordSetupPlaceholder ?? `At least ${MIN_PASSWORD} characters`,
@@ -121,6 +126,10 @@ export default function SignUpScreen() {
     ticket ? 'processing-ticket' : 'no-ticket',
   );
   const [password, setPassword] = useState('');
+  // The invited address, shown read-only above the password field: it tells
+  // the member which account they're setting up, and gives the password
+  // manager a username to file the new credential under.
+  const [inviteEmail, setInviteEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -226,6 +235,7 @@ export default function SignUpScreen() {
           attempt.status === 'missing_requirements' &&
           attempt.missingFields.includes('password')
         ) {
+          setInviteEmail(attempt.emailAddress ?? '');
           setPhase('set-password');
           return;
         }
@@ -384,6 +394,31 @@ export default function SignUpScreen() {
             <>
               {renderHero('welcome', labels.setupSubtitle)}
               <FKGlassPanel radius={20} style={{ padding: 20, gap: 16 }}>
+                {inviteEmail ? (
+                  <Field label={labels.email} isRTL={isRTL}>
+                    <TextInput
+                      value={inviteEmail}
+                      editable={false}
+                      {...autofill('username')}
+                      style={{
+                        height: 48,
+                        paddingHorizontal: 14,
+                        borderRadius: 12,
+                        borderCurve: 'continuous',
+                        borderWidth: 1,
+                        borderColor: 'rgba(94,112,130,0.25)',
+                        backgroundColor: isDark
+                          ? 'rgba(118,118,128,0.12)'
+                          : 'rgba(118,118,128,0.06)',
+                        fontSize: 16,
+                        fontWeight: '500',
+                        color: colors.mutedFg,
+                        textAlign: 'left',
+                      }}
+                    />
+                  </Field>
+                ) : null}
+
                 <Field label={labels.password} isRTL={isRTL}>
                   <PasswordInput
                     value={password}
@@ -548,11 +583,9 @@ function PasswordInput({
         placeholderTextColor={
           isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
         }
-        autoCapitalize="none"
-        autoComplete="new-password"
-        autoCorrect={false}
+        {...autofill('newPassword')}
         secureTextEntry={!visible}
-        textContentType="newPassword"
+        passwordRules={PASSWORD_RULES}
         returnKeyType="go"
         onSubmitEditing={onSubmit}
         style={{

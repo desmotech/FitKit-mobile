@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
+import { autofill } from '@/lib/autofill';
 import { webUrl } from '@/lib/api';
 import { useHaptics } from '@/hooks/use-haptics';
 import { reportHandledError } from '@/lib/error-reporting';
@@ -202,6 +203,7 @@ export default function FeedbackScreen() {
                 onChangeText={setContent}
                 placeholder={labels.placeholder}
                 placeholderTextColor={colors.mutedFg}
+                {...autofill('off')}
                 multiline
                 maxLength={MAX_LENGTH}
                 style={{

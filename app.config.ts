@@ -67,7 +67,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     bundleIdentifier: 'fit.taikan.app',
     supportsTablet: false,
-    associatedDomains: ['applinks:app.taikan.fit'],
+    // `webcredentials` is what lets iOS Passwords offer the credential the
+    // member saved on app.taikan.fit (and file the one they set here under
+    // the same site). Needs a matching `webcredentials.apps` entry in the
+    // site's /.well-known/apple-app-site-association.
+    associatedDomains: [
+      'applinks:app.taikan.fit',
+      'webcredentials:app.taikan.fit',
+    ],
     infoPlist: {
       NSCameraUsageDescription:
         'Taikan uses the camera to scan check-in QR codes and to take progress photos and form-check videos.',
