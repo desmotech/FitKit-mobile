@@ -7,21 +7,28 @@
  *
  * Network staged via MSW; the real hooks, week math, and screen logic run.
  */
-import { screen, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import HomeScreen from '../(tabs)/index';
 import { homeStringsFor } from '@/i18n/home-strings';
 import { getWeekStartDay, weekStartFor, ymd } from '@/lib/week';
-import { stageSignedInMember } from '../../test/fixtures';
+import {
+  membership,
+  stageSignedInMember,
+  subscriptionWithPlan,
+  userMe,
+} from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
 
 const H = homeStringsFor('he');
 
+const mockPush = jest.fn();
+
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual<typeof import('react')>('react');
   return {
     useRouter: () => ({
-      push: jest.fn(),
+      push: mockPush,
       back: jest.fn(),
       replace: jest.fn(),
     }),
@@ -60,6 +67,41 @@ function todayWorkoutAssignment(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** A published class today at `hour` local, with no workout attached. */
+function todaySession(
+  overrides: Record<string, unknown> = {},
+  hour = 18,
+) {
+  const startsAt = new Date();
+  startsAt.setHours(hour, 0, 0, 0);
+  const endsAt = new Date(startsAt.getTime() + 60 * 60_000);
+  return {
+    id: 'sess_1',
+    classTypeId: 'ct_1',
+    title: null,
+    startsAt: startsAt.toISOString(),
+    endsAt: endsAt.toISOString(),
+    capacity: 12,
+    waitlistCapacity: 0,
+    status: 'published',
+    notes: null,
+    classType: { id: 'ct_1', name: 'Yoga', color: null, defaultDurationMin: 60 },
+    location: null,
+    coach: null,
+    workouts: [],
+    attendees: [],
+    bookingCount: 0,
+    capacityRemaining: 12,
+    myBookingStatus: null,
+    myCheckedInAt: null,
+    myCheckinMethod: null,
+    cancellationDeadline: null,
+    cancellationWindowHours: 2,
+    allowLateCancellation: false,
+    ...overrides,
+  };
+}
+
 function goal(overrides: Record<string, unknown> = {}) {
   return {
     id: 'goal_1',
@@ -80,12 +122,19 @@ function goal(overrides: Record<string, unknown> = {}) {
 function stageHome({
   assignments = [] as Record<string, unknown>[],
   goals = [] as Record<string, unknown>[],
+  sessions = [] as Record<string, unknown>[],
+  subscriptions = [] as Record<string, unknown>[],
 }: {
   assignments?: Record<string, unknown>[];
   goals?: Record<string, unknown>[];
+  sessions?: Record<string, unknown>[];
+  subscriptions?: Record<string, unknown>[];
 } = {}) {
   const requestedWeekStarts: (string | null)[] = [];
   server.use(
+    http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
+      HttpResponse.json({ data: subscriptions }),
+    ),
     http.get(
       api(`/organizations/${TEST_ORG}/assignments/my-week`),
       ({ request }) => {
@@ -96,7 +145,14 @@ function stageHome({
       },
     ),
     http.get(api(`/organizations/${TEST_ORG}/sessions`), () =>
-      HttpResponse.json({ data: [] }),
+      HttpResponse.json({ data: sessions }),
+    ),
+    // The peek sheet re-reads the session, because the week list is not
+    // guaranteed to carry each workout's sections.
+    http.get(api(`/organizations/${TEST_ORG}/sessions/:id`), ({ params }) =>
+      HttpResponse.json({
+        data: sessions.find((s) => (s as { id: string }).id === params.id),
+      }),
     ),
     http.get(api(`/organizations/${TEST_ORG}/goals/me`), () =>
       HttpResponse.json({ data: goals }),
@@ -110,6 +166,7 @@ function stageHome({
 }
 
 beforeEach(() => {
+  mockPush.mockClear();
   stageSignedInMember();
 });
 
@@ -188,20 +245,276 @@ describe('Home dashboard — Goals section', () => {
 
     expect(await screen.findByText('Back Squat')).toBeOnTheScreen();
     expect(screen.getByText('Deadlift')).toBeOnTheScreen();
-    // With goals present the empty-state nudge must be gone.
-    expect(screen.queryByText(H.noGoals)).not.toBeOnTheScreen();
   });
 
-  it('nudges toward creating a first goal when none are active', async () => {
+  // The section used to answer an empty goal list with a "set your first
+  // goal" card — a second Add goal CTA one scroll below the Quick actions
+  // tile. The tile is the one that stayed, so an empty list now means no
+  // section at all rather than a heading over a nudge.
+  it('drops the whole section when no goal is active', async () => {
     stageHome({
       goals: [goal({ status: 'archived' })],
     });
 
     await renderWithProviders(<HomeScreen />);
 
-    expect(await screen.findByText(H.noGoals)).toBeOnTheScreen();
+    // Quick actions still offers the one Add goal there is.
+    expect(await screen.findByText(H.addGoal)).toBeOnTheScreen();
     await waitFor(() =>
-      expect(screen.queryByText('Back Squat')).not.toBeOnTheScreen(),
+      expect(screen.queryByText(H.goalsTitle)).not.toBeOnTheScreen(),
     );
+    expect(screen.queryByText('Back Squat')).not.toBeOnTheScreen();
   });
+});
+
+
+/**
+ * "On today" — what the gym runs today, aggregated by CLASS TYPE. A box that
+ * runs CrossFit four times has one tile, not four: Home is a glance surface,
+ * and four tiles carrying the same whiteboard would make it a worse copy of
+ * the Schedule tab. The peek sheet is the point — the day's whiteboard,
+ * without leaving the screen.
+ */
+describe('Home dashboard — On today rail', () => {
+  const WOD = [
+    {
+      id: 'w_class',
+      title: 'Cindy',
+      displayName: 'Cindy',
+      description: '20 minutes AMRAP',
+      scoring: 'rounds',
+      mode: 'fixed',
+      timeCap: 20,
+      sortOrder: 0,
+      sections: [],
+    },
+  ];
+
+  it('collapses every session of a type into one tile', async () => {
+    stageHome({
+      sessions: [
+        todaySession({ id: 'sess_1', workouts: WOD }, 7),
+        todaySession({ id: 'sess_2', workouts: WOD }, 17),
+        todaySession({ id: 'sess_3', workouts: WOD }, 18),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    expect(await screen.findAllByText('Yoga')).toHaveLength(1);
+    expect(screen.getByText(H.classCount.replace('{count}', '3'))).toBeOnTheScreen();
+  }, 15000);
+
+  it('keeps distinct types apart, earliest first', async () => {
+    stageHome({
+      sessions: [
+        todaySession(
+          {
+            id: 'sess_wod',
+            classTypeId: 'ct_2',
+            classType: { id: 'ct_2', name: 'CrossFit', color: null, defaultDurationMin: 60 },
+          },
+          19,
+        ),
+        todaySession({ id: 'sess_yoga' }, 7),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    expect(await screen.findByText('Yoga')).toBeOnTheScreen();
+    expect(screen.getByText('CrossFit')).toBeOnTheScreen();
+  }, 15000);
+
+  it('peeks at the programmed workout without leaving Home', async () => {
+    stageHome({
+      sessions: [
+        todaySession({ id: 'sess_1', workouts: WOD }, 7),
+        todaySession({ id: 'sess_2', workouts: WOD }, 18),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    // Read off the earliest session of the type, once — not once per class.
+    expect(await screen.findByText('Cindy')).toBeOnTheScreen();
+    expect(mockPush).not.toHaveBeenCalled();
+  }, 15000);
+
+  // An org that doesn't program its classes — or deleted the workout's
+  // sections and left the shell — has nothing to peek at. Offering the sheet
+  // anyway opens it onto blank space.
+  it('offers no peek for a workout with nothing in it', async () => {
+    stageHome({
+      sessions: [
+        todaySession({
+          workouts: [{ ...WOD[0], sections: [], description: null }],
+        }),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(tabs)/schedule/[id]',
+        params: { id: 'sess_1' },
+      }),
+    );
+  }, 15000);
+
+  // The tile decides off the cached week list; the gym can delete the
+  // programme before the sheet asks the server for it.
+  it('says the workout is gone rather than opening an empty sheet', async () => {
+    stageHome({ sessions: [todaySession({ workouts: WOD })] });
+    // The detail read answers with the same session, minus its workout.
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/sessions/:id`), () =>
+        HttpResponse.json({ data: todaySession({ workouts: [] }) }),
+      ),
+    );
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    expect(await screen.findByText(H.peekEmpty)).toBeOnTheScreen();
+    // The way out to the real screen stays, whatever the sheet found.
+    expect(screen.getByText(H.openClass)).toBeOnTheScreen();
+  }, 15000);
+
+  it('offers a retry when the peek read fails outright', async () => {
+    stageHome({ sessions: [todaySession({ workouts: WOD })] });
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/sessions/:id`), () =>
+        HttpResponse.json({ message: 'gone' }, { status: 404 }),
+      ),
+    );
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    // `useApiQuery` retries a non-401 three times with backoff, so the error
+    // state is ~7s away — the wait has to outlast the retries, or this asserts
+    // on a sheet that is still loading.
+    expect(
+      await screen.findByText(H.loadFailedTitle, {}, { timeout: 15000 }),
+    ).toBeOnTheScreen();
+    expect(screen.getByText(H.tryAgain)).toBeOnTheScreen();
+  }, 30000);
+
+  it('opens the one class itself when nothing is programmed', async () => {
+    stageHome({ sessions: [todaySession()] });
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(tabs)/schedule/[id]',
+        params: { id: 'sess_1' },
+      }),
+    );
+  }, 15000);
+
+  // No single session represents a type that runs four times, so the day is
+  // the only honest destination.
+  it('opens the day when an unprogrammed type runs more than once', async () => {
+    stageHome({
+      sessions: [
+        todaySession({ id: 'sess_1' }, 7),
+        todaySession({ id: 'sess_2' }, 18),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith('/(tabs)/schedule'),
+    );
+  }, 15000);
+});
+
+/**
+ * FIT-287 presale: the member paid at a gym that has not opened yet. Their
+ * board is empty and their card is untouched, both correctly — the card is
+ * what stops that reading as a purchase that silently failed.
+ */
+describe('Home dashboard — presale welcome', () => {
+  /** `/users/me` with an opening day `days` from now, in `YYYY-MM-DD`. */
+  function stagePreOpenGym(days: number) {
+    const opensOn = new Intl.DateTimeFormat('en-CA').format(
+      new Date(Date.now() + days * 86_400_000),
+    );
+    stageSignedInMember(
+      userMe({
+        memberships: [
+          membership({
+            organization: {
+              id: TEST_ORG,
+              name: 'Test Gym',
+              opensOn,
+            },
+          } as never),
+        ],
+      }),
+    );
+    return opensOn;
+  }
+
+  it('welcomes a member whose purchase is waiting for opening day', async () => {
+    stagePreOpenGym(12);
+    stageHome({
+      subscriptions: [
+        subscriptionWithPlan({
+          status: 'scheduled',
+          nextChargeAt: new Date(
+            Date.now() + 12 * 86_400_000,
+          ).toISOString(),
+        } as never),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    expect(await screen.findByText(H.presaleTitle)).toBeOnTheScreen();
+    expect(
+      screen.getByText(H.presaleCountdown.replace('{days}', '12')),
+    ).toBeOnTheScreen();
+    // Nothing is programmed and nothing can be booked yet, so the open-day
+    // nudge toward the week would be a second, worse answer to the same
+    // question the card just answered.
+    expect(screen.queryByText(H.openDayTitle)).not.toBeOnTheScreen();
+  }, 15000);
+
+  it('leaves the ordinary screen alone for a member who has not bought', async () => {
+    stagePreOpenGym(12);
+    stageHome({ subscriptions: [] });
+
+    await renderWithProviders(<HomeScreen />);
+
+    // The open-day card is the tell that the normal Today section rendered.
+    expect(await screen.findByText(H.openDayTitle)).toBeOnTheScreen();
+    expect(screen.queryByText(H.presaleTitle)).not.toBeOnTheScreen();
+  }, 15000);
+
+  it('says nothing once the gym has opened', async () => {
+    stagePreOpenGym(-1);
+    stageHome({
+      subscriptions: [subscriptionWithPlan({ status: 'active' })],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    expect(await screen.findByText(H.openDayTitle)).toBeOnTheScreen();
+    expect(screen.queryByText(H.presaleTitle)).not.toBeOnTheScreen();
+  }, 15000);
 });

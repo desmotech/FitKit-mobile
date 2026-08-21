@@ -34,7 +34,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FKModalHeader, useFKColors } from '@/components/fk';
+import { FKActionBar, FKBtn, FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import {
@@ -90,6 +90,7 @@ export default function CancelSubscriptionScreen() {
       reasonPlaceholder:
         get(t, cd + 'reasonPlaceholder') ?? "Tell us what's going on…",
       keep: get(t, cd + 'cancelAction') ?? 'Keep subscription',
+      close: get(t, 'common.close') ?? 'Close',
       confirm: get(t, cd + 'confirmPeriodEnd') ?? 'Cancel membership',
       scheduled:
         get(t, cd + 'periodEndScheduled') ??
@@ -188,12 +189,10 @@ export default function CancelSubscriptionScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FKModalHeader
         title={L.title}
-        leadingAction={{ label: L.keep, onPress: () => router.back() }}
-        trailingAction={{
-          label: L.confirm,
-          onPress: handleSubmit,
-          style: 'destructive',
-          disabled: !canSubmit,
+        leadingAction={{
+          label: L.close,
+          onPress: () => router.back(),
+          disabled: submitting,
         }}
       />
       <KeyboardAvoidingView
@@ -201,10 +200,12 @@ export default function CancelSubscriptionScreen() {
         style={{ flex: 1 }}
       >
         <ScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={{
             paddingHorizontal: 20,
             paddingTop: 16,
-            paddingBottom: 48,
+            paddingBottom: 24,
             gap: 18,
           }}
           showsVerticalScrollIndicator={false}
@@ -308,6 +309,26 @@ export default function CancelSubscriptionScreen() {
             </View>
           </View>
         </ScrollView>
+
+        {/* Stacked, not side by side: both labels are whole sentences in
+            Hebrew and would wrap into two-line slabs sharing a row. No `full`
+            either — `flex: 1` in an auto-height column collapses to zero. */}
+        <FKActionBar>
+          <View style={{ flex: 1, gap: 10 }}>
+            <FKBtn
+              variant="danger"
+              label={L.confirm}
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+            />
+            <FKBtn
+              variant="ghost"
+              label={L.keep}
+              onPress={() => router.back()}
+              disabled={submitting}
+            />
+          </View>
+        </FKActionBar>
       </KeyboardAvoidingView>
     </View>
   );

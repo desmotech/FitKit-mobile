@@ -7,6 +7,7 @@
  */
 import { fireEvent, screen } from '@testing-library/react-native';
 import { MembershipCard } from '../membership-card';
+import { formatPrice } from '@/lib/format-price';
 import { renderWithProviders } from '../../../../test/render';
 
 const LABELS = {
@@ -22,6 +23,10 @@ const LABELS = {
   checkoutNotCompleted: 'Checkout not completed',
   checkoutNotCompletedNote:
     'This checkout was never completed, so no membership started.',
+  presalePurchased:
+    'Purchase confirmed. Your first charge is on {date}, the day we open.',
+  presalePurchasedWithAmount:
+    'Purchase confirmed. Your first charge of {amount} is on {date}, the day we open.',
 };
 
 const STATUS = {
@@ -31,6 +36,7 @@ const STATUS = {
   paused: 'Frozen',
   debt: 'Balance due',
   pending: 'Awaiting payment',
+  scheduled: 'Starts when we open',
 };
 
 function renderCard(sub: Record<string, unknown>) {
@@ -199,5 +205,67 @@ describe('MembershipCard — early renewal CTA', () => {
     );
     fireEvent.press(screen.getByTestId('renew-early-cta'));
     expect(onRenewEarly).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+/**
+ * FIT-287 presale. A subscription bought before the gym opened is
+ * `scheduled`: card on file, nothing charged, access starting on opening day.
+ * Every other branch of this card reads it as a membership that has already
+ * begun — "Expires {date}" over a period that never started — so the two
+ * facts a member wants (the purchase went through, the money comes out on the
+ * opening date) have to be said outright.
+ */
+describe('MembershipCard — presale purchase', () => {
+  const OPENS = '2026-09-01T00:00:00.000Z';
+  const presale = {
+    status: 'scheduled',
+    displayStatus: 'scheduled',
+    memberAction: 'none',
+    nextChargeAt: OPENS,
+    currentPeriodEnd: null,
+  };
+
+  it('names the first-charge date and the amount', async () => {
+    await renderCard({
+      ...presale,
+      effectivePriceInCents: 36800,
+      plan: { name: 'Founders', currency: 'ILS' },
+    });
+
+    // Formatted through the app's own helper rather than a literal: the ILS
+    // pattern carries RTL marks whose exact placement is an ICU detail.
+    const amount = formatPrice(36800, 'ILS', 'he');
+    const date = new Date(OPENS).toLocaleDateString('he');
+    expect(
+      screen.getByText(
+        `Purchase confirmed. Your first charge of ${amount} is on ${date}, the day we open.`,
+      ),
+    ).toBeOnTheScreen();
+    expect(screen.getByText('STARTS WHEN WE OPEN')).toBeOnTheScreen();
+  });
+
+  // An API build without `effectivePriceInCents` must still get the date out
+  // rather than guessing an amount off the plan's list price.
+  it('falls back to the date alone when the server sent no amount', async () => {
+    await renderCard(presale);
+
+    const date = new Date(OPENS).toLocaleDateString('he');
+    expect(
+      screen.getByText(`Purchase confirmed. Your first charge is on ${date}, the day we open.`),
+    ).toBeOnTheScreen();
+  });
+
+  it('never says the membership expires — it has not started', async () => {
+    await renderCard({ ...presale, currentPeriodEnd: '2026-10-01T00:00:00.000Z' });
+
+    expect(screen.queryByText(/Expires/)).toBeNull();
+  });
+
+  it('says nothing of the sort on an ordinary active membership', async () => {
+    await renderCard({ status: 'active', memberAction: 'none' });
+
+    expect(screen.queryByTestId('membership-presale-note')).toBeNull();
   });
 });

@@ -10,6 +10,18 @@ import { estimateDuration } from '@/lib/workout-estimate';
 import type { WorkoutLite, WorkoutMovement } from '@/hooks/use-workouts';
 
 /**
+ * Whether a workout has anything a preview can show.
+ *
+ * The same rule the block renders by, exported because callers have to make
+ * the decision BEFORE mounting one: a coach who deleted a workout's sections
+ * leaves a titled shell behind, and a surface that offers a peek at it opens
+ * an empty sheet. Two copies of this rule would drift into exactly that.
+ */
+export function hasPreviewContent(workout: WorkoutLite): boolean {
+  return (workout.sections ?? []).length > 0 || !!workout.description;
+}
+
+/**
  * The class-detail "what am I booking?" preview. Shares its header with the
  * member's own Program detail (WorkoutPoster) and its body with the same
  * sheet (ProgramSheetSections, in `preview` variant) — the two screens differ
@@ -42,7 +54,7 @@ export function WorkoutBlock({
     0,
   );
 
-  if (sections.length === 0 && !workout.description) return null;
+  if (!hasPreviewContent(workout)) return null;
 
   // Scoring leads the stamps — it is the fact that decides how you pace the
   // workout, and for someone deciding whether to book, how they decide at all.
