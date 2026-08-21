@@ -88,6 +88,7 @@ export default function MetricsScreen() {
       onAdd={handleAdd}
       addLabel={labels.addMetric}
       contentStyle={{ gap: 12 }}
+      maskFromReplay
     >
         {summary.isLoading ? (
           <>

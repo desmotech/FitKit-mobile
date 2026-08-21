@@ -25,6 +25,7 @@ import {
   KeyboardAwareScrollView,
   KeyboardStickyView,
 } from 'react-native-keyboard-controller';
+import { PostHogMaskView } from 'posthog-react-native';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import { FKActionBar } from './action-bar';
 import { FKAmbientBackdrop } from './ambient-backdrop';
@@ -45,6 +46,7 @@ export function FKSubScreen({
   onScroll,
   scrollEventThrottle,
   contentStyle,
+  maskFromReplay = false,
   children,
 }: {
   title: string;
@@ -70,6 +72,10 @@ export function FKSubScreen({
   onScroll?: ComponentProps<typeof ScrollView>['onScroll'];
   scrollEventThrottle?: number;
   contentStyle?: ViewStyle;
+  /** Hide the whole screen from session replay. For health, identity and
+   *  payment data: the recorder works off screenshots, so plain `<Text>` is
+   *  captured unless the view it sits in says otherwise. */
+  maskFromReplay?: boolean;
   children: ReactNode;
 }) {
   const dockPad = useTabBarPadding();
@@ -100,8 +106,12 @@ export function FKSubScreen({
   // the form into a sliver and strands the ActionBar mid-screen.
   const Scroller = keyboardAvoiding ? KeyboardAwareScrollView : ScrollView;
 
+  // Same flex root either way — PostHogMaskView is a View that tags itself
+  // `ph-no-capture` and opts out of view flattening.
+  const Root = maskFromReplay ? PostHogMaskView : View;
+
   return (
-    <View style={{ flex: 1 }}>
+    <Root style={{ flex: 1 }}>
       <FKAmbientBackdrop />
       <FKScreenHeader
         title={title}
@@ -137,6 +147,6 @@ export function FKSubScreen({
           <FKActionBar>{actions}</FKActionBar>
         </KeyboardStickyView>
       ) : null}
-    </View>
+    </Root>
   );
 }

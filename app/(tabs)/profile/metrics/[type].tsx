@@ -132,6 +132,7 @@ export default function MetricDetailScreen() {
       title={typeLabel}
       onAdd={handleAdd}
       addLabel={labels.addMetric}
+      maskFromReplay
     >
         {history.isLoading ? (
           <>

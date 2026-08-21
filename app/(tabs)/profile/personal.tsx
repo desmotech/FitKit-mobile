@@ -166,6 +166,7 @@ export default function PersonalDetailsScreen() {
       title={labels.title}
       keyboardAvoiding
       contentStyle={{ gap: 18 }}
+      maskFromReplay
       actions={
         <>
           <FKBtn

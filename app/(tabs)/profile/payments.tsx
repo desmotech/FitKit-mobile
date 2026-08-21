@@ -540,7 +540,7 @@ export default function PaymentsScreen() {
   const cardBusy = resolving || registerCard.isPending;
 
   return (
-    <FKSubScreen title={labels.title} contentStyle={{ gap: 20 }}>
+    <FKSubScreen title={labels.title} contentStyle={{ gap: 20 }} maskFromReplay>
         {isDebt && (
           <Animated.View entering={FadeInDown.duration(280)}>
             <View
