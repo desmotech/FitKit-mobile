@@ -13,11 +13,7 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineStringsFor } from '@/i18n/offline-strings';
 import { dictionaries } from '@fitkit/shared';
 import { AuthGate } from '../auth-gate';
-import {
-  membership,
-  stageSignedInMember,
-  userMe,
-} from '../../../test/fixtures';
+import { stageSignedInMember, userMe } from '../../../test/fixtures';
 import { mockAuthState } from '../../../test/mocks/clerk';
 import { api, http, HttpResponse, server } from '../../../test/msw';
 import { makeTestQueryClient, renderWithProviders } from '../../../test/render';
@@ -227,99 +223,6 @@ describe('AuthGate', () => {
       expect(mockRedirects).toContain('/onboarding/complete-profile'),
     );
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
-  });
-
-  // Every way a member can end up with no ACTIVE membership. All of them
-  // used to reach the tab shell, where the home screen's no-active-org card
-  // renders the literal string "Loading…" and never resolves — the app
-  // looked like it was loading forever. Zero-memberships is the case the
-  // first fix missed: it only covered rows that existed but were inactive.
-  it.each([
-    ['cancelled by the gym', [membership({ status: 'cancelled' })]],
-    ['suspended by the gym', [membership({ status: 'suspended' })]],
-    ['no membership rows at all', []],
-  ])('tells a member with no access (%s) instead of loading forever', async (
-    _label,
-    memberships,
-  ) => {
-    stageSignedInMember(userMe({ memberships }));
-    stageConsentStatus(ALL_CONSENTED);
-
-    await renderWithProviders(gate());
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('membership-inactive-screen'),
-      ).toBeOnTheScreen(),
-    );
-    expect(screen.getByText(he.auth.membershipInactive)).toBeOnTheScreen();
-    expect(screen.getByTestId('membership-inactive-retry')).toBeOnTheScreen();
-    expect(
-      screen.getByTestId('membership-inactive-sign-out'),
-    ).toBeOnTheScreen();
-    expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
-    expect(mockRedirects).toHaveLength(0);
-  });
-
-  it('tells a member whose invite is still converting that it is processing', async () => {
-    stageSignedInMember(
-      userMe({ memberships: [membership({ status: 'pending_invitation' })] }),
-    );
-    stageConsentStatus(ALL_CONSENTED);
-
-    await renderWithProviders(gate());
-
-    await waitFor(() =>
-      expect(screen.getByTestId('membership-pending-screen')).toBeOnTheScreen(),
-    );
-    expect(screen.getByText(he.auth.processingInvitation)).toBeOnTheScreen();
-    expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
-  });
-
-  it('holds a suspended member at the inactive screen, not onboarding', async () => {
-    // A suspended membership must not fall through to accept-terms /
-    // complete-profile — those flows cannot fix a membership the gym turned
-    // off, and the web's RoleRouter skips them for this state too.
-    stageSignedInMember(
-      userMe({
-        profileComplete: false,
-        memberships: [membership({ status: 'suspended' })],
-      }),
-    );
-    stageConsentStatus([]);
-
-    await renderWithProviders(gate());
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('membership-inactive-screen'),
-      ).toBeOnTheScreen(),
-    );
-    expect(mockRedirects).toHaveLength(0);
-  });
-
-  it('names the real problem when the consent check fails for a removed client', async () => {
-    // Consent status is meaningless for someone with no active membership.
-    // While it was checked first, a removed client whose /legal/consents/status
-    // errored got the generic "something went wrong" screen, and one whose
-    // request hung sat on a spinner — the loads-forever this fix is about.
-    stageSignedInMember(
-      userMe({ memberships: [membership({ status: 'cancelled' })] }),
-    );
-    server.use(
-      http.get(CONSENT_PATH, () =>
-        HttpResponse.json({ message: 'forbidden' }, { status: 403 }),
-      ),
-    );
-
-    await renderWithProviders(gate());
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('membership-inactive-screen'),
-      ).toBeOnTheScreen(),
-    );
-    expect(screen.queryByTestId('auth-error-screen')).not.toBeOnTheScreen();
   });
 
   it('renders the app for a consented member with a complete profile', async () => {

@@ -55,17 +55,6 @@ export interface CurrentUserContext {
   isNewUser: boolean;
   /** True when user has memberships but none are active (only pending invites). */
   hasPendingMembership: boolean;
-  /** True when user has memberships but none are active or pending — the
-   *  client was cancelled/suspended (or soft-deleted) by the gym. Mirrors
-   *  the web's use-current-user. */
-  isMembershipInactive: boolean;
-  /** True when the user holds NO active membership, whatever the reason:
-   *  cancelled/suspended (removed client), soft-deleted by erasure, only a
-   *  pending invite, or no membership rows at all. This — not the narrower
-   *  `isMembershipInactive` — is what the mobile gate keys on: the app is
-   *  member-only (no course-viewer surface like the web has), so there is
-   *  nothing any of these users can be shown but an explanation. */
-  hasNoActiveMembership: boolean;
   /** True when user is signed in + has an active membership but profile is not yet
    *  filled in (name / phone / national-id / birth-date). Gates /complete-profile. */
   isProfileIncomplete: boolean;
@@ -122,19 +111,6 @@ export function useCurrentUser(): CurrentUserContext {
       !isLoading &&
       activeMemberships.length === 0 &&
       pendingMemberships.length > 0,
-    isMembershipInactive:
-      !isLoading &&
-      memberships.length > 0 &&
-      activeMemberships.length === 0 &&
-      pendingMemberships.length === 0,
-    // `!!user` is load-bearing: offline with nothing cached, the /users/me
-    // query is PAUSED — which react-query reports as isLoading:false (nothing
-    // is in flight) with no data. Without this guard that reads as "zero
-    // memberships" and an offline member gets told their membership was
-    // cancelled instead of getting the offline screen. No payload means we
-    // know nothing, not that they have no access.
-    hasNoActiveMembership:
-      !isLoading && !!user && activeMemberships.length === 0,
     isProfileIncomplete:
       !isLoading &&
       !!user &&

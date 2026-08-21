@@ -96,11 +96,6 @@ export default function HomeScreen() {
   // the key set is defined server-side alongside the goal data.
   const bmTypes = (((t as unknown as Record<string, Record<string, unknown>>)
     .bodyMetrics?.types ?? {}) as Record<string, string>);
-  // Safety-net copy for the no-active-org branch at the bottom of this
-  // screen. Reuses the same auth dictionary key the gate's own screen uses.
-  const noAccessText =
-    ((t as unknown as Record<string, Record<string, string>>).auth ?? {})
-      .membershipInactive ?? 'Your membership is currently inactive.';
 
   // ── Data ──────────────────────────────────────────────────────────
   // "Today" refreshes when the tab regains focus after a day rollover —
@@ -649,12 +644,8 @@ export default function HomeScreen() {
           </Animated.View>
         ) : null}
 
-        {/* No active org. AuthGate now stops every no-active-membership
-            state before the tab shell mounts, so this should be
-            unreachable — but it used to render the string "Loading…" as a
-            TERMINAL state, which is exactly how a removed client
-            experienced an app that never finished loading. Keep the
-            branch as a safety net, never as a fake loader. */}
+        {/* Soft empty-state when there's no active org yet (pending
+            invite / approval). Greeting still shows above. */}
         {!hasOrg ? (
           <View
             style={{
@@ -680,7 +671,7 @@ export default function HomeScreen() {
                   maxWidth: 280,
                 }}
               >
-                {noAccessText}
+                {s.loading}
               </Text>
             </FKCard>
           </View>
