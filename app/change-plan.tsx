@@ -23,7 +23,7 @@ import { FKGlassPanel, FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useMySubscription } from '@/hooks/use-feed-data';
-import { usePlans } from '@/hooks/use-shop';
+import { isOfferedInShop, usePlans } from '@/hooks/use-shop';
 import {
   useChangePlanPreview,
   useMemberChangePlan,
@@ -82,6 +82,10 @@ export default function ChangePlanScreen() {
         (p) =>
           p.type === 'subscription' &&
           p.isActive &&
+          // Hidden plans aren't change targets either: members can't buy
+          // them (server rejects), and staff previewing the member flow
+          // shouldn't be offered rows the storefront never shows.
+          isOfferedInShop(p) &&
           p.id !== subscription?.planId &&
           // A capped plan with no seats left is refused server-side
           // (PLAN_SOLD_OUT); don't offer it as a target at all.

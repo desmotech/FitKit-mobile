@@ -17,6 +17,20 @@ import type {
  * (src/hooks/use-feed-data.ts).
  */
 
+/**
+ * Whether a plan belongs in a member-facing storefront surface.
+ *
+ * The API filters `showInShop=false` rows out of member responses, but for
+ * staff roles (owner/admin/coach) it returns the FULL catalog — the same
+ * endpoint feeds the web dashboard, which needs hidden plans to manage them.
+ * Mobile is a storefront on every role, so it must honor the flag itself or
+ * a staff account sees hidden plans in the Shop tab. Absent field (older API
+ * builds predating FIT hidden plans) means the plan was always visible.
+ */
+export function isOfferedInShop(plan: Pick<PlanResponse, 'showInShop'>) {
+  return plan.showInShop !== false;
+}
+
 export function usePlans(orgId: string | undefined | null) {
   return useApiQuery<ApiEnvelope<PlanResponse[]>>({
     path: orgId ? `/organizations/${orgId}/plans` : '',
