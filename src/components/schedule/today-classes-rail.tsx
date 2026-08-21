@@ -421,129 +421,131 @@ function ClassPeekSheet({
             borderCurve: 'continuous',
           }}
         >
-          <View>
-            <View style={{ alignItems: 'center', paddingTop: 8 }}>
-              <View
-                style={{
-                  width: 36,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: colors.border,
-                }}
-              />
-            </View>
+          <View style={{ alignItems: 'center', paddingTop: 8 }}>
+            <View
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.border,
+              }}
+            />
+          </View>
 
-            <View style={{ paddingHorizontal: 18, paddingTop: 12 }}>
+          <View style={{ paddingHorizontal: 18, paddingTop: 12 }}>
+            <Text
+              numberOfLines={2}
+              style={{
+                fontSize: 19,
+                color: colors.foreground,
+                letterSpacing: -0.4,
+                textAlign: isRTL ? 'right' : 'left',
+                fontFamily: bodyFamily(lang, 'bold'),
+              }}
+            >
+              {heading}
+            </Text>
+            {subheading ? (
               <Text
-                numberOfLines={2}
                 style={{
-                  fontSize: 19,
-                  color: colors.foreground,
-                  letterSpacing: -0.4,
+                  fontSize: 12.5,
+                  color: colors.mutedFg,
+                  marginTop: 2,
                   textAlign: isRTL ? 'right' : 'left',
-                  fontFamily: bodyFamily(lang, 'bold'),
                 }}
               >
-                {heading}
+                {subheading}
               </Text>
-              {subheading ? (
+            ) : null}
+          </View>
+
+          <ScrollView
+            // RN defaults flexShrink to 0: without this the scroll view
+            // claims its full content height inside the sheet's maxHeight
+            // and pushes the footer button off the bottom of the screen.
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: 18,
+              paddingTop: 14,
+              paddingBottom: 8,
+              gap: 14,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            {detail.isLoading && !session ? (
+              <Skeleton style={{ height: 220, borderRadius: 18 }} />
+            ) : (
+              workouts.map((w) => (
+                <WorkoutBlock
+                  key={w.id}
+                  workout={w}
+                  scoringT={scoringT}
+                  isRTL={isRTL}
+                  lang={lang}
+                  colors={colors}
+                  ps={ps}
+                  minutesLabel={labels.minSuffix}
+                  onPlayVideo={(mv) => {
+                    if (!mv.exercise.videoUrl || !session) return;
+                    // Close first — a route pushed under an open modal
+                    // renders behind it.
+                    onClose();
+                    watchDemo({
+                      url: mv.exercise.videoUrl,
+                      title: mv.exercise.name,
+                      routeId: session.id,
+                    });
+                  }}
+                />
+              ))
+            )}
+          </ScrollView>
+
+          <Pressable
+            onPress={() => group && onOpenTarget(group)}
+            accessibilityRole="button"
+            accessibilityLabel={footerLabel}
+            style={{
+              paddingHorizontal: 18,
+              paddingTop: 12,
+              paddingBottom: footerInset + 10,
+              borderTopWidth: StyleSheet.hairlineWidth,
+              borderTopColor: colors.border,
+            }}
+          >
+            {({ pressed }) => (
+              <View
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  height: 46,
+                  borderRadius: 14,
+                  borderCurve: 'continuous',
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.8 : 1,
+                }}
+              >
+                <CalendarDays
+                  size={16}
+                  color={colors.primaryText}
+                  strokeWidth={2.4}
+                />
+                {/* One class today → that class. Several → the day. */}
                 <Text
                   style={{
-                    fontSize: 12.5,
-                    color: colors.mutedFg,
-                    marginTop: 2,
-                    textAlign: isRTL ? 'right' : 'left',
+                    fontSize: 14,
+                    color: colors.primaryText,
+                    fontFamily: bodyFamily(lang, 'bold'),
                   }}
                 >
-                  {subheading}
+                  {footerLabel}
                 </Text>
-              ) : null}
-            </View>
-
-            <ScrollView
-              contentContainerStyle={{
-                paddingHorizontal: 18,
-                paddingTop: 14,
-                paddingBottom: 8,
-                gap: 14,
-              }}
-              showsVerticalScrollIndicator={false}
-            >
-              {detail.isLoading && !session ? (
-                <Skeleton style={{ height: 220, borderRadius: 18 }} />
-              ) : (
-                workouts.map((w) => (
-                  <WorkoutBlock
-                    key={w.id}
-                    workout={w}
-                    scoringT={scoringT}
-                    isRTL={isRTL}
-                    lang={lang}
-                    colors={colors}
-                    ps={ps}
-                    minutesLabel={labels.minSuffix}
-                    onPlayVideo={(mv) => {
-                      if (!mv.exercise.videoUrl || !session) return;
-                      // Close first — a route pushed under an open modal
-                      // renders behind it.
-                      onClose();
-                      watchDemo({
-                        url: mv.exercise.videoUrl,
-                        title: mv.exercise.name,
-                        routeId: session.id,
-                      });
-                    }}
-                  />
-                ))
-              )}
-            </ScrollView>
-
-            <Pressable
-              onPress={() => group && onOpenTarget(group)}
-              accessibilityRole="button"
-              accessibilityLabel={footerLabel}
-              style={{
-                paddingHorizontal: 18,
-                paddingTop: 12,
-                paddingBottom: footerInset + 10,
-                borderTopWidth: StyleSheet.hairlineWidth,
-                borderTopColor: colors.border,
-              }}
-            >
-              {({ pressed }) => (
-                <View
-                  style={{
-                    flexDirection: isRTL ? 'row-reverse' : 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    height: 46,
-                    borderRadius: 14,
-                    borderCurve: 'continuous',
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    opacity: pressed ? 0.8 : 1,
-                  }}
-                >
-                  <CalendarDays
-                    size={16}
-                    color={colors.primaryText}
-                    strokeWidth={2.4}
-                  />
-                  {/* One class today → that class. Several → the day. */}
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      color: colors.primaryText,
-                      fontFamily: bodyFamily(lang, 'bold'),
-                    }}
-                  >
-                    {footerLabel}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+              </View>
+            )}
+          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
