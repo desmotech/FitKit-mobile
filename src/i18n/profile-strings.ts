@@ -158,7 +158,7 @@ const HE: ProfileStrings = {
   renew: 'חידוש',
   renewing: 'מחדש…',
   managePlan: 'ניהול מנוי',
-  completePayment: 'השלמת תשלום',
+  completePayment: 'השלמת התשלום',
   updateCard: 'עדכון כרטיס',
   endedByGym: 'המנוי הופסק על ידי המועדון',
   checkoutNotCompleted: 'התשלום לא הושלם',

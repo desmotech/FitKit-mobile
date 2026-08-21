@@ -35,23 +35,23 @@ const en: WithdrawScheduledStrings = {
   cta: 'Cancel, free of charge',
   confirmTitle: 'Cancel before it starts',
   confirmDescription:
-    'Your {plan} membership has not started yet. Nothing was charged, your spot is released, and you can join again any time.',
+    'Cancel your {plan} membership before it begins. Nothing was charged, your spot is released, and you can join again any time.',
   keepAction: 'Keep my spot',
-  confirmAction: 'Cancel membership',
+  confirmAction: 'Cancel, free of charge',
   success: 'Your spot was released. Nothing was charged.',
-  error: "Couldn't cancel this membership. Please try again.",
+  error: 'Could not cancel this membership. Please try again.',
   withdrawing: 'Cancelling…',
 };
 
 const he: WithdrawScheduledStrings = {
   cta: 'ביטול ללא עלות',
-  confirmTitle: 'ביטול לפני תחילת המנוי',
+  confirmTitle: 'ביטול לפני תחילת מסלול החברות',
   confirmDescription:
-    'המנוי {plan} עדיין לא התחיל. לא בוצע חיוב, המקום משוחרר, ואפשר להצטרף שוב בכל עת.',
+    'ביטול מסלול החברות {plan} עוד לפני שהוא מתחיל. לא בוצע חיוב, המקום מתפנה, ואפשר להצטרף מחדש בכל רגע.',
   keepAction: 'שמירת המקום',
-  confirmAction: 'ביטול המנוי',
+  confirmAction: 'ביטול ללא עלות',
   success: 'המקום שוחרר. לא בוצע חיוב.',
-  error: 'לא הצלחנו לבטל את המנוי. נסו שוב.',
+  error: 'לא הצלחנו לבטל את מסלול החברות. נסו שוב.',
   withdrawing: 'מבטל…',
 };
 
@@ -59,9 +59,9 @@ const ru: WithdrawScheduledStrings = {
   cta: 'Отменить бесплатно',
   confirmTitle: 'Отмена до начала',
   confirmDescription:
-    'Абонемент {plan} ещё не начался. Списаний не было, ваше место освобождается, и вы сможете присоединиться снова в любое время.',
+    'Отмена абонемента {plan} до его начала. Списаний не было, место освобождается, и вы сможете вернуться в любой момент.',
   keepAction: 'Оставить место',
-  confirmAction: 'Отменить абонемент',
+  confirmAction: 'Отменить бесплатно',
   success: 'Место освобождено. Списаний не было.',
   error: 'Не удалось отменить абонемент. Попробуйте ещё раз.',
   withdrawing: 'Отмена…',

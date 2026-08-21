@@ -42,9 +42,9 @@ export interface CheckoutDecisionStrings {
 const en: CheckoutDecisionStrings = {
   failedTitle: 'Payment did not go through',
   failedDesc:
-    'Your card was not charged. You can try the payment again, or cancel this purchase.',
+    'Your card was not charged. You can try the payment again, or cancel the purchase.',
   cancelledHint:
-    'You left the payment page before paying, so nothing was charged.',
+    'Nothing was charged. Finish the payment now, or cancel the purchase and the plan goes back to the shop.',
   resumeAction: 'Resume payment',
   cancelPurchaseAction: 'Cancel purchase',
   resuming: 'Opening payment…',
@@ -57,9 +57,10 @@ const en: CheckoutDecisionStrings = {
 const he: CheckoutDecisionStrings = {
   failedTitle: 'התשלום לא עבר',
   failedDesc:
-    'לא בוצע חיוב בכרטיס. אפשר לנסות את התשלום שוב, או לבטל את הרכישה.',
-  cancelledHint: 'יצאתם מדף התשלום לפני שהתשלום הושלם, ולכן לא בוצע חיוב.',
-  resumeAction: 'השלמת התשלום',
+    'הכרטיס לא חויב. אפשר לנסות את התשלום שוב, או לבטל את הרכישה.',
+  cancelledHint:
+    'לא בוצע חיוב. אפשר להשלים את התשלום עכשיו, או לבטל את הרכישה והמסלול יחזור לחנות.',
+  resumeAction: 'המשך לתשלום',
   cancelPurchaseAction: 'ביטול הרכישה',
   resuming: 'פותח את דף התשלום…',
   resumeError: 'לא הצלחנו לפתוח מחדש את דף התשלום. נסו שוב.',
@@ -69,11 +70,11 @@ const he: CheckoutDecisionStrings = {
 };
 
 const ru: CheckoutDecisionStrings = {
-  failedTitle: 'Оплата не прошла',
+  failedTitle: 'Платёж не прошёл',
   failedDesc:
-    'Списание с карты не выполнено. Можно попробовать оплату снова или отменить покупку.',
+    'Списания не было. Можно попробовать оплатить снова или отменить покупку.',
   cancelledHint:
-    'Вы покинули страницу оплаты до её завершения, поэтому списаний не было.',
+    'Списаний не было. Завершите оплату сейчас или отмените покупку, и план вернётся в магазин.',
   resumeAction: 'Продолжить оплату',
   cancelPurchaseAction: 'Отменить покупку',
   resuming: 'Открываем оплату…',
