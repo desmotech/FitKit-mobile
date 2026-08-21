@@ -18,8 +18,8 @@ importers:
         specifier: ^15.0.3
         version: 15.1.1(expo-font@55.0.8)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.15)(bufferutil@4.1.0)(react@19.2.0)(utf-8-validate@6.0.6))(react@19.2.0)
       '@fitkit/shared':
-        specifier: npm:@desmotech/fitkit-shared@^0.1.53
-        version: '@desmotech/fitkit-shared@0.1.53'
+        specifier: npm:@desmotech/fitkit-shared@^0.1.55
+        version: '@desmotech/fitkit-shared@0.1.55'
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.15)(bufferutil@4.1.0)(react@19.2.0)(utf-8-validate@6.0.6))
@@ -855,8 +855,8 @@ packages:
   '@coinbase/wallet-sdk@4.3.0':
     resolution: {integrity: sha512-T3+SNmiCw4HzDm4we9wCHCxlP0pqCiwKe4sOwPH3YAK2KSKjxPRydKu6UQJrdONFVLG7ujXvbd/6ZqmvJb8rkw==}
 
-  '@desmotech/fitkit-shared@0.1.53':
-    resolution: {integrity: sha512-a77v+gTqYVV8tFG7DAmufYT8q65O1CvMW/2pEr3AIIR9LfZw1VzQZwn6aEMb7Gy1KGB4QOGXZiP935v7G82Eyg==, tarball: https://npm.pkg.github.com/download/@desmotech/fitkit-shared/0.1.53/1226a975d4338f798b720c0d9c11bfd53fbca69d}
+  '@desmotech/fitkit-shared@0.1.55':
+    resolution: {integrity: sha512-vjZMalZIwW2bADrGuPc5MKvRAzSCSlOOjWZlvU7p9132NZ/0EhsfQjQo3a0ueAKSwC0yYqntZe/Ls3dNEvvzYw==, tarball: https://npm.pkg.github.com/download/@desmotech/fitkit-shared/0.1.55/89838fb814a3b9bfd0fac0d630f76578692a9a88}
 
   '@egjs/hammerjs@2.0.17':
     resolution: {integrity: sha512-XQsZgjm2EcVUiZQf11UBJQfmZeEmOW8DpI1gsFeln6w0ae0ii4dMQEQ0kjl6DspdWX1aGY1/loyXnP0JS06e/A==}
@@ -7392,7 +7392,7 @@ snapshots:
       eventemitter3: 5.0.4
       preact: 10.29.2
 
-  '@desmotech/fitkit-shared@0.1.53':
+  '@desmotech/fitkit-shared@0.1.55':
     dependencies:
       '@swc/helpers': 0.5.23
       zod: 4.4.3
@@ -9132,7 +9132,7 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 12.20.55
+      '@types/node': 26.2.0
 
   '@types/emscripten@1.41.5': {}
 
@@ -9207,7 +9207,7 @@ snapshots:
 
   '@types/ws@7.4.7':
     dependencies:
-      '@types/node': 12.20.55
+      '@types/node': 26.2.0
 
   '@types/ws@8.18.1':
     dependencies:
