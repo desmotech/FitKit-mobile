@@ -25,8 +25,14 @@
  */
 import { CalendarDays, Eye } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FKCard, useFKColors } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -365,8 +371,15 @@ function ClassPeekSheet({
 }) {
   const colors = useFKColors();
   const { t, lang } = useI18n();
+  const insets = useSafeAreaInsets();
   const ps = useProgramSheetStrings();
   const watchDemo = useWatchExerciseDemo();
+  // The home indicator is 34pt at most. A bigger inset is the tab dock's —
+  // expo-router gives each tab screen its own SafeAreaProvider whose bottom
+  // inset already includes the bar — and that bar is not behind this modal,
+  // so honouring it would strand the button in a dead band. Clamped both
+  // ways: never flush against the screen edge, never floating above nothing.
+  const footerInset = Math.min(Math.max(insets.bottom, 16), 34);
   const detail = useSessionDetail(orgId, group?.workoutSessionId ?? undefined);
   const session = detail.data?.data;
   const scoringT = (((t as unknown as Record<string, Record<string, unknown>>)
@@ -401,14 +414,14 @@ function ClassPeekSheet({
         <Pressable
           onPress={(e) => e.stopPropagation()}
           style={{
-            maxHeight: '84%',
+            maxHeight: '82%',
             backgroundColor: colors.background,
             borderTopLeftRadius: 22,
             borderTopRightRadius: 22,
             borderCurve: 'continuous',
           }}
         >
-          <SafeAreaView edges={['bottom']}>
+          <View>
             <View style={{ alignItems: 'center', paddingTop: 8 }}>
               <View
                 style={{
@@ -489,7 +502,13 @@ function ClassPeekSheet({
               onPress={() => group && onOpenTarget(group)}
               accessibilityRole="button"
               accessibilityLabel={footerLabel}
-              style={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 10 }}
+              style={{
+                paddingHorizontal: 18,
+                paddingTop: 12,
+                paddingBottom: footerInset + 10,
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderTopColor: colors.border,
+              }}
             >
               {({ pressed }) => (
                 <View
@@ -524,7 +543,7 @@ function ClassPeekSheet({
                 </View>
               )}
             </Pressable>
-          </SafeAreaView>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
