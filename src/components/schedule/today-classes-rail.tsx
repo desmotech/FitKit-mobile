@@ -1,23 +1,30 @@
 /**
- * TodayClassesRail — "what's on at the gym today", as a rail of class tiles.
+ * TodayClassesRail — "what's on at the gym today", one tile per CLASS TYPE.
  *
  * Home's Today section answers "what am I doing today" (my assignment, my
  * bookings). This answers the other question a member opens the app with:
- * what is actually running today, whether or not they booked it.
+ * what is running today, whether or not they booked it.
  *
- * A tile whose session carries a programmed workout opens a peek sheet with
- * the whiteboard — the same `WorkoutBlock` the class detail renders, so the
- * preview and the screen behind it can't drift. Sessions with nothing
- * programmed have nothing to peek at and go straight to the class detail;
- * an org that doesn't program its classes therefore never sees a sheet,
- * and an org with no sessions today never sees the rail at all.
+ * Aggregated by type, not listed by session: a box that runs CrossFit at
+ * 06:00, 07:00, 17:00 and 18:00 has four rows on the Schedule tab and one
+ * fact here — "CrossFit, four times, 06:00–18:00, here's the WOD". A tile per
+ * session would make Home a second, worse schedule, and would print the same
+ * whiteboard four times over.
  *
- * Data comes from the week-sessions query Home already holds — the rail
- * costs no extra request. The sheet fetches the session detail, because the
- * list payload is not guaranteed to carry each workout's sections.
+ * A type whose sessions carry a programmed workout opens a peek sheet with
+ * that whiteboard — the same `WorkoutBlock` the class detail renders, so the
+ * preview and the screen behind it can't drift. A type with nothing
+ * programmed has nothing to peek at and goes to its target instead (see
+ * `ClassTypeGroup.targetSessionId`), so an org that doesn't program its
+ * classes never sees a sheet, and an org with no sessions today never sees
+ * the rail at all.
+ *
+ * Data comes from the week-sessions query Home already holds — the rail costs
+ * no extra request. The sheet fetches the one representative session, because
+ * the list payload is not guaranteed to carry each workout's sections.
  */
 import { CalendarDays, Eye } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FKCard, useFKColors } from '@/components/fk';
@@ -26,11 +33,7 @@ import { Text } from '@/components/ui/text';
 import { WorkoutBlock } from '@/components/schedule/session-workout-block';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useWatchExerciseDemo } from '@/hooks/use-exercise-demo';
-import {
-  differenceInMinutes,
-  useSessionDetail,
-  type ClassSession,
-} from '@/hooks/use-schedule';
+import { useSessionDetail, type ClassSession } from '@/hooks/use-schedule';
 import { useProgramSheetStrings } from '@/i18n/use-program-sheet-strings';
 import { useHomeStrings } from '@/i18n/use-home-strings';
 import { useI18n } from '@/providers/i18n-provider';
@@ -39,12 +42,13 @@ import { bodyFamily } from '@/lib/type';
 export interface TodayClassesLabels {
   booked: string;
   waitlisted: string;
-  full: string;
-  spotsLeft: string;
+  /** Template with `{count}`; `classCountOne` covers the singular. */
+  classCount: string;
+  classCountOne: string;
   minSuffix: string;
   peekTitle: string;
   openClass: string;
-  coach: string;
+  viewSchedule: string;
 }
 
 /** Labels the rail needs, half from the home table and half from the shared
@@ -54,18 +58,91 @@ export function useTodayClassesLabels(): TodayClassesLabels {
   const s = useHomeStrings();
   const dict = t as unknown as Record<string, Record<string, unknown>>;
   const sched = (dict.schedule ?? {}) as Record<string, unknown>;
-  const member = (sched.memberBooking ?? {}) as Record<string, string>;
   const mobile = (sched.mobile ?? {}) as Record<string, string>;
   return {
     booked: s.booked,
     waitlisted: s.waitlisted,
-    full: member.classFull ?? 'Full',
-    spotsLeft: member.spotsLeft ?? 'spots left',
+    classCount: s.classCount,
+    classCountOne: s.classCountOne,
     minSuffix: mobile.min ?? 'min',
     peekTitle: s.peekTitle,
     openClass: s.openClass,
-    coach: s.coach,
+    viewSchedule: s.viewSchedule,
   };
+}
+
+/** Today's sessions of one class type, collapsed into the single thing the
+ *  rail shows for them. */
+export interface ClassTypeGroup {
+  classTypeId: string;
+  name: string;
+  color: string | null;
+  count: number;
+  /** Earliest and latest start of the day, for the time line. */
+  firstAt: string;
+  lastAt: string;
+  /** The member holds a seat in at least one of them. */
+  booked: boolean;
+  waitlisted: boolean;
+  /** Earliest session of the type that carries a programmed workout — what
+   *  the peek sheet reads. Null when the type has nothing programmed. */
+  workoutSessionId: string | null;
+  /** Where a tap goes when there is no whiteboard to peek at, and where the
+   *  sheet's footer button leads. The session itself when the type runs once
+   *  today; null for "the whole day", because no single session represents
+   *  four of them. */
+  targetSessionId: string | null;
+}
+
+function holdsSeat(session: ClassSession): boolean {
+  return (
+    session.myBookingStatus === 'confirmed' ||
+    session.myBookingStatus === 'attended'
+  );
+}
+
+/**
+ * Collapse a day's sessions into one entry per class type, ordered by when
+ * each type first runs. Pure, so the aggregation is testable without a
+ * rendered screen.
+ */
+export function groupByClassType(sessions: ClassSession[]): ClassTypeGroup[] {
+  const groups = new Map<string, ClassTypeGroup>();
+  // Sorted first so "earliest" holds for `firstAt`, for the representative
+  // session and for the rail's order, whatever order the API returned.
+  const ordered = sessions
+    .slice()
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+
+  for (const session of ordered) {
+    const id = session.classTypeId ?? session.classType.name;
+    const workoutId = (session.workouts ?? []).length > 0 ? session.id : null;
+    const existing = groups.get(id);
+    if (!existing) {
+      groups.set(id, {
+        classTypeId: id,
+        name: session.classType.name,
+        color: session.classType.color,
+        count: 1,
+        firstAt: session.startsAt,
+        lastAt: session.startsAt,
+        booked: holdsSeat(session),
+        waitlisted: session.myBookingStatus === 'waitlisted',
+        workoutSessionId: workoutId,
+        targetSessionId: session.id,
+      });
+      continue;
+    }
+    existing.count += 1;
+    existing.lastAt = session.startsAt;
+    existing.booked ||= holdsSeat(session);
+    existing.waitlisted ||= session.myBookingStatus === 'waitlisted';
+    existing.workoutSessionId ??= workoutId;
+    // Past the first session the type no longer has one place to point at.
+    existing.targetSessionId = null;
+  }
+
+  return [...groups.values()];
 }
 
 export function TodayClassesRail({
@@ -74,18 +151,27 @@ export function TodayClassesRail({
   isRTL,
   labels,
   onOpenSession,
+  onOpenSchedule,
 }: {
-  /** Today's published sessions, already filtered and sorted by the caller. */
+  /** Today's published sessions. Grouping and ordering happen here. */
   sessions: ClassSession[];
   orgId: string | undefined;
   isRTL: boolean;
   labels: TodayClassesLabels;
   onOpenSession: (sessionId: string) => void;
+  /** Where a type that runs more than once today leads — the day itself. */
+  onOpenSchedule: () => void;
 }) {
   const haptics = useHaptics();
-  const [peekId, setPeekId] = useState<string | null>(null);
+  const [peek, setPeek] = useState<ClassTypeGroup | null>(null);
+  const groups = useMemo(() => groupByClassType(sessions), [sessions]);
 
-  if (sessions.length === 0) return null;
+  if (groups.length === 0) return null;
+
+  const goToTarget = (group: ClassTypeGroup) => {
+    if (group.targetSessionId) onOpenSession(group.targetSessionId);
+    else onOpenSchedule();
+  };
 
   return (
     <>
@@ -98,16 +184,16 @@ export function TodayClassesRail({
           paddingHorizontal: 20,
         }}
       >
-        {sessions.map((session) => (
-          <ClassTile
-            key={session.id}
-            session={session}
+        {groups.map((group) => (
+          <ClassTypeTile
+            key={group.classTypeId}
+            group={group}
             isRTL={isRTL}
             labels={labels}
             onPress={() => {
               haptics.tap();
-              if ((session.workouts ?? []).length > 0) setPeekId(session.id);
-              else onOpenSession(session.id);
+              if (group.workoutSessionId) setPeek(group);
+              else goToTarget(group);
             }}
           />
         ))}
@@ -115,13 +201,13 @@ export function TodayClassesRail({
 
       <ClassPeekSheet
         orgId={orgId}
-        sessionId={peekId}
+        group={peek}
         isRTL={isRTL}
         labels={labels}
-        onClose={() => setPeekId(null)}
-        onOpenSession={(id) => {
-          setPeekId(null);
-          onOpenSession(id);
+        onClose={() => setPeek(null)}
+        onOpenTarget={(group) => {
+          setPeek(null);
+          goToTarget(group);
         }}
       />
     </>
@@ -132,46 +218,53 @@ export function TodayClassesRail({
 
 const TILE_WIDTH = 156;
 
-function ClassTile({
-  session,
+/** "07:00" for a type that runs once, "07:00–18:00" for one that runs all day. */
+function timeSpan(group: ClassTypeGroup, lang: string): string {
+  const fmt = new Intl.DateTimeFormat(lang, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  const first = fmt.format(new Date(group.firstAt));
+  if (group.count === 1) return first;
+  // Always first→last, never reversed for RTL: these are clock times, and
+  // "18:00–07:00" reads as a class that runs overnight.
+  return `${first}–${fmt.format(new Date(group.lastAt))}`;
+}
+
+function countLabel(group: ClassTypeGroup, labels: TodayClassesLabels): string {
+  return group.count === 1
+    ? labels.classCountOne
+    : labels.classCount.replace('{count}', String(group.count));
+}
+
+function ClassTypeTile({
+  group,
   isRTL,
   labels,
   onPress,
 }: {
-  session: ClassSession;
+  group: ClassTypeGroup;
   isRTL: boolean;
   labels: TodayClassesLabels;
   onPress: () => void;
 }) {
   const colors = useFKColors();
   const { lang } = useI18n();
-  const accent = session.classType.color ?? colors.primary;
-  const hasWorkout = (session.workouts ?? []).length > 0;
-  const time = new Intl.DateTimeFormat(lang, {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(session.startsAt));
-
-  // One line of status, in the order that decides whether the member acts:
-  // already mine → no room → room left → nothing worth saying.
-  const isBooked = session.myBookingStatus === 'confirmed' ||
-    session.myBookingStatus === 'attended';
-  const remaining = session.capacityRemaining;
-  const status = isBooked
+  const accent = group.color ?? colors.primary;
+  const times = timeSpan(group, lang);
+  // A seat of the member's own outranks the count — it is the one thing on
+  // the tile they might need to act on.
+  const status = group.booked
     ? labels.booked
-    : session.myBookingStatus === 'waitlisted'
+    : group.waitlisted
       ? labels.waitlisted
-      : remaining != null && remaining <= 0
-        ? labels.full
-        : remaining != null && remaining <= 3
-          ? `${remaining} ${labels.spotsLeft}`
-          : `${differenceInMinutes(session.startsAt, session.endsAt)} ${labels.minSuffix}`;
+      : countLabel(group, labels);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${session.classType.name} ${time}`}
+      accessibilityLabel={`${group.name}, ${countLabel(group, labels)}, ${times}`}
     >
       {({ pressed }) => (
         <FKCard
@@ -199,16 +292,18 @@ function ClassTile({
               }}
             />
             <Text
+              numberOfLines={1}
               style={{
-                fontSize: 13,
+                flexShrink: 1,
+                fontSize: 12.5,
                 color: colors.foreground,
                 fontVariant: ['tabular-nums'],
                 fontFamily: bodyFamily(lang, 'bold'),
               }}
             >
-              {time}
+              {times}
             </Text>
-            {hasWorkout ? (
+            {group.workoutSessionId ? (
               <Eye
                 size={13}
                 color={colors.mutedFg}
@@ -229,14 +324,17 @@ function ClassTile({
               fontFamily: bodyFamily(lang, 'bold'),
             }}
           >
-            {session.title ?? session.classType.name}
+            {group.name}
           </Text>
 
           <Text
             numberOfLines={1}
             style={{
               fontSize: 11.5,
-              color: isBooked ? colors.primaryText : colors.mutedFg,
+              color:
+                group.booked || group.waitlisted
+                  ? colors.primaryText
+                  : colors.mutedFg,
               textAlign: isRTL ? 'right' : 'left',
             }}
           >
@@ -252,45 +350,41 @@ function ClassTile({
 
 function ClassPeekSheet({
   orgId,
-  sessionId,
+  group,
   isRTL,
   labels,
   onClose,
-  onOpenSession,
+  onOpenTarget,
 }: {
   orgId: string | undefined;
-  sessionId: string | null;
+  group: ClassTypeGroup | null;
   isRTL: boolean;
   labels: TodayClassesLabels;
   onClose: () => void;
-  onOpenSession: (sessionId: string) => void;
+  onOpenTarget: (group: ClassTypeGroup) => void;
 }) {
   const colors = useFKColors();
   const { t, lang } = useI18n();
   const ps = useProgramSheetStrings();
   const watchDemo = useWatchExerciseDemo();
-  const detail = useSessionDetail(orgId, sessionId ?? undefined);
+  const detail = useSessionDetail(orgId, group?.workoutSessionId ?? undefined);
   const session = detail.data?.data;
   const scoringT = (((t as unknown as Record<string, Record<string, unknown>>)
     .workouts?.scoringLabels ?? {}) as Record<string, string>);
 
   const workouts = session?.workouts ?? [];
-  const heading = session
-    ? (session.title ?? session.classType.name)
-    : labels.peekTitle;
-  const subheading = session
-    ? `${new Intl.DateTimeFormat(lang, {
-        hour: 'numeric',
-        minute: '2-digit',
-      }).format(new Date(session.startsAt))} · ${differenceInMinutes(
-        session.startsAt,
-        session.endsAt,
-      )} ${labels.minSuffix}`
+  const heading = group?.name ?? labels.peekTitle;
+  // The type's shape for the day: how many, and between which hours.
+  const subheading = group
+    ? `${countLabel(group, labels)} · ${timeSpan(group, lang)}`
     : null;
+  const footerLabel = group?.targetSessionId
+    ? labels.openClass
+    : labels.viewSchedule;
 
   return (
     <Modal
-      visible={sessionId != null}
+      visible={group != null}
       transparent
       animationType="slide"
       onRequestClose={onClose}
@@ -392,9 +486,9 @@ function ClassPeekSheet({
             </ScrollView>
 
             <Pressable
-              onPress={() => sessionId && onOpenSession(sessionId)}
+              onPress={() => group && onOpenTarget(group)}
               accessibilityRole="button"
-              accessibilityLabel={labels.openClass}
+              accessibilityLabel={footerLabel}
               style={{ paddingHorizontal: 18, paddingTop: 6, paddingBottom: 10 }}
             >
               {({ pressed }) => (
@@ -417,6 +511,7 @@ function ClassPeekSheet({
                     color={colors.primaryText}
                     strokeWidth={2.4}
                   />
+                  {/* One class today → that class. Several → the day. */}
                   <Text
                     style={{
                       fontSize: 14,
@@ -424,7 +519,7 @@ function ClassPeekSheet({
                       fontFamily: bodyFamily(lang, 'bold'),
                     }}
                   >
-                    {labels.openClass}
+                    {footerLabel}
                   </Text>
                 </View>
               )}

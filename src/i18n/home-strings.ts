@@ -38,6 +38,11 @@ export interface HomeStrings {
   coach: string;
   peekTitle: string;
   openClass: string;
+  /** Opens the day rather than one class, for a type that runs several. */
+  viewSchedule: string;
+  /** Template with `{count}` — how many times a type runs today. */
+  classCount: string;
+  classCountOne: string;
 
   // ── Goals ─────────────────────────────────────────────────────────
   bodyMetric: string;
@@ -93,6 +98,9 @@ const HE: HomeStrings = {
   coach: 'מאמן',
   peekTitle: 'הצצה לאימון',
   openClass: 'לפרטי השיעור',
+  viewSchedule: 'למערכת השיעורים',
+  classCount: '{count} שיעורים היום',
+  classCountOne: 'שיעור אחד היום',
 
   bodyMetric: 'מדד גוף',
   exercisePr: 'שיא בתרגיל',
@@ -140,6 +148,9 @@ const EN: HomeStrings = {
   coach: 'Coach',
   peekTitle: 'Workout preview',
   openClass: 'Open class',
+  viewSchedule: 'View schedule',
+  classCount: '{count} classes today',
+  classCountOne: 'Once today',
 
   bodyMetric: 'Body Metric',
   exercisePr: 'Exercise PR',
@@ -188,6 +199,9 @@ const RU: HomeStrings = {
   coach: 'Тренер',
   peekTitle: 'Превью тренировки',
   openClass: 'Открыть занятие',
+  viewSchedule: 'Открыть расписание',
+  classCount: 'Сегодня занятий: {count}',
+  classCountOne: 'Сегодня один раз',
 
   bodyMetric: 'Показатель тела',
   exercisePr: 'Рекорд в упражнении',

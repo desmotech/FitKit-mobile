@@ -19,10 +19,12 @@
  *                        class(es), each rendered with their shared
  *                        card primitive (no inline duplication).
  *                        Rest branch when neither exists.
- *   4. On today        — every published class the gym runs today, as a
- *                        rail of tiles. Tapping one with a programmed
- *                        workout peeks at the whiteboard; without one it
- *                        opens the class. Absent when the day is empty.
+ *   4. On today        — what the gym runs today, one tile per CLASS TYPE
+ *                        (four CrossFit sessions are one tile, not four).
+ *                        Tapping a type with a programmed workout peeks at
+ *                        the whiteboard; without one it opens the class, or
+ *                        the day when the type runs more than once. Absent
+ *                        when the day is empty.
  *   5. Goals           — top-3 active goals by progress descending,
  *                        compact GoalCards taps through to the goal
  *                        detail. The section is absent until there is a
@@ -570,6 +572,7 @@ export default function HomeScreen() {
                   params: { id },
                 })
               }
+              onOpenSchedule={() => router.push('/(tabs)/schedule')}
             />
           </Animated.View>
         ) : null}

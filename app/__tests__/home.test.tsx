@@ -67,10 +67,13 @@ function todayWorkoutAssignment(overrides: Record<string, unknown> = {}) {
   };
 }
 
-/** A published class today at 18:00 local, with no workout attached. */
-function todaySession(overrides: Record<string, unknown> = {}) {
+/** A published class today at `hour` local, with no workout attached. */
+function todaySession(
+  overrides: Record<string, unknown> = {},
+  hour = 18,
+) {
   const startsAt = new Date();
-  startsAt.setHours(18, 0, 0, 0);
+  startsAt.setHours(hour, 0, 0, 0);
   const endsAt = new Date(startsAt.getTime() + 60 * 60_000);
   return {
     id: 'sess_1',
@@ -266,31 +269,68 @@ describe('Home dashboard — Goals section', () => {
 
 
 /**
- * "On today" — the rail of every class the gym runs today, which exists so a
- * member can see what's on without booking anything first. The peek sheet is
- * the point: a tile whose class carries a programmed workout shows the
- * whiteboard in place, and one without it has nothing to preview and simply
- * opens the class.
+ * "On today" — what the gym runs today, aggregated by CLASS TYPE. A box that
+ * runs CrossFit four times has one tile, not four: Home is a glance surface,
+ * and four tiles carrying the same whiteboard would make it a worse copy of
+ * the Schedule tab. The peek sheet is the point — the day's whiteboard,
+ * without leaving the screen.
  */
 describe('Home dashboard — On today rail', () => {
+  const WOD = [
+    {
+      id: 'w_class',
+      title: 'Cindy',
+      displayName: 'Cindy',
+      description: '20 minutes AMRAP',
+      scoring: 'rounds',
+      mode: 'fixed',
+      timeCap: 20,
+      sortOrder: 0,
+      sections: [],
+    },
+  ];
+
+  it('collapses every session of a type into one tile', async () => {
+    stageHome({
+      sessions: [
+        todaySession({ id: 'sess_1', workouts: WOD }, 7),
+        todaySession({ id: 'sess_2', workouts: WOD }, 17),
+        todaySession({ id: 'sess_3', workouts: WOD }, 18),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    expect(await screen.findAllByText('Yoga')).toHaveLength(1);
+    expect(screen.getByText(H.classCount.replace('{count}', '3'))).toBeOnTheScreen();
+  }, 15000);
+
+  it('keeps distinct types apart, earliest first', async () => {
+    stageHome({
+      sessions: [
+        todaySession(
+          {
+            id: 'sess_wod',
+            classTypeId: 'ct_2',
+            classType: { id: 'ct_2', name: 'CrossFit', color: null, defaultDurationMin: 60 },
+          },
+          19,
+        ),
+        todaySession({ id: 'sess_yoga' }, 7),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    expect(await screen.findByText('Yoga')).toBeOnTheScreen();
+    expect(screen.getByText('CrossFit')).toBeOnTheScreen();
+  }, 15000);
+
   it('peeks at the programmed workout without leaving Home', async () => {
     stageHome({
       sessions: [
-        todaySession({
-          workouts: [
-            {
-              id: 'w_class',
-              title: 'Cindy',
-              displayName: 'Cindy',
-              description: '20 minutes AMRAP',
-              scoring: 'rounds',
-              mode: 'fixed',
-              timeCap: 20,
-              sortOrder: 0,
-              sections: [],
-            },
-          ],
-        }),
+        todaySession({ id: 'sess_1', workouts: WOD }, 7),
+        todaySession({ id: 'sess_2', workouts: WOD }, 18),
       ],
     });
 
@@ -298,11 +338,12 @@ describe('Home dashboard — On today rail', () => {
 
     await userEvent.press(await screen.findByText('Yoga'));
 
+    // Read off the earliest session of the type, once — not once per class.
     expect(await screen.findByText('Cindy')).toBeOnTheScreen();
     expect(mockPush).not.toHaveBeenCalled();
   }, 15000);
 
-  it('opens the class itself when nothing is programmed', async () => {
+  it('opens the one class itself when nothing is programmed', async () => {
     stageHome({ sessions: [todaySession()] });
 
     await renderWithProviders(<HomeScreen />);
@@ -316,8 +357,26 @@ describe('Home dashboard — On today rail', () => {
       }),
     );
   }, 15000);
-});
 
+  // No single session represents a type that runs four times, so the day is
+  // the only honest destination.
+  it('opens the day when an unprogrammed type runs more than once', async () => {
+    stageHome({
+      sessions: [
+        todaySession({ id: 'sess_1' }, 7),
+        todaySession({ id: 'sess_2' }, 18),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith('/(tabs)/schedule'),
+    );
+  }, 15000);
+});
 
 /**
  * FIT-287 presale: the member paid at a gym that has not opened yet. Their
