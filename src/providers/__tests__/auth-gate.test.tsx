@@ -13,7 +13,11 @@ import { onlineManager } from '@tanstack/react-query';
 import { offlineStringsFor } from '@/i18n/offline-strings';
 import { dictionaries } from '@fitkit/shared';
 import { AuthGate } from '../auth-gate';
-import { stageSignedInMember, userMe } from '../../../test/fixtures';
+import {
+  membership,
+  stageSignedInMember,
+  userMe,
+} from '../../../test/fixtures';
 import { mockAuthState } from '../../../test/mocks/clerk';
 import { api, http, HttpResponse, server } from '../../../test/msw';
 import { makeTestQueryClient, renderWithProviders } from '../../../test/render';
@@ -223,6 +227,85 @@ describe('AuthGate', () => {
       expect(mockRedirects).toContain('/onboarding/complete-profile'),
     );
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
+  });
+
+  it('tells an erased account it is gone instead of loading forever', async () => {
+    // The gym erased this person. /users/me reports it explicitly; before
+    // that field existed the payload looked like any healthy account, the
+    // tab shell mounted, and the home screen's no-gym card read "Loading…"
+    // with nothing ever arriving.
+    stageSignedInMember(
+      userMe({ accountStatus: 'deleted' } as Record<string, unknown>),
+    );
+    stageConsentStatus(ALL_CONSENTED);
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(screen.getByTestId('account-deleted-screen')).toBeOnTheScreen(),
+    );
+    expect(screen.getByText(he.auth.accountDeleted)).toBeOnTheScreen();
+    // No Retry: nothing about an erased account resolves by asking again.
+    expect(
+      screen.getByTestId('account-deleted-sign-out'),
+    ).toBeOnTheScreen();
+    expect(screen.queryByText(he.auth.retry)).not.toBeOnTheScreen();
+    expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
+    expect(mockRedirects).toHaveLength(0);
+  });
+
+  it('never asks an erased account to accept terms or finish a profile', async () => {
+    stageSignedInMember(
+      userMe({
+        accountStatus: 'deleted',
+        profileComplete: false,
+        pendingLegalConsents: true,
+      } as Record<string, unknown>),
+    );
+    stageConsentStatus([]);
+
+    await renderWithProviders(gate());
+
+    await waitFor(() =>
+      expect(screen.getByTestId('account-deleted-screen')).toBeOnTheScreen(),
+    );
+    expect(mockRedirects).toHaveLength(0);
+  });
+
+  // Membership is a roster/plan concept and must never deny app access. These
+  // pin that: only the account-level signal closes the door.
+  it.each([
+    ['cancelled', 'cancelled'],
+    ['suspended', 'suspended'],
+  ])('lets a member with a %s membership into the app', async (_l, status) => {
+    stageSignedInMember(
+      userMe({
+        memberships: [membership({ status: status as 'cancelled' })],
+      }),
+    );
+    stageConsentStatus(ALL_CONSENTED);
+
+    await renderWithProviders(gate());
+
+    expect(await screen.findByText('INSIDE')).toBeOnTheScreen();
+    expect(
+      screen.queryByTestId('account-deleted-screen'),
+    ).not.toBeOnTheScreen();
+  });
+
+  it('lets a member in when the API predates accountStatus', async () => {
+    // Absent must read as "not deleted" — an unknown value is never a reason
+    // to lock someone out of their own app.
+    const { accountStatus: _omitted, ...withoutField } = userMe() as Record<
+      string,
+      unknown
+    >;
+    stageSignedInMember(withoutField as never);
+    stageConsentStatus(ALL_CONSENTED);
+
+    await renderWithProviders(gate());
+
+    expect(await screen.findByText('INSIDE')).toBeOnTheScreen();
   });
 
   it('renders the app for a consented member with a complete profile', async () => {

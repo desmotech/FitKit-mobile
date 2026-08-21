@@ -8,9 +8,17 @@
  *   3. /users/me OR /legal/consents/status hard-failed → AuthErrorScreen
  *   4. either still unresolved → spinner; or, when the reason they cannot
  *      resolve is no network and nothing cached, the offline screen
- *   5. needsLegalConsent → /onboarding/accept-terms
- *   6. isProfileIncomplete → /onboarding/complete-profile
- *   7. otherwise → render children
+ *   5. accountStatus === 'deleted' → AccountDeletedScreen
+ *   6. needsLegalConsent → /onboarding/accept-terms
+ *   7. isProfileIncomplete → /onboarding/complete-profile
+ *   8. otherwise → render children
+ *
+ * Step 5 is the ONLY state that denies someone the app, and it keys on the
+ * account-level `accountStatus` the API reports — never on membership.
+ * Membership status is a roster/plan concept: a client between plans, or one
+ * a gym dropped, still owns a valid account and gets in. It runs before the
+ * consent gates because an erased account has no business being asked to
+ * accept terms.
  *
  * Legal-consent gating uses `useNeedsLegalConsent`, which checks the
  * /legal/consents/status endpoint in addition to the user.pendingLegalConsents
@@ -27,6 +35,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { WifiOff } from 'lucide-react-native';
 import { View } from 'react-native';
 import type { ReactNode } from 'react';
+import { AccountDeletedScreen } from '@/components/auth/account-deleted-screen';
 import { AuthErrorScreen } from '@/components/auth/auth-error-screen';
 import { QueryErrorState } from '@/components/error-state';
 import { useFKColors } from '@/components/fk';
@@ -81,6 +90,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const {
     isProfileIncomplete,
+    isAccountDeleted,
     isLoading,
     isError: userError,
   } = useCurrentUser();
@@ -147,6 +157,20 @@ export function AuthGate({ children }: { children: ReactNode }) {
       );
     }
     return <LoadingScreen />;
+  }
+
+  // The gym erased this account. Say so and offer the one action that makes
+  // sense. Checked here, after the payload resolves and before any onboarding
+  // gate, so an erased account is never asked to accept terms or complete a
+  // profile it will never use.
+  if (isAccountDeleted) {
+    return (
+      <AccountDeletedScreen
+        onSignOut={() => {
+          void signOut();
+        }}
+      />
+    );
   }
 
   if (needsLegalConsent) return <Redirect href="/onboarding/accept-terms" />;

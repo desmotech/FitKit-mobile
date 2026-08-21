@@ -55,6 +55,12 @@ export interface CurrentUserContext {
   isNewUser: boolean;
   /** True when user has memberships but none are active (only pending invites). */
   hasPendingMembership: boolean;
+  /** True when the ACCOUNT itself is gone — the gym erased this person and
+   *  the API reports `accountStatus: 'deleted'`. This is the only signal that
+   *  should stop someone using the app. Membership status must never be used
+   *  for it: a client between plans, or one dropped from a gym's roster, is
+   *  still a valid account. */
+  isAccountDeleted: boolean;
   /** True when user is signed in + has an active membership but profile is not yet
    *  filled in (name / phone / national-id / birth-date). Gates /complete-profile. */
   isProfileIncomplete: boolean;
@@ -85,6 +91,12 @@ export function useCurrentUser(): CurrentUserContext {
   const { activeOrgId } = useActiveOrg();
 
   const user = data?.data ?? null;
+  // `accountStatus` ships from @fitkit/shared 0.1.54; typed locally so this
+  // app can build against the currently published types. Absent (older API,
+  // older package) must read as NOT deleted — an unknown value is never a
+  // reason to lock someone out of their app.
+  const accountStatus = (user as { accountStatus?: string } | null)
+    ?.accountStatus;
   const memberships = user?.memberships ?? [];
   const activeMemberships = memberships.filter((m) => m.status === 'active');
   const pendingMemberships = memberships.filter(
@@ -111,6 +123,7 @@ export function useCurrentUser(): CurrentUserContext {
       !isLoading &&
       activeMemberships.length === 0 &&
       pendingMemberships.length > 0,
+    isAccountDeleted: accountStatus === 'deleted',
     isProfileIncomplete:
       !isLoading &&
       !!user &&

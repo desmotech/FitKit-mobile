@@ -96,6 +96,17 @@ export default function HomeScreen() {
   // the key set is defined server-side alongside the goal data.
   const bmTypes = (((t as unknown as Record<string, Record<string, unknown>>)
     .bodyMetrics?.types ?? {}) as Record<string, string>);
+  // Copy for the no-active-gym card at the bottom of this screen. Someone
+  // with no active membership still has a valid account and full run of the
+  // app (renewing is one of the reasons they are here), so this states the
+  // fact rather than blocking anything.
+  const authT =
+    (t as unknown as Record<string, Record<string, string>>).auth ?? {};
+  const noGymTitle =
+    authT.membershipInactive ?? 'Your membership is currently inactive.';
+  const noGymHint =
+    authT.membershipInactiveHint ??
+    'Please contact your organization admin for assistance.';
 
   // ── Data ──────────────────────────────────────────────────────────
   // "Today" refreshes when the tab regains focus after a day rollover —
@@ -644,8 +655,11 @@ export default function HomeScreen() {
           </Animated.View>
         ) : null}
 
-        {/* Soft empty-state when there's no active org yet (pending
-            invite / approval). Greeting still shows above. */}
+        {/* No active gym: a pending invite, or a membership the gym ended.
+            The account is fine and the app stays open to them — this card
+            only explains why the screen is empty. It used to render the
+            string "Loading…" here, which is how a removed client
+            experienced an app that never finished loading. */}
         {!hasOrg ? (
           <View
             style={{
@@ -671,7 +685,18 @@ export default function HomeScreen() {
                   maxWidth: 280,
                 }}
               >
-                {s.loading}
+                {noGymTitle}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: colors.mutedFg,
+                  textAlign: 'center',
+                  lineHeight: 17,
+                  maxWidth: 280,
+                }}
+              >
+                {noGymHint}
               </Text>
             </FKCard>
           </View>

@@ -40,6 +40,7 @@ export function userMe(
     email: 'member@test.local',
     profileComplete: true,
     pendingLegalConsents: false,
+    accountStatus: 'active',
     memberships: [membership()],
     ...overrides,
   } as UserWithMembershipsResponse;
