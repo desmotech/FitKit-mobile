@@ -34,9 +34,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FKCard, useFKColors } from '@/components/fk';
+import { QueryErrorState } from '@/components/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { WorkoutBlock } from '@/components/schedule/session-workout-block';
+import {
+  hasPreviewContent,
+  WorkoutBlock,
+} from '@/components/schedule/session-workout-block';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useWatchExerciseDemo } from '@/hooks/use-exercise-demo';
 import { useSessionDetail, type ClassSession } from '@/hooks/use-schedule';
@@ -55,6 +59,10 @@ export interface TodayClassesLabels {
   peekTitle: string;
   openClass: string;
   viewSchedule: string;
+  /** The whiteboard is gone by the time the sheet asks for it. */
+  peekEmpty: string;
+  loadFailed: string;
+  tryAgain: string;
 }
 
 /** Labels the rail needs, half from the home table and half from the shared
@@ -74,6 +82,9 @@ export function useTodayClassesLabels(): TodayClassesLabels {
     peekTitle: s.peekTitle,
     openClass: s.openClass,
     viewSchedule: s.viewSchedule,
+    peekEmpty: s.peekEmpty,
+    loadFailed: s.loadFailedTitle,
+    tryAgain: s.tryAgain,
   };
 }
 
@@ -122,7 +133,12 @@ export function groupByClassType(sessions: ClassSession[]): ClassTypeGroup[] {
 
   for (const session of ordered) {
     const id = session.classTypeId ?? session.classType.name;
-    const workoutId = (session.workouts ?? []).length > 0 ? session.id : null;
+    // A workout row is not a whiteboard: a coach who deleted its sections
+    // leaves a titled shell that renders as nothing. Offer the peek only for
+    // a session that has something to show.
+    const workoutId = (session.workouts ?? []).some(hasPreviewContent)
+      ? session.id
+      : null;
     const existing = groups.get(id);
     if (!existing) {
       groups.set(id, {
@@ -385,7 +401,16 @@ function ClassPeekSheet({
   const scoringT = (((t as unknown as Record<string, Record<string, unknown>>)
     .workouts?.scoringLabels ?? {}) as Record<string, string>);
 
-  const workouts = session?.workouts ?? [];
+  // Everything the sheet can actually draw. A workout whose sections were
+  // deleted renders as nothing, so it must not count towards "we have a
+  // whiteboard" — otherwise the sheet opens onto blank space.
+  const workouts = (session?.workouts ?? []).filter(hasPreviewContent);
+  // The tile decided to offer a peek off the cached week list. By the time
+  // the sheet asks, the gym may have deleted the workout, the programme, or
+  // the session itself — say so instead of showing an empty sheet.
+  const loading = detail.isLoading && !session;
+  const failed = detail.isError && !session;
+  const empty = !loading && !failed && workouts.length === 0;
   const heading = group?.name ?? labels.peekTitle;
   // The type's shape for the day: how many, and between which hours.
   const subheading = group
@@ -472,8 +497,27 @@ function ClassPeekSheet({
             }}
             showsVerticalScrollIndicator={false}
           >
-            {detail.isLoading && !session ? (
+            {loading ? (
               <Skeleton style={{ height: 220, borderRadius: 18 }} />
+            ) : failed ? (
+              <QueryErrorState
+                title={labels.loadFailed}
+                retryLabel={labels.tryAgain}
+                onRetry={() => detail.refetch()}
+                isRTL={isRTL}
+              />
+            ) : empty ? (
+              <Text
+                style={{
+                  fontSize: 13,
+                  lineHeight: 19,
+                  color: colors.mutedFg,
+                  paddingVertical: 18,
+                  textAlign: 'center',
+                }}
+              >
+                {labels.peekEmpty}
+              </Text>
             ) : (
               workouts.map((w) => (
                 <WorkoutBlock

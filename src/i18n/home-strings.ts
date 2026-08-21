@@ -43,6 +43,8 @@ export interface HomeStrings {
   /** Template with `{count}` — how many times a type runs today. */
   classCount: string;
   classCountOne: string;
+  /** The peek was offered off a cached list and the whiteboard is gone. */
+  peekEmpty: string;
 
   // ── Goals ─────────────────────────────────────────────────────────
   bodyMetric: string;
@@ -101,6 +103,7 @@ const HE: HomeStrings = {
   viewSchedule: 'למערכת השיעורים',
   classCount: '{count} שיעורים היום',
   classCountOne: 'שיעור אחד היום',
+  peekEmpty: 'עדיין לא פורסם אימון לשיעור הזה.',
 
   bodyMetric: 'מדד גוף',
   exercisePr: 'שיא בתרגיל',
@@ -151,6 +154,7 @@ const EN: HomeStrings = {
   viewSchedule: 'View schedule',
   classCount: '{count} classes today',
   classCountOne: 'Once today',
+  peekEmpty: 'No workout published for this class yet.',
 
   bodyMetric: 'Body Metric',
   exercisePr: 'Exercise PR',
@@ -202,6 +206,7 @@ const RU: HomeStrings = {
   viewSchedule: 'Открыть расписание',
   classCount: 'Сегодня занятий: {count}',
   classCountOne: 'Сегодня один раз',
+  peekEmpty: 'Тренировка для этого занятия ещё не опубликована.',
 
   bodyMetric: 'Показатель тела',
   exercisePr: 'Рекорд в упражнении',

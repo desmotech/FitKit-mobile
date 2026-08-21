@@ -343,6 +343,71 @@ describe('Home dashboard — On today rail', () => {
     expect(mockPush).not.toHaveBeenCalled();
   }, 15000);
 
+  // An org that doesn't program its classes — or deleted the workout's
+  // sections and left the shell — has nothing to peek at. Offering the sheet
+  // anyway opens it onto blank space.
+  it('offers no peek for a workout with nothing in it', async () => {
+    stageHome({
+      sessions: [
+        todaySession({
+          workouts: [{ ...WOD[0], sections: [], description: null }],
+        }),
+      ],
+    });
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith({
+        pathname: '/(tabs)/schedule/[id]',
+        params: { id: 'sess_1' },
+      }),
+    );
+  }, 15000);
+
+  // The tile decides off the cached week list; the gym can delete the
+  // programme before the sheet asks the server for it.
+  it('says the workout is gone rather than opening an empty sheet', async () => {
+    stageHome({ sessions: [todaySession({ workouts: WOD })] });
+    // The detail read answers with the same session, minus its workout.
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/sessions/:id`), () =>
+        HttpResponse.json({ data: todaySession({ workouts: [] }) }),
+      ),
+    );
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    expect(await screen.findByText(H.peekEmpty)).toBeOnTheScreen();
+    // The way out to the real screen stays, whatever the sheet found.
+    expect(screen.getByText(H.openClass)).toBeOnTheScreen();
+  }, 15000);
+
+  it('offers a retry when the peek read fails outright', async () => {
+    stageHome({ sessions: [todaySession({ workouts: WOD })] });
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/sessions/:id`), () =>
+        HttpResponse.json({ message: 'gone' }, { status: 404 }),
+      ),
+    );
+
+    await renderWithProviders(<HomeScreen />);
+
+    await userEvent.press(await screen.findByText('Yoga'));
+
+    // `useApiQuery` retries a non-401 three times with backoff, so the error
+    // state is ~7s away — the wait has to outlast the retries, or this asserts
+    // on a sheet that is still loading.
+    expect(
+      await screen.findByText(H.loadFailedTitle, {}, { timeout: 15000 }),
+    ).toBeOnTheScreen();
+    expect(screen.getByText(H.tryAgain)).toBeOnTheScreen();
+  }, 30000);
+
   it('opens the one class itself when nothing is programmed', async () => {
     stageHome({ sessions: [todaySession()] });
 
