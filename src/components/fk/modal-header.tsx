@@ -23,9 +23,25 @@
  * locale, trailing on the trailing. The parent row uses `row-reverse`
  * in RTL; `marginStart: 'auto'` doesn't work in row-reverse so we use
  * a conditional physical margin.
+ *
+ * The centered title is absolute, so it can't be pushed by the buttons — it
+ * has to be kept clear of them instead. Both side slots are measured and the
+ * title's inset is the wider of the two, which is what UINavigationBar does.
+ * A fixed inset was fine for `Cancel`/`Save` and broke the moment a locale
+ * handed us a sentence ("השארת מסלול החברות"): the title printed straight
+ * through both labels. Slots are capped at 40% so the title always keeps a
+ * fifth of the bar, and every label is single-line — three phrases in a 52pt
+ * bar is a truncation problem, never an overlap one.
  */
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import {
+  type LayoutChangeEvent,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -64,12 +80,27 @@ export function FKModalHeader({
   const isRTL = dir === 'rtl';
   const isDark = colors.isDark;
 
+  const [leadWidth, setLeadWidth] = useState(0);
+  const [trailWidth, setTrailWidth] = useState(0);
+  const onLead = (e: LayoutChangeEvent) =>
+    setLeadWidth(e.nativeEvent.layout.width);
+  const onTrail = (e: LayoutChangeEvent) =>
+    setTrailWidth(e.nativeEvent.layout.width);
+  // 16 = the row's own horizontal padding, so the inset is measured from the
+  // same edge the buttons start at, plus 8pt of breathing room.
+  const titleInset = 16 + Math.max(48, leadWidth, trailWidth) + 8;
+
   // JSX reorder: leading goes on the visual leading edge (left in LTR,
   // right in RTL). We render LTR-ordered children then conditionally
   // reverse the array — avoids `flexDirection: 'row-reverse'`, which
   // has been unreliable in this repo's mixed-locale renders.
+  const slotStyle = { maxWidth: '40%', flexShrink: 1 } as const;
   const leadingEl = (
-    <View key="lead" style={{ minWidth: 60, alignItems: 'flex-start' }}>
+    <View
+      key="lead"
+      onLayout={onLead}
+      style={{ ...slotStyle, alignItems: 'flex-start' }}
+    >
       {leadingAction ? (
         <ActionButton action={leadingAction} isRTL={isRTL} />
       ) : null}
@@ -77,7 +108,11 @@ export function FKModalHeader({
   );
   const spacerEl = <View key="sp" style={{ flex: 1 }} />;
   const trailingEl = (
-    <View key="trail" style={{ minWidth: 60, alignItems: 'flex-end' }}>
+    <View
+      key="trail"
+      onLayout={onTrail}
+      style={{ ...slotStyle, alignItems: 'flex-end' }}
+    >
       {trailingAction ? (
         <ActionButton action={trailingAction} isRTL={isRTL} />
       ) : null}
@@ -119,8 +154,8 @@ export function FKModalHeader({
               position: 'absolute',
               top: 0,
               bottom: 0,
-              left: 80,
-              right: 80,
+              left: titleInset,
+              right: titleInset,
               alignItems: 'center',
               justifyContent: 'center',
             }}
@@ -190,7 +225,9 @@ function ActionButton({
         const labelEl = (
           <Text
             key="lb"
+            numberOfLines={1}
             style={{
+              flexShrink: 1,
               fontSize: 17,
               fontWeight,
               color,
@@ -207,6 +244,7 @@ function ActionButton({
               flexDirection: 'row',
               alignItems: 'center',
               gap: isBack ? 2 : 0,
+              flexShrink: 1,
               paddingVertical: 6,
               paddingHorizontal: 4,
               opacity: action.disabled ? 0.4 : pressed ? 0.5 : 1,
