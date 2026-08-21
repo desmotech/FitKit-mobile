@@ -24,6 +24,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import {
+  isOfferedInShop,
   usePaymentConfig,
   usePlans,
   usePurchasePlan,
@@ -86,8 +87,12 @@ export default function ShopScreen() {
 
   // TODO(FIT-203): course-type plans need the dedicated course checkout +
   // a library player that mobile doesn't have yet — hide them until
-  // courses GA on mobile.
-  const plans = (plansQ.data?.data ?? []).filter((p) => p.type !== 'course');
+  // courses GA on mobile. `isOfferedInShop`: staff-role responses carry
+  // hidden (showInShop=false) plans for the dashboard's sake — a storefront
+  // never shows them, whoever is looking.
+  const plans = (plansQ.data?.data ?? []).filter(
+    (p) => p.type !== 'course' && isOfferedInShop(p),
+  );
   // `isActive` means "this is the org's selected provider", NOT "it can
   // charge". A FitKit-managed terminal awaiting Cardcom's KYC is active and
   // unchargeable, so gating on it alone showed buyable plans against a

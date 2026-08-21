@@ -14,7 +14,7 @@ import {
   useMyProgramEnrollments,
   useOrgPrograms,
 } from '@/hooks/use-workouts';
-import { usePaymentConfig, usePlans } from '@/hooks/use-shop';
+import { isOfferedInShop, usePaymentConfig, usePlans } from '@/hooks/use-shop';
 import { usePendingIntent } from '@/hooks/use-pending-intent';
 import { useAnalyticsConsentSync } from '@/hooks/use-analytics-consent-sync';
 import { useI18n } from '@/providers/i18n-provider';
@@ -69,7 +69,7 @@ export default function TabsLayout() {
   const plans = usePlans(orgId);
   const paymentConfig = usePaymentConfig(orgId);
   const shoppablePlanCount = (plans.data?.data ?? []).filter(
-    (p) => p.type !== 'course',
+    (p) => p.type !== 'course' && isOfferedInShop(p),
   ).length;
   const shouldShowShop =
     paymentConfig.data?.data?.isActive === true && shoppablePlanCount > 0;
