@@ -1,8 +1,8 @@
 /**
  * Deep-link target for QR check-ins.
  *
- * QR codes posted at the gym encode either a `fitkit://...` deep-link or
- * a web URL of the form `https://app.fitkit.fit/{lang}/checkin?org=…&s=…&t=…&e=…`.
+ * QR codes posted at the gym encode either a `taikan://...` deep-link or
+ * a web URL of the form `https://app.taikan.fit/{lang}/checkin?org=…&s=…&t=…&e=…`.
  * When the mobile app is the default handler (or the user taps a QR-link
  * from outside the in-app scanner — Messages, email, etc.), iOS routes
  * here.

@@ -16,7 +16,7 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import type { MessageResponse } from '@fitkit/shared';
+import type { MessageResponse } from '@taikan/shared';
 import { ActiveOrgProvider } from '@/providers/active-org-provider';
 import { I18nProvider } from '@/providers/i18n-provider';
 import { useMessages } from '../use-messages';

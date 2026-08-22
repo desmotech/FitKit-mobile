@@ -10,7 +10,7 @@ import {
 import { Alert, I18nManager, Platform } from 'react-native';
 import { useLocales } from 'expo-localization';
 import * as Updates from 'expo-updates';
-import { dictionaries, type Dictionary } from '@fitkit/shared';
+import { dictionaries, type Dictionary } from '@taikan/shared';
 import { localeConfig, resolveDeviceLocale, type Locale } from '@/i18n/config';
 import { reportHandledError } from '@/lib/error-reporting';
 import { clearLocaleOverride, saveLocaleOverride } from '@/lib/settings-store';

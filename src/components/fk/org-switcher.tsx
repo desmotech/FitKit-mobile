@@ -24,7 +24,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Dictionary, MembershipResponse } from '@fitkit/shared';
+import type { Dictionary, MembershipResponse } from '@taikan/shared';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -39,7 +39,7 @@ type OrgSwitcherStrings = {
   roles: Record<MembershipResponse['role'], string>;
 };
 
-// TODO(shared): delete once @fitkit/shared ships the `orgSwitcher`
+// TODO(shared): delete once @taikan/shared ships the `orgSwitcher`
 // dictionary namespace (added to en/he/ru alongside this feature) and the
 // dependency is bumped — then read t.orgSwitcher directly. The values below
 // are verbatim copies of those dictionary entries.
@@ -157,7 +157,7 @@ export function OrgSwitcher({ children }: { children: ReactNode }) {
               borderRadius: 14,
               borderCurve: 'continuous',
               backgroundColor: isDark
-                ? 'rgba(58,70,78,0.72)'
+                ? 'rgba(18,56,69,0.72)'
                 : 'rgba(255,255,255,0.82)',
               borderWidth: 1,
               borderColor: isDark

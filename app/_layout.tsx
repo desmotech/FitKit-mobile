@@ -61,7 +61,7 @@ Sentry.init({
   tracesSampleRate: __DEV__ ? 1.0 : 0.3,
   // Attach sentry-trace/baggage to API requests so spans link mobile → API.
   // RN has no same-origin default, so this must be set explicitly. `apiUrl`
-  // adapts per build (localhost / preview / api.fitkit.fit).
+  // adapts per build (localhost / preview / api.taikan.fit).
   tracePropagationTargets: [apiUrl],
   // Session Replay: capture 100% of error sessions + 10% of normal
   // sessions so we can see what the alpha tester was doing when it broke.
@@ -86,7 +86,7 @@ function RootLayout() {
   }, [navigationRef]);
 
   const [fontsLoaded, fontError] = useFonts({
-    // ── FitKit "Whiteboard" type system ──────────────────────────────
+    // ── Taikan "Whiteboard" type system ──────────────────────────────
     // Static per-weight faces. RN/Android weight-matching within a single
     // family is unreliable, so each weight is registered under its own
     // family name and referenced explicitly (see src/lib/type.ts). The
@@ -304,7 +304,7 @@ function ConfigErrorScreen({ lang }: { lang: Locale }) {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 32,
-        backgroundColor: '#0B0B0D',
+        backgroundColor: '#07202B',
       }}
     >
       <Text

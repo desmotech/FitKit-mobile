@@ -16,7 +16,7 @@ import type {
   CreateProgressPhotoDto,
   ProgressPhotoDto,
   ProgressPhotoListResponseDto,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useApi } from './use-api';
 import { queryKeys } from '@/lib/query-keys';
 

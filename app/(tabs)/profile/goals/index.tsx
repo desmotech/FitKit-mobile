@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { Target } from 'lucide-react-native';
 import { Alert, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import type { GoalResponse } from '@fitkit/shared';
+import type { GoalResponse } from '@taikan/shared';
 import {
   FKEmptyState,
   FKGlassPanel,

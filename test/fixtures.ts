@@ -1,5 +1,5 @@
 /**
- * API response factories for MSW handlers. Shapes mirror the @fitkit/shared
+ * API response factories for MSW handlers. Shapes mirror the @taikan/shared
  * response schemas; overrides let each test state only what it cares about.
  */
 import type {
@@ -9,7 +9,7 @@ import type {
   PersonalRecordResponse,
   SubscriptionWithPlan,
   UserWithMembershipsResponse,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { api, http, HttpResponse, server } from './msw';
 import { TEST_ORG } from './render';
 

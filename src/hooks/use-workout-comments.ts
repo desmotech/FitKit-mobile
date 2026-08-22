@@ -26,7 +26,7 @@ import type {
   CreateWorkoutCommentInput,
   MessageResponse,
   MessagesListResponse,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { analytics } from '@/lib/analytics';
 import { useApi } from './use-api';
 import { queryKeys } from '@/lib/query-keys';

@@ -11,7 +11,7 @@ import { ChevronLeft, ChevronRight, Dumbbell, Timer, Trophy } from 'lucide-react
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import type { PersonalRecordResponse } from '@fitkit/shared';
+import type { PersonalRecordResponse } from '@taikan/shared';
 import { QueryErrorState } from '@/components/error-state';
 import { FKButton, FKEmptyState, FKSubScreen } from '@/components/fk';
 import { Kicker, MONO, glass, useWB } from '@/components/log/whiteboard';

@@ -13,7 +13,7 @@
  * for the one being charged.
  */
 import { screen } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { PlanCard } from '../plan-card';
 import { quotaStringsFor } from '@/i18n/quota-strings';
 import { formatPrice } from '@/lib/format-price';

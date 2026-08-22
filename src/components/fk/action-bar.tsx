@@ -39,8 +39,8 @@ export function FKActionBar({ children }: { children: ReactNode }) {
         borderTopWidth: StyleSheet.hairlineWidth,
         borderTopColor: colors.border,
         backgroundColor: colors.isDark
-          ? 'rgba(13,17,20,0.96)'
-          : 'rgba(247,243,236,0.97)',
+          ? 'rgba(7,32,43,0.96)'
+          : 'rgba(246,248,250,0.97)',
       }}
     >
       {children}

@@ -1,5 +1,5 @@
 /**
- * FitKit motion system — shared spring/timing tokens so microinteractions
+ * Taikan motion system — shared spring/timing tokens so microinteractions
  * feel like one app instead of 50 ad-hoc animations.
  *
  * Principle (from the Fuse / "beautiful RN app" reference set): physics over

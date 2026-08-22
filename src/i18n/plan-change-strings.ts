@@ -6,7 +6,7 @@
  * plan" picker, the payment-return plan-change copy, and the structured
  * payment error codes the flow maps.
  *
- * Every value is copied VERBATIM from `@fitkit/shared`'s dictionaries
+ * Every value is copied VERBATIM from `@taikan/shared`'s dictionaries
  * (`profile.changePlan.*`, `shop.switchPicker.*`,
  * `shop.planCard.switchToThisPlan`, `shop.paymentReturn.planChange*`,
  * `payments.errorCodes.*`) — the pinned published package predates those

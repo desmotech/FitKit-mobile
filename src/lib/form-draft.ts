@@ -17,7 +17,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formAnswersSchema, type FormAnswers } from '@/types/forms';
 
-const PREFIX = 'fitkit:form-draft:';
+const PREFIX = 'taikan:form-draft:';
 
 /** Drafts older than this are ignored (and swept) on read. */
 export const DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;

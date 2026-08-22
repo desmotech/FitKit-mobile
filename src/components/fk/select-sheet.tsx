@@ -122,7 +122,7 @@ export function FKSelectSheet<T extends string>({
                   ? colors.foreground
                   : isDark
                     ? 'rgba(200,195,184,0.85)'
-                    : 'rgba(94,112,130,0.85)',
+                    : 'rgba(61,90,112,0.85)',
                 textAlign: isRTL ? 'right' : 'left',
               }}
             >

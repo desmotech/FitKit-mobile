@@ -27,7 +27,7 @@ import {
 import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { MessageResponse } from '@fitkit/shared';
+import type { MessageResponse } from '@taikan/shared';
 import { FKBackButton, FKIconButton, useFKColors } from '@/components/fk';
 import { ImageLightbox } from '@/components/messages/image-lightbox';
 import { MessageBubble } from '@/components/messages/message-bubble';

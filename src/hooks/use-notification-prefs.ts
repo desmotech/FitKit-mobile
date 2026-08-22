@@ -14,7 +14,7 @@ import type {
   NotificationCategory,
   NotificationChannel,
   NotificationPrefsValue,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
 

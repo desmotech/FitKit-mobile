@@ -1,7 +1,7 @@
 /**
  * QR scanner — full-screen modal launched from the session detail sheet.
  *
- * Scans a `fitkit:`/`https://app.fitkit.fit/...` URL containing a session id,
+ * Scans a `taikan:`/`https://app.taikan.fit/...` URL containing a session id,
  * token, and expiry. Parses the params and posts to `/sessions/:id/self-checkin`
  * with `{ method: 'qr', token, expiresAt }`. On success, navigates back to
  * Schedule with a haptic confirmation; on error, surfaces the message inline.
@@ -62,7 +62,7 @@ export default function ScanScreen() {
       cameraNeeded: scanT.cameraNeeded ?? 'Camera access needed',
       cameraDesc:
         scanT.cameraDesc ??
-        'FitKit uses the camera to scan check-in QR codes at your gym.',
+        'Taikan uses the camera to scan check-in QR codes at your gym.',
       allowCamera: scanT.allowCamera ?? 'Allow camera',
       openSettings: scanT.openSettings ?? 'Open Settings',
       cancel: commonT.cancel ?? 'Cancel',
@@ -92,7 +92,7 @@ export default function ScanScreen() {
     ({ data }: { data: string }) => {
       if (handled.current || busy) return;
       try {
-        // Accept either fitkit:// deep link or https URL — both carry the
+        // Accept either taikan:// deep link or https URL — both carry the
         // same query params (org, s, t, e).
         const url = new URL(data);
         const params = url.searchParams;

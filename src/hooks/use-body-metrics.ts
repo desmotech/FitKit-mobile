@@ -23,7 +23,7 @@ import type {
   BodyMetricResponse,
   BodyMetricSummaryResponse,
   CreateBodyMetricInput,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
 import { queryKeys } from '@/lib/query-keys';

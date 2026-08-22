@@ -1,6 +1,6 @@
 /**
  * Invite ticket exchange — the sign-up screen a Clerk invitation deep-links
- * into (fitkit://sign-up?__clerk_ticket=…).
+ * into (taikan://sign-up?__clerk_ticket=…).
  *
  * The ticket is ONE-TIME. Clerk hands back new hook identities on every
  * client state change — including the exchange call itself resolving, and
@@ -13,7 +13,7 @@
  * re-run even signed the brand-new session straight back out.
  */
 import { act, screen, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import SignUpScreen from '../sign-up';
 import { mockAuthState, mockSignUp } from '../../test/mocks/clerk';
 import { renderWithProviders } from '../../test/render';

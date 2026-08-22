@@ -19,7 +19,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
-import type { GoalResponse } from '@fitkit/shared';
+import type { GoalResponse } from '@taikan/shared';
 import { Text } from '@/components/ui/text';
 import { font } from '@/lib/type';
 import { useFKColors } from './colors';
@@ -84,12 +84,12 @@ export function GoalCard({
       : `→ ${goal.targetValue}${unitLabel}`;
 
   const tintBg = isAchieved
-    ? 'rgba(122,138,92,0.16)'
+    ? 'rgba(46,122,77,0.16)'
     : 'rgba(14,140,140,0.10)';
   const tintBorder = isAchieved
-    ? 'rgba(122,138,92,0.30)'
+    ? 'rgba(46,122,77,0.30)'
     : 'rgba(14,140,140,0.30)';
-  const tintFg = isAchieved ? '#5A6A3F' : '#0E8C8C';
+  const tintFg = isAchieved ? colors.success : colors.primaryText;
 
   const inner = (
     <FKGlassPanel
@@ -99,8 +99,8 @@ export function GoalCard({
         gap: isCompact ? 10 : 12,
         ...(isAchieved
           ? {
-              backgroundColor: 'rgba(122,138,92,0.06)',
-              borderColor: 'rgba(122,138,92,0.30)',
+              backgroundColor: 'rgba(46,122,77,0.06)',
+              borderColor: 'rgba(46,122,77,0.30)',
             }
           : null),
       }}
@@ -191,7 +191,7 @@ export function GoalCard({
         ) : isCompact ? (
           <Chevron
             size={18}
-            color="rgba(94,112,130,0.55)"
+            color="rgba(61,90,112,0.55)"
             strokeWidth={2.2}
           />
         ) : (

@@ -264,7 +264,7 @@ function PairedSlot({ field }: { field: PairedField }) {
         style={{
           fontSize: 10,
           fontWeight: '600',
-          color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+          color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
           marginBottom: 2,
         }}
       >
@@ -277,7 +277,7 @@ function PairedSlot({ field }: { field: PairedField }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder={field.placeholder ?? '0'}
-        placeholderTextColor={isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'}
+        placeholderTextColor={isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'}
         keyboardType="number-pad"
         maxLength={field.maxLength}
         style={{
@@ -332,7 +332,7 @@ function SingleNumeric({
             value={value == null ? '' : String(value)}
             onChangeText={(t) => onChange(parseInt10(t, null))}
             placeholder={placeholder ?? '0'}
-            placeholderTextColor={isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'}
+            placeholderTextColor={isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'}
             keyboardType="number-pad"
             style={{
               fontSize: 34,
@@ -349,7 +349,7 @@ function SingleNumeric({
               style={{
                 fontSize: 15,
                 fontWeight: '500',
-                color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+                color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
               }}
             >
               {suffix}
@@ -402,7 +402,7 @@ function ValueWithUnit({
               onChangeText={(t) => onChange(parseFloat10(t), unit)}
               placeholder="0"
               placeholderTextColor={
-                isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+                isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
               }
               keyboardType="decimal-pad"
               style={{
@@ -456,7 +456,7 @@ function InlineUnitSegments({
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 2,
-          borderColor: active ? BRAND_TEAL : 'rgba(94,112,130,0.30)',
+          borderColor: active ? BRAND_TEAL : 'rgba(61,90,112,0.30)',
           backgroundColor: active
             ? 'rgba(14,140,140,0.12)'
             : 'rgba(120,120,128,0.10)',
@@ -484,7 +484,7 @@ function InlineUnitSegments({
               fontSize: 14,
               fontWeight: '800',
               fontFamily: 'Assistant-Medium',
-              color: active ? BRAND_TEAL : 'rgb(94,112,130)',
+              color: active ? BRAND_TEAL : 'rgb(61,90,112)',
               letterSpacing: -0.1,
             }}
           >
@@ -520,7 +520,7 @@ function HintLine({ text }: { text: string }) {
       style={{
         fontSize: 12,
         fontWeight: '500',
-        color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+        color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
         textAlign: isRTL ? 'right' : 'center',
       }}
     >

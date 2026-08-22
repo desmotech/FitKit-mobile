@@ -2,7 +2,7 @@
  * Payment / subscription error-code localization (FIT-272).
  *
  * Static per-language tables mapping the API's structured error codes
- * (`payments.errorCodes.*` in `@fitkit/shared`) plus the card-panel labels
+ * (`payments.errorCodes.*` in `@taikan/shared`) plus the card-panel labels
  * (`profile.paymentHistory.updateCard` / `addCard`, and the expired-card
  * badge `members.paymentMethods.expiredBadge`) — for the renew buttons, the
  * booking-horizon guard, and the cancel-flow conflict.

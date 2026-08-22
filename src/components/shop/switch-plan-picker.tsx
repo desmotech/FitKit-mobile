@@ -11,7 +11,7 @@
  */
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { SubscriptionWithPlan } from '@fitkit/shared';
+import type { SubscriptionWithPlan } from '@taikan/shared';
 import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';

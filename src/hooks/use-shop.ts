@@ -5,7 +5,7 @@ import type {
   PlanResponse,
   ProviderConfigResponse,
   SubscriptionWithPlan,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 
 /**
  * Shop data hooks. Mirror the endpoints apps/web's shop page hits:

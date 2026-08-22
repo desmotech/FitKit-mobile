@@ -12,7 +12,7 @@ import { Image as ExpoImage } from 'expo-image';
 import { Check, CheckCheck } from 'lucide-react-native';
 import { memo } from 'react';
 import { Pressable, View } from 'react-native';
-import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
+import type { AttachmentResponse, MessageResponse } from '@taikan/shared';
 import type { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { bodyFamily, eyebrow } from '@/lib/type';

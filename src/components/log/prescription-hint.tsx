@@ -11,6 +11,7 @@ import { View } from 'react-native';
 import { useColorScheme } from 'nativewind';
 import { Text } from '@/components/ui/text';
 import { useI18n } from '@/providers/i18n-provider';
+import { useFKColors } from '@/components/fk/colors';
 import {
   type FlatFallback,
   formatPrescription,
@@ -33,6 +34,7 @@ export function PrescriptionHint({
   const { colorScheme } = useColorScheme();
   const isRTL = dir === 'rtl';
   const isDark = colorScheme === 'dark';
+  const colors = useFKColors();
   const baseLine = formatPrescription(prescription, fallback);
   const computedTarget = computeTargetWeight(
     prescription,
@@ -40,7 +42,7 @@ export function PrescriptionHint({
     displayUnit,
   );
   if (!baseLine && !computedTarget) return null;
-  const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const mutedFg = isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)';
   return (
     <View accessible accessibilityLabel={composeA11yLabel(baseLine, computedTarget)}>
       {baseLine ? (
@@ -59,7 +61,7 @@ export function PrescriptionHint({
       {computedTarget ? (
         <Text
           style={{
-            color: isDark ? '#27C8BA' : '#0A6E6E',
+            color: colors.primaryText,
             fontSize: 11,
             fontWeight: '600',
             fontFamily: 'Assistant-Medium',

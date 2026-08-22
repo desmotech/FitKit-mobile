@@ -42,7 +42,7 @@ describe('form draft store', () => {
   it('namespaces the storage key so drafts cannot collide with settings', async () => {
     await saveFormDraft(KEY, { full_name: 'Dana' });
 
-    expect(formDraftStorageKey(KEY)).toBe('fitkit:form-draft:instance:inst_1');
+    expect(formDraftStorageKey(KEY)).toBe('taikan:form-draft:instance:inst_1');
     expect(await AsyncStorage.getItem(formDraftStorageKey(KEY))).not.toBeNull();
   });
 

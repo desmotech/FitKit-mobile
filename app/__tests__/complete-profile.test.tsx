@@ -11,7 +11,7 @@
  * hydrated from the server).
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import CompleteProfileScreen from '../onboarding/complete-profile';
 import { formErrorSummary } from '@/lib/validation-i18n';
 import { stageSignedInMember, userMe } from '../../test/fixtures';
@@ -112,7 +112,7 @@ describe('complete-profile onboarding gate', () => {
     await waitFor(() => expect(bodies).toHaveLength(1));
     // The full completeProfileSchema payload: every hydrated value plus the
     // national id the member just typed.
-    // israeliPhoneSchema (@fitkit/shared) normalizes phones to E.164 on
+    // israeliPhoneSchema (@taikan/shared) normalizes phones to E.164 on
     // parse — the server receives +972…, not what the member typed.
     expect(bodies[0]).toEqual({
       ...PROFILE,

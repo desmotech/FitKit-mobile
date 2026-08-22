@@ -11,44 +11,56 @@ import { useColorScheme } from 'nativewind';
 import { useMemo } from 'react';
 
 export const FK_LIGHT = {
-  card: '#FCFBF7',
-  foreground: '#161512',
-  background: '#F6F4EE',
-  muted: '#EEEBE2',
-  mutedFg: '#605B51', // WCAG AA on bg + glass (≥4.5:1)
-  secondary: '#EEEBE2',
+  card: '#FFFFFF',
+  foreground: '#0D1B2A',
+  background: '#F6F8FA', // Ocean light — same ground as usetaikan.com / web
+  muted: '#EEF2F6',
+  mutedFg: '#4A5A6E', // 6.6:1 on ground — AA at any size
+  subtleFg: '#6B7A8C', // 4.1:1 — AA-large only (captions, meta)
+  secondary: '#EEF2F6',
   secondaryFg: '#0E8C8C',
-  border: '#E3DFD4',
+  border: '#DCE3EA',
+  borderStrong: '#C3CFDA',
   primary: '#0E8C8C', // brand teal — fills/graphics
-  primaryText: '#0A6E6E', // darker teal for small text (AA on light surfaces)
+  primaryText: '#0A6E6E', // darker teal for small text (5.7:1 on ground)
+  primaryPress: '#094F4F', // solid-CTA pressed fill
   onPrimary: '#FFFFFF', // ink on a primary-filled surface
   // The tinted-primary tile: icon plates, empty-state tiles, badge fills.
-  // Hand-rolled `rgba(14,140,140,…)` literals of these two were scattered
-  // across a dozen files and none of them adapted to dark mode.
   primarySoft: 'rgba(14,140,140,0.10)',
   primaryEdge: 'rgba(14,140,140,0.28)',
-  destructive: '#B84A40', // the ONE destructive red (was 3 drifting values)
-  energy: '#D7FF3E',
-  energyFg: '#17160F',
+  destructive: '#B84A40', // the ONE destructive red
+  success: '#2E7A4D', // mint — positive / highlight (4.9:1 on ground)
+  warning: '#A8792F', // amber — attention, AA-large only
+  info: '#3D5A70', // slate — neutral status (6.8:1)
+  mauve: '#8B5A7C', // automation / event chip
+  energy: '#2E7A4D', // highlight accent == mint (no volt in the Ocean system)
+  energyFg: '#FFFFFF',
 } as const;
 
 export const FK_DARK = {
-  card: '#141417',
-  foreground: '#F3F0E9',
-  background: '#0B0B0D',
-  muted: '#1B1B1F',
-  mutedFg: '#C8C3B8', // bright secondary ink — legible on the dark gradient
-  secondary: '#1B1B1F',
-  secondaryFg: '#F3F0E9',
-  border: '#26262B',
-  primary: '#27C8BA',
-  primaryText: '#27C8BA', // already AA on dark surfaces
-  onPrimary: '#04201E', // deep teal-black ink on the bright dark-mode teal
-  primarySoft: 'rgba(39,200,186,0.12)',
-  primaryEdge: 'rgba(39,200,186,0.30)',
+  card: '#0C2B38', // band-raised
+  foreground: '#EAF2F4', // ink on band — 6.0:1
+  background: '#07202B', // the marketing "band" teal-navy
+  muted: '#123845',
+  mutedFg: '#C8D9DF', // secondary ink on band — 4.65:1
+  subtleFg: '#8FA7B3',
+  secondary: '#123845',
+  secondaryFg: '#EAF2F4',
+  border: '#2B424B', // rgba(234,242,244,0.16) flattened on band
+  borderStrong: '#3A5560',
+  primary: '#2AB8B8', // teal fill on band (web-app dark primary)
+  primaryText: '#94E3DE', // teal text/links on band — 4.6:1
+  primaryPress: '#1F9A9A',
+  onPrimary: '#04201E', // deep teal-black ink on the bright teal
+  primarySoft: 'rgba(42,184,184,0.14)',
+  primaryEdge: 'rgba(42,184,184,0.32)',
   destructive: '#EC7C70', // brightened for AA on dark surfaces
-  energy: '#D7FF3E',
-  energyFg: '#0E0E0A',
+  success: '#B0E5C4', // mint on band — 4.78:1
+  warning: '#E0B25C', // amber on band
+  info: '#7AA3C2', // slate on band
+  mauve: '#C9A2BC',
+  energy: '#B0E5C4', // mint on band
+  energyFg: '#07202B',
 } as const;
 
 /**

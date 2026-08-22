@@ -149,7 +149,7 @@ describe('Shop checkout that does not complete', () => {
     stageShop();
     openAuth.mockResolvedValue({
       type: 'success',
-      url: 'fitkit://shop/payment-return?status=failed',
+      url: 'taikan://shop/payment-return?status=failed',
     });
     const user = userEvent.setup();
     await renderWithProviders(<ShopScreen />);
@@ -189,7 +189,7 @@ describe('Shop resume of a pending checkout', () => {
     const state = stageShop({ subs: [PENDING_SUB] });
     openAuth.mockResolvedValue({
       type: 'success',
-      url: 'fitkit://shop/payment-return?status=success',
+      url: 'taikan://shop/payment-return?status=success',
     });
     const user = userEvent.setup();
     await renderWithProviders(<ShopScreen />);

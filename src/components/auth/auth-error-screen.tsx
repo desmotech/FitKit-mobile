@@ -10,7 +10,7 @@
  * no message). Here we stop, explain, and offer Retry / Sign out.
  *
  * Strings reuse the existing `auth.*` dictionary keys (somethingWentWrong,
- * retry, signOut) — no new i18n keys, so no @fitkit/shared republish.
+ * retry, signOut) — no new i18n keys, so no @taikan/shared republish.
  */
 import { Pressable, View } from 'react-native';
 import { useFKColors } from '@/components/fk';

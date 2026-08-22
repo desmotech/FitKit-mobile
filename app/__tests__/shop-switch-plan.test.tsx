@@ -13,11 +13,10 @@
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { PostHog } from 'posthog-react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import ShopScreen from '../(tabs)/shop/index';
 import { planChangeStringsFor } from '@/i18n/plan-change-strings';
 import { setAnalyticsConsent } from '@/lib/analytics';
-import { MEMBER_PLAN_CHANGE_FLAG } from '@/lib/plan-change';
 import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
@@ -48,11 +47,11 @@ const phClient = new (PostHog as unknown as new (
   key: string,
 ) => Record<string, jest.Mock>)('phc_test');
 
-function stageFlag(value: boolean | undefined) {
+// `member-plan-change` was merged as always-on (2026-08-22); consent only
+// keeps the mocked PostHog client constructing the way the screen expects.
+function stageFlag(_value: boolean | undefined) {
   setAnalyticsConsent(true);
-  phClient.getFeatureFlag.mockImplementation((key: string) =>
-    key === MEMBER_PLAN_CHANGE_FLAG ? value : undefined,
-  );
+  phClient.getFeatureFlag.mockImplementation(() => undefined);
 }
 
 // Dictionary-first labels, same merge the screens use.
@@ -146,17 +145,6 @@ beforeEach(() => {
 });
 
 describe('Shop switch-to-this-plan', () => {
-  it('keeps the plain purchase CTA while the flag is off', async () => {
-    stageShop();
-    await renderWithProviders(<ShopScreen />);
-
-    await waitFor(() => {
-      expect(screen.getByText(SILVER_PLAN.name)).toBeTruthy();
-    });
-    expect(screen.queryByText(S.switchToThisPlan)).toBeNull();
-    expect(screen.getAllByText(S.purchase).length).toBeGreaterThan(0);
-  });
-
   it('routes straight to change-plan with the single active sub preselected', async () => {
     stageFlag(true);
     stageShop();

@@ -3,7 +3,7 @@ import { type ProfileStrings, profileStringsFor } from './profile-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 /**
- * Dot-paths into the runtime dictionary (`@fitkit/shared`), keyed by the
+ * Dot-paths into the runtime dictionary (`@taikan/shared`), keyed by the
  * `ProfileStrings` field they feed. The dictionary value wins when it is a
  * string; otherwise the static per-language table is the fallback (this
  * replaces the screen's old inline `dict.x ?? 'English fallback'` lookups,
@@ -36,7 +36,7 @@ const DICT_PATHS: Partial<Record<keyof ProfileStrings, string>> = {
   // Lands with the checkout-decision keys (web adds the same path); until
   // then the static per-language table supplies it.
   completePayment: 'profile.membership.completePayment',
-  // Lands once `@fitkit/shared` publishes the `checkout_abandoned` status
+  // Lands once `@taikan/shared` publishes the `checkout_abandoned` status
   // key; until then the static per-language table above supplies it, so the
   // label is translated either way.
   checkoutNotCompleted: 'profile.membership.status.checkout_abandoned',

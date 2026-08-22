@@ -50,7 +50,7 @@ export function TextFieldRenderer({
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
         placeholderTextColor={
-          isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+          isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
         }
         style={{
           minHeight: multiline ? 96 : 48,
@@ -59,7 +59,7 @@ export function TextFieldRenderer({
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 1,
-          borderColor: 'rgba(94,112,130,0.25)',
+          borderColor: 'rgba(61,90,112,0.25)',
           backgroundColor: isDark
             ? 'rgba(118,118,128,0.20)'
             : 'rgba(118,118,128,0.10)',

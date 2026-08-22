@@ -203,7 +203,7 @@ export function SetRow({
         textAlign: 'center',
         fontSize: 13,
         fontWeight: '600',
-        color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+        color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
         fontFamily: 'Assistant-Medium',
       }}
     >
@@ -326,15 +326,15 @@ export function SetRow({
         justifyContent: 'center',
         borderWidth: 1.5,
         borderColor: value.done
-          ? '#7A8A5C'
+          ? colors.success
           : isDark
-            ? 'rgba(235,235,245,0.25)'
+            ? 'rgba(238,242,246,0.25)'
             : 'rgba(60,60,67,0.25)',
-        backgroundColor: value.done ? 'rgba(122,138,92,0.18)' : 'transparent',
+        backgroundColor: value.done ? 'rgba(46,122,77,0.18)' : 'transparent',
       }}
     >
       {value.done ? (
-        <Check size={15} color="#5A6A3F" strokeWidth={3} />
+        <Check size={15} color={colors.success} strokeWidth={3} />
       ) : null}
     </Pressable>
   );
@@ -432,7 +432,7 @@ function ColumnLabel({
         width,
         fontSize: 11,
         fontWeight: '600',
-        color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
+        color: isDark ? 'rgba(238,242,246,0.5)' : 'rgba(60,60,67,0.5)',
         textAlign: 'center',
       }}
     >
@@ -469,7 +469,7 @@ function CellInput({
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={
-        isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+        isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
       }
       keyboardType={keyboardType}
       maxLength={maxLength}

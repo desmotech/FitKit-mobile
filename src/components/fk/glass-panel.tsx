@@ -37,7 +37,7 @@ export function FKGlassPanel({
   // Translucent "liquid glass" fill over the ambient backdrop (orbs +
   // gradient) so panels refract what's behind them. The bright edge stands in
   // for CSS's inset top-highlight, which RN can't render.
-  const fillBg = isDark ? 'rgba(58,70,78,0.72)' : 'rgba(255,255,255,0.82)';
+  const fillBg = isDark ? 'rgba(18,56,69,0.72)' : 'rgba(255,255,255,0.82)';
   const borderCol = isDark ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.92)';
 
   const sharedStyle: ViewStyle = {
@@ -67,7 +67,7 @@ export function FKGlassPanel({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: isDark ? 'rgba(40,48,54,0.40)' : 'rgba(255,255,255,0.30)',
+            backgroundColor: isDark ? 'rgba(12,43,56,0.40)' : 'rgba(255,255,255,0.30)',
           }}
         />
         {children}

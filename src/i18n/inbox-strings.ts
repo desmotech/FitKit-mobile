@@ -1,5 +1,5 @@
 /**
- * Unified-inbox localization (mobile-only; not in @fitkit/shared).
+ * Unified-inbox localization (mobile-only; not in @taikan/shared).
  *
  * The inbox merges three messaging surfaces — direct messages, in-workout
  * comment threads, and studio announcements — under one screen with tabs.

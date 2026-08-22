@@ -2,13 +2,13 @@
  * Notification settings — per-category × per-channel toggles.
  *
  * Apple's HIG forbids replicating the master OS-level enable/disable
- * (that lives in iOS Settings → FitKit → Notifications). What we DO own:
+ * (that lives in iOS Settings → Taikan → Notifications). What we DO own:
  * per-category opt-out across each delivery channel. If the OS-level
  * permission is denied, we show a banner pointing the user at Settings —
  * the in-app toggles for `push` won't matter until they re-enable.
  *
  * Channels are data-driven: `NOTIFICATION_CHANNELS` lives in
- * `@fitkit/shared`. When we add WhatsApp / SMS later, this screen picks
+ * `@taikan/shared`. When we add WhatsApp / SMS later, this screen picks
  * them up automatically as long as we add an icon mapping below.
  */
 import * as Notifications from 'expo-notifications';
@@ -28,7 +28,7 @@ import {
   isChannelEnabled,
   type NotificationCategory,
   type NotificationChannel,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { FKSubScreen, useFKColors } from '@/components/fk';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';

@@ -177,7 +177,7 @@ export function FormRenderer({
   // and <FieldShell> via useFormRTL().
   const isRTL = form.locale === 'he';
   const colors = useFKColors();
-  // `bodyRichJson` ships in a newer @fitkit/shared than this app pins, so
+  // `bodyRichJson` ships in a newer @taikan/shared than this app pins, so
   // read it off the response defensively rather than widening the type.
   const richBody = (form as { bodyRichJson?: unknown }).bodyRichJson;
   const haptics = useHaptics();

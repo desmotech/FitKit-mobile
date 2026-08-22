@@ -56,7 +56,7 @@ import {
   useLogResult,
   useWorkoutAssignment,
 } from '@/hooks/use-workouts';
-import { getShapeCaps, type MovementCaps, type SectionShape } from '@fitkit/shared';
+import { getShapeCaps, type MovementCaps, type SectionShape } from '@taikan/shared';
 import { analytics } from '@/lib/analytics';
 import { formatSectionHeader } from '@/lib/format-prescription';
 import { useLogStrings } from '@/i18n/use-log-strings';
@@ -107,7 +107,7 @@ export default function LogWorkoutResultScreen() {
   const { oneRMKg, isLoading: oneRMLoading } = useMyOneRMByExercise(orgId);
 
   // i18n: all strings come from the local log dictionary (he/en/ru).
-  // See src/i18n/log-strings.ts; the shared @fitkit/shared dictionary
+  // See src/i18n/log-strings.ts; the shared @taikan/shared dictionary
   // doesn't yet cover the new fields and the strings live in one
   // place so the UI matches across the three log surfaces.
 
@@ -426,7 +426,7 @@ export default function LogWorkoutResultScreen() {
                 placeholder={L.workoutNotesPlaceholder}
                 placeholderTextColor={
                   isDark
-                    ? 'rgba(235,235,245,0.3)'
+                    ? 'rgba(238,242,246,0.3)'
                     : 'rgba(60,60,67,0.3)'
                 }
                 multiline

@@ -6,15 +6,15 @@ Hello, and thank you for the review. Below are detailed answers to the
 business-model questions (Guideline 2.1(b)), followed by a note on the change
 we made for Guideline 2.5.4.
 
-**About FitKit:** FitKit is a B2B SaaS platform for real-world fitness
+**About Taikan:** Taikan is a B2B SaaS platform for real-world fitness
 businesses — gyms, studios, and independent coaches. Those businesses
-("organizations") subscribe to FitKit to run their operations. This mobile app
+("organizations") subscribe to Taikan to run their operations. This mobile app
 is the **member-facing companion**: it is used by the existing clients of a
 specific gym/studio/coach to manage their real-world membership (class
 schedules and bookings, QR/GPS check-in at the physical gym, workout
 programming assigned by their coach, announcements, and messaging). The app
 contains no business-administration or B2B billing surfaces — gym owners manage
-their business on the FitKit web dashboard, not in this app.
+their business on the Taikan web dashboard, not in this app.
 
 The app uses **no in-app purchase / StoreKit**, because the only paid offering
 surfaced to members is access to a real-world fitness business's services
@@ -22,13 +22,13 @@ surfaced to members is access to a real-world fitness business's services
 3.1.3(e) / 3.1.5, services that take place in the real world are not required to
 use in-app purchase. Members pay their gym directly through the gym's own
 external payment processor (e.g. Stripe), on a provider-hosted web checkout page
-opened outside the app — the gym is the merchant of record, and neither FitKit
+opened outside the app — the gym is the merchant of record, and neither Taikan
 nor Apple processes that payment within the app.
 
 **1. Who are the users that will use the paid content, subscriptions, features,
 and services in the app?**
 The existing clients (members) of a specific gym, studio, or independent coach
-that subscribes to FitKit. A member only sees the offerings of the one business
+that subscribes to Taikan. A member only sees the offerings of the one business
 they belong to. They are real-world clients using the app as the companion to
 their in-person membership.
 
@@ -55,7 +55,7 @@ Membership plans for the member's gym. Each plan represents that gym's
 real-world offering — access to the physical facility, in-person classes, and
 coaching. Some plans also include the coach's workout programming, which is
 delivered as part of that real-world coaching relationship (not sold as a
-standalone digital catalog by FitKit). Because these are services of a
+standalone digital catalog by Taikan). Because these are services of a
 real-world fitness business, paid through the gym's own external processor, they
 are exempt from in-app purchase under Guideline 3.1.3(e) / 3.1.5.
 
@@ -71,11 +71,11 @@ app?**
 Opening an account and using the app are free. The only paid item is the
 member's gym membership, which the member pays to their gym (the merchant of
 record) through the gym's external payment processor — not to Apple, and not as
-a fee charged by the app. FitKit itself is paid by the gyms via a B2B SaaS
+a fee charged by the app. Taikan itself is paid by the gyms via a B2B SaaS
 subscription billed entirely outside this consumer app.
 
 **7. Are there enterprise services in your app?**
-FitKit's enterprise/B2B service (the SaaS platform) is sold to fitness
+Taikan's enterprise/B2B service (the SaaS platform) is sold to fitness
 businesses and is billed outside this app. This mobile app is purely the
 consumer/member companion and contains no enterprise administration or B2B
 billing functionality.
@@ -84,7 +84,7 @@ billing functionality.
 or for family use?**
 Within the app, memberships are sold by each gym to individual members for that
 individual's own personal use — they are not family plans and not enterprise
-seats. FitKit's platform subscription (the B2B/enterprise part) is sold to the
+seats. Taikan's platform subscription (the B2B/enterprise part) is sold to the
 gym business and is handled entirely outside this app.
 
 ---

@@ -3,7 +3,7 @@
  *
  * A contained rail (matte surface + hairline border) with a single inverted
  * pill that springs to the selected day. Each cell: weekday (mono/Alef) over
- * date (display), a status bar (sage = done · teal = scheduled · rust = missed),
+ * date (display), a status bar (mint = done · teal = scheduled · rust = missed),
  * and a static dot in the top corner on today. Visual reference only — fed the
  * app's real week data + selection.
  */
@@ -24,7 +24,7 @@ import { FKGlassSurface } from './glass-surface';
 /**
  * Day status — drives the bar under the date (one consistent semantic across
  * Schedule + Program):
- *   done    → attended / completed   (sage)
+ *   done    → attended / completed   (mint)
  *   has     → booked / assigned ahead (teal)
  *   missed  → past commitment not met (rust)
  *   rest    → rest day               (no bar)
@@ -188,11 +188,10 @@ function RailCell({
     .filter(Boolean)
     .join(', ');
 
-  const sage = colors.isDark ? '#8AA86A' : '#6E8A4E';
   const rust = colors.isDark ? '#E0685C' : '#C0524A';
   const statusCol =
     day.state === 'done'
-      ? sage
+      ? colors.success
       : day.state === 'missed'
         ? rust
         : day.state === 'has'

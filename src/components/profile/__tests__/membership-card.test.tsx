@@ -126,7 +126,7 @@ describe('MembershipCard — abandoned checkout vs ended membership', () => {
   });
 
   it('labels the chip from the static strings when the dictionary lacks the key', async () => {
-    // Pre-publish state: `@fitkit/shared` has no `checkout_abandoned` status
+    // Pre-publish state: `@taikan/shared` has no `checkout_abandoned` status
     // key yet, so STATUS here has no entry and the card must still not fall
     // through to "Ended".
     await renderCard(abandoned);

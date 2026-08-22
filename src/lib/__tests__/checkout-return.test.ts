@@ -18,8 +18,8 @@ import {
 describe('checkoutOutcomeOf', () => {
   const url = (status?: string) =>
     status
-      ? `fitkit://shop/payment-return?status=${status}&sub=sub_1`
-      : 'fitkit://shop/payment-return?sub=sub_1';
+      ? `taikan://shop/payment-return?status=${status}&sub=sub_1`
+      : 'taikan://shop/payment-return?sub=sub_1';
 
   it('reads a successful return', () => {
     expect(checkoutOutcomeOf({ type: 'success', url: url('success') })).toBe(
@@ -51,13 +51,13 @@ describe('checkoutOutcomeOf', () => {
 
 describe('statusParamOf', () => {
   it('finds the param wherever it sits in the query string', () => {
-    expect(statusParamOf('fitkit://x?sub=1&status=failed')).toBe('failed');
-    expect(statusParamOf('fitkit://x?status=cancelled&sub=1')).toBe('cancelled');
+    expect(statusParamOf('taikan://x?sub=1&status=failed')).toBe('failed');
+    expect(statusParamOf('taikan://x?status=cancelled&sub=1')).toBe('cancelled');
   });
 
   it('stops at a fragment and returns nothing when absent', () => {
-    expect(statusParamOf('fitkit://x?sub=1')).toBeUndefined();
-    expect(statusParamOf('fitkit://x?status=failed#frag')).toBe('failed');
+    expect(statusParamOf('taikan://x?sub=1')).toBeUndefined();
+    expect(statusParamOf('taikan://x?status=failed#frag')).toBe('failed');
   });
 });
 
@@ -71,13 +71,13 @@ describe('statusParamOf', () => {
 describe('subParamOf', () => {
   it('reads the subscription id off every leg', () => {
     expect(
-      subParamOf('fitkit://shop/payment-return?status=cancelled&sub=sub_9'),
+      subParamOf('taikan://shop/payment-return?status=cancelled&sub=sub_9'),
     ).toBe('sub_9');
     expect(
-      subParamOf('fitkit://shop/payment-return?status=failed&sub=sub_9'),
+      subParamOf('taikan://shop/payment-return?status=failed&sub=sub_9'),
     ).toBe('sub_9');
     expect(
-      subParamOf('fitkit://shop/payment-return?sub=sub_9&status=success'),
+      subParamOf('taikan://shop/payment-return?sub=sub_9&status=success'),
     ).toBe('sub_9');
   });
 
@@ -85,15 +85,15 @@ describe('subParamOf', () => {
     // What the bridge forwards: the `to=` target plus the provider's params.
     expect(
       subParamOf(
-        'fitkit://shop/payment-return?to=shop%2Fpayment-return&status=failed&sub=sub_bridge',
+        'taikan://shop/payment-return?to=shop%2Fpayment-return&status=failed&sub=sub_bridge',
       ),
     ).toBe('sub_bridge');
   });
 
   it('reports nothing rather than an empty id when the leg is silent', () => {
-    expect(subParamOf('fitkit://shop/payment-return?status=cancelled')).toBeUndefined();
+    expect(subParamOf('taikan://shop/payment-return?status=cancelled')).toBeUndefined();
     expect(
-      subParamOf('fitkit://shop/payment-return?status=cancelled&sub='),
+      subParamOf('taikan://shop/payment-return?status=cancelled&sub='),
     ).toBeUndefined();
   });
 });
@@ -103,7 +103,7 @@ describe('checkoutReturnOf', () => {
     expect(
       checkoutReturnOf({
         type: 'success',
-        url: 'fitkit://shop/payment-return?status=failed&sub=sub_3',
+        url: 'taikan://shop/payment-return?status=failed&sub=sub_3',
       }),
     ).toEqual({ outcome: 'failed', subId: 'sub_3' });
   });

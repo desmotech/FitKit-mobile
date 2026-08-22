@@ -10,7 +10,7 @@
  * Network staged via MSW; the member drives the real screen.
  */
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import WorkoutDetailScreen from '../(tabs)/workouts/[id]/index';
 import { programSheetStringsFor } from '@/i18n/program-sheet-strings';
 import { stageSignedInMember } from '../../test/fixtures';

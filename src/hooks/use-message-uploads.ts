@@ -23,7 +23,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sentry from '@sentry/react-native';
 import { useCallback, useState } from 'react';
 import { useApi } from './use-api';
-import type { UploadUrlResponse } from '@fitkit/shared';
+import type { UploadUrlResponse } from '@taikan/shared';
 
 const ALLOWED_MIME = new Set([
   'image/jpeg',

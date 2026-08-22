@@ -52,7 +52,7 @@ function AvatarFallback({
 }
 
 /**
- * FitKit-flavored avatar that draws initials from a person's name.
+ * Taikan-flavored avatar that draws initials from a person's name.
  * Per the design bundle: primary/12 background, primary text, ~36%
  * font-size of the avatar diameter, no image.
  */

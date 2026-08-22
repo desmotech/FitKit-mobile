@@ -17,7 +17,7 @@ import type {
   MemberChangePlanResponse,
 } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
-import type { SubscriptionWithPlan } from '@fitkit/shared';
+import type { SubscriptionWithPlan } from '@taikan/shared';
 
 export function useChangePlanPreview(
   orgId: string | undefined | null,

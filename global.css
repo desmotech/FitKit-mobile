@@ -1,14 +1,15 @@
 /* ============================================================
-   FitKit Mobile — global.css  ·  "Whiteboard" palette
-   Dark-first: matte ink is the hero surface, warm paper is the
-   light adaptation. Teal is the cool/brand accent; volt is the
-   energy accent (today, PRs, the single primary CTA).
+   Taikan Mobile — global.css  ·  "Ocean" palette
+   Shared with usetaikan.com and the web app: Ocean-light ground
+   with deep-navy ink, the marketing "band" teal-navy for dark.
+   Teal is the brand accent; mint is the highlight/positive accent
+   (today, PRs, the single primary CTA).
 
    HSL channel-split tokens (shadcn pattern). NativeWind 4 +
    Tailwind v3 only honour `/alpha` modifiers when the token is
    in `H S% L%` channel form referenced via
    `hsl(var(--token) / <alpha-value>)` in tailwind.config.js.
-   Hex equivalents are in the comments (mirror src/lib/theme.ts).
+   Hex equivalents are in the comments (mirror src/components/fk/colors.ts).
    ============================================================ */
 
 @tailwind base;
@@ -17,108 +18,109 @@
 
 @layer base {
   :root {
-    /* ── Light / "paper" — warm, low-blue, glanceable in a bright gym ── */
-    --background: 44 30% 95%;           /* #F6F4EE — warm paper   */
-    --foreground: 45 10% 8%;            /* #161512 — ink          */
-    --card: 48 38% 98%;                 /* #FCFBF7 — raised paper */
-    --card-foreground: 45 10% 8%;
-    --popover: 48 38% 98%;
-    --popover-foreground: 45 10% 8%;
+    /* ── Light / "Ocean light" — mirrors usetaikan.com + the web app ── */
+    --background: 210 29% 97%;          /* #F6F8FA — ocean ground */
+    --foreground: 211 53% 11%;          /* #0D1B2A — deep navy ink*/
+    --card: 0 0% 100%;                  /* #FFFFFF — raised card  */
+    --card-foreground: 211 53% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 211 53% 11%;
 
-    /* Primary — Teal (cool/brand accent) */
+    /* Primary — Teal (brand fill / icons). Small teal TEXT uses
+       FK primaryText (#0A6E6E) for AA on the light ground. */
     --primary: 180 82% 30%;             /* #0E8C8C                */
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary / Muted — warm neutrals */
-    --secondary: 44 25% 91%;            /* #EEEBE2                */
+    /* Secondary / Muted — ocean neutrals */
+    --secondary: 210 29% 95%;           /* #EEF2F6 — sunken wash  */
     --secondary-foreground: 180 82% 30%;
-    --muted: 44 25% 91%;
-    --muted-foreground: 40 8% 40%;      /* #6E695E — warm steel   */
+    --muted: 210 29% 95%;
+    --muted-foreground: 213 20% 36%;    /* #4A5A6E — 6.6:1        */
 
-    /* Accent — Sage (FK molecules) */
-    --accent: 75 20% 45%;               /* #7A8A5C                */
-    --accent-foreground: 0 0% 100%;
+    /* Accent — Ocean wash with teal ink (web app parity) */
+    --accent: 210 29% 95%;              /* #EEF2F6                */
+    --accent-foreground: 180 82% 30%;   /* #0E8C8C                */
 
-    /* Energy — Volt. Athletic high-signal accent. Use sparingly:
-       today, PRs, streaks, the one primary CTA. Pair with ink text. */
-    --energy: 73 100% 62%;              /* #D7FF3E — volt         */
-    --energy-foreground: 60 17% 8%;     /* #17160F — ink on volt  */
+    /* Energy — Mint, the palette's highlight/positive accent
+       (today, PRs, streaks, the one primary CTA). */
+    --energy: 144 45% 33%;              /* #2E7A4D — mint         */
+    --energy-foreground: 0 0% 100%;
 
     /* Destructive — Rust */
     --destructive: 5 49% 49%;           /* #B84A40                */
     --destructive-foreground: 0 0% 100%;
 
     /* Borders / Inputs */
-    --border: 44 22% 86%;               /* #E3DFD4 — warm hairline*/
-    --input: 44 22% 86%;
+    --border: 210 25% 89%;              /* #DCE3EA — ocean border */
+    --input: 210 25% 89%;
     --ring: 180 82% 30%;
 
     /* Charts */
-    --chart-1: 180 82% 30%;
-    --chart-2: 75 20% 45%;
-    --chart-3: 35 56% 55%;
-    --chart-4: 207 33% 43%;
-    --chart-5: 73 90% 50%;
+    --chart-1: 180 82% 30%;             /* teal   */
+    --chart-2: 144 45% 33%;             /* mint   */
+    --chart-3: 37 56% 42%;              /* amber  */
+    --chart-4: 206 29% 34%;             /* slate  */
+    --chart-5: 320 21% 45%;             /* mauve  */
 
     /* Status */
-    --success: 75 20% 45%;
-    --success-foreground: 75 22% 22%;
-    --success-muted: 75 30% 92%;
-    --warning: 35 56% 55%;              /* #C9974D — amber        */
-    --warning-foreground: 35 50% 28%;
-    --warning-muted: 35 60% 94%;
-    --info: 207 33% 43%;                /* #4A7290 — slate        */
-    --info-foreground: 207 35% 25%;
-    --info-muted: 207 35% 92%;
+    --success: 144 45% 33%;             /* #2E7A4D — mint         */
+    --success-foreground: 144 50% 22%;
+    --success-muted: 144 40% 93%;
+    --warning: 37 56% 42%;              /* #A8792F — amber        */
+    --warning-foreground: 37 60% 26%;
+    --warning-muted: 37 60% 94%;
+    --info: 206 29% 34%;                /* #3D5A70 — slate        */
+    --info-foreground: 206 35% 24%;
+    --info-muted: 206 35% 93%;
 
     --radius: 0.75rem;
   }
 
   .dark:root,
   .dark {
-    /* ── Dark / "board" — matte ink hero surface (the lead identity) ── */
-    --background: 240 8% 5%;            /* #0B0B0D — matte ink    */
-    --foreground: 42 30% 93%;           /* #F3F0E9 — warm chalk   */
-    --card: 240 7% 8%;                  /* #141417 — lifted       */
-    --card-foreground: 42 30% 93%;
-    --popover: 240 7% 8%;
-    --popover-foreground: 42 30% 93%;
+    /* ── Dark / "Band" — the deep teal-navy full-bleed from usetaikan.com ── */
+    --background: 198 72% 10%;          /* #07202B — band         */
+    --foreground: 190 31% 94%;          /* #EAF2F4 — ink on band  */
+    --card: 198 65% 13%;                /* #0C2B38 — band raised  */
+    --card-foreground: 190 31% 94%;
+    --popover: 198 65% 13%;
+    --popover-foreground: 190 31% 94%;
 
-    --primary: 175 67% 47%;             /* #27C8BA — brighter teal*/
+    --primary: 180 63% 45%;             /* #2AB8B8 — teal fill    */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 7% 11%;            /* #1B1B1F                */
-    --secondary-foreground: 42 30% 93%;
-    --muted: 240 7% 11%;
-    --muted-foreground: 40 8% 57%;      /* #9A958A — warm grey    */
+    --secondary: 196 58% 17%;           /* #123845 — lifted band  */
+    --secondary-foreground: 190 31% 94%;
+    --muted: 196 58% 17%;
+    --muted-foreground: 196 23% 83%;    /* #C8D9DF — 4.65:1       */
 
-    --accent: 85 27% 54%;               /* #8AA86A — sage         */
-    --accent-foreground: 0 0% 100%;
+    --accent: 180 63% 45%;              /* teal wash (use /18)    */
+    --accent-foreground: 190 31% 94%;
 
-    --energy: 73 100% 62%;              /* #D7FF3E — volt         */
-    --energy-foreground: 60 17% 7%;     /* near-black ink         */
+    --energy: 143 51% 79%;              /* #B0E5C4 — mint on band */
+    --energy-foreground: 198 72% 10%;   /* band ink on mint       */
 
     --destructive: 5 72% 64%;           /* #E0685C — brighter rust*/
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 7% 16%;               /* #26262B                */
-    --input: 240 7% 16%;
-    --ring: 175 67% 47%;
+    --border: 197 27% 23%;              /* #2B424B — 16% ink line */
+    --input: 197 27% 23%;
+    --ring: 180 63% 45%;
 
-    --chart-1: 175 67% 47%;
-    --chart-2: 85 27% 54%;
-    --chart-3: 35 56% 55%;
-    --chart-4: 207 33% 50%;
-    --chart-5: 73 100% 62%;
+    --chart-1: 180 63% 45%;
+    --chart-2: 143 51% 79%;
+    --chart-3: 37 68% 62%;
+    --chart-4: 206 40% 62%;
+    --chart-5: 320 30% 70%;
 
-    --success: 85 27% 54%;
-    --success-foreground: 75 30% 70%;
-    --success-muted: 75 28% 18%;
-    --warning: 35 56% 55%;
-    --warning-foreground: 35 60% 75%;
-    --warning-muted: 35 40% 18%;
-    --info: 207 33% 50%;
-    --info-foreground: 207 50% 70%;
-    --info-muted: 207 40% 18%;
+    --success: 143 51% 79%;             /* #B0E5C4                */
+    --success-foreground: 143 51% 79%;
+    --success-muted: 144 35% 16%;
+    --warning: 37 68% 62%;              /* #E0B25C — amber on band*/
+    --warning-foreground: 37 68% 72%;
+    --warning-muted: 37 40% 16%;
+    --info: 206 40% 62%;                /* #7AA3C2 — slate on band*/
+    --info-foreground: 206 50% 74%;
+    --info-muted: 206 40% 16%;
   }
 }

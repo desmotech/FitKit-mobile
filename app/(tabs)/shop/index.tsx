@@ -8,7 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Info, ShoppingBag } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, View } from 'react-native';
-import type { PlanResponse } from '@fitkit/shared';
+import type { PlanResponse } from '@taikan/shared';
 import { QueryErrorState } from '@/components/error-state';
 import {
   FKAmbientBackdrop,
@@ -21,7 +21,6 @@ import { SwitchPlanPicker } from '@/components/shop/switch-plan-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import {
   isOfferedInShop,
@@ -39,7 +38,6 @@ import { paymentReturnUrl } from '@/lib/api';
 import { checkoutReturnOf, returnParamFor } from '@/lib/checkout-return';
 import { queryKeys } from '@/lib/query-keys';
 import { formatPrice } from '@/lib/format-price';
-import { MEMBER_PLAN_CHANGE_FLAG } from '@/lib/plan-change';
 import { useTabBarPadding } from '@/hooks/use-tab-bar-padding';
 import * as analytics from '@/lib/analytics';
 import { displayFamily } from '@/lib/type';
@@ -47,7 +45,7 @@ import { usePlanChangeStrings } from '@/i18n/use-plan-change-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
 const RETURN_PATH = 'shop/payment-return';
-const RETURN_URL = `fitkit://${RETURN_PATH}`;
+const RETURN_URL = `taikan://${RETURN_PATH}`;
 
 export default function ShopScreen() {
   const router = useRouter();
@@ -94,12 +92,12 @@ export default function ShopScreen() {
     (p) => p.type !== 'course' && isOfferedInShop(p),
   );
   // `isActive` means "this is the org's selected provider", NOT "it can
-  // charge". A FitKit-managed terminal awaiting Cardcom's KYC is active and
+  // charge". A Taikan-managed terminal awaiting Cardcom's KYC is active and
   // unchargeable, so gating on it alone showed buyable plans against a
   // terminal that rejects every checkout (prod, KineticsCF, 2026-08-12).
   //
   // `status` (FIT-286) is the field that says whether money can move. It is
-  // read defensively: this app ships against older @fitkit/shared builds and
+  // read defensively: this app ships against older @taikan/shared builds and
   // older API deployments where the field does not exist, and there "no
   // status" means the provider was always chargeable — treating it as
   // unchargeable would hide the shop for every gym.
@@ -174,11 +172,9 @@ export default function ShopScreen() {
   const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ── Switch-to-this-plan (FIT-271, flag `member-plan-change`) ────────
-  // Fail-closed: until PostHog affirms the flag, cards keep the plain
-  // purchase CTA. Switching is only offered on subscription-type target
-  // plans, to members already holding ≥1 active recurring subscription.
-  const switchPlanEnabled = useFeatureFlag(MEMBER_PLAN_CHANGE_FLAG);
+  // ── Switch-to-this-plan (FIT-271) ──────────────────────────────────
+  // Switching is only offered on subscription-type target plans, to members
+  // already holding ≥1 active recurring subscription.
   const planChangeStrings = usePlanChangeStrings();
   const [pickerPlanId, setPickerPlanId] = useState<string | null>(null);
   const activeSubscriptionSubs = useMemo(
@@ -388,7 +384,6 @@ export default function ShopScreen() {
     const isCurrent =
       plan.type === 'subscription' && !!currentByPlanId[plan.id];
     const canSwitch =
-      switchPlanEnabled &&
       plan.type === 'subscription' &&
       !isCurrent &&
       !pendingByPlanId[plan.id] &&
@@ -399,7 +394,7 @@ export default function ShopScreen() {
     }
     if (isCurrent) return;
     if (plan.priceInCents > 0 && !hasPaymentProvider) return;
-    // Fallback strings until the mobile @fitkit/shared pin picks up the
+    // Fallback strings until the mobile @taikan/shared pin picks up the
     // shop.deepLink keys (added alongside the web landing).
     const dlT = ((dict.shop?.deepLink as Record<string, string>) ?? {}) as Record<
       string,
@@ -438,7 +433,6 @@ export default function ShopScreen() {
     currentByPlanId,
     pendingByPlanId,
     activeSubscriptionSubs,
-    switchPlanEnabled,
     hasPaymentProvider,
     handleSelect,
     handleSwitchClick,
@@ -560,7 +554,6 @@ export default function ShopScreen() {
               // nothing pending on this plan. Consumables never switch —
               // they're bought alongside, not moved onto.
               const canSwitch =
-                switchPlanEnabled &&
                 plan.type === 'subscription' &&
                 !currentByPlanId[plan.id] &&
                 !pendingByPlanId[plan.id] &&

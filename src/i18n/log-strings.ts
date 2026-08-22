@@ -1,7 +1,7 @@
 /**
  * Log-flow localization.
  *
- * Supplements the shared `@fitkit/shared` dictionary for the new
+ * Supplements the shared `@taikan/shared` dictionary for the new
  * unified log surfaces (hub, free-form lift, body metric, score
  * primitives). All strings live here so the components themselves
  * stay locale-free, and Hebrew (the default locale) is a first-class

@@ -4,7 +4,7 @@
  * editable (Clerk owns the address), and never part of the PATCH payload.
  */
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import PersonalDetailsScreen from '../(tabs)/profile/personal';
 import { stageSignedInMember, userMe } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
@@ -17,7 +17,7 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: jest.fn(), push: jest.fn(), back: jest.fn() }),
 }));
 
-const EMAIL = 'saar@fitkit.fit';
+const EMAIL = 'saar@usetaikan.com';
 
 function capturePatch() {
   const bodies: Record<string, unknown>[] = [];

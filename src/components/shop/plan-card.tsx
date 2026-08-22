@@ -7,7 +7,7 @@
  *   current → resume payment → payment unavailable → purchase.
  */
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import type { PlanInterval, PlanResponse } from '@fitkit/shared';
+import type { PlanInterval, PlanResponse } from '@taikan/shared';
 import {
   FKCard,
   FKChip,
@@ -30,7 +30,7 @@ const INTERVAL_KEY: Record<PlanInterval, string> = {
 
 /**
  * `shop.planCard.classCredits` / `creditsLeft` are plain `{count}` template
- * strings in older @fitkit/shared releases but pluralization objects
+ * strings in older @taikan/shared releases but pluralization objects
  * (`{one, two, other}`) in newer ones — accept both so a dictionary bump
  * can't crash the card.
  */
@@ -88,7 +88,7 @@ export function PlanCard({
   const qt = useQuotaStrings();
 
   // FIT-282 presale terms. Read off the plan structurally: mobile's pinned
-  // @fitkit/shared predates these fields, and they stay optional on the wire
+  // @taikan/shared predates these fields, and they stay optional on the wire
   // so an older app simply shows the standard price.
   const presale = plan as unknown as {
     introPriceInCents?: number | null;

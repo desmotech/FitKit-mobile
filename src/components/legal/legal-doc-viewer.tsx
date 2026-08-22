@@ -17,7 +17,7 @@
  */
 import * as WebBrowser from 'expo-web-browser';
 import { Linking } from 'react-native';
-import type { LegalDocumentType } from '@fitkit/shared';
+import type { LegalDocumentType } from '@taikan/shared';
 import { marketingUrlForType } from '@/hooks/use-legal';
 
 /**

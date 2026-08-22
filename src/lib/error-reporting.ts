@@ -5,7 +5,7 @@ import * as Sentry from '@sentry/react-native';
  *
  * Until 2026-07-31 the app called `Sentry.captureException` exactly once in
  * the entire codebase (an upload hook), so every failed API call died inside
- * UI copy. The fitkit-mobile Sentry project had received one event in its
+ * UI copy. The taikan-mobile Sentry project had received one event in its
  * lifetime while a compliance signature was 500ing in production for a real
  * customer — the backend saw it, the client reported nothing. This module is
  * the missing path from "a request failed" to "we know about it".

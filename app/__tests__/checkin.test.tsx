@@ -8,7 +8,7 @@
  * Copy comes from the shared `schedule.checkinPage` dictionary — the same
  * table the web QR landing renders, so the surfaces stay in sync.
  */
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import CheckInScreen from '../checkin';
 import { scheduleStringsFor } from '@/i18n/schedule-strings';

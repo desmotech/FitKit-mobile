@@ -48,7 +48,7 @@ import { ChevronLeft, ChevronRight, Compass, Target, Trophy, WifiOff, type Lucid
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import type { GoalResponse } from '@fitkit/shared';
+import type { GoalResponse } from '@taikan/shared';
 import {
   FKAmbientBackdrop,
   FKCard,
@@ -98,7 +98,6 @@ import { useHomeStrings } from '@/i18n/use-home-strings';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
-const BRAND_GOLD = '#C9974D';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -435,7 +434,7 @@ export default function HomeScreen() {
                         height: 44,
                         borderRadius: 14,
                         backgroundColor: colors.isDark
-                          ? 'rgba(58,70,78,0.72)'
+                          ? 'rgba(18,56,69,0.72)'
                           : 'rgba(255,255,255,0.82)',
                         borderWidth: 1,
                         borderColor: colors.isDark
@@ -605,7 +604,7 @@ export default function HomeScreen() {
               <QuickActionTile
                 icon={Trophy}
                 label={L.homeLogPr}
-                accent={BRAND_GOLD}
+                accent={colors.warning}
                 isDark={colors.isDark}
                 fg={colors.foreground}
                 isRTL={isRTL}

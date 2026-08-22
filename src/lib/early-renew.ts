@@ -8,12 +8,6 @@
  * can't book with.
  */
 
-/** Mirrors `FeatureFlags.PLAN_INTRO_PRICING` (libs/shared feature-flags.ts).
- *  Deliberately shares FIT-282's presale-terms flag rather than getting its
- *  own — both ship on the same rollout, org-by-org. Per-org PostHog gate,
- *  default OFF, fail-closed — same flag as web. */
-export const EARLY_RENEWAL_FLAG = 'plan-intro-pricing';
-
 /** Structured API error codes `renewEarly` can throw (mirrors web's
  *  early-renew-dialog KNOWN_CODES). */
 export const EARLY_RENEW_ERROR_CODES = [

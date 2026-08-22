@@ -194,7 +194,7 @@ describe('MembershipCard — intro payments vs a cancelled membership', () => {
     expect(screen.queryByTestId('no-further-charges')).toBeNull();
   });
 
-  // ADR-0017: the gym's own provider debits the member and FitKit only
+  // ADR-0017: the gym's own provider debits the member and Taikan only
   // observes it — we cannot say what is coming next, so we say nothing.
   it('claims nothing about an externally billed subscription', async () => {
     await renderWithProviders(

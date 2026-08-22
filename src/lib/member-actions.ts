@@ -9,7 +9,7 @@
  * shipped before it.
  *
  * Read through {@link memberActionsOf} rather than off the row: mobile's
- * pinned `@fitkit/shared` predates both fields, so both are typed
+ * pinned `@taikan/shared` predates both fields, so both are typed
  * structurally, and the fallback keeps an older API deployment behaving
  * exactly as it did.
  */

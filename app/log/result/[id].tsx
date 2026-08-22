@@ -143,15 +143,15 @@ export default function ResultDetailScreen() {
                     paddingVertical: 5,
                     borderRadius: 999,
                     backgroundColor: result.rx
-                      ? 'rgba(122,138,92,0.18)'
-                      : 'rgba(201,151,77,0.18)',
+                      ? 'rgba(46,122,77,0.18)'
+                      : 'rgba(168,121,47,0.18)',
                   }}
                 >
                   <Text
                     style={{
                       fontFamily: 'Assistant-Bold',
                       fontSize: 12,
-                      color: result.rx ? '#5A6A3F' : '#A8742E',
+                      color: result.rx ? colors.success : colors.warning,
                       letterSpacing: 0.3,
                     }}
                   >

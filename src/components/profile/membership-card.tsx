@@ -1,7 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { CheckCircle2, Star } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
-import type { SubscriptionDisplayStatus } from '@fitkit/shared';
+import type { SubscriptionDisplayStatus } from '@taikan/shared';
 import { Text } from '@/components/ui/text';
 import { useFKColors } from '@/components/fk';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -69,7 +69,7 @@ export function MembershipCard({
      *  ran its course, one somebody ended, and a checkout nobody completed —
      *  and this splits the last one out. Optional: still absent on an API
      *  build that predates it, which is why every read falls back to `status`.
-     *  Typed off the shared union now that the pinned `@fitkit/shared` carries
+     *  Typed off the shared union now that the pinned `@taikan/shared` carries
      *  it (0.1.53), so the `checkout_abandoned` test below cannot drift into a
      *  silent typo. */
     displayStatus?: SubscriptionDisplayStatus | null;

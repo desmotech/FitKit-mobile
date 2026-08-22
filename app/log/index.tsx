@@ -1,5 +1,5 @@
 /**
- * Log Hub — bottom-sheet chooser, built on the established FitKit
+ * Log Hub — bottom-sheet chooser, built on the established Taikan
  * "SettingsGroup" pattern from app/(tabs)/profile/index.tsx.
  *
  * Visual: one `FKGlassPanel` (radius 20, padding 6) containing 3 rows
@@ -174,14 +174,14 @@ interface Branch {
 
 const TONE_BG: Record<'primary' | 'warm' | 'success', string> = {
   primary: 'rgba(14,140,140,0.12)',
-  warm: 'rgba(201,151,77,0.14)',
-  success: 'rgba(122,138,92,0.16)',
+  warm: 'rgba(168,121,47,0.14)',
+  success: 'rgba(46,122,77,0.16)',
 };
-const TONE_FG: Record<'primary' | 'warm' | 'success', string> = {
-  primary: '#0E8C8C',
-  warm: '#C9974D',
-  success: '#5A6A3F',
-};
+function toneFg(
+  c: ReturnType<typeof useFKColors>,
+): Record<'primary' | 'warm' | 'success', string> {
+  return { primary: c.primaryText, warm: c.warning, success: c.success };
+}
 
 function BranchRow({
   branch,
@@ -209,7 +209,7 @@ function BranchRow({
         justifyContent: 'center',
       }}
     >
-      <branch.Icon size={18} color={TONE_FG[branch.tone]} strokeWidth={2.2} />
+      <branch.Icon size={18} color={toneFg(colors)[branch.tone]} strokeWidth={2.2} />
     </View>
   );
 
@@ -250,7 +250,7 @@ function BranchRow({
     <ChevronIcon
       key="chev"
       size={18}
-      color={isDark ? 'rgba(235,235,245,0.45)' : 'rgba(94,112,130,0.55)'}
+      color={isDark ? 'rgba(238,242,246,0.45)' : 'rgba(61,90,112,0.55)'}
       strokeWidth={2.2}
     />
   );

@@ -11,7 +11,7 @@
  *
  * Strings reuse the existing `auth.*` dictionary keys the web already
  * ships (membershipInactive, membershipInactiveHint, retry, signOut) —
- * no new i18n keys, so no @fitkit/shared republish.
+ * no new i18n keys, so no @taikan/shared republish.
  */
 import { Pressable, View } from 'react-native';
 import { useFKColors } from '@/components/fk';

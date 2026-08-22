@@ -2,9 +2,9 @@
  * /sign-up — invite-only acceptance screen.
  *
  * NOT a free-form sign-up. Members are created via the gym's Clerk
- * invitation flow; the email links to `clerk.fitkit.fit/v1/tickets/accept`
+ * invitation flow; the email links to `clerk.taikan.fit/v1/tickets/accept`
  * which validates the ticket server-side and redirects to
- * `https://app.fitkit.fit/sign-up?__clerk_ticket=...&__clerk_status=sign_up`
+ * `https://app.taikan.fit/sign-up?__clerk_ticket=...&__clerk_status=sign_up`
  * (or `sign_in` for existing users being added to a second org).
  *
  * That redirect URL is intercepted by Universal Links / App Links and
@@ -94,7 +94,7 @@ export default function SignUpScreen() {
     | undefined;
 
   const labels = {
-    welcome: auth?.inviteWelcome ?? 'Welcome to FitKit',
+    welcome: auth?.inviteWelcome ?? 'Welcome to Taikan',
     setupSubtitle:
       auth?.inviteSetupSubtitle ?? 'Set a password to finish setting up your account.',
     processingSubtitle:
@@ -534,7 +534,7 @@ function PasswordInput({
         borderRadius: 12,
         borderCurve: 'continuous',
         borderWidth: 1,
-        borderColor: 'rgba(94,112,130,0.25)',
+        borderColor: 'rgba(61,90,112,0.25)',
         backgroundColor: isDark
           ? 'rgba(118,118,128,0.20)'
           : 'rgba(118,118,128,0.10)',
@@ -546,7 +546,7 @@ function PasswordInput({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={
-          isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+          isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
         }
         autoCapitalize="none"
         autoComplete="new-password"
@@ -573,7 +573,7 @@ function PasswordInput({
       >
         <ToggleIcon
           size={20}
-          color={isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)'}
+          color={isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)'}
           strokeWidth={2}
         />
       </Pressable>

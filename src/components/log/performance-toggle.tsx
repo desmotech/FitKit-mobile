@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useLogStrings } from '@/i18n/use-log-strings';
 import { useI18n } from '@/providers/i18n-provider';
+import { useFKColors } from '@/components/fk/colors';
 
 export type Performance = 'rx' | 'scaled' | 'modified';
 
@@ -22,11 +23,11 @@ export interface PerformanceToggleProps {
 }
 
 const ORDER: Performance[] = ['rx', 'scaled', 'modified'];
-const TONES: Record<Performance, string> = {
-  rx: '#7A8A5C',      // sage
-  scaled: '#C9974D',  // warm amber
-  modified: '#5E7082', // slate
-};
+function tones(
+  c: ReturnType<typeof useFKColors>,
+): Record<Performance, string> {
+  return { rx: c.success, scaled: c.warning, modified: c.info };
+}
 
 export function PerformanceToggle({
   value,
@@ -37,6 +38,8 @@ export function PerformanceToggle({
   const isRTL = dir === 'rtl';
   const haptics = useHaptics();
   const L = useLogStrings();
+  const colors = useFKColors();
+  const TONES = tones(colors);
   const DEFAULT_LABELS: Record<Performance, string> = {
     rx: L.perfRx,
     scaled: L.perfScaled,
@@ -59,7 +62,7 @@ export function PerformanceToggle({
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 1.5,
-          borderColor: active ? tone : 'rgba(94,112,130,0.30)',
+          borderColor: active ? tone : 'rgba(61,90,112,0.30)',
           backgroundColor: active ? `${tone}1A` : 'rgba(120,120,128,0.10)',
           overflow: 'hidden',
         }}
@@ -82,7 +85,7 @@ export function PerformanceToggle({
             style={{
               fontSize: 14,
               fontWeight: '700',
-              color: active ? tone : 'rgb(94,112,130)',
+              color: active ? tone : colors.info,
               letterSpacing: -0.1,
             }}
           >

@@ -1,7 +1,7 @@
 /**
  * Program Sheet (structured workout detail) localization.
  *
- * Supplements the shared `@fitkit/shared` dictionary for the redesigned
+ * Supplements the shared `@taikan/shared` dictionary for the redesigned
  * structured-workout screen — the session progress meter, per-section
  * check-off, inline exercise expansion, and the CTA cluster. Strings live
  * here so the components stay locale-free and Hebrew (the default locale)

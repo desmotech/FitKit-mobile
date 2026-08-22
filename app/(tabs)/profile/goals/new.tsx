@@ -495,6 +495,7 @@ function NumericInput({
   isDark: boolean;
   placeholder?: string;
 }) {
+  const colors = useFKColors();
   return (
     <View
       style={[
@@ -511,7 +512,7 @@ function NumericInput({
         value={value}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor={isDark ? '#6B8FAA' : '#5E7082'}
+        placeholderTextColor={colors.subtleFg}
         keyboardType="decimal-pad"
         style={{
           paddingVertical: 12,

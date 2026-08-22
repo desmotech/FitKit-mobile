@@ -141,7 +141,7 @@ describe('Shop deep-link landing', () => {
     });
     expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith(
       'https://pay.test.local/checkout/evt',
-      'fitkit://shop/payment-return',
+      'taikan://shop/payment-return',
     );
     // One-shot: no second dialog after re-renders settle.
     await waitFor(() => {

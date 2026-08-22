@@ -5,7 +5,7 @@
  * checkout, flag-gated per-org on the API side via
  * `subscription-member-cancel-pending`).
  *
- * Every value is copied VERBATIM from `@fitkit/shared`'s dictionaries — the
+ * Every value is copied VERBATIM from `@taikan/shared`'s dictionaries — the
  * pinned published package predates those keys, so `useCancelPendingStrings`
  * (./use-cancel-pending-strings.ts) overlays the runtime dictionary on top of
  * this table: the dictionary wins once a release shipping the keys lands. Do

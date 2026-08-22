@@ -21,8 +21,8 @@ export function CoachNoteCard({
         borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(201,151,77,0.30)',
-        backgroundColor: 'rgba(201,151,77,0.06)',
+        borderColor: 'rgba(168,121,47,0.30)',
+        backgroundColor: 'rgba(168,121,47,0.06)',
       }}
     >
       <View
@@ -37,9 +37,9 @@ export function CoachNoteCard({
             width: 40,
             height: 40,
             borderRadius: 12,
-            backgroundColor: 'rgba(201,151,77,0.18)',
+            backgroundColor: 'rgba(168,121,47,0.18)',
             borderWidth: 1,
-            borderColor: 'rgba(201,151,77,0.32)',
+            borderColor: 'rgba(168,121,47,0.32)',
             alignItems: 'center',
             justifyContent: 'center',
           }}

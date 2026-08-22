@@ -9,8 +9,8 @@
  * `/(tabs)/profile/forms/[instanceId]`, the one authenticated signing
  * surface.
  *
- * Reached via Universal Link (`app.fitkit.fit/forms/sign/<token>`) or, in the
- * simulator, `xcrun simctl openurl booted "fitkit:///forms/sign/<token>"`.
+ * Reached via Universal Link (`app.taikan.fit/forms/sign/<token>`) or, in the
+ * simulator, `xcrun simctl openurl booted "taikan:///forms/sign/<token>"`.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';

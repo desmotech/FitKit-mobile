@@ -23,7 +23,7 @@ import type {
   BodyMetricType,
   BodyMetricUnit,
   CreateBodyMetricInput,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import {
   FKAmbientBackdrop,
   FKScreenHeader,
@@ -148,7 +148,7 @@ export default function LogMetricScreen() {
   }, [type, bmT.units]);
 
   const placeholderColor = isDark
-    ? 'rgba(235,235,245,0.3)'
+    ? 'rgba(238,242,246,0.3)'
     : 'rgba(60,60,67,0.3)';
 
   return (

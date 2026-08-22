@@ -1,7 +1,7 @@
 /**
  * TanStack Query keys. Mirrors apps/web/src/lib/query-keys.ts.
  *
- * TODO(phase-0.5): consolidate into @fitkit/shared so web and mobile
+ * TODO(phase-0.5): consolidate into @taikan/shared so web and mobile
  * cannot drift. Deferred to keep the scaffold commit focused — moving
  * the file forces edits in 30+ web call sites.
  */

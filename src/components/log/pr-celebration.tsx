@@ -91,15 +91,15 @@ export function PRCelebration({
             width: 96,
             height: 96,
             borderRadius: 48,
-            backgroundColor: 'rgba(201,151,77,0.15)',
+            backgroundColor: 'rgba(168,121,47,0.15)',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 24,
             borderWidth: 2,
-            borderColor: 'rgba(201,151,77,0.35)',
+            borderColor: 'rgba(168,121,47,0.35)',
           }}
         >
-          <Trophy size={44} color="#C9974D" strokeWidth={2.2} />
+          <Trophy size={44} color={colors.warning} strokeWidth={2.2} />
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(120).duration(320)}>
@@ -125,7 +125,7 @@ export function PRCelebration({
             style={{
               fontSize: 56,
               fontWeight: '800',
-              color: '#C9974D',
+              color: colors.warning,
               fontFamily: 'Assistant-Medium',
               fontVariant: ['tabular-nums'],
               letterSpacing: -1,
@@ -217,7 +217,14 @@ export function PRCelebration({
 
 // ── Confetti ─────────────────────────────────────────────────────────
 
-const CONFETTI_COLORS = ['#0E8C8C', '#C9974D', '#5A6A3F', '#B84A40', '#3F6394'];
+const CONFETTI_COLORS = [
+  '#0E8C8C',
+  '#A8792F',
+  '#2E7A4D',
+  '#B84A40',
+  '#3D5A70',
+  '#8B5A7C',
+];
 const CONFETTI_COUNT = 24;
 
 function Confetti() {

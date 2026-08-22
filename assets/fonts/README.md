@@ -1,4 +1,4 @@
-# FitKit fonts — "Whiteboard" type system
+# Taikan fonts — "Whiteboard" type system
 
 Bundled, static, per-weight `.ttf` faces. Registered in `app/_layout.tsx`
 via `useFonts` and referenced through `src/lib/type.ts` (the typed `font`

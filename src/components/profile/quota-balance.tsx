@@ -3,7 +3,7 @@ import { Text } from '@/components/ui/text';
 import { useQuotaStrings } from '@/i18n/use-quota-strings';
 
 /** One anchored quota window as the API reports it. Declared structurally so
- *  this renders before `@fitkit/shared` ships the type to mobile. */
+ *  this renders before `@taikan/shared` ships the type to mobile. */
 export interface QuotaUsage {
   period: 'day' | 'week' | 'month';
   limit: number;

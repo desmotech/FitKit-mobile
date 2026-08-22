@@ -43,7 +43,7 @@ export function NumberFieldRenderer({
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 1,
-          borderColor: 'rgba(94,112,130,0.25)',
+          borderColor: 'rgba(61,90,112,0.25)',
           backgroundColor: isDark
             ? 'rgba(118,118,128,0.20)'
             : 'rgba(118,118,128,0.10)',
@@ -58,7 +58,7 @@ export function NumberFieldRenderer({
           keyboardType="decimal-pad"
           inputMode="decimal"
           placeholderTextColor={
-            isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+            isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
           }
           placeholder={
             field.min != null && field.max != null
@@ -80,7 +80,7 @@ export function NumberFieldRenderer({
             style={{
               fontSize: 14,
               fontWeight: '600',
-              color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+              color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
             }}
           >
             {field.unit}

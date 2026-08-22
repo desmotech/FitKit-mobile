@@ -18,7 +18,7 @@ import { useAuth } from '@clerk/clerk-expo';
 import type {
   CreateExerciseCommentDto,
   ExerciseCommentDto,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { analytics } from '@/lib/analytics';
 import { useApi } from './use-api';
 import { queryKeys } from '@/lib/query-keys';

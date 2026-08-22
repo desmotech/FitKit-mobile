@@ -117,7 +117,7 @@ export function ExerciseSearchInput({
     ? 'rgba(118,118,128,0.24)'
     : 'rgba(118,118,128,0.12)';
   const placeholderColor = isDark
-    ? 'rgba(235,235,245,0.45)'
+    ? 'rgba(238,242,246,0.45)'
     : 'rgba(60,60,67,0.45)';
 
   // UISearchBar children
@@ -236,7 +236,7 @@ function ResultList({
         style={{
           fontSize: 11,
           fontWeight: '600',
-          color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
+          color: isDark ? 'rgba(238,242,246,0.5)' : 'rgba(60,60,67,0.5)',
           textAlign: isRTL ? 'right' : 'left',
           writingDirection: isRTL ? 'rtl' : 'ltr',
           marginBottom: 2,
@@ -264,7 +264,7 @@ function ResultList({
               paddingVertical: 18,
               paddingHorizontal: 16,
               fontSize: 15,
-              color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+              color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
               textAlign: 'center',
             }}
           >
@@ -296,7 +296,7 @@ function ResultList({
                   fontSize: 12,
                   fontWeight: '600',
                   color: isDark
-                    ? 'rgba(235,235,245,0.6)'
+                    ? 'rgba(238,242,246,0.6)'
                     : 'rgba(60,60,67,0.6)',
                 }}
               >

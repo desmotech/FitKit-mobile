@@ -24,7 +24,7 @@ import type {
   SubscriptionWithPlan,
   TransactionStatus,
   TransactionType,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import {
   FKButton,
   FKEdgeStripe,
@@ -45,7 +45,6 @@ import {
   useResumeCancellation,
   useWithdrawScheduled,
 } from '@/hooks/use-feed-data';
-import { useGatedFeature } from '@/hooks/use-feature-flag';
 import { useHaptics } from '@/hooks/use-haptics';
 import { usePlans, useResumeCheckout } from '@/hooks/use-shop';
 import { ScheduledPlanChangeBanner } from '@/components/profile/scheduled-plan-change-banner';
@@ -64,16 +63,16 @@ import { checkoutOutcomeOf, returnParamFor } from '@/lib/checkout-return';
 import { memberActionsOf } from '@/lib/member-actions';
 import * as analytics from '@/lib/analytics';
 import { isCardExpired } from '@/lib/payment-method';
-import { MEMBER_PLAN_CHANGE_FLAG, getPlanChangeSchedule } from '@/lib/plan-change';
+import { getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
 const CARD_RETURN_PATH = 'profile/payments';
-const CARD_RETURN_URL = `fitkit://${CARD_RETURN_PATH}`;
+const CARD_RETURN_URL = `taikan://${CARD_RETURN_PATH}`;
 // Finishing a checkout from here lands on the shop's verification /
 // decision screen, exactly like starting one from the shop does.
 const CHECKOUT_RETURN_PATH = 'shop/payment-return';
-const CHECKOUT_RETURN_URL = `fitkit://${CHECKOUT_RETURN_PATH}`;
+const CHECKOUT_RETURN_URL = `taikan://${CHECKOUT_RETURN_PATH}`;
 
 interface Transaction {
   id: string;
@@ -91,23 +90,29 @@ interface TransactionsResponse {
   limit: number;
 }
 
-const STATUS_TONE: Record<
-  TransactionStatus,
-  { bg: string; fg: string; border: string }
-> = {
-  completed: { bg: 'rgba(122,138,92,0.16)', fg: '#5A6A3F', border: 'rgba(122,138,92,0.28)' },
-  pending: { bg: 'rgba(201,151,77,0.14)', fg: '#8B6A35', border: 'rgba(201,151,77,0.30)' },
-  failed: { bg: 'rgba(184,74,64,0.12)', fg: '#B84A40', border: 'rgba(184,74,64,0.28)' },
-  refund_pending: { bg: 'rgba(201,151,77,0.14)', fg: '#8B6A35', border: 'rgba(201,151,77,0.30)' },
-  refunded: { bg: 'rgba(74,114,144,0.14)', fg: '#3D5A78', border: 'rgba(74,114,144,0.28)' },
-  cancelled: { bg: 'rgba(120,120,128,0.12)', fg: '#5E7082', border: 'transparent' },
-};
+type Tone = { bg: string; fg: string; border: string };
+type FKColors = ReturnType<typeof useFKColors>;
 
-const TYPE_TONE: Record<TransactionType, { bg: string; fg: string; border: string }> = {
-  charge: { bg: 'rgba(14,140,140,0.10)', fg: '#0E8C8C', border: 'rgba(14,140,140,0.30)' },
-  recurring: { bg: 'rgba(74,114,144,0.14)', fg: '#3D5A78', border: 'rgba(74,114,144,0.28)' },
-  refund: { bg: 'rgba(201,151,77,0.14)', fg: '#8B6A35', border: 'rgba(201,151,77,0.30)' },
-};
+/** Tinted backgrounds read the same on both themes; the ink has to be
+ *  resolved per-theme or it fails contrast on the dark band. */
+function statusTones(c: FKColors): Record<TransactionStatus, Tone> {
+  return {
+    completed: { bg: 'rgba(46,122,77,0.16)', fg: c.success, border: 'rgba(46,122,77,0.28)' },
+    pending: { bg: 'rgba(168,121,47,0.14)', fg: c.warning, border: 'rgba(168,121,47,0.30)' },
+    failed: { bg: 'rgba(184,74,64,0.12)', fg: c.destructive, border: 'rgba(184,74,64,0.28)' },
+    refund_pending: { bg: 'rgba(168,121,47,0.14)', fg: c.warning, border: 'rgba(168,121,47,0.30)' },
+    refunded: { bg: 'rgba(61,90,112,0.14)', fg: c.info, border: 'rgba(61,90,112,0.28)' },
+    cancelled: { bg: 'rgba(120,120,128,0.12)', fg: c.info, border: 'transparent' },
+  };
+}
+
+function typeTones(c: FKColors): Record<TransactionType, Tone> {
+  return {
+    charge: { bg: 'rgba(14,140,140,0.10)', fg: c.primaryText, border: 'rgba(14,140,140,0.30)' },
+    recurring: { bg: 'rgba(61,90,112,0.14)', fg: c.info, border: 'rgba(61,90,112,0.28)' },
+    refund: { bg: 'rgba(168,121,47,0.14)', fg: c.warning, border: 'rgba(168,121,47,0.30)' },
+  };
+}
 
 export default function PaymentsScreen() {
   const queryClient = useQueryClient();
@@ -151,7 +156,7 @@ export default function PaymentsScreen() {
       'You cannot book classes until the balance is resolved.',
     resolve: (phT.resolve as string) ?? 'Resolve',
     // From the merged profile strings, not an inline English fallback: this
-    // key does not exist in the pinned `@fitkit/shared` dictionary yet, and
+    // key does not exist in the pinned `@taikan/shared` dictionary yet, and
     // `useProfileStrings` already resolves exactly that case to a translated
     // static value.
     checkoutNotCompleted: profileStrings.checkoutNotCompleted,
@@ -222,16 +227,11 @@ export default function PaymentsScreen() {
     : undefined;
   const cardSub = activeSub ?? scheduledSub ?? pendingSub;
 
-  // Member plan-change (FIT-271) — same PostHog per-org gate as web
-  // (fail-closed; entry points render nothing until the flag resolves true).
-  const { enabled: changePlanEnabled } = useGatedFeature(
-    MEMBER_PLAN_CHANGE_FLAG,
-  );
+  // Member plan-change (FIT-271).
   const plansQ = usePlans(orgId);
   const orgPlans = plansQ.data?.data ?? [];
   const changePlanStrings = usePlanChangeStrings();
   const showChangePlan =
-    changePlanEnabled &&
     activeSub?.status === 'active' &&
     activeSub.plan.type === 'subscription';
   const hasScheduledChange = !!(activeSub && getPlanChangeSchedule(activeSub));
@@ -628,7 +628,6 @@ export default function PaymentsScreen() {
                 (inside the card) wins when both could apply; the API's
                 one-pending-action invariant means they can't truly coexist. */}
             {orgId &&
-            changePlanEnabled &&
             hasScheduledChange &&
             !(activeSub as unknown as { cancelAtPeriodEnd?: boolean })
               .cancelAtPeriodEnd ? (
@@ -965,7 +964,7 @@ function SubscriptionCard({
   withdrawLabel?: string;
 }) {
   const status = sub.status;
-  // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @fitkit/shared) predate
+  // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @taikan/shared) predate
   // both of these — same cast precedent as `scheduledToCancelOf` below.
   const memberAction = (sub as unknown as { memberAction?: string })
     .memberAction;
@@ -998,7 +997,7 @@ function SubscriptionCard({
       status === 'past_due' ||
       status === 'debt');
   const scheduledToCancel = scheduledToCancelOf(sub);
-  // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @fitkit/shared) predate
+  // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @taikan/shared) predate
   // `memberAction` — same cast precedent as `scheduledToCancelOf` above.
   // The API's per-org gate on cancel-pending is gone, so a pending row now
   // offers BOTH finishing and rolling back; no client-side flag check exists
@@ -1039,13 +1038,13 @@ function SubscriptionCard({
 
   const isActive = status === 'active' || status === 'paused';
   const statusTone = isActive
-    ? { bg: 'rgba(122,138,92,0.16)', fg: '#5A6A3F', border: 'rgba(122,138,92,0.28)' }
+    ? { bg: 'rgba(46,122,77,0.16)', fg: colors.success, border: 'rgba(46,122,77,0.28)' }
     : // A checkout nobody completed is a non-event, not a loss — it takes the
       // neutral tone rather than the destructive one a lapsed membership gets.
       !isAbandonedCheckout &&
         (status === 'past_due' || status === 'cancelled' || status === 'debt')
-      ? { bg: 'rgba(184,74,64,0.12)', fg: '#B84A40', border: 'rgba(184,74,64,0.28)' }
-      : { bg: 'rgba(120,120,128,0.12)', fg: '#5E7082', border: 'transparent' };
+      ? { bg: 'rgba(184,74,64,0.12)', fg: colors.destructive, border: 'rgba(184,74,64,0.28)' }
+      : { bg: 'rgba(120,120,128,0.12)', fg: colors.info, border: 'transparent' };
 
   return (
     <FKGlassPanel
@@ -1153,9 +1152,9 @@ function SubscriptionCard({
             gap: 10,
             padding: 12,
             borderRadius: 12,
-            backgroundColor: 'rgba(201,151,77,0.14)',
+            backgroundColor: 'rgba(168,121,47,0.14)',
             borderWidth: 1,
-            borderColor: 'rgba(201,151,77,0.30)',
+            borderColor: 'rgba(168,121,47,0.30)',
           }}
         >
           <View
@@ -1334,12 +1333,10 @@ function TransactionCard({
   typeLabel: string;
   lang: string;
 }) {
-  // The charge tone's light-teal ink falls below AA on dark cards.
-  const typeTone =
-    txn.type === 'charge' && colors.isDark
-      ? { ...TYPE_TONE.charge, fg: colors.primaryText }
-      : TYPE_TONE[txn.type];
-  const statusTone = STATUS_TONE[txn.status];
+  // Ink is resolved per-theme — the light-teal charge tone falls below AA
+  // on dark cards, so `primaryText` carries it there.
+  const typeTone = typeTones(colors)[txn.type];
+  const statusTone = statusTones(colors)[txn.status];
   const dateStr = new Date(txn.createdAt).toLocaleDateString(lang, {
     year: 'numeric',
     month: 'short',

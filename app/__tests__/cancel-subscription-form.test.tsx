@@ -14,7 +14,7 @@
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { formStringsFor } from '@/i18n/form-strings';
 import CancelSubscriptionScreen from '../(tabs)/profile/cancel-subscription';
 import { stageSignedInMember } from '../../test/fixtures';

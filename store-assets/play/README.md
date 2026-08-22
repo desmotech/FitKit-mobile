@@ -1,6 +1,6 @@
 # Google Play — Store Listing Assets
 
-Generated for the FitKit member app. Brand: teal `#0E8C8C`, navy `#0A1628`, mint accent `#5EEAD4`.
+Generated for the Taikan member app. Brand: teal `#0E8C8C`, navy `#0A1628`, mint accent `#5EEAD4`.
 
 ## What's here
 
@@ -16,7 +16,7 @@ Upload the **`.jpg`** versions (flattened, no alpha — Play's requirement). PNG
 
 ## How they were made
 
-- Captured live from the production app (appletester / "FitKit Demo Gym") on an Android emulator, English UI, light theme.
+- Captured live from the production app (appletester / "Taikan Demo Gym") on an Android emulator, English UI, light theme.
 - Framed in a device mockup on the brand gradient with a headline, rendered to exact Play dimensions.
 - Source: real screens (`scratchpad/shots`), frame templates (`scratchpad/frame/gen.py`).
 
@@ -24,5 +24,5 @@ Upload the **`.jpg`** versions (flattened, no alpha — Play's requirement). PNG
 
 The demo account had only PRs + membership populated (no classes, no coach-assigned program on
 any date). To showcase **class booking, QR check-in, and coach workouts**, seed the demo gym
-(FitKit Demo Gym) from the web dashboard with classes on current dates + an assigned program,
+(Taikan Demo Gym) from the web dashboard with classes on current dates + an assigned program,
 then re-capture those screens with the same frame template.

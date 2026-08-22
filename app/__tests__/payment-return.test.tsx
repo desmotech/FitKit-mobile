@@ -167,7 +167,7 @@ describe('PaymentReturnScreen — resume', () => {
     const staged = stageReturn();
     openAuth.mockResolvedValue({
       type: 'success',
-      url: 'fitkit://shop/payment-return?status=success',
+      url: 'taikan://shop/payment-return?status=success',
     });
     const user = userEvent.setup();
     await renderWithProviders(<PaymentReturnScreen />);
@@ -192,7 +192,7 @@ describe('PaymentReturnScreen — resume', () => {
     stageReturn();
     openAuth.mockResolvedValue({
       type: 'success',
-      url: 'fitkit://shop/payment-return?status=failed',
+      url: 'taikan://shop/payment-return?status=failed',
     });
     const user = userEvent.setup();
     await renderWithProviders(<PaymentReturnScreen />);
@@ -235,7 +235,7 @@ describe('PaymentReturnScreen — which subscription the leg names', () => {
     const staged = stageReturn();
     openAuth.mockResolvedValue({
       type: 'success',
-      url: 'fitkit://shop/payment-return?status=cancelled&sub=sub_other',
+      url: 'taikan://shop/payment-return?status=cancelled&sub=sub_other',
     });
     const user = userEvent.setup();
     await renderWithProviders(<PaymentReturnScreen />);

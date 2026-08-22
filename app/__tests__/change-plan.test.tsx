@@ -8,13 +8,13 @@
  * structured API error codes map to localized copy.
  *
  * Copy is asserted through the same dictionary-first merge the screen uses
- * (`usePlanChangeStrings`): the @fitkit/shared dictionary value wins when
+ * (`usePlanChangeStrings`): the @taikan/shared dictionary value wins when
  * present, the static plan-change-strings table is the fallback.
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import ChangePlanScreen from '../change-plan';
 import { planChangeStringsFor } from '@/i18n/plan-change-strings';
 import { formatPrice } from '@/lib/format-price';
@@ -49,7 +49,7 @@ jest.mock('expo-web-browser', () => ({
 jest.mock('expo-linking', () => ({
   parse: jest.fn((url: string) => ({
     queryParams: Object.fromEntries(
-      new URL(url.replace(/^fitkit:\/\//, 'http://x/')).searchParams,
+      new URL(url.replace(/^taikan:\/\//, 'http://x/')).searchParams,
     ),
   })),
 }));
@@ -268,7 +268,7 @@ describe('ChangePlanScreen', () => {
     );
     (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
       type: 'success',
-      url: 'fitkit://shop/payment-return?status=success',
+      url: 'taikan://shop/payment-return?status=success',
     });
     const user = userEvent.setup();
 
@@ -285,7 +285,7 @@ describe('ChangePlanScreen', () => {
     await waitFor(() => {
       expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith(
         'https://pay.test.local/checkout/123',
-        'fitkit://shop/payment-return',
+        'taikan://shop/payment-return',
       );
     });
     await waitFor(() => {

@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { type Gender, updateUserProfileSchema } from '@fitkit/shared';
+import { type Gender, updateUserProfileSchema } from '@taikan/shared';
 import {
   FKBtn,
   FKGlassPanel,

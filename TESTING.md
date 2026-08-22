@@ -28,7 +28,7 @@ Concretely:
 - **Query what the member sees.** `getByText`, `getByRole` with accessible
   names — not testIDs, not component internals, not hook state.
 - **Assert copy from the real dictionaries** (`dictionaries.he` from
-  `@fitkit/shared`) so copy edits don't break tests, but missing
+  `@taikan/shared`) so copy edits don't break tests, but missing
   translations do surface.
 - **Exception — contract tests:** `src/lib/__tests__/query-keys.test.ts`
   deliberately pins exact query-key shapes, because members' persisted

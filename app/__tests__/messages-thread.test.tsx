@@ -14,8 +14,8 @@
  */
 import { Alert } from 'react-native';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
-import type { MessageResponse } from '@fitkit/shared';
-import { dictionaries } from '@fitkit/shared';
+import type { MessageResponse } from '@taikan/shared';
+import { dictionaries } from '@taikan/shared';
 import ChatScreen from '../messages/[id]';
 import { commonStringsFor } from '@/i18n/common-strings';
 import { conversation, stageSignedInMember } from '../../test/fixtures';

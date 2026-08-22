@@ -11,7 +11,7 @@
  * screen logic run exactly as in production.
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import InboxScreen from '../messages/index';
 import AnnouncementDetailScreen from '../messages/announcement/[id]';
 import { announcement, stageSignedInMember } from '../../test/fixtures';

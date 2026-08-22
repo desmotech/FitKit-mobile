@@ -6,13 +6,13 @@
  * redirect to sign-in).
  *
  * Copy is asserted through the same dictionary-first merge the screen uses
- * (`useProfileStrings`): the @fitkit/shared dictionary value wins when
+ * (`useProfileStrings`): the @taikan/shared dictionary value wins when
  * present, the static profile-strings table is the fallback.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import ProfileScreen from '../(tabs)/profile/index';
 import { profileStringsFor } from '@/i18n/profile-strings';
 import { cancelPendingStringsFor } from '@/i18n/cancel-pending-strings';
@@ -76,7 +76,7 @@ const S = {
   signOutConfirm: pick('profile.settings.signOut') ?? P.signOutConfirm,
 };
 
-// Cancel-pending copy: the pinned @fitkit/shared package predates these
+// Cancel-pending copy: the pinned @taikan/shared package predates these
 // dictionary keys, so `pick` resolves to undefined and the static table
 // (`cancelPendingStringsFor`) is what the screen actually renders today —
 // same overlay pattern as `S` above, kept future-proof for when the package
@@ -262,9 +262,9 @@ describe('Profile hub', () => {
     const removed = (AsyncStorage.removeItem as jest.Mock).mock.calls.map(
       (c) => c[0],
     );
-    expect(removed).toContain('fitkit-rq-cache');
-    expect(removed).toContain('fitkit:settings:activeOrg');
-    expect(removed).toContain('fitkit:auth:cacheOwner');
+    expect(removed).toContain('taikan-rq-cache');
+    expect(removed).toContain('taikan:settings:activeOrg');
+    expect(removed).toContain('taikan:auth:cacheOwner');
     expect(mockRouterReplace).toHaveBeenCalledWith('/(auth)/sign-in');
 
     // Let the refetches triggered by queryClient.clear() settle so nothing

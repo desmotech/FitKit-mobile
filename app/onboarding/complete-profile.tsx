@@ -3,7 +3,7 @@
  *
  * Routed to by AuthGate when /users/me reports profileComplete=false
  * (and consent is already recorded). The form requires ALL fields per
- * `completeProfileSchema` from @fitkit/shared — stricter than the
+ * `completeProfileSchema` from @taikan/shared — stricter than the
  * regular profile-edit form that uses `updateUserProfileSchema`.
  *
  * Structure mirrors app/(tabs)/profile/personal.tsx so the form looks
@@ -24,7 +24,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { completeProfileSchema, type Gender } from '@fitkit/shared';
+import { completeProfileSchema, type Gender } from '@taikan/shared';
 import {
   FKAmbientBackdrop,
   FKBrandMark,
@@ -48,7 +48,7 @@ import {
 import { reportHandledError } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
 
-// The published @fitkit/shared still marks the emergency-contact fields as
+// The published @taikan/shared still marks the emergency-contact fields as
 // required in completeProfileSchema; the form no longer collects them, so
 // validate against the schema without those keys. Once the dependency picks
 // up the release where they became optional, this omit is a harmless no-op.

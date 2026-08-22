@@ -1,7 +1,7 @@
 /**
  * FKRing — circular progress ring with the percentage stamped in the middle.
  *
- * Ported from the design system's `Ring` primitive (fitkit-glass-ds.jsx):
+ * Ported from the design system's `Ring` primitive (taikan-glass-ds.jsx):
  * a faint full-circle track + a rounded primary arc, the numeric label in
  * DM Mono (numerals only, so no Hebrew-fallback concern).
  */

@@ -21,7 +21,7 @@ import { reportHandledError } from '@/lib/error-reporting';
 import type {
   PresignedUploadResponseDto,
   UploadOwnerType,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 
 const IMAGE_MIMES = new Set([
   'image/jpeg',

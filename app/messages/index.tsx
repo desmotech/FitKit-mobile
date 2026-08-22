@@ -34,7 +34,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { AnnouncementResponse, ConversationResponse } from '@fitkit/shared';
+import type { AnnouncementResponse, ConversationResponse } from '@taikan/shared';
 import {
   FKAmbientBackdrop,
   FKBackButton,

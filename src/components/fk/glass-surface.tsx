@@ -84,7 +84,7 @@ export function FKGlassSurface({
         shape,
         {
           backgroundColor:
-            tint ?? (isDark ? 'rgba(58,70,78,0.72)' : 'rgba(255,255,255,0.82)'),
+            tint ?? (isDark ? 'rgba(18,56,69,0.72)' : 'rgba(255,255,255,0.82)'),
           borderWidth: tint ? 0 : StyleSheet.hairlineWidth,
           borderColor: isDark
             ? 'rgba(255,255,255,0.22)'

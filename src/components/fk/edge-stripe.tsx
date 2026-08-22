@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { useI18n } from '@/providers/i18n-provider';
+import { useFKColors } from './colors';
 
 /**
  * Right-edge brand accent stripe (`fk-card`'s right-side decoration in the
@@ -20,16 +21,17 @@ export function FKEdgeStripe({
 }) {
   const { dir } = useI18n();
   const rtl = dir === 'rtl';
+  const colors = useFKColors();
   const color =
     tone === 'success'
-      ? '#7A8A5C'
+      ? colors.success
       : tone === 'warn'
-        ? '#C9974D'
+        ? colors.warning
         : tone === 'danger'
-          ? '#B84A40'
+          ? colors.destructive
           : tone === 'muted'
-            ? 'rgba(94,112,130,0.6)'
-            : '#27C8BA';
+            ? 'rgba(61,90,112,0.6)'
+            : colors.primary;
 
   return (
     <View

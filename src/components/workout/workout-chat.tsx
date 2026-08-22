@@ -45,7 +45,7 @@ import { programSheetInk } from '@/lib/program-sheet-ink';
 import { bodyFamily, eyebrow } from '@/lib/type';
 import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
-import type { AttachmentResponse, MessageResponse } from '@fitkit/shared';
+import type { AttachmentResponse, MessageResponse } from '@taikan/shared';
 
 function dict(t: unknown, path: string): string | null {
   return (

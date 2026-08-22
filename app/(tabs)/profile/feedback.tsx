@@ -54,7 +54,7 @@ export default function FeedbackScreen() {
       title: get(t, 'feedback.title') ?? 'Report an Issue',
       description:
         get(t, 'feedback.description') ??
-        'Help us improve FitKit by reporting bugs or suggesting features.',
+        'Help us improve Taikan by reporting bugs or suggesting features.',
       bug: get(t, 'feedback.bug') ?? 'Bug Report',
       feature: get(t, 'feedback.feature') ?? 'Feature Request',
       content: get(t, 'feedback.content') ?? 'Description',

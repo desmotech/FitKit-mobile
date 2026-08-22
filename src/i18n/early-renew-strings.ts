@@ -1,7 +1,7 @@
 /**
  * Early renewal localization (FIT-282 follow-up — BoostApp parity, Erez).
  *
- * Every value is copied VERBATIM from `@fitkit/shared`'s dictionaries
+ * Every value is copied VERBATIM from `@taikan/shared`'s dictionaries
  * (`subscriptions.renewEarly.*`, `payments.errorCodes.early_renew_*` and the
  * two shared codes it reuses) — the pinned published package predates those
  * keys, so `useEarlyRenewStrings` (./use-early-renew-strings.ts) overlays the

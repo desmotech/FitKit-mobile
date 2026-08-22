@@ -11,10 +11,10 @@ import Svg, {
 /**
  * Atmospheric ambient backdrop — the "liquid glass" foundation.
  *
- * A warm base gradient with three soft, blurred color orbs (teal · warm ·
- * gold) bleeding in from the corners, so the translucent glass panels on top
+ * An Ocean base gradient with three soft, blurred color orbs (teal · slate ·
+ * mint) bleeding in from the corners, so the translucent glass panels on top
  * have something to refract. Ported from the design system's PhoneFrame +
- * THEMES tokens (fitkit-glass-ds.jsx).
+ * THEMES tokens (taikan-glass-ds.jsx).
  *
  * Rendered with SVG radial gradients (crisp + cheap — no faux-blur stacks)
  * into an absolute fill. Place as the first child of a flex-1 screen root and
@@ -22,24 +22,26 @@ import Svg, {
  */
 const ORBS = {
   light: {
-    base: ['#f5f1e8', '#ece5d7', '#f1e9de'] as const,
-    highlight: '#d9ede9',
+    // Ocean light ground with a cool slate drift — same family as the web app.
+    base: ['#F6F8FA', '#EEF2F6', '#F3F6F9'] as const,
+    highlight: '#D9EDE9', // teal mist, top-right sheen
     orb1: '#0E8C8C', // teal
-    orb1Op: 0.34,
-    orb2: '#E0552F', // warm
-    orb2Op: 0.2,
-    orb3: '#B07D2A', // gold
-    orb3Op: 0.18,
+    orb1Op: 0.3,
+    orb2: '#3D5A70', // slate (was the warm orange)
+    orb2Op: 0.14,
+    orb3: '#2E7A4D', // mint (was gold)
+    orb3Op: 0.14,
   },
   dark: {
-    base: ['#0f1b1f', '#0c1316', '#08090c'] as const,
-    highlight: '#1c3c42',
-    orb1: '#36D6C6',
-    orb1Op: 0.26,
-    orb2: '#52E5FF',
-    orb2Op: 0.16,
-    orb3: '#E2B85C',
-    orb3Op: 0.12,
+    // The marketing "band": deep teal-navy, lifting toward the raised card tone.
+    base: ['#0A2531', '#07202B', '#051A23'] as const,
+    highlight: '#123845',
+    orb1: '#2AB8B8',
+    orb1Op: 0.24,
+    orb2: '#94E3DE',
+    orb2Op: 0.12,
+    orb3: '#B0E5C4',
+    orb3Op: 0.1,
   },
 };
 

@@ -21,7 +21,7 @@ import {
 import { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import type { BodyMetricSummaryResponse } from '@fitkit/shared';
+import type { BodyMetricSummaryResponse } from '@taikan/shared';
 import {
   FKButton,
   FKCard,
@@ -36,8 +36,6 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
 import { useI18n } from '@/providers/i18n-provider';
 
-const TREND_UP = '#5A6A3F';
-const TREND_DOWN = '#B84A40';
 
 export default function MetricsScreen() {
   const router = useRouter();
@@ -177,9 +175,9 @@ function MetricSummaryCard({
         : Minus;
   const trendColor =
     item.trend === 'up'
-      ? TREND_UP
+      ? colors.success
       : item.trend === 'down'
-        ? TREND_DOWN
+        ? colors.destructive
         : colors.mutedFg;
   // Trend semantics depend on direction the user wants. For "weight"
   // we don't presume up/down is good/bad — just show the arrow color
@@ -198,7 +196,7 @@ function MetricSummaryCard({
             borderRadius: 18,
             overflow: 'hidden',
             borderWidth: 1,
-            borderColor: 'rgba(94,112,130,0.18)',
+            borderColor: 'rgba(61,90,112,0.18)',
             opacity: pressed ? 0.85 : 1,
           }}
         >

@@ -49,16 +49,19 @@ interface BookingsResponse {
   limit: number;
 }
 
-const STATUS_TONE: Record<
-  BookingStatus,
-  { bg: string; fg: string; border: string }
-> = {
-  confirmed: { bg: 'rgba(122,138,92,0.16)', fg: '#5A6A3F', border: 'rgba(122,138,92,0.28)' },
-  waitlisted: { bg: 'rgba(201,151,77,0.14)', fg: '#8B6A35', border: 'rgba(201,151,77,0.30)' },
-  attended: { bg: 'rgba(74,114,144,0.14)', fg: '#3D5A78', border: 'rgba(74,114,144,0.28)' },
-  cancelled: { bg: 'rgba(184,74,64,0.12)', fg: '#B84A40', border: 'rgba(184,74,64,0.28)' },
-  no_show: { bg: 'rgba(120,120,128,0.12)', fg: '#5E7082', border: 'transparent' },
-};
+/** Tinted backgrounds read the same on both themes; the ink has to be
+ *  resolved per-theme or it fails contrast on the dark band. */
+function statusTones(
+  c: ReturnType<typeof useFKColors>,
+): Record<BookingStatus, { bg: string; fg: string; border: string }> {
+  return {
+    confirmed: { bg: 'rgba(46,122,77,0.16)', fg: c.success, border: 'rgba(46,122,77,0.28)' },
+    waitlisted: { bg: 'rgba(168,121,47,0.14)', fg: c.warning, border: 'rgba(168,121,47,0.30)' },
+    attended: { bg: 'rgba(61,90,112,0.14)', fg: c.info, border: 'rgba(61,90,112,0.28)' },
+    cancelled: { bg: 'rgba(184,74,64,0.12)', fg: c.destructive, border: 'rgba(184,74,64,0.28)' },
+    no_show: { bg: 'rgba(120,120,128,0.12)', fg: c.info, border: 'transparent' },
+  };
+}
 
 export default function HistoryScreen() {
   const haptics = useHaptics();
@@ -200,7 +203,7 @@ function BookingCard({
   lang: string;
 }) {
   const session = booking.classSession;
-  const tone = STATUS_TONE[booking.status];
+  const tone = statusTones(colors)[booking.status];
   const coachName = session.coach
     ? [session.coach.firstName, session.coach.lastName]
         .filter(Boolean)

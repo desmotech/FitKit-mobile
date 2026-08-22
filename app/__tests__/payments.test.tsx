@@ -8,7 +8,7 @@
  */
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import PaymentsScreen from '../(tabs)/profile/payments';
 import { paymentErrorStringsFor } from '@/i18n/payment-error-strings';
 import { cancelPendingStringsFor } from '@/i18n/cancel-pending-strings';
@@ -32,7 +32,7 @@ jest.mock('expo-web-browser', () => ({
 
 const S = paymentErrorStringsFor('he');
 
-// Same overlay convention as profile.test.tsx: the pinned @fitkit/shared
+// Same overlay convention as profile.test.tsx: the pinned @taikan/shared
 // package predates these dictionary keys, so `pick` resolves to undefined
 // and the static table is what the screen actually renders today.
 function pick(path: string): string | undefined {

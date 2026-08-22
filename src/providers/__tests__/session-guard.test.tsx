@@ -19,8 +19,8 @@ import { useActiveOrg } from '../active-org-provider';
 import { mockAuthState } from '../../../test/mocks/clerk';
 import { makeTestQueryClient, renderWithProviders, TEST_ORG } from '../../../test/render';
 
-const OWNER_KEY = 'fitkit:auth:cacheOwner';
-const ACTIVE_ORG_KEY = 'fitkit:settings:activeOrg';
+const OWNER_KEY = 'taikan:auth:cacheOwner';
+const ACTIVE_ORG_KEY = 'taikan:settings:activeOrg';
 
 /** Surfaces the in-memory active-org selection so the reset is observable. */
 function ActiveOrgProbe() {

@@ -1,6 +1,6 @@
 # Brief — Granular Workout Logging, PRs & History (functionality)
 
-For Claude design (you already have the FitKit "Whiteboard" design system —
+For Claude design (you already have the Taikan "Whiteboard" design system —
 apply it; this brief is **functionality only**). This is the member-side
 logging flow of a gym / CrossFit coaching app: log what you actually did across
 every prescription shape, track PRs explicitly, and see it trend over time.

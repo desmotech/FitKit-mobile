@@ -1,8 +1,8 @@
 /**
  * Local mirror of `libs/shared/src/lib/schemas/forms.ts` from the
- * `fitkit` monorepo. The shipped `@fitkit/shared@0.1.0` package on
+ * `taikan` monorepo. The shipped `@taikan/shared@0.1.0` package on
  * mobile doesn't expose these yet — once the package is republished
- * we can swap imports to `from '@fitkit/shared'`.
+ * we can swap imports to `from '@taikan/shared'`.
  *
  * Keep these in sync with the source until then. The Drizzle columns
  * are jsonb so the schemas are the source of truth for what's inside.

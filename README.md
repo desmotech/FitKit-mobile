@@ -1,7 +1,7 @@
-# fitkit-mobile
+# taikan-mobile
 
-Expo (managed workflow) React Native app for FitKit members — extracted
-from the FitKit monorepo as a standalone repo. Mirrors the member
+Expo (managed workflow) React Native app for Taikan members — extracted
+from the Taikan monorepo as a standalone repo. Mirrors the member
 surfaces of `apps/web` with native value-adds: QR / GPS check-in, push
 notifications, offline cache, haptics, and smooth gestures.
 
@@ -10,19 +10,19 @@ notifications, offline cache, haptics, and smooth gestures.
 - Node 24 (`.nvmrc`-compatible)
 - pnpm 10
 - A GitHub Personal Access Token with `read:packages` scope, exported as
-  `GITHUB_TOKEN` so pnpm can install `@fitkit/shared` from GitHub
+  `GITHUB_TOKEN` so pnpm can install `@taikan/shared` from GitHub
   Packages (see "Shared code" below).
 - Xcode (iOS) and/or Android Studio (Android) for native builds.
 
-## Shared code: `@fitkit/shared`
+## Shared code: `@taikan/shared`
 
 This app depends on Zod schemas, types, validation, and i18n
-dictionaries shipped from the source-of-truth FitKit monorepo as a
+dictionaries shipped from the source-of-truth Taikan monorepo as a
 versioned npm package.
 
 - **Source repo:** `desmotech/fitnx2` → `libs/shared/`
-- **Published as:** `@desmotech/fitkit-shared` on GitHub Packages
-- **Aliased here as:** `@fitkit/shared` (via the npm: protocol in
+- **Published as:** `@desmotech/taikan-shared` on GitHub Packages
+- **Aliased here as:** `@taikan/shared` (via the npm: protocol in
   `package.json`) so imports stay identical to the source repo
 
 A GitHub Actions workflow in the source repo
@@ -45,13 +45,13 @@ The repo's `.npmrc` reads `${GITHUB_TOKEN}` at install time.
 ### Bumping the shared dependency
 
 ```bash
-pnpm up @fitkit/shared@latest
+pnpm up @taikan/shared@latest
 ```
 
 Or pin to a specific version published by the workflow:
 
 ```bash
-pnpm up @fitkit/shared@npm:@desmotech/fitkit-shared@x.y.z
+pnpm up @taikan/shared@npm:@desmotech/taikan-shared@x.y.z
 ```
 
 ## Setup
@@ -104,7 +104,7 @@ press `i` / `a` in the terminal for iOS / Android simulators.
   `app/checkin.tsx`.
 - **i18n**: `I18nProvider` reads device locale via `expo-localization`,
   falls back to Hebrew (matches web default). Dictionaries from
-  `@fitkit/shared`.
+  `@taikan/shared`.
 - **Realtime**: `socket.io-client` with `transports: ['websocket']`,
   AppState lifecycle awareness, JWT rotation.
 
