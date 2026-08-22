@@ -32,7 +32,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Taikan',
   slug: 'taikan',
-  // `taikan` is the brand scheme. `taikan` stays registered because QR codes
+  owner: 'saarku',
+  // `taikan` is the brand scheme. `fitkit` stays registered because QR codes
   // printed at gyms before the rebrand encode `fitkit://...` deep links.
   scheme: ['taikan', 'fitkit'],
   // The one place the marketing version lives. iOS `buildNumber` and Android
@@ -357,11 +358,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // Which commit this bundle came from — see `resolveCommit` above.
     commit: resolveCommit(),
     eas: {
-      // REBRAND: `fit.taikan.app` is a brand-new store app, so it needs its own
-      // EAS project. Run `eas init` against the new Expo project and replace
-      // this id (and the updates URL below) — the old id belongs to Taikan.
       projectId:
-        process.env.EAS_PROJECT_ID ?? '1f6bb22c-0649-417b-af9e-9154dd4efda0',
+        process.env.EAS_PROJECT_ID ?? '1c14f37d-bd36-4464-b848-249b5dec4831',
     },
   },
   // An OTA update is only delivered to installed apps whose runtimeVersion
@@ -380,6 +378,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   updates: {
     url:
       process.env.EAS_UPDATES_URL ??
-      'https://u.expo.dev/1f6bb22c-0649-417b-af9e-9154dd4efda0',
+      'https://u.expo.dev/1c14f37d-bd36-4464-b848-249b5dec4831',
   },
 });
