@@ -44,18 +44,21 @@ import {
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useI18n } from '@/providers/i18n-provider';
 
-const BRAND_TEAL = '#0E8C8C';
-const BRAND_TEAL_DARK = '#27C8BA';
-const STATUS_PILL_FG: Record<string, string> = {
-  pending: '#B84A40',
-  sent: '#B84A40',
-  scheduled: '#5A6A3F',
-  draft: 'rgb(94,112,130)',
-  signed: '#0E8C8C',
-  answered: '#0E8C8C',
-  reviewed: '#0E8C8C',
-  archived: 'rgb(94,112,130)',
-};
+/** Status pill ink, resolved against the active theme's FK tokens. */
+function statusPillFg(
+  colors: ReturnType<typeof useFKColors>,
+): Record<string, string> {
+  return {
+    pending: colors.destructive,
+    sent: colors.destructive,
+    scheduled: colors.success,
+    draft: colors.info,
+    signed: colors.primary,
+    answered: colors.primary,
+    reviewed: colors.primary,
+    archived: colors.info,
+  };
+}
 
 function isActionable(status: string): boolean {
   return status === 'pending' || status === 'sent' || status === 'scheduled';
@@ -106,6 +109,7 @@ export default function MyFormsScreen() {
   const haptics = useHaptics();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const colors = useFKColors();
 
   const { activeOrganization } = useCurrentUser();
   const orgId = activeOrganization?.id;
@@ -297,7 +301,7 @@ export default function MyFormsScreen() {
                   paddingVertical: 10,
                   borderTopWidth: 0.5,
                   borderTopColor: isDark
-                    ? 'rgba(235,235,245,0.12)'
+                    ? 'rgba(238,242,246,0.12)'
                     : 'rgba(60,60,67,0.12)',
                 }}
               >
@@ -305,7 +309,7 @@ export default function MyFormsScreen() {
                   style={{
                     fontSize: 12,
                     fontWeight: '600',
-                    color: isDark ? BRAND_TEAL_DARK : BRAND_TEAL,
+                    color: colors.primary,
                     writingDirection: isRTL ? 'rtl' : 'ltr',
                   }}
                 >
@@ -314,12 +318,12 @@ export default function MyFormsScreen() {
                 {expanded ? (
                   <ChevronUp
                     size={14}
-                    color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+                    color={colors.primary}
                   />
                 ) : (
                   <ChevronDown
                     size={14}
-                    color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+                    color={colors.primary}
                   />
                 )}
               </Pressable>
@@ -425,7 +429,7 @@ function SectionGroup({
         style={{
           fontSize: 11,
           fontWeight: '700',
-          color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
+          color: isDark ? 'rgba(238,242,246,0.5)' : 'rgba(60,60,67,0.5)',
           paddingHorizontal: 4,
           textAlign: isRTL ? 'right' : 'left',
           writingDirection: isRTL ? 'rtl' : 'ltr',
@@ -477,9 +481,7 @@ function FormRow({
   const s = useFormStrings();
   const status = entry.instance.status;
   const actionable = isActionable(status);
-  const rawPill = STATUS_PILL_FG[status] ?? 'rgb(94,112,130)';
-  const pillColor =
-    isDark && rawPill === BRAND_TEAL ? BRAND_TEAL_DARK : rawPill;
+  const pillColor = statusPillFg(colors)[status] ?? colors.info;
 
   const StatusIcon = actionable
     ? Circle
@@ -489,7 +491,7 @@ function FormRow({
         ? ClipboardCheck
         : CheckCircle2;
 
-  const iconColor = actionable ? '#B84A40' : pillColor;
+  const iconColor = actionable ? colors.destructive : pillColor;
 
   const expiresAt = entry.instance.expiresAt;
   let expiresIn: string | null = null;
@@ -593,7 +595,7 @@ function FormRow({
                     height: 3,
                     borderRadius: 1.5,
                     backgroundColor: isDark
-                      ? 'rgba(235,235,245,0.4)'
+                      ? 'rgba(238,242,246,0.4)'
                       : 'rgba(60,60,67,0.4)',
                   }}
                 />
@@ -601,7 +603,7 @@ function FormRow({
                   style={{
                     fontSize: 12,
                     fontWeight: '600',
-                    color: isDark ? BRAND_TEAL_DARK : BRAND_TEAL,
+                    color: colors.primary,
                     writingDirection: isRTL ? 'rtl' : 'ltr',
                   }}
                 >
@@ -617,7 +619,7 @@ function FormRow({
                     fontSize: 12,
                     fontWeight: '600',
                     color: isDark
-                      ? 'rgba(235,235,245,0.6)'
+                      ? 'rgba(238,242,246,0.6)'
                       : 'rgba(60,60,67,0.6)',
                     writingDirection: isRTL ? 'rtl' : 'ltr',
                   }}
@@ -634,7 +636,7 @@ function FormRow({
                     fontSize: 12,
                     fontWeight: '500',
                     color: isDark
-                      ? 'rgba(235,235,245,0.6)'
+                      ? 'rgba(238,242,246,0.6)'
                       : 'rgba(60,60,67,0.6)',
                     writingDirection: isRTL ? 'rtl' : 'ltr',
                   }}
@@ -666,7 +668,7 @@ function FormRow({
                     fontSize: 12,
                     fontWeight: '500',
                     color: isDark
-                      ? 'rgba(235,235,245,0.6)'
+                      ? 'rgba(238,242,246,0.6)'
                       : 'rgba(60,60,67,0.6)',
                   }}
                 >
@@ -680,7 +682,7 @@ function FormRow({
               style={{
                 fontSize: 12,
                 fontWeight: '500',
-                color: isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)',
+                color: isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)',
                 textAlign: isRTL ? 'right' : 'left',
                 writingDirection: isRTL ? 'rtl' : 'ltr',
               }}
@@ -728,12 +730,12 @@ function FormRow({
             {downloading ? (
               <ActivityIndicator
                 size="small"
-                color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+                color={colors.primary}
               />
             ) : (
               <Download
                 size={17}
-                color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+                color={colors.primary}
                 strokeWidth={2.2}
               />
             )}
@@ -746,7 +748,7 @@ function FormRow({
         <View style={isRTL ? { transform: [{ scaleX: -1 }] } : undefined}>
           <ChevronRight
             size={18}
-            color={isDark ? 'rgba(235,235,245,0.4)' : 'rgba(60,60,67,0.4)'}
+            color={isDark ? 'rgba(238,242,246,0.4)' : 'rgba(60,60,67,0.4)'}
           />
         </View>
       </Pressable>
@@ -764,7 +766,7 @@ function MetaDot({ isDark }: { isDark: boolean }) {
         height: 3,
         borderRadius: 1.5,
         backgroundColor: isDark
-          ? 'rgba(235,235,245,0.4)'
+          ? 'rgba(238,242,246,0.4)'
           : 'rgba(60,60,67,0.4)',
       }}
     />
@@ -798,7 +800,8 @@ function PreviousRow({
   downloadError?: string | null;
 }) {
   const s = useFormStrings();
-  const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const colors = useFKColors();
+  const mutedFg = isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)';
   return (
     <Pressable
       onPress={onPress}
@@ -815,7 +818,7 @@ function PreviousRow({
         gap: 8,
         borderTopWidth: 0.5,
         borderTopColor: isDark
-          ? 'rgba(235,235,245,0.12)'
+          ? 'rgba(238,242,246,0.12)'
           : 'rgba(60,60,67,0.12)',
       }}
     >
@@ -890,12 +893,12 @@ function PreviousRow({
           {downloading ? (
             <ActivityIndicator
               size="small"
-              color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+              color={colors.primary}
             />
           ) : (
             <Download
               size={15}
-              color={isDark ? BRAND_TEAL_DARK : BRAND_TEAL}
+              color={colors.primary}
               strokeWidth={2.2}
             />
           )}

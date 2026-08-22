@@ -11,7 +11,7 @@ import { Text } from 'react-native';
 import { screen, waitFor } from '@testing-library/react-native';
 import { onlineManager } from '@tanstack/react-query';
 import { offlineStringsFor } from '@/i18n/offline-strings';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { AuthGate } from '../auth-gate';
 import {
   membership,

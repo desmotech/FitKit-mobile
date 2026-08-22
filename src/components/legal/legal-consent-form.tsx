@@ -32,7 +32,7 @@ import { Check, ShieldCheck } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useColorScheme } from 'nativewind';
-import type { ConsentContext, LegalDocumentType } from '@fitkit/shared';
+import type { ConsentContext, LegalDocumentType } from '@taikan/shared';
 import { setAnalyticsConsent } from '@/lib/analytics';
 import { useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
@@ -101,7 +101,7 @@ export function LegalConsentForm({
       'Failed to record your acceptance. Please try again.',
     analyticsConsentLabel:
       (legalT?.analyticsConsentLabel as string) ??
-      'Share anonymous usage data to help improve FitKit.',
+      'Share anonymous usage data to help improve Taikan.',
     analyticsConsentHint:
       (legalT?.analyticsConsentHint as string) ??
       'Optional. You can change this anytime in Profile.',
@@ -160,7 +160,7 @@ export function LegalConsentForm({
   };
 
   const mutedFg = isDark
-    ? 'rgba(235,235,245,0.6)'
+    ? 'rgba(238,242,246,0.6)'
     : 'rgba(60,60,67,0.6)';
 
   return (
@@ -400,7 +400,7 @@ function ConsentRow({
         borderRadius: 6,
         borderCurve: 'continuous',
         borderWidth: 2,
-        borderColor: checked ? BRAND_TEAL : 'rgba(94,112,130,0.40)',
+        borderColor: checked ? BRAND_TEAL : 'rgba(61,90,112,0.40)',
         backgroundColor: checked ? BRAND_TEAL : 'transparent',
         alignItems: 'center',
         justifyContent: 'center',

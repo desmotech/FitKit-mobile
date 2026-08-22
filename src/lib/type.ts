@@ -1,5 +1,5 @@
 /**
- * FitKit "Whiteboard" type system.
+ * Taikan "Whiteboard" type system.
  *
  * Concrete, per-weight font-family names registered in app/_layout.tsx.
  * Reference these directly in inline `style={{ fontFamily }}` — they render

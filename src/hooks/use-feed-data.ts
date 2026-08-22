@@ -5,7 +5,7 @@ import type {
   PersonalRecordResponse,
   BodyMetricSummaryResponse,
   SubscriptionWithPlan,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 
 /**
  * Member-side data hooks. All org-scoped endpoints take orgId so we

@@ -33,7 +33,7 @@ import React, {
 import { AppState } from 'react-native';
 import { onlineManager } from '@tanstack/react-query';
 import { io, type Socket } from 'socket.io-client';
-import type { AnnouncementResponse, MessageResponse } from '@fitkit/shared';
+import type { AnnouncementResponse, MessageResponse } from '@taikan/shared';
 import { wsUrl } from '@/lib/api';
 
 export type MessagePayload = MessageResponse;

@@ -1,5 +1,5 @@
 /**
- * Profile-screen localization (mobile-only; not in @fitkit/shared).
+ * Profile-screen localization (mobile-only; not in @taikan/shared).
  *
  * Static per-language tables for every label on the Profile tab: hero
  * stats, membership card, settings rows, theme/language controls, the
@@ -7,7 +7,7 @@
  * strings that started this file live here too.
  *
  * `useProfileStrings` (./use-profile-strings.ts) overlays values from
- * the runtime dictionary (`@fitkit/shared`) on top of these tables, so
+ * the runtime dictionary (`@taikan/shared`) on top of these tables, so
  * the dictionary stays the source of truth when it has a translation
  * and these values act as per-language fallbacks.
  *
@@ -105,11 +105,11 @@ export interface ProfileStrings {
   // ── Support sections ──────────────────────────────────────────────
   orgSupportTitle: string;
   orgSupportSubtitle: string;
-  fitkitSupportTitle: string;
-  fitkitSupportSubtitle: string;
-  fitkitFeedback: string;
-  fitkitContact: string;
-  fitkitWebsite: string;
+  taikanSupportTitle: string;
+  taikanSupportSubtitle: string;
+  taikanFeedback: string;
+  taikanContact: string;
+  taikanWebsite: string;
 
   // ── Theme + language controls ─────────────────────────────────────
   themeLabel: string;
@@ -200,11 +200,11 @@ const HE: ProfileStrings = {
 
   orgSupportTitle: 'הסטודיו שלי',
   orgSupportSubtitle: 'שאלות על המנוי שלך',
-  fitkitSupportTitle: 'תמיכת FitKit',
-  fitkitSupportSubtitle: 'עזרה ומשוב לאפליקציה',
-  fitkitFeedback: 'שליחת משוב',
-  fitkitContact: 'יצירת קשר עם התמיכה',
-  fitkitWebsite: 'מעבר לאתר FitKit',
+  taikanSupportTitle: 'תמיכת Taikan',
+  taikanSupportSubtitle: 'עזרה ומשוב לאפליקציה',
+  taikanFeedback: 'שליחת משוב',
+  taikanContact: 'יצירת קשר עם התמיכה',
+  taikanWebsite: 'מעבר לאתר Taikan',
 
   themeLabel: 'ערכת נושא',
   themeSystem: 'מערכת',
@@ -293,11 +293,11 @@ const EN: ProfileStrings = {
 
   orgSupportTitle: 'Your Gym',
   orgSupportSubtitle: 'Questions about your membership',
-  fitkitSupportTitle: 'FitKit Support',
-  fitkitSupportSubtitle: 'App help & feedback',
-  fitkitFeedback: 'Send Feedback',
-  fitkitContact: 'Contact Support',
-  fitkitWebsite: 'Visit FitKit',
+  taikanSupportTitle: 'Taikan Support',
+  taikanSupportSubtitle: 'App help & feedback',
+  taikanFeedback: 'Send Feedback',
+  taikanContact: 'Contact Support',
+  taikanWebsite: 'Visit Taikan',
 
   themeLabel: 'Theme',
   themeSystem: 'System',
@@ -386,11 +386,11 @@ const RU: ProfileStrings = {
 
   orgSupportTitle: 'Ваш зал',
   orgSupportSubtitle: 'Вопросы о вашем абонементе',
-  fitkitSupportTitle: 'Поддержка FitKit',
-  fitkitSupportSubtitle: 'Помощь и отзывы о приложении',
-  fitkitFeedback: 'Отправить отзыв',
-  fitkitContact: 'Связаться с поддержкой',
-  fitkitWebsite: 'Открыть сайт FitKit',
+  taikanSupportTitle: 'Поддержка Taikan',
+  taikanSupportSubtitle: 'Помощь и отзывы о приложении',
+  taikanFeedback: 'Отправить отзыв',
+  taikanContact: 'Связаться с поддержкой',
+  taikanWebsite: 'Открыть сайт Taikan',
 
   themeLabel: 'Тема',
   themeSystem: 'Системная',

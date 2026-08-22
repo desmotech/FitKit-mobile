@@ -10,7 +10,7 @@
  * Key paths mirror the web dictionary keys added with the same feature
  * (`subscriptions.withdrawScheduledAction` /
  * `subscriptions.withdrawScheduledDialog.*`), so the copy converges once
- * `@fitkit/shared` publishes them. Same pattern as ./cancel-pending-strings.ts.
+ * `@taikan/shared` publishes them. Same pattern as ./cancel-pending-strings.ts.
  */
 import { type Locale } from '@/i18n/config';
 

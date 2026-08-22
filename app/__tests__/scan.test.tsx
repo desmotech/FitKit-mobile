@@ -9,7 +9,7 @@
  * `mockPermission` drives useCameraPermissions and the CameraView stub
  * exposes its `onBarcodeScanned` prop so tests can "scan" a code.
  */
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { act, screen, waitFor } from '@testing-library/react-native';
 import ScanScreen from '../(tabs)/schedule/scan';
 import { stageSignedInMember } from '../../test/fixtures';
@@ -107,13 +107,13 @@ describe('QR scanner', () => {
     expect(screen.getByText(SC.openSettings)).toBeOnTheScreen();
   });
 
-  it('checks the member in from a valid fitkit:// QR and returns to Schedule', async () => {
+  it('checks the member in from a valid taikan:// QR and returns to Schedule', async () => {
     const exp = Math.floor(Date.now() / 1000) + 900;
     const bodies = captureCheckin('sess_1');
     await renderReadyScanner();
 
     await scan(
-      `fitkit://checkin?org=${TEST_ORG}&s=sess_1&t=tok_scan_1&e=${exp}`,
+      `taikan://checkin?org=${TEST_ORG}&s=sess_1&t=tok_scan_1&e=${exp}`,
     );
 
     await waitFor(() => expect(bodies).toHaveLength(1), { timeout: 4000 });
@@ -135,7 +135,7 @@ describe('QR scanner', () => {
     const bodies = captureCheckin('sess_1');
     await renderReadyScanner();
 
-    await scan('fitkit://checkin'); // parseable URL, but not a gym code
+    await scan('taikan://checkin'); // parseable URL, but not a gym code
 
     expect(await screen.findByText(SC.invalidQr)).toBeOnTheScreen();
     expect(bodies).toHaveLength(0);

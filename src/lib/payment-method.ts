@@ -5,7 +5,7 @@
  * frozen clock — the boundary (a card is good through the LAST day of its
  * stated month) is the part that is easy to get wrong by a month.
  */
-import type { PaymentMethodResponse } from '@fitkit/shared';
+import type { PaymentMethodResponse } from '@taikan/shared';
 
 /** The expiry fields as the API ships them — narrower than the full
  *  `PaymentMethodResponse` so callers can ask about a bare `{month, year}`

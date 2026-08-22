@@ -12,7 +12,7 @@
 import { RefreshCw } from 'lucide-react-native';
 import { ActivityIndicator, Alert, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import type { PlanResponse, SubscriptionWithPlan } from '@fitkit/shared';
+import type { PlanResponse, SubscriptionWithPlan } from '@taikan/shared';
 import { FKButton } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCancelScheduledChange } from '@/hooks/use-plan-change';

@@ -1,5 +1,5 @@
 /**
- * FitKit Mobile — Tailwind config.
+ * Taikan Mobile — Tailwind config.
  * HSL channel-split tokens (shadcn pattern). Each token is referenced
  * via `hsl(var(--token) / <alpha-value>)` so Tailwind's alpha modifier
  * (e.g. `border-border/60`, `bg-primary/12`) works under NativeWind 4.

@@ -1,5 +1,5 @@
 /**
- * Cross-cutting member-facing copy the published `@fitkit/shared` dictionary
+ * Cross-cutting member-facing copy the published `@taikan/shared` dictionary
  * has no keys for.
  *
  * Two kinds live here:

@@ -2,7 +2,7 @@ import type {
   CreateSetResultInput,
   WorkoutResultResponse,
   WorkoutSetResultResponse,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { parseYmdLocal } from '@/lib/week';
 import { useApiAction, useApiQuery, useApiSend } from './use-api-query';
 import type { ApiEnvelope } from './use-feed-data';
@@ -279,7 +279,7 @@ export function useLatestResult(
 // ── Hook: my results for the workout (for History list + chart) ─────
 
 /**
- * Result shapes reuse the canonical `@fitkit/shared` schemas so the mobile and
+ * Result shapes reuse the canonical `@taikan/shared` schemas so the mobile and
  * API never drift. `WorkoutResult` is the base response plus the optional
  * `setResults` the library-scoped history endpoint adds (toResponseWithSets).
  */

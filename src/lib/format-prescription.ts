@@ -1,10 +1,10 @@
 /**
  * Pure formatters for the canonical prescription shape (mirrors
  * apps/web/src/components/shared/prescription/format-prescription.ts).
- * Keep both files in sync — the SECTION_SHAPES registry in @fitkit/shared
+ * Keep both files in sync — the SECTION_SHAPES registry in @taikan/shared
  * is the source of truth and adding a new shape means updating both.
  */
-import type { SectionShape } from '@fitkit/shared';
+import type { SectionShape } from '@taikan/shared';
 
 export interface FlatFallback {
   prescribedSets: number | null;

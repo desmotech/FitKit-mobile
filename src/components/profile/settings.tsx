@@ -182,7 +182,7 @@ export function SettingsRow({
         </View>
       ) : null}
 
-      <Chevron size={18} color="rgba(94,112,130,0.55)" strokeWidth={2.2} />
+      <Chevron size={18} color="rgba(61,90,112,0.55)" strokeWidth={2.2} />
     </TouchableOpacity>
   );
 }

@@ -2,7 +2,7 @@
  * pickActiveMembership decides which gym the member lands in after sign-in
  * and after switching orgs — the wrong pick shows another gym's data.
  */
-import type { MembershipResponse } from '@fitkit/shared';
+import type { MembershipResponse } from '@taikan/shared';
 import { pickActiveMembership } from '../use-current-user';
 
 function m(

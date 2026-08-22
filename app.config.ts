@@ -30,9 +30,12 @@ function resolveCommit(): string {
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'FitKit',
-  slug: 'fitkit',
-  scheme: 'fitkit',
+  name: 'Taikan',
+  slug: 'taikan',
+  owner: 'saarku',
+  // `taikan` is the brand scheme. `fitkit` stays registered because QR codes
+  // printed at gyms before the rebrand encode `fitkit://...` deep links.
+  scheme: ['taikan', 'fitkit'],
   // The one place the marketing version lives. iOS `buildNumber` and Android
   // `versionCode` are NOT set here on purpose — eas.json runs
   // `appVersionSource: "remote"` with `autoIncrement` on the production
@@ -51,16 +54,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // block was one more place for the colors to drift out of sync.
   assetBundlePatterns: ['**/*'],
   ios: {
-    bundleIdentifier: 'fit.fitkit.app',
+    bundleIdentifier: 'fit.taikan.app',
     supportsTablet: false,
-    associatedDomains: ['applinks:app.fitkit.fit'],
+    associatedDomains: ['applinks:app.taikan.fit'],
     infoPlist: {
       NSCameraUsageDescription:
-        'FitKit uses the camera to scan check-in QR codes and to take progress photos and form-check videos.',
+        'Taikan uses the camera to scan check-in QR codes and to take progress photos and form-check videos.',
       NSPhotoLibraryUsageDescription:
-        'FitKit needs photo library access to attach progress photos and form-check videos to your workouts.',
+        'Taikan needs photo library access to attach progress photos and form-check videos to your workouts.',
       NSLocationWhenInUseUsageDescription:
-        'FitKit uses your location to verify you are at the gym for class check-in.',
+        'Taikan uses your location to verify you are at the gym for class check-in.',
       ITSAppUsesNonExemptEncryption: false,
     },
     // Apple privacy manifest — declares the data the app collects so the
@@ -156,7 +159,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             'NSPrivacyCollectedDataTypePurposeAppFunctionality',
           ],
         },
-        // First-party feature data sent to the FitKit API.
+        // First-party feature data sent to the Taikan API.
         {
           // GPS gym check-in (ACCESS_FINE_LOCATION).
           NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypePreciseLocation',
@@ -197,7 +200,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    package: 'fit.fitkit.app',
+    package: 'fit.taikan.app',
     googleServicesFile: './google-services.json',
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
@@ -213,33 +216,33 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         action: 'VIEW',
         autoVerify: true,
         data: [
-          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/checkin' },
+          { scheme: 'https', host: 'app.taikan.fit', pathPrefix: '/checkin' },
           {
             scheme: 'https',
-            host: 'app.fitkit.fit',
+            host: 'app.taikan.fit',
             pathPrefix: '/he/checkin',
           },
           {
             scheme: 'https',
-            host: 'app.fitkit.fit',
+            host: 'app.taikan.fit',
             pathPrefix: '/en/checkin',
           },
           {
             scheme: 'https',
-            host: 'app.fitkit.fit',
+            host: 'app.taikan.fit',
             pathPrefix: '/ru/checkin',
           },
           // Clerk invite ticket redirect target. Clerk's invitation
-          // emails point at clerk.fitkit.fit/v1/tickets/accept; after
+          // emails point at clerk.taikan.fit/v1/tickets/accept; after
           // server-side validation Clerk redirects to
-          // https://app.fitkit.fit/sign-up?__clerk_ticket=...&__clerk_status=sign_up
+          // https://app.taikan.fit/sign-up?__clerk_ticket=...&__clerk_status=sign_up
           // (per the JWT's rurl). This filter catches that redirect on
           // Android so the app handles invite acceptance instead of
           // the browser falling through to a web fallback. Requires
           // assetlinks.json on /.well-known/ — see FIT-188.
           {
             scheme: 'https',
-            host: 'app.fitkit.fit',
+            host: 'app.taikan.fit',
             pathPrefix: '/sign-up',
           },
           // FIT-178 token-gated form signing. Email/SMS links from
@@ -247,16 +250,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
           // assetlinks.json + AASA file from FIT-188 cover this path.
           {
             scheme: 'https',
-            host: 'app.fitkit.fit',
+            host: 'app.taikan.fit',
             pathPrefix: '/forms/sign',
           },
           // Shop deep links (quick-register → shop landing, optionally
           // with ?plan=<id> to auto-open a plan's purchase). Locale
           // prefixes are stripped in-app by app/+native-intent.ts.
-          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/shop' },
-          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/he/shop' },
-          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/en/shop' },
-          { scheme: 'https', host: 'app.fitkit.fit', pathPrefix: '/ru/shop' },
+          { scheme: 'https', host: 'app.taikan.fit', pathPrefix: '/shop' },
+          { scheme: 'https', host: 'app.taikan.fit', pathPrefix: '/he/shop' },
+          { scheme: 'https', host: 'app.taikan.fit', pathPrefix: '/en/shop' },
+          { scheme: 'https', host: 'app.taikan.fit', pathPrefix: '/ru/shop' },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       },
@@ -270,7 +273,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       // `supportedLocales` writes CFBundleLocalizations (iOS) and a
       // locales_config.xml + android:localeConfig (Android 13+). Without
-      // it, neither OS shows FitKit in its per-app Language setting, so a
+      // it, neither OS shows Taikan in its per-app Language setting, so a
       // member can't pick the app's language from device Settings — they
       // could only ever inherit the system language. Keep this list in
       // sync with `i18n.locales` in src/i18n/config.ts.
@@ -284,14 +287,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-camera',
       {
         cameraPermission:
-          'FitKit needs camera access to scan check-in QR codes.',
+          'Taikan needs camera access to scan check-in QR codes.',
       },
     ],
     [
       'expo-location',
       {
         locationWhenInUsePermission:
-          'FitKit uses your location to verify check-in at the gym.',
+          'Taikan uses your location to verify check-in at the gym.',
       },
     ],
     [
@@ -304,12 +307,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        // Cold-start splash: the brand globe centred on the FitKit splash
+        // Cold-start splash: the brand globe centred on the Taikan splash
         // background. Handled off to the animated <AnimatedSplash> overlay
         // (src/components/animated-splash.tsx) — keep bg + imageWidth in
         // sync with it so the native → animated transition is seamless.
-        backgroundColor: '#F6F4EE',
-        dark: { backgroundColor: '#050608' },
+        backgroundColor: '#F6F8FA',
+        dark: { backgroundColor: '#07202B' },
         image: './assets/images/splash.png',
         imageWidth: 160,
       },
@@ -332,8 +335,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       '@sentry/react-native/expo',
       {
         url: 'https://sentry.io/',
-        organization: process.env.SENTRY_ORG ?? 'fitkit1',
-        project: process.env.SENTRY_PROJECT ?? 'fitkit-mobile',
+        organization: process.env.SENTRY_ORG ?? 'taikan',
+        project: process.env.SENTRY_PROJECT ?? 'taikan-mobile',
       },
     ],
   ],
@@ -356,7 +359,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     commit: resolveCommit(),
     eas: {
       projectId:
-        process.env.EAS_PROJECT_ID ?? '1f6bb22c-0649-417b-af9e-9154dd4efda0',
+        process.env.EAS_PROJECT_ID ?? '1c14f37d-bd36-4464-b848-249b5dec4831',
     },
   },
   // An OTA update is only delivered to installed apps whose runtimeVersion
@@ -375,6 +378,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   updates: {
     url:
       process.env.EAS_UPDATES_URL ??
-      'https://u.expo.dev/1f6bb22c-0649-417b-af9e-9154dd4efda0',
+      'https://u.expo.dev/1c14f37d-bd36-4464-b848-249b5dec4831',
   },
 });

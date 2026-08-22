@@ -42,10 +42,10 @@ export const featureFlagBootstrap = extra.featureFlags
 
 /**
  * Payment providers reject non-web return URLs (Morning errors with 1103 on
- * `fitkit://` links), so hosted-checkout return URLs go through the API's
- * HTTPS bridge, which 302s back to `fitkit://<appPath>` with all params
+ * `taikan://` links), so hosted-checkout return URLs go through the API's
+ * HTTPS bridge, which 302s back to `taikan://<appPath>` with all params
  * (these plus any the API/provider appended, e.g. `sub`). The bridge redirect
- * is what closes `openAuthSessionAsync` — keep watching the `fitkit://` URL
+ * is what closes `openAuthSessionAsync` — keep watching the `taikan://` URL
  * as its callback.
  */
 export function paymentReturnUrl(

@@ -160,7 +160,7 @@ function MetaRow({
           justifyContent: 'center',
         }}
       >
-        <Icon size={14} color="rgba(94,112,130,0.85)" strokeWidth={2.2} />
+        <Icon size={14} color="rgba(61,90,112,0.85)" strokeWidth={2.2} />
       </View>
       <Text
         className="text-foreground"

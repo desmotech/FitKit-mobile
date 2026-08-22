@@ -35,11 +35,11 @@ export function RestOrNoteDetail({
   const ChevronStart = isRTL ? ChevronRight : ChevronLeft;
   const isRest = kind === 'rest';
 
-  const tintFg = isRest ? '#5A6A3F' : '#8B6A35';
-  const tintBg = isRest ? 'rgba(122,138,92,0.06)' : 'rgba(201,151,77,0.06)';
+  const tintFg = isRest ? colors.success : colors.warning;
+  const tintBg = isRest ? 'rgba(46,122,77,0.06)' : 'rgba(168,121,47,0.06)';
   const tintBorder = isRest
-    ? 'rgba(122,138,92,0.30)'
-    : 'rgba(201,151,77,0.30)';
+    ? 'rgba(46,122,77,0.30)'
+    : 'rgba(168,121,47,0.30)';
 
   return (
     <View className="flex-1 bg-background">

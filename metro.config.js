@@ -1,4 +1,4 @@
-// FitKit Mobile — Metro config for Expo + NativeWind.
+// Taikan Mobile — Metro config for Expo + NativeWind.
 //
 // Sentry: per docs.sentry.io/platforms/react-native/manual-setup/expo/,
 // the base Expo config is replaced with `getSentryExpoConfig` so source

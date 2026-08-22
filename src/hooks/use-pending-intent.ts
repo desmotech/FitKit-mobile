@@ -4,7 +4,7 @@ import { analytics } from '@/lib/analytics';
 import { useApiQuery, useApiAction } from './use-api-query';
 
 /**
- * Mirrors `PendingIntentResponse` in @fitkit/shared. Declared locally because
+ * Mirrors `PendingIntentResponse` in @taikan/shared. Declared locally because
  * mobile consumes the package from npm, and the type only ships after the
  * next release of it — swap this for the import once that lands.
  */

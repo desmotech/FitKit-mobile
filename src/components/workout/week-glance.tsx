@@ -25,11 +25,6 @@ import {
   type WeekConsistency,
 } from '@/lib/week-glance';
 
-const SAGE = '#5A6A3F';
-const TEAL = '#0E8C8C';
-const TEAL_DARK = '#27C8BA';
-const AMBER = '#C9974D';
-
 export interface WeekGlanceProps {
   weekStart: string;
   todayYMD: string;
@@ -108,7 +103,7 @@ export function WeekGlance({
         >
           {title}
         </Text>
-        <ConsistencyChip consistency={consistency} isDark={colors.isDark} track={colors.border} />
+        <ConsistencyChip consistency={consistency} track={colors.border} />
       </View>
 
       <View
@@ -140,17 +135,16 @@ export function WeekGlance({
 
 function ConsistencyChip({
   consistency,
-  isDark,
   track,
 }: {
   consistency: WeekConsistency;
-  isDark: boolean;
   track: string;
 }) {
+  const colors = useFKColors();
   const { done, committed, pct } = consistency;
   if (committed === 0 || pct == null) return null;
   const color =
-    pct >= 80 ? SAGE : pct >= 50 ? (isDark ? TEAL_DARK : TEAL) : AMBER;
+    pct >= 80 ? colors.success : pct >= 50 ? colors.primary : colors.warning;
   return (
     <View
       accessibilityRole="text"
@@ -163,7 +157,7 @@ function ConsistencyChip({
         paddingRight: 10,
         paddingVertical: 4,
         borderRadius: 999,
-        backgroundColor: withAlpha(color, isDark ? 0.18 : 0.1),
+        backgroundColor: withAlpha(color, colors.isDark ? 0.18 : 0.1),
         borderWidth: 1,
         borderColor: withAlpha(color, 0.32),
       }}
@@ -251,7 +245,7 @@ function DayPill({
               width: 5,
               height: 5,
               borderRadius: 3,
-              backgroundColor: cell.status === 'done' ? SAGE : colors.primary,
+              backgroundColor: cell.status === 'done' ? colors.success : colors.primary,
             }}
           />
         ) : null}
@@ -280,10 +274,10 @@ function visualFor(
   switch (status) {
     case 'done':
       return {
-        bg: 'rgba(122,138,92,0.20)',
+        bg: withAlpha(colors.success, 0.2),
         borderWidth: 1,
-        borderColor: withAlpha(SAGE, 0.45),
-        icon: <Check size={15} color={SAGE} strokeWidth={2.6} />,
+        borderColor: withAlpha(colors.success, 0.45),
+        icon: <Check size={15} color={colors.success} strokeWidth={2.6} />,
         ...todayRing,
       };
     case 'today':
@@ -312,10 +306,10 @@ function visualFor(
       // untouched day — the two read alike at a glance and colour was the
       // only difference. A missed commitment now carries an explicit mark.
       return {
-        bg: withAlpha(AMBER, 0.12),
+        bg: withAlpha(colors.warning, 0.12),
         borderWidth: 1.5,
-        borderColor: withAlpha(AMBER, 0.7),
-        icon: <X size={13} color={AMBER} strokeWidth={2.6} />,
+        borderColor: withAlpha(colors.warning, 0.7),
+        icon: <X size={13} color={colors.warning} strokeWidth={2.6} />,
         ...todayRing,
       };
     case 'rest':

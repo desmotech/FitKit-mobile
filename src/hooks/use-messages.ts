@@ -23,7 +23,7 @@ import type {
   CreateMessageInput,
   MessageResponse,
   MessagesListResponse,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useRealtime } from '@/providers/realtime-provider';
 import { useApi } from './use-api';
 import { queryKeys } from '@/lib/query-keys';

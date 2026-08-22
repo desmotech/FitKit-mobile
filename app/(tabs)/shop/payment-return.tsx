@@ -17,7 +17,7 @@ import { CheckCircle2, Clock, XCircle } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { SubscriptionWithPlan } from '@fitkit/shared';
+import type { SubscriptionWithPlan } from '@taikan/shared';
 import { FKAmbientBackdrop, FKButton, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
@@ -37,7 +37,7 @@ import { useI18n } from '@/providers/i18n-provider';
 const MAX_POLLS = 10;
 const POLL_INTERVAL_MS = 2000;
 const RETURN_PATH = 'shop/payment-return';
-const RETURN_URL = `fitkit://${RETURN_PATH}`;
+const RETURN_URL = `taikan://${RETURN_PATH}`;
 
 type VerifyState =
   | 'verifying'
@@ -334,7 +334,7 @@ export default function PaymentReturnScreen() {
         }
       : state === 'confirmed'
         ? {
-            icon: <CheckCircle2 size={56} color="#7A8A5C" strokeWidth={1.8} />,
+            icon: <CheckCircle2 size={56} color={colors.success} strokeWidth={1.8} />,
             title: isPlanChange
               ? planChangeStrings.returnSuccessTitle.replace(
                   '{plan}',
@@ -347,7 +347,7 @@ export default function PaymentReturnScreen() {
           }
         : state === 'pending'
           ? {
-              icon: <Clock size={56} color="#C9974D" strokeWidth={1.8} />,
+              icon: <Clock size={56} color={colors.warning} strokeWidth={1.8} />,
               title: prT.processingTitle ?? 'Payment Received',
               desc:
                 prT.processingDesc ??

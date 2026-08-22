@@ -2,7 +2,7 @@
  * Membership-role labels shown on profile and member lists. They must come
  * from the shared dictionaries so a coach reads "מאמן", not "coach".
  */
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { roleLabel } from '../role-label';
 
 describe('the role a member sees on a profile', () => {

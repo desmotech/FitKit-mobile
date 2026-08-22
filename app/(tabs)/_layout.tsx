@@ -24,8 +24,8 @@ const Icon = NativeTabs.Trigger.Icon;
 const Badge = NativeTabs.Trigger.Badge;
 
 // Single source of truth for the brand tint — a locally-declared duplicate
-// here once drifted (#2AB8B8) from the FK dark primary (#27C8BA), leaving
-// the tab bar a different teal from every other accent in dark mode.
+// here once drifted from the FK dark primary, leaving the tab bar a
+// different teal from every other accent in dark mode. Read the tokens.
 const PRIMARY_LIGHT = FK_LIGHT.primary;
 const PRIMARY_DARK = FK_DARK.primary;
 
@@ -118,7 +118,7 @@ export default function TabsLayout() {
   const tint = isDark ? PRIMARY_DARK : PRIMARY_LIGHT;
   // Unselected icon/label ink — the light-mode slate reads ~3.9:1 on the dark
   // background, so dark mode uses iOS systemGray instead.
-  const inactive = isDark ? 'rgb(142,142,147)' : 'rgb(94,112,130)';
+  const inactive = isDark ? 'rgb(142,142,147)' : 'rgb(61,90,112)';
 
   if (!tabsReady) {
     return (

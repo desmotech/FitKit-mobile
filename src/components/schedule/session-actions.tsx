@@ -191,7 +191,7 @@ export function PrimaryCta({
       ? 'transparent'
       : variant === 'destructive'
         ? 'rgba(184,74,64,0.30)'
-        : 'rgba(94,112,130,0.20)';
+        : 'rgba(61,90,112,0.20)';
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -246,7 +246,7 @@ export function DisabledCta({ text }: { text: string }) {
         borderCurve: 'continuous',
         backgroundColor: 'rgba(120,120,128,0.08)',
         borderWidth: 1,
-        borderColor: 'rgba(94,112,130,0.16)',
+        borderColor: 'rgba(61,90,112,0.16)',
         alignItems: 'center',
         justifyContent: 'center',
       }}
@@ -287,8 +287,8 @@ export function CheckedInBanner({
         borderRadius: 16,
         borderCurve: 'continuous',
         backgroundColor: colors.isDark
-          ? 'rgba(122,138,92,0.20)'
-          : 'rgba(122,138,92,0.14)',
+          ? 'rgba(46,122,77,0.20)'
+          : 'rgba(46,122,77,0.14)',
       }}
     >
       <CheckCircle2 size={18} color={green} strokeWidth={2.4} />

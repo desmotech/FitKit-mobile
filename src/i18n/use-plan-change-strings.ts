@@ -7,7 +7,7 @@ import { reportUnmappedApiCode } from '@/lib/error-reporting';
 import { useI18n } from '@/providers/i18n-provider';
 
 /**
- * Dot-paths into the runtime dictionary (`@fitkit/shared`), keyed by the
+ * Dot-paths into the runtime dictionary (`@taikan/shared`), keyed by the
  * `PlanChangeStrings` field they feed. The dictionary value wins when it is
  * a string; otherwise the static per-language table is the fallback. The
  * pinned shared release predates the FIT-254 keys, so today the tables are

@@ -81,7 +81,7 @@ export function MultiChoiceFieldRenderer({
                 borderRadius: field.allowMultiple ? 6 : 11,
                 borderCurve: 'continuous',
                 borderWidth: 2,
-                borderColor: selected ? BRAND_TEAL : 'rgba(94,112,130,0.40)',
+                borderColor: selected ? BRAND_TEAL : 'rgba(61,90,112,0.40)',
                 backgroundColor: selected ? BRAND_TEAL : 'transparent',
                 alignItems: 'center',
                 justifyContent: 'center',

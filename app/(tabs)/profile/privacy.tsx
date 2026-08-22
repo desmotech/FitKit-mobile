@@ -46,7 +46,7 @@ export default function PrivacySettingsScreen() {
     analyticsLabel: get(t, 'privacy.analyticsLabel') ?? 'Usage analytics',
     analyticsBody:
       get(t, 'privacy.analyticsBody') ??
-      'Help improve FitKit by sharing anonymous data about how you use the app. We never sell your data, and you can turn this off at any time.',
+      'Help improve Taikan by sharing anonymous data about how you use the app. We never sell your data, and you can turn this off at any time.',
     privacyPolicy:
       get(t, 'privacy.privacyPolicyLink') ?? 'Read our Privacy Policy',
   };

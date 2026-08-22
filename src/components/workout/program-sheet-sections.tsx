@@ -56,7 +56,7 @@ import { estimateSectionMinutes } from '@/lib/workout-estimate';
 import { programSheetInk, type ProgramSheetInk } from '@/lib/program-sheet-ink';
 import { bodyFamily, displayFamily, font } from '@/lib/type';
 import { spring } from '@/lib/motion';
-import { getShapeCaps, type SectionShape } from '@fitkit/shared';
+import { getShapeCaps, type SectionShape } from '@taikan/shared';
 import { CoachNote } from './coach-note';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);

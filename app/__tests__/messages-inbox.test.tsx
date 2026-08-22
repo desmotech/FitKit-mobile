@@ -12,7 +12,7 @@
  * presence falls back to the no-op context.
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import MessagesListScreen from '../messages/index';
 import { conversation, stageSignedInMember } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
@@ -138,7 +138,7 @@ describe('Inbox — Direct tab', () => {
 
   // The he dictionary has no messages.loadFailed / loadFailedHint keys yet,
   // so the screen falls back to its inline English copy. When the keys ship
-  // in @fitkit/shared, point these assertions at the dictionary.
+  // in @taikan/shared, point these assertions at the dictionary.
   const LOAD_FAILED_COPY = "Couldn't load conversations";
 
   it('shows the retry card on failure — never the empty state', async () => {

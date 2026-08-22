@@ -8,7 +8,7 @@
  * Key paths mirror the web dictionary keys added with the same feature
  * (`shop.paymentReturn.*`), so `useCheckoutDecisionStrings`
  * (./use-checkout-decision-strings.ts) can overlay the runtime dictionary on
- * top of this table and the copy converges once `@fitkit/shared` publishes
+ * top of this table and the copy converges once `@taikan/shared` publishes
  * them. Same pattern as ./cancel-pending-strings.ts.
  */
 import { type Locale } from '@/i18n/config';

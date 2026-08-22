@@ -17,7 +17,7 @@ importers:
       '@expo/vector-icons':
         specifier: ^15.0.3
         version: 15.1.1(expo-font@55.0.8)(react-native@0.83.6(@babel/core@7.29.0)(@types/react@19.2.15)(bufferutil@4.1.0)(react@19.2.0)(utf-8-validate@6.0.6))(react@19.2.0)
-      '@fitkit/shared':
+      '@taikan/shared':
         specifier: npm:@desmotech/fitkit-shared@^0.1.55
         version: '@desmotech/fitkit-shared@0.1.55'
       '@react-native-async-storage/async-storage':

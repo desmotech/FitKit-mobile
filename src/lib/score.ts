@@ -6,7 +6,7 @@
  * shape and a discriminated union that the UI can render and validate
  * without parsing strings everywhere.
  *
- * The eight scoring kinds come from @fitkit/shared (`WorkoutScoring`); we
+ * The eight scoring kinds come from @taikan/shared (`WorkoutScoring`); we
  * mirror them locally so the UI doesn't have to bring zod into every render.
  */
 

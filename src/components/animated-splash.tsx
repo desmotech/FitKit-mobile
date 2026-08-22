@@ -17,7 +17,7 @@ import { font } from '@/lib/type';
 import { type Locale } from '@/i18n/config';
 import { FKLoadingBar } from '@/components/fk/loading-bar';
 
-// "FitKit Splash" design ported to RN. The real brand globe replaces the
+// "Taikan Splash" design ported to RN. The real brand globe replaces the
 // design's tile+barbell, pinned where the native splash shows it for a
 // seamless handoff; halo/wordmark/tagline/loader animate in around it.
 
@@ -32,22 +32,22 @@ const ENTER = Easing.bezier(0.22, 1, 0.36, 1);
 
 const THEME = {
   dark: {
-    bg: '#050608',
+    bg: '#07202B',
     text: '#F2F4F5',
     muted: 'rgba(232,238,242,0.64)',
     primary: '#36D6C6',
     track: 'rgba(255,255,255,0.10)',
   },
   light: {
-    bg: '#F6F4EE',
-    text: '#15140F',
-    muted: 'rgba(40,36,30,0.62)',
+    bg: '#F6F8FA',
+    text: '#0D1B2A',
+    muted: 'rgba(13,27,42,0.62)',
     primary: '#0E8C8C',
-    track: 'rgba(40,36,30,0.10)',
+    track: 'rgba(13,27,42,0.10)',
   },
 } as const;
 
-// "FitKit" is a brand name — it stays. Only the tagline is localized.
+// "Taikan" is a brand name — it stays. Only the tagline is localized.
 const TAGLINE: Record<Locale, string> = {
   en: 'Train · Track · Progress',
   he: 'אימון · מעקב · התקדמות',
@@ -157,7 +157,7 @@ export function AnimatedSplash({
             wordStyle,
           ]}
         >
-          FitKit
+          Taikan
         </Animated.Text>
         <Animated.Text
           style={[

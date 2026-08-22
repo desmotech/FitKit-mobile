@@ -2,9 +2,9 @@
  * Program Sheet ink — higher-contrast secondary colors tuned for the dense
  * structured-workout screen sitting over the ambient gradient.
  *
- * The global `mutedFg` (#A8A398 dark / #605B51 light) reads too faint on this
+ * The global `mutedFg` (#C8D9DF dark / #4A5A6E light) reads too faint on this
  * screen — secondary text, the dotted spine and hairline dividers wash out
- * against the teal-tinted backdrop. The sheet uses these stronger values
+ * against the Ocean teal-navy backdrop. The sheet uses these stronger values
  * instead. Shared by the detail screen + ProgramSheetSections so both match.
  */
 export interface ProgramSheetInk {
@@ -14,9 +14,9 @@ export interface ProgramSheetInk {
   faint: string;
   /** Hairlines, dotted spine, scoreboard column separators. */
   line: string;
-  /** "Done" accent for checked blocks + the progress meter. */
+  /** "Done" accent (Ocean mint) for checked blocks + the progress meter. */
   sage: string;
-  /** Coach-note accent (label). */
+  /** Coach-note accent (Ocean amber label). */
   amber: string;
 }
 
@@ -28,14 +28,14 @@ export function programSheetInk(isDark: boolean): ProgramSheetInk {
         muted: '#C9CFD3',
         faint: '#9BA1A6',
         line: 'rgba(255,255,255,0.16)',
-        sage: '#93C49B',
-        amber: '#E7C06A',
+        sage: '#B0E5C4',
+        amber: '#E0B25C',
       }
     : {
-        muted: '#4C473F',
-        faint: '#736D63',
-        line: 'rgba(40,36,30,0.20)',
-        sage: '#5E7E3E',
-        amber: '#9A6F1E',
+        muted: '#3E4C5C',
+        faint: '#66768A',
+        line: 'rgba(13,27,42,0.20)',
+        sage: '#2E7A4D',
+        amber: '#A8792F',
       };
 }

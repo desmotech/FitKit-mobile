@@ -6,7 +6,7 @@ import {
 import { useI18n } from '@/providers/i18n-provider';
 
 /**
- * Dot-paths into the runtime dictionary (`@fitkit/shared`), keyed by the
+ * Dot-paths into the runtime dictionary (`@taikan/shared`), keyed by the
  * `WithdrawScheduledStrings` field they feed. Dictionary value wins when it
  * is a string; otherwise the static per-language table is the fallback. Same
  * pattern as ./use-cancel-pending-strings.ts. `withdrawing` is a mobile-only

@@ -57,7 +57,7 @@ export function ScaleFieldRenderer({
           borderRadius: 12,
           borderCurve: 'continuous',
           borderWidth: 2,
-          borderColor: active ? BRAND_TEAL : 'rgba(94,112,130,0.30)',
+          borderColor: active ? BRAND_TEAL : 'rgba(61,90,112,0.30)',
           backgroundColor: active
             ? 'rgba(14,140,140,0.12)'
             : 'rgba(120,120,128,0.10)',
@@ -82,7 +82,7 @@ export function ScaleFieldRenderer({
             style={{
               fontSize: 15,
               fontWeight: '800',
-              color: active ? BRAND_TEAL : 'rgb(94,112,130)',
+              color: active ? BRAND_TEAL : 'rgb(61,90,112)',
               fontFamily: 'Assistant-Medium',
             }}
           >
@@ -118,7 +118,7 @@ export function ScaleFieldRenderer({
         <Text
           style={{
             fontSize: 11,
-            color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
+            color: isDark ? 'rgba(238,242,246,0.5)' : 'rgba(60,60,67,0.5)',
           }}
         >
           {min}
@@ -126,7 +126,7 @@ export function ScaleFieldRenderer({
         <Text
           style={{
             fontSize: 11,
-            color: isDark ? 'rgba(235,235,245,0.5)' : 'rgba(60,60,67,0.5)',
+            color: isDark ? 'rgba(238,242,246,0.5)' : 'rgba(60,60,67,0.5)',
           }}
         >
           {max}

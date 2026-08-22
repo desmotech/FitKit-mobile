@@ -59,13 +59,13 @@ export function MemberHeader({ onPressQR, qrLabel, trailing }: MemberHeaderProps
   // Combined unread across DMs + workout comments + announcements.
   const unreadTotal = useBadgeTotal(orgId).data?.data?.count ?? 0;
 
-  const orgName = activeOrganization?.name ?? 'FitKit';
+  const orgName = activeOrganization?.name ?? 'Taikan';
   const orgLogo =
     (activeOrganization as unknown as { logoUrl?: string | null })?.logoUrl ??
     null;
   // Initial tile stands in for a gym that hasn't uploaded a logo. With no org
-  // at all (still loading, or between orgs) the name falls back to FitKit, so
-  // show the actual FitKit mark rather than an "F" tile.
+  // at all (still loading, or between orgs) the name falls back to Taikan, so
+  // show the actual Taikan mark rather than an "F" tile.
   const orgInitial = orgName[0]?.toUpperCase() ?? '';
 
   return (

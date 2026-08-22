@@ -15,7 +15,7 @@
  * share its single network round-trip and cache.
  */
 import { useMemo } from 'react';
-import type { PersonalRecordResponse } from '@fitkit/shared';
+import type { PersonalRecordResponse } from '@taikan/shared';
 import {
   type ExerciseSearchResult,
   useMyPersonalRecords,

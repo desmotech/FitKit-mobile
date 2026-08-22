@@ -771,7 +771,7 @@ function BigTextInput({
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderTextColor={
-        isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+        isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
       }
       autoCapitalize={autoCapitalize}
       autoComplete={autoComplete}
@@ -786,7 +786,7 @@ function BigTextInput({
         borderRadius: 12,
         borderCurve: 'continuous',
         borderWidth: 1,
-        borderColor: 'rgba(94,112,130,0.25)',
+        borderColor: 'rgba(61,90,112,0.25)',
         backgroundColor: isDark
           ? 'rgba(118,118,128,0.20)'
           : 'rgba(118,118,128,0.10)',
@@ -838,7 +838,7 @@ function PasswordInput({
         borderRadius: 12,
         borderCurve: 'continuous',
         borderWidth: 1,
-        borderColor: 'rgba(94,112,130,0.25)',
+        borderColor: 'rgba(61,90,112,0.25)',
         backgroundColor: isDark
           ? 'rgba(118,118,128,0.20)'
           : 'rgba(118,118,128,0.10)',
@@ -850,7 +850,7 @@ function PasswordInput({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={
-          isDark ? 'rgba(235,235,245,0.3)' : 'rgba(60,60,67,0.3)'
+          isDark ? 'rgba(238,242,246,0.3)' : 'rgba(60,60,67,0.3)'
         }
         autoCapitalize="none"
         autoComplete={isNewPassword ? 'new-password' : 'password'}
@@ -877,7 +877,7 @@ function PasswordInput({
       >
         <ToggleIcon
           size={20}
-          color={isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)'}
+          color={isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)'}
           strokeWidth={2}
         />
       </Pressable>

@@ -8,7 +8,7 @@
  * the inbox preview + unread badge stay current without polling. TanStack's
  * `staleTime` (30s) + focus refetch are the offline/cold-start fallback.
  */
-import type { ConversationsListResponse } from '@fitkit/shared';
+import type { ConversationsListResponse } from '@taikan/shared';
 import { useApiQuery } from './use-api-query';
 
 export function useConversations(orgId: string | undefined | null) {

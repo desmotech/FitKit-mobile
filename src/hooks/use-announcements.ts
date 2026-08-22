@@ -22,7 +22,7 @@ import {
 import type {
   AnnouncementResponse,
   AnnouncementsListResponse,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useApi } from './use-api';
 import { useApiQuery } from './use-api-query';
 import { queryKeys } from '@/lib/query-keys';
@@ -109,5 +109,5 @@ export function useMarkAnnouncementRead(orgId: string | undefined | null) {
   });
 }
 
-// Type re-export so consumers don't dig through @fitkit/shared.
+// Type re-export so consumers don't dig through @taikan/shared.
 export type { AnnouncementResponse };

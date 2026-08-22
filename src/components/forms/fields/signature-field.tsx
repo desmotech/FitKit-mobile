@@ -81,7 +81,7 @@ export function SignatureFieldRenderer({
   const s = useFormStrings();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const mutedFg = isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)';
 
   const [editing, setEditing] = useState(!value && !uploaded);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
@@ -224,7 +224,7 @@ export function SignatureFieldRenderer({
     setEditing(true);
   };
 
-  const canvasBorder = 'rgba(94,112,130,0.25)';
+  const canvasBorder = 'rgba(61,90,112,0.25)';
 
   return (
     <FieldShell

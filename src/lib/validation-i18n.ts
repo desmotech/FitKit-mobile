@@ -46,7 +46,7 @@ export function formErrorSummary(lang: Locale): string {
   return FORM_ERROR_SUMMARY[lang] ?? FORM_ERROR_SUMMARY.en;
 }
 
-// IL validators ported from @fitkit/shared validation/{israeli-id,phone} —
+// IL validators ported from @taikan/shared validation/{israeli-id,phone} —
 // inlined so the on-blur/on-change check doesn't depend on a re-exported
 // zod schema object, which can resolve to undefined in the RN bundle.
 export function isValidIsraeliId(raw: string): boolean {

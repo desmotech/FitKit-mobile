@@ -22,7 +22,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import type {
   BodyMetricResponse,
   BodyMetricType,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import {
   FKCard,
   FKGlassPanel,
@@ -148,7 +148,7 @@ export default function MetricDetailScreen() {
                 borderRadius: 18,
                 overflow: 'hidden',
                 borderWidth: 1,
-                borderColor: 'rgba(94,112,130,0.18)',
+                borderColor: 'rgba(61,90,112,0.18)',
               }}
             >
               {chartPoints.length >= 2 ? (
@@ -355,7 +355,7 @@ function HistoryRow({
             padding: 14,
             borderRadius: 14,
             borderWidth: 1,
-            borderColor: 'rgba(94,112,130,0.16)',
+            borderColor: 'rgba(61,90,112,0.16)',
             opacity: pressed ? 0.85 : 1,
           }}
         >

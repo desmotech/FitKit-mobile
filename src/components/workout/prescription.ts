@@ -140,7 +140,7 @@ export function letterFor(
 /**
  * A movement flagged `each_round` in its prescription is a fixed "cash-out"
  * performed identically after every round (not laddered by the section's rep
- * scheme). Mirrors `isPerRoundConstant` in @fitkit/shared — inlined here
+ * scheme). Mirrors `isPerRoundConstant` in @taikan/shared — inlined here
  * because the published mobile dependency predates that export. The flag lets
  * the renderer split these movements under an "After each round" divider and
  * keep showing their own reps even when the section hides reps.

@@ -21,7 +21,7 @@ describe('safeInternalRoute', () => {
   it('refuses absolute and scheme-relative URLs', () => {
     expect(safeInternalRoute('https://evil.example/x')).toBe('/(tabs)');
     expect(safeInternalRoute('//evil.example/x')).toBe('/(tabs)');
-    expect(safeInternalRoute('fitkit://shop')).toBe('/(tabs)');
+    expect(safeInternalRoute('taikan://shop')).toBe('/(tabs)');
   });
 
   it('refuses a path that is not rooted', () => {

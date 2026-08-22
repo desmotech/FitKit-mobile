@@ -1,5 +1,5 @@
 /**
- * Profile screen — port of `11-FitKit Fitness - Profile (Acco).html`.
+ * Profile screen — port of `11-Taikan Fitness - Profile (Acco).html`.
  *
  * Layout (top → bottom):
  *   1. Sticky glass header: bell + title + brand mark
@@ -73,7 +73,6 @@ import {
   useMySubscription,
   useRenewSubscription,
 } from '@/hooks/use-feed-data';
-import { useFeatureFlag } from '@/hooks/use-feature-flag';
 import { useResumeCheckout } from '@/hooks/use-shop';
 import { useIncompleteFormsCount } from '@/hooks/use-forms';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -95,7 +94,6 @@ import { ApiError } from '@/hooks/use-api';
 import * as analytics from '@/lib/analytics';
 import { paymentReturnUrl } from '@/lib/api';
 import { checkoutOutcomeOf, returnParamFor } from '@/lib/checkout-return';
-import { EARLY_RENEWAL_FLAG } from '@/lib/early-renew';
 import { formatPrice } from '@/lib/format-price';
 import { getPlanChangeSchedule } from '@/lib/plan-change';
 import { queryKeys } from '@/lib/query-keys';
@@ -117,7 +115,7 @@ import {
 // Finishing an abandoned checkout from this card lands on the shop's
 // verification / decision screen, exactly like starting one from the shop.
 const CHECKOUT_RETURN_PATH = 'shop/payment-return';
-const CHECKOUT_RETURN_URL = `fitkit://${CHECKOUT_RETURN_PATH}`;
+const CHECKOUT_RETURN_URL = `taikan://${CHECKOUT_RETURN_PATH}`;
 
 /** One tappable row in a settings group — see `renderRows` in the screen. */
 type SettingsRowConfig = {
@@ -166,9 +164,6 @@ export default function ProfileScreen() {
   const cancelPending = useCancelPendingSubscription(orgId);
   const resumeCheckout = useResumeCheckout(orgId);
   const [completingCheckout, setCompletingCheckout] = useState(false);
-  // Shares FIT-282's presale-terms flag rather than getting its own — see
-  // src/lib/early-renew.ts.
-  const earlyRenewalEnabled = useFeatureFlag(EARLY_RENEWAL_FLAG);
   const queryClient = useQueryClient();
 
   // The membership card's status labels stay on the raw dictionary — they
@@ -217,7 +212,6 @@ export default function ProfileScreen() {
     (q) => q.period === 'month' && q.remaining === 0,
   );
   const canRenewEarly =
-    earlyRenewalEnabled &&
     primarySub?.status === 'active' &&
     primarySub.plan.type === 'subscription' &&
     !!exhaustedMonthQuota &&
@@ -264,8 +258,8 @@ export default function ProfileScreen() {
       { text: labels.avatarCancel, style: 'cancel' },
     ]);
   };
-  const FITKIT_SUPPORT_EMAIL = 'support@fitkit.fit';
-  const FITKIT_WEBSITE = 'https://fitkit.fit';
+  const TAIKAN_SUPPORT_EMAIL = 'support@usetaikan.com';
+  const TAIKAN_WEBSITE = 'https://usetaikan.com';
 
   // "Member since YYYY" — derive from user.createdAt if present, else fall
   // back to the org name. `labels.memberSince` template carries `{year}` for
@@ -277,7 +271,7 @@ export default function ProfileScreen() {
     ? labels.memberSince.includes('{year}')
       ? labels.memberSince.replace('{year}', String(createdYear))
       : `${labels.memberPrefix} ${createdYear}`
-    : (activeOrganization?.name ?? 'FitKit');
+    : (activeOrganization?.name ?? 'Taikan');
 
   // FIT-282 follow-up (early renewal, BoostApp parity) — confirm-then-charge:
   // this alert IS the confirmation step, no silent auto-charge. Mirrors
@@ -583,33 +577,33 @@ export default function ProfileScreen() {
       : []),
   ];
 
-  const fitkitRows: SettingsRowConfig[] = [
+  const taikanRows: SettingsRowConfig[] = [
     {
       key: 'feedback',
       Icon: MessageSquare,
-      label: labels.fitkitFeedback,
+      label: labels.taikanFeedback,
       onPress: () => router.push('/(tabs)/profile/feedback'),
     },
     {
       key: 'contact',
       Icon: LifeBuoy,
-      label: labels.fitkitContact,
-      sublabel: FITKIT_SUPPORT_EMAIL,
+      label: labels.taikanContact,
+      sublabel: TAIKAN_SUPPORT_EMAIL,
       onPress: () =>
         Linking.openURL(
-          `mailto:${FITKIT_SUPPORT_EMAIL}?subject=${encodeURIComponent(
+          `mailto:${TAIKAN_SUPPORT_EMAIL}?subject=${encodeURIComponent(
             // Carries the exact bundle into the subject, so a bug report says
             // which build and update it came from without having to ask.
-            `FitKit support — ${buildLabel}`,
+            `Taikan support — ${buildLabel}`,
           )}`,
         ),
     },
     {
       key: 'website',
       Icon: Globe,
-      label: labels.fitkitWebsite,
-      sublabel: 'fitkit.fit',
-      onPress: () => Linking.openURL(FITKIT_WEBSITE),
+      label: labels.taikanWebsite,
+      sublabel: 'usetaikan.com',
+      onPress: () => Linking.openURL(TAIKAN_WEBSITE),
     },
   ];
 
@@ -894,7 +888,7 @@ export default function ProfileScreen() {
           ) : (
             <MembershipCard
               // `quotas` + `introCyclesRemaining` ride along on the
-              // subscription payload; mobile's pinned @fitkit/shared predates
+              // subscription payload; mobile's pinned @taikan/shared predates
               // both, so the card types them structurally and renders them
               // only when the API actually sends them.
               sub={subList[0]}
@@ -1131,16 +1125,16 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* FitKit support — the platform */}
+          {/* Taikan support — the platform */}
           <View style={{ gap: 10 }}>
             <SettingsSectionHeader
-              title={labels.fitkitSupportTitle}
-              subtitle={labels.fitkitSupportSubtitle}
+              title={labels.taikanSupportTitle}
+              subtitle={labels.taikanSupportSubtitle}
               isRTL={isRTL}
               colors={colors}
             />
             <SettingsGroup colors={colors} isRTL={isRTL}>
-              {renderRows(fitkitRows)}
+              {renderRows(taikanRows)}
             </SettingsGroup>
           </View>
 
@@ -1229,7 +1223,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={() => {
                   haptics.tap();
-                  Linking.openURL('https://fitkit.fit/terms-of-use');
+                  Linking.openURL('https://usetaikan.com/terms-of-use');
                 }}
                 hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
                 accessibilityRole="link"
@@ -1242,7 +1236,7 @@ export default function ProfileScreen() {
               <Pressable
                 onPress={() => {
                   haptics.tap();
-                  Linking.openURL('https://fitkit.fit/privacy-policy');
+                  Linking.openURL('https://usetaikan.com/privacy-policy');
                 }}
                 hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
                 accessibilityRole="link"
@@ -1265,7 +1259,7 @@ export default function ProfileScreen() {
                   fontFamily: 'Assistant-Medium',
                 }}
               >
-                FitKit {buildLabel}
+                Taikan {buildLabel}
               </Text>
             </Pressable>
           </View>

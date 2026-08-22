@@ -7,7 +7,7 @@
  *
  * QR check-in deep-links via the existing `/checkin` route — we route
  * to a dedicated scanner screen at `/schedule/scan?id=…` which decodes
- * a `fitkit:`-pattern URL and posts back.
+ * a `taikan:`-pattern URL and posts back.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -212,7 +212,7 @@ export default function SessionDetailScreen() {
     quotaDailyLimit: quota.dailyLimit ?? 'Daily limit ({max}/day)',
     quotaWeeklyLimit: quota.weeklyLimit ?? 'Weekly limit ({max}/week)',
     // These five prefer the IN-APP strings over the shared dictionary. The
-    // shared copy ships in the published @fitkit/shared package, so a `??`
+    // shared copy ships in the published @taikan/shared package, so a `??`
     // chain rooted there would hand a Hebrew member English until the next
     // release — whereas `sched2` is already translated in this build. Same
     // reasoning as the "member-facing failure copy lives in the app" note

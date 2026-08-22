@@ -571,11 +571,11 @@ export default function WorkoutDetailScreen() {
                 paddingHorizontal: 16,
                 borderRadius: 18,
                 borderCurve: 'continuous',
-                backgroundColor: 'rgba(122,138,92,0.16)',
+                backgroundColor: 'rgba(46,122,77,0.16)',
               }}
             >
-              <Check size={18} color="#7A8A5C" strokeWidth={2.6} />
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#7A8A5C' }}>
+              <Check size={18} color={colors.success} strokeWidth={2.6} />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.success }}>
                 {ps.completed}
               </Text>
               <View style={{ flex: 1 }} />
@@ -592,8 +592,8 @@ export default function WorkoutDetailScreen() {
                   opacity: uncompleteAssignment.isPending ? 0.5 : 1,
                 }}
               >
-                <RotateCcw size={14} color="#5A6A3F" strokeWidth={2.4} />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#5A6A3F' }}>
+                <RotateCcw size={14} color={colors.success} strokeWidth={2.4} />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.success }}>
                   {ps.undo}
                 </Text>
               </Pressable>
@@ -672,7 +672,7 @@ export default function WorkoutDetailScreen() {
               size="lg"
               fullWidth
               className="rounded-2xl"
-              leading={<Trophy size={16} color="#C9974D" strokeWidth={2.2} />}
+              leading={<Trophy size={16} color={colors.warning} strokeWidth={2.2} />}
               onPress={() => {
                 haptics.tap();
                 router.push({

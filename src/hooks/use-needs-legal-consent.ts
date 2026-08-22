@@ -19,7 +19,7 @@
  * of briefly mounting the tab shell and then redirecting.
  */
 import { useMemo } from 'react';
-import type { ConsentStatusItem } from '@fitkit/shared';
+import type { ConsentStatusItem } from '@taikan/shared';
 import { useConsentStatus } from './use-legal';
 
 const REQUIRED_TYPES: ConsentStatusItem['documentType'][] = [

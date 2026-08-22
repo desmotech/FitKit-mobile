@@ -69,16 +69,16 @@ export function TodayClassCard({
     session.myBookingStatus === 'attended'
       ? {
           label: labels.attended,
-          bg: 'rgba(122,138,92,0.16)',
-          fg: '#5A6A3F',
-          border: 'rgba(122,138,92,0.32)',
+          bg: 'rgba(46,122,77,0.16)',
+          fg: colors.success,
+          border: 'rgba(46,122,77,0.32)',
         }
       : session.myBookingStatus === 'waitlisted'
         ? {
             label: labels.waitlisted,
-            bg: 'rgba(201,151,77,0.12)',
-            fg: '#8B6A35',
-            border: 'rgba(201,151,77,0.32)',
+            bg: 'rgba(168,121,47,0.12)',
+            fg: colors.warning,
+            border: 'rgba(168,121,47,0.32)',
           }
         : session.myBookingStatus === 'confirmed'
           ? {
@@ -103,7 +103,7 @@ export function TodayClassCard({
             borderRadius: 18,
             overflow: 'hidden',
             borderWidth: 1,
-            borderColor: 'rgba(94,112,130,0.18)',
+            borderColor: 'rgba(61,90,112,0.18)',
             opacity: pressed ? 0.85 : 1,
           }}
         >
@@ -245,7 +245,7 @@ export function TodayClassCard({
 
             <Chevron
               size={18}
-              color="rgba(94,112,130,0.55)"
+              color="rgba(61,90,112,0.55)"
               strokeWidth={2.2}
             />
           </View>

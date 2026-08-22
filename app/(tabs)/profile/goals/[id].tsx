@@ -7,11 +7,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check } from 'lucide-react-native';
-import { useColorScheme } from 'nativewind';
 import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import type { GoalResponse } from '@fitkit/shared';
+import type { GoalResponse } from '@taikan/shared';
 import {
   FKBtn,
   FKDateField,
@@ -39,9 +38,7 @@ export default function GoalEditScreen() {
   const { activeOrganization } = useCurrentUser();
   const { dir, t } = useI18n();
   const colors = useFKColors();
-  const { colorScheme } = useColorScheme();
   const isRTL = dir === 'rtl';
-  const isDark = colorScheme === 'dark';
   const orgId = activeOrganization?.id;
 
   const goalsT = (t as unknown as Record<string, Record<string, string>>).goals ?? {};
@@ -202,7 +199,7 @@ export default function GoalEditScreen() {
                 value={targetValue}
                 onChangeText={setTargetValue}
                 placeholder={unit === 'mm:ss' ? '11:00' : '0'}
-                placeholderTextColor={isDark ? '#6B8FAA' : '#5E7082'}
+                placeholderTextColor={colors.subtleFg}
                 keyboardType={
                   isBodyMetric ? 'decimal-pad' : 'numbers-and-punctuation'
                 }

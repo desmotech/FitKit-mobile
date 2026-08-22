@@ -18,7 +18,7 @@ import { queryPersister } from '@/lib/query-persister';
 import { clearSyncFailures } from '@/lib/offline-sync-store';
 import { clearActiveOrgId } from '@/lib/settings-store';
 
-const SESSION_OWNER_KEY = 'fitkit:auth:cacheOwner';
+const SESSION_OWNER_KEY = 'taikan:auth:cacheOwner';
 
 /** Clerk user id the persisted cache was written for, or null. */
 export async function loadSessionOwner(): Promise<string | null> {

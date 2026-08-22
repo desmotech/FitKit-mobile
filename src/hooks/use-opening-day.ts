@@ -80,7 +80,7 @@ export function parseCalendarDate(ymd: string): Date | null {
 export function useOpeningDay(): OpeningDay {
   const { activeOrganization } = useCurrentUser();
   // `opensOn` ships on every organization payload the API serializes, but
-  // mobile's pinned `@fitkit/shared` predates the field — read it
+  // mobile's pinned `@taikan/shared` predates the field — read it
   // structurally, exactly as the membership card reads `quotas` and
   // `billingState`, and behave as before when it isn't there.
   const opensOn = (activeOrganization as { opensOn?: string } | null)?.opensOn;

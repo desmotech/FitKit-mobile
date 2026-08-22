@@ -1,18 +1,14 @@
 /**
  * Member plan-change (FIT-271, mobile parity for FIT-254).
  *
- * Local mirrors of the `@fitkit/shared` plan.schema.ts exports introduced by
- * FIT-254 (`ChangePlanPreviewResponse`, `MemberChangePlanResponse`, …) plus
- * the `member-plan-change` PostHog flag key. The pinned
- * `@desmotech/fitkit-shared` release predates FIT-254, so these cannot be
+ * Local mirrors of the `@taikan/shared` plan.schema.ts exports introduced by
+ * FIT-254 (`ChangePlanPreviewResponse`, `MemberChangePlanResponse`, …) . The pinned
+ * `@desmotech/taikan-shared` release predates FIT-254, so these cannot be
  * imported yet — swap this module's types/constants for the shared exports
  * once a release containing them ships (> 0.1.38) and the dependency bumps.
  */
-import type { SubscriptionWithPlan } from '@fitkit/shared';
+import type { SubscriptionWithPlan } from '@taikan/shared';
 
-/** Mirrors `FeatureFlags.MEMBER_PLAN_CHANGE` (libs/shared feature-flags.ts).
- *  Per-org PostHog gate, default OFF, fail-closed — same flag as web. */
-export const MEMBER_PLAN_CHANGE_FLAG = 'member-plan-change';
 
 export type ChangePlanDirection = 'upgrade' | 'downgrade';
 export type ChangePlanTiming = 'immediate' | 'period_end';

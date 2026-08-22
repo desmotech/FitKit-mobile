@@ -1,7 +1,7 @@
 # Prompt — "Whiteboard" design system + a viewable screen
 
 Paste the block below into Claude (artifacts / "design"). It's fully
-self-contained — it reproduces the FitKit "Whiteboard" art direction as a
+self-contained — it reproduces the Taikan "Whiteboard" art direction as a
 runnable **web** artifact so the look + micro-interactions can be reviewed
 without building the React Native app. Edit the "screen to build" section to
 preview other screens with the same reusable styling.

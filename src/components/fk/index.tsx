@@ -1,7 +1,7 @@
 /**
- * FitKit member-redesign primitives.
+ * Taikan member-redesign primitives.
  *
- * Ports of the design tokens / classes in the FitKit redesign styles to
+ * Ports of the design tokens / classes in the Taikan redesign styles to
  * React Native + NativeWind. Each `.fk-*` class maps to a thin component.
  *
  * All primitives are RTL-aware via `useI18n().dir`.
@@ -83,13 +83,13 @@ export function FKCard({
 
 /** 2px hairline accent at the top of a card. */
 export function FKHairline({ tone = 'primary' }: { tone?: 'primary' | 'warn' | 'success' }) {
-  const { primary } = useFKColors();
+  const colors = useFKColors();
   const color =
     tone === 'warn'
-      ? '#C9974D'
+      ? colors.warning
       : tone === 'success'
-        ? '#7A8A5C'
-        : primary;
+        ? colors.success
+        : colors.primary;
   return (
     <View
       pointerEvents="none"
@@ -112,27 +112,33 @@ export function FKHairline({ tone = 'primary' }: { tone?: 'primary' | 'warn' | '
 type ChipTone = 'warm' | 'success' | 'info' | 'danger' | 'muted' | 'primary';
 
 const CHIP_BG: Record<ChipTone, string> = {
-  warm: 'rgba(201,151,77,0.14)',
-  success: 'rgba(122,138,92,0.16)',
-  info: 'rgba(74,114,144,0.14)',
+  warm: 'rgba(168,121,47,0.14)',
+  success: 'rgba(46,122,77,0.16)',
+  info: 'rgba(61,90,112,0.14)',
   danger: 'rgba(184,74,64,0.12)',
   muted: 'rgba(120,120,128,0.12)',
   primary: 'rgba(14,140,140,0.12)',
 };
 
-const CHIP_FG: Record<ChipTone, string> = {
-  warm: '#8B6A35',
-  success: '#5A6A3F',
-  info: '#3D5A78',
-  danger: '#B84A40',
-  muted: '#5E7082',
-  primary: '#0E8C8C',
-};
+/** Chip ink comes from the FK tokens, which already carry the per-theme
+ *  value — a hardcoded light ink fell to ~2:1 on the dark band. */
+function chipFg(
+  c: ReturnType<typeof useFKColors>,
+): Record<ChipTone, string> {
+  return {
+    warm: c.warning,
+    success: c.success,
+    info: c.info,
+    danger: c.destructive,
+    muted: c.mutedFg,
+    primary: c.primaryText,
+  };
+}
 
 const CHIP_BORDER: Record<ChipTone, string> = {
-  warm: 'rgba(201,151,77,0.3)',
-  success: 'rgba(122,138,92,0.28)',
-  info: 'rgba(74,114,144,0.28)',
+  warm: 'rgba(168,121,47,0.3)',
+  success: 'rgba(46,122,77,0.28)',
+  info: 'rgba(61,90,112,0.28)',
   danger: 'rgba(184,74,64,0.28)',
   muted: 'transparent',
   primary: 'rgba(14,140,140,0.3)',
@@ -140,30 +146,21 @@ const CHIP_BORDER: Record<ChipTone, string> = {
 
 // Dark-mode chip inks — the light-mode foregrounds above are deep inks
 // that fall to ~2:1 on dark cards. These are brightened for ≥4.5:1 on
-// the dark card surface (#141417), with slightly stronger fills/borders.
+// the dark card surface (#0C2B38), with slightly stronger fills/borders.
 const CHIP_BG_DARK: Record<ChipTone, string> = {
-  warm: 'rgba(217,168,92,0.18)',
-  success: 'rgba(169,191,126,0.18)',
-  info: 'rgba(143,180,217,0.16)',
-  danger: 'rgba(224,128,120,0.16)',
+  warm: 'rgba(224,178,92,0.18)',
+  success: 'rgba(176,229,196,0.18)',
+  info: 'rgba(122,163,194,0.16)',
+  danger: 'rgba(236,124,112,0.16)',
   muted: 'rgba(155,168,181,0.14)',
   primary: 'rgba(42,184,184,0.16)',
 };
 
-const CHIP_FG_DARK: Record<ChipTone, string> = {
-  warm: '#D9A85C',
-  success: '#A9BF7E',
-  info: '#8FB4D9',
-  danger: '#E08078',
-  muted: '#9BA8B5',
-  primary: '#27C8BA',
-};
-
 const CHIP_BORDER_DARK: Record<ChipTone, string> = {
-  warm: 'rgba(217,168,92,0.34)',
-  success: 'rgba(169,191,126,0.32)',
-  info: 'rgba(143,180,217,0.32)',
-  danger: 'rgba(224,128,120,0.32)',
+  warm: 'rgba(224,178,92,0.34)',
+  success: 'rgba(176,229,196,0.32)',
+  info: 'rgba(122,163,194,0.32)',
+  danger: 'rgba(236,124,112,0.32)',
   muted: 'transparent',
   primary: 'rgba(42,184,184,0.34)',
 };
@@ -177,9 +174,10 @@ export function FKChip({
   children: ReactNode;
   leading?: ReactNode;
 }) {
-  const { isDark } = useFKColors();
+  const colors = useFKColors();
+  const isDark = colors.isDark;
   const bg = isDark ? CHIP_BG_DARK : CHIP_BG;
-  const fg = isDark ? CHIP_FG_DARK : CHIP_FG;
+  const fg = chipFg(colors);
   const border = isDark ? CHIP_BORDER_DARK : CHIP_BORDER;
   return (
     <View
@@ -298,7 +296,7 @@ export function FKButton({
     gap: 8,
     backgroundColor: variantBg[variant],
     borderWidth: variant === 'outline' ? 1 : 0,
-    borderColor: 'rgba(94,112,130,0.18)',
+    borderColor: 'rgba(61,90,112,0.18)',
     borderCurve: 'continuous',
     opacity: disabled ? 0.5 : 1,
   };

@@ -8,7 +8,7 @@
  * the two surfaces don't drift visually.
  *
  * Rest-day card lives here too since both surfaces render it when the
- * coach has marked the day as rest. Quiet sage-tinted palette — no log
+ * coach has marked the day as rest. Quiet mint-tinted palette — no log
  * CTA, no chevron.
  */
 import {
@@ -26,7 +26,6 @@ import { Text } from '@/components/ui/text';
 import { bodyFamily, displayFamily, eyebrow, font } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 
-const SAGE = '#5A6A3F';
 
 // ── Public exports ─────────────────────────────────────────────────
 
@@ -73,12 +72,12 @@ export function WorkoutSummaryCard({
 
   const colors = useFKColors();
   const isDark = colors.isDark;
-  const sageAccent = isDark ? '#93C49B' : SAGE;
+  const mintAccent = colors.success;
 
   const isStructured = workout.mode === 'structured' && sectionCount > 0;
   const Chevron = isRTL ? ChevronLeft : ChevronRight;
   const StatusIcon = completed ? CheckCircle2 : Dumbbell;
-  const accent = completed ? sageAccent : colors.primary;
+  const accent = completed ? mintAccent : colors.primary;
   const kicker = feedT.programTitle ?? 'Workout';
 
   const scoringBadge =
@@ -330,7 +329,7 @@ export function WorkoutSummaryCard({
             </View>
           ) : null}
 
-          {/* Completed treatment — sage "done" footer. */}
+          {/* Completed treatment — mint "done" footer. */}
           {completed ? (
             <View
               style={{
@@ -343,12 +342,12 @@ export function WorkoutSummaryCard({
                 borderRadius: 12,
                 borderCurve: 'continuous',
                 backgroundColor: isDark
-                  ? 'rgba(122,138,92,0.20)'
-                  : 'rgba(122,138,92,0.14)',
+                  ? 'rgba(46,122,77,0.20)'
+                  : 'rgba(46,122,77,0.14)',
               }}
             >
-              <Check size={14} color={sageAccent} strokeWidth={2.6} />
-              <Text style={{ fontSize: 12, fontWeight: '800', color: sageAccent }}>
+              <Check size={14} color={mintAccent} strokeWidth={2.6} />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: mintAccent }}>
                 {commonT.done ?? 'Done'}
               </Text>
             </View>
@@ -368,6 +367,7 @@ export interface RestDayCardProps {
 }
 
 export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
+  const colors = useFKColors();
   return (
     <FKCard
       style={{
@@ -375,7 +375,7 @@ export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
         borderRadius: 20,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(122,138,92,0.45)',
+        borderColor: 'rgba(46,122,77,0.45)',
       }}
     >
       <View
@@ -390,14 +390,14 @@ export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
             width: 48,
             height: 48,
             borderRadius: 14,
-            backgroundColor: 'rgba(122,138,92,0.18)',
+            backgroundColor: 'rgba(46,122,77,0.18)',
             borderWidth: 1,
-            borderColor: 'rgba(122,138,92,0.32)',
+            borderColor: 'rgba(46,122,77,0.32)',
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
-          <Moon size={22} color="#5A6A3F" strokeWidth={2.2} />
+          <Moon size={22} color={colors.success} strokeWidth={2.2} />
         </View>
         <View style={{ flex: 1 }}>
           <Text
@@ -405,7 +405,7 @@ export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
             style={{
               fontSize: 17,
               fontWeight: '800',
-              color: '#5A6A3F',
+              color: colors.success,
               letterSpacing: -0.3,
               textAlign: isRTL ? 'right' : 'left',
             }}
@@ -415,7 +415,7 @@ export function RestDayCard({ title, subtitle, isRTL }: RestDayCardProps) {
           <Text
             style={{
               fontSize: 13,
-              color: '#5A6A3F',
+              color: colors.success,
               marginTop: 3,
               lineHeight: 18,
               textAlign: isRTL ? 'right' : 'left',
@@ -440,12 +440,12 @@ export interface OpenDayCardProps {
 /**
  * Shown when nothing's on the board — no programmed workout, no booked
  * class — as distinct from a coach-assigned rest day. Teal "keep moving"
- * treatment (vs the sage Moon rest card) so an empty day reads as an
+ * treatment (vs the mint Moon rest card) so an empty day reads as an
  * invitation to move lightly, not as prescribed recovery.
  */
 export function OpenDayCard({ title, subtitle, isRTL }: OpenDayCardProps) {
   const colors = useFKColors();
-  const accent = colors.isDark ? '#27C8BA' : '#0A6E6E';
+  const accent = colors.primaryText;
   return (
     <FKCard
       style={{

@@ -8,7 +8,7 @@
  * error path (a failed POST keeps the member on the screen).
  */
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import AcceptTermsScreen from '../onboarding/accept-terms';
 import { stageSignedInMember, userMe } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';

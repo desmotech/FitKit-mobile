@@ -3,10 +3,10 @@
 # Forms (FIT-176 / FIT-178) — Mobile Handover
 
 **Date written:** 2026-05-27
-**API branch:** `forms` in `../fitkit` (commit not yet merged to main)
+**API branch:** `forms` in `../taikan` (commit not yet merged to main)
 **Linear refs:** FIT-176 (engine), FIT-178 (mobile signing UX), FIT-184 (spike)
 
-This document briefs an agent on `../fitkit-mobile` so it can finish the
+This document briefs an agent on `../taikan-mobile` so it can finish the
 member-side signing surface. The API side shipped the full backend
 pipeline (schema, PDF, R2, agent tools, auto-issue on onboarding) — what
 mobile still needs is described below.
@@ -27,7 +27,7 @@ where mobile's assumptions diverged from what the API actually returns.
 ## 1. The two flows
 
 Both submit to the same legal pipeline server-side (PDF render → SHA-256 →
-R2 upload to `fitkit-compliance` bucket → append `form_signatures` audit
+R2 upload to `taikan-compliance` bucket → append `form_signatures` audit
 row → flip `pending → signed` → null the `signing_token`).
 
 | Flow | When | Auth |
@@ -157,7 +157,7 @@ sits in the authenticated nav, push notification taps deep-link into
 has the hooks ready).
 
 **Token**: `app/forms/sign/[token].tsx` already there. Deep-link comes
-via Universal Link (`app.fitkit.fit/forms/sign/<token>`) once AASA
+via Universal Link (`app.taikan.fit/forms/sign/<token>`) once AASA
 deployment lands (FIT-188).
 
 ---
@@ -219,7 +219,7 @@ these — render as-is.
 
 ## 12. Reference
 
-* API source of truth for endpoint shapes: `apps/api/src/forms/forms.controller.ts` and `apps/api/src/forms/forms.service.ts` in the `forms` branch of `../fitkit`
-* Shared Zod schemas: `libs/shared/src/lib/schemas/forms.ts` in `../fitkit`
-* Compliance presets (for understanding what fields a `health_declaration` will carry on the wire): `libs/shared/src/lib/schemas/forms-presets.ts` in `../fitkit`
+* API source of truth for endpoint shapes: `apps/api/src/forms/forms.controller.ts` and `apps/api/src/forms/forms.service.ts` in the `forms` branch of `../taikan`
+* Shared Zod schemas: `libs/shared/src/lib/schemas/forms.ts` in `../taikan`
+* Compliance presets (for understanding what fields a `health_declaration` will carry on the wire): `libs/shared/src/lib/schemas/forms-presets.ts` in `../taikan`
 * Linear: FIT-176 (engine, this is where the API work was tracked), FIT-178 (this mobile UX ticket), FIT-184 (the spike that drove the shared-schema design), FIT-189 (token-scoped signature upload — server-side, blocks Path B above), FIT-188 (universal link AASA deployment)

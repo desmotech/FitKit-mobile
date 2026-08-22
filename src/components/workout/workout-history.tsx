@@ -128,6 +128,7 @@ function HistoryRow({
   completedLabel: string;
   onPress: () => void;
 }) {
+  const colors = useFKColors();
   const ChevronEnd = isRTL ? ChevronLeft : ChevronRight;
   return (
     <Pressable
@@ -167,8 +168,8 @@ function HistoryRow({
               gap: 5,
             }}
           >
-            <Check size={14} color="#7A8A5C" strokeWidth={2.6} />
-            <Text style={{ fontSize: 13, color: '#7A8A5C', fontWeight: '700' }}>
+            <Check size={14} color={colors.success} strokeWidth={2.6} />
+            <Text style={{ fontSize: 13, color: colors.success, fontWeight: '700' }}>
               {completedLabel}
             </Text>
           </View>
@@ -179,14 +180,14 @@ function HistoryRow({
               paddingHorizontal: 6,
               paddingVertical: 1,
               borderRadius: 999,
-              backgroundColor: 'rgba(122,138,92,0.18)',
+              backgroundColor: 'rgba(46,122,77,0.18)',
             }}
           >
             <Text
               style={{
                 fontSize: 9,
                 fontWeight: '800',
-                color: '#7A8A5C',
+                color: colors.success,
                 letterSpacing: 0.4,
               }}
             >
@@ -200,14 +201,14 @@ function HistoryRow({
               paddingHorizontal: 6,
               paddingVertical: 1,
               borderRadius: 999,
-              backgroundColor: 'rgba(201,151,77,0.18)',
+              backgroundColor: 'rgba(168,121,47,0.18)',
             }}
           >
             <Text
               style={{
                 fontSize: 9,
                 fontWeight: '800',
-                color: '#C9974D',
+                color: colors.warning,
                 letterSpacing: 0.4,
               }}
             >
@@ -226,7 +227,7 @@ function HistoryRow({
         <Text className="text-muted-foreground" style={{ fontSize: 11 }}>
           {HISTORY_DATE_FORMATTER.format(new Date(result.performedAt))}
         </Text>
-        <ChevronEnd size={14} color="#9A958A" />
+        <ChevronEnd size={14} color="#8FA7B3" />
       </View>
     </Pressable>
   );

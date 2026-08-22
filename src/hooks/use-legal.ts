@@ -12,7 +12,7 @@ import type {
   ConsentStatusItem,
   LegalDocumentResponse,
   LegalDocumentType,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useApiQuery, useApiSend } from './use-api-query';
 import { OFFLINE_GC_TIME } from '@/lib/query-persister';
 import type { ApiEnvelope } from './use-feed-data';
@@ -64,5 +64,5 @@ export const LEGAL_DOC_SLUG: Record<LegalDocumentType, string> = {
 };
 
 export function marketingUrlForType(type: LegalDocumentType): string {
-  return `https://fitkit.fit/${LEGAL_DOC_SLUG[type]}`;
+  return `https://usetaikan.com/${LEGAL_DOC_SLUG[type]}`;
 }

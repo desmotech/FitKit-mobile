@@ -33,7 +33,7 @@ import { useMediaPermissions } from '@/hooks/use-media-permissions';
 import { useUpload, type UploadItem } from '@/hooks/use-upload';
 import { useCommonStrings } from '@/i18n/use-common-strings';
 import { useI18n } from '@/providers/i18n-provider';
-import type { ExerciseCommentDto } from '@fitkit/shared';
+import type { ExerciseCommentDto } from '@taikan/shared';
 
 
 interface ExerciseCommentsThreadProps {

@@ -36,7 +36,7 @@ export function FieldShell({
   const isRTL = useFormRTL();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const mutedFg = isDark ? 'rgba(235,235,245,0.6)' : 'rgba(60,60,67,0.6)';
+  const mutedFg = isDark ? 'rgba(238,242,246,0.6)' : 'rgba(60,60,67,0.6)';
   const destructive = isDark ? '#FF453A' : '#D70015';
 
   return (

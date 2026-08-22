@@ -2,7 +2,7 @@ import { useUser as useClerkUser } from '@clerk/clerk-expo';
 import type {
   MembershipResponse,
   UserWithMembershipsResponse,
-} from '@fitkit/shared';
+} from '@taikan/shared';
 import { useActiveOrg } from '@/providers/active-org-provider';
 import { OFFLINE_GC_TIME } from '@/lib/query-persister';
 import { useApiQuery } from './use-api-query';

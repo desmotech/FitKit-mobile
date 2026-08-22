@@ -95,7 +95,7 @@ export function DatePresetField({
         borderRadius: 12,
         borderCurve: 'continuous',
         borderWidth: seg.active ? 1.5 : 1,
-        borderColor: seg.active ? BRAND_TEAL : 'rgba(94,112,130,0.22)',
+        borderColor: seg.active ? BRAND_TEAL : 'rgba(61,90,112,0.22)',
         backgroundColor: seg.active
           ? 'rgba(14,140,140,0.12)'
           : 'rgba(120,120,128,0.08)',
@@ -119,7 +119,7 @@ export function DatePresetField({
           style={{
             fontSize: 15,
             fontWeight: '700',
-            color: seg.active ? BRAND_TEAL : 'rgb(94,112,130)',
+            color: seg.active ? BRAND_TEAL : 'rgb(61,90,112)',
             letterSpacing: -0.1,
           }}
         >

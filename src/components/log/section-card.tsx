@@ -8,7 +8,7 @@
  * idiom).
  *
  * This replaces the previous bespoke iOS-grouped card aesthetic with
- * the established FitKit visual language so log surfaces feel native
+ * the established Taikan visual language so log surfaces feel native
  * to the rest of the app.
  */
 import type { ReactNode } from 'react';

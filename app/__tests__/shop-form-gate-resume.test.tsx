@@ -18,7 +18,7 @@
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { dictionaries } from '@fitkit/shared';
+import { dictionaries } from '@taikan/shared';
 import { formStringsFor } from '@/i18n/form-strings';
 import ShopScreen from '../(tabs)/shop/index';
 import SignFormInstanceScreen from '../(tabs)/profile/forms/[instanceId]';
@@ -163,7 +163,7 @@ beforeEach(() => {
   (WebBrowser.openAuthSessionAsync as jest.Mock).mockClear();
   (WebBrowser.openAuthSessionAsync as jest.Mock).mockResolvedValue({
     type: 'success',
-    url: 'fitkit://shop/payment-return?status=success',
+    url: 'taikan://shop/payment-return?status=success',
   });
   alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 });

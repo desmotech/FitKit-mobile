@@ -24,7 +24,7 @@ export interface BrowserAuthResult {
   url?: string | null;
 }
 
-/** Read a query param off a returned deep link (`fitkit://…?status=failed`).
+/** Read a query param off a returned deep link (`taikan://…?status=failed`).
  *
  *  Parsed here rather than via `Linking.parse` so the mapping stays usable
  *  from plain units and tests. The links come through the API's
@@ -41,7 +41,7 @@ function paramOf(url: string, name: string): string | undefined {
   }
 }
 
-/** Read `status` off a returned deep link (`fitkit://…?status=failed`). */
+/** Read `status` off a returned deep link (`taikan://…?status=failed`). */
 export function statusParamOf(url: string): string | undefined {
   return paramOf(url, 'status');
 }

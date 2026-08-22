@@ -19,8 +19,8 @@ import { isLocale, type Locale } from '@/i18n/config';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
-const THEME_KEY = 'fitkit:settings:theme';
-const LOCALE_KEY = 'fitkit:settings:locale';
+const THEME_KEY = 'taikan:settings:theme';
+const LOCALE_KEY = 'taikan:settings:locale';
 
 function isThemePreference(v: string | null): v is ThemePreference {
   return v === 'light' || v === 'dark' || v === 'system';
@@ -76,7 +76,7 @@ export async function clearLocaleOverride(): Promise<void> {
   }
 }
 
-const ACTIVE_ORG_KEY = 'fitkit:settings:activeOrg';
+const ACTIVE_ORG_KEY = 'taikan:settings:activeOrg';
 
 /**
  * The org the user explicitly selected in the org switcher, or `null` when
@@ -109,7 +109,7 @@ export async function clearActiveOrgId(): Promise<void> {
   }
 }
 
-const ANALYTICS_KEY = 'fitkit:settings:analyticsConsent';
+const ANALYTICS_KEY = 'taikan:settings:analyticsConsent';
 
 /**
  * Whether the user opted in to product analytics (PostHog). Defaults to

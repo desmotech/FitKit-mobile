@@ -18,7 +18,7 @@ import { Check } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import type { PlanResponse } from '@fitkit/shared';
+import type { PlanResponse } from '@taikan/shared';
 import { FKGlassPanel, FKModalHeader, useFKColors } from '@/components/fk';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -43,7 +43,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
 const RETURN_PATH = 'shop/payment-return';
-const RETURN_URL = `fitkit://${RETURN_PATH}`;
+const RETURN_URL = `taikan://${RETURN_PATH}`;
 const BRAND_TEAL = '#0E8C8C';
 const DESTRUCTIVE = '#B84A40';
 const WARN = '#8B6A35';
@@ -274,9 +274,9 @@ export default function ChangePlanScreen() {
                 style={{
                   padding: 12,
                   borderRadius: 12,
-                  backgroundColor: 'rgba(201,151,77,0.14)',
+                  backgroundColor: 'rgba(168,121,47,0.14)',
                   borderWidth: 1,
-                  borderColor: 'rgba(201,151,77,0.30)',
+                  borderColor: 'rgba(168,121,47,0.30)',
                 }}
               >
                 <Text

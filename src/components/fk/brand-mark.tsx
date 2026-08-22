@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { View, type ViewStyle } from 'react-native';
 
 /**
- * Brand mark — the FitKit logo. Transparent PNG, so it sits on light and
+ * Brand mark — the Taikan logo. Transparent PNG, so it sits on light and
  * dark backgrounds alike and carries its own glow.
  */
 export function FKBrandMark({
