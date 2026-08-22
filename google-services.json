@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "729065358952",
-    "project_id": "fitkit-7b46b",
-    "storage_bucket": "fitkit-7b46b.firebasestorage.app"
+    "project_number": "235982838051",
+    "project_id": "taikan-7cd6d",
+    "storage_bucket": "taikan-7cd6d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:729065358952:android:2172746745805a03995ddd",
+        "mobilesdk_app_id": "1:235982838051:android:3af02a5663d51fe90a9496",
         "android_client_info": {
-          "package_name": "fit.fitkit.app"
+          "package_name": "fit.taikan.app"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAVI40-jvlJzU3DLeoJO-5EKa7p_MfedDM"
+          "current_key": "AIzaSyAYEQCGN_hIdNx5aSR8TR0CjAER83EWJ00"
         }
       ],
       "services": {
