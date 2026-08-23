@@ -31,6 +31,11 @@ export interface HomeStrings {
   presaleCountdown: string;
   presaleCountdownTomorrow: string;
 
+  // ── Finish-your-profile prompt (replaces the blocking gate) ───────
+  profileNoticeBody: string;
+  profileNoticeCta: string;
+  profileNoticeDismiss: string;
+
   // ── Today's class card + the class-tile peek sheet ────────────────
   booked: string;
   waitlisted: string;
@@ -94,6 +99,12 @@ const HE: HomeStrings = {
   presaleCountdown: 'עוד {days} ימים לפתיחה',
   presaleCountdownTomorrow: 'נפתחים מחר',
 
+  // Plural and verb-free like the rest of the Hebrew here. A prompt, not an
+  // order: the profile can be completed whenever they feel like it.
+  profileNoticeBody: 'נשארו כמה פרטים להשלמה בפרופיל שלכם.',
+  profileNoticeCta: 'להשלמה',
+  profileNoticeDismiss: 'סגירה',
+
   booked: 'רשום',
   waitlisted: 'המתנה',
   attended: 'נרשמה הגעה',
@@ -144,6 +155,10 @@ const EN: HomeStrings = {
     "We open on {date}, and your membership starts that day. Nothing to do until then — you're all set.",
   presaleCountdown: '{days} days to opening',
   presaleCountdownTomorrow: 'Opening tomorrow',
+
+  profileNoticeBody: 'A few details are still missing from your profile.',
+  profileNoticeCta: 'Finish',
+  profileNoticeDismiss: 'Dismiss',
 
   booked: 'Booked',
   waitlisted: 'Waitlist',
@@ -196,6 +211,10 @@ const RU: HomeStrings = {
     'Мы открываемся {date}, тогда же начнётся ваш абонемент. До этого ничего делать не нужно — всё готово.',
   presaleCountdown: 'До открытия {days} дн.',
   presaleCountdownTomorrow: 'Открываемся завтра',
+
+  profileNoticeBody: 'В вашем профиле не хватает нескольких данных.',
+  profileNoticeCta: 'Заполнить',
+  profileNoticeDismiss: 'Закрыть',
 
   booked: 'Запись',
   waitlisted: 'Лист ожидания',

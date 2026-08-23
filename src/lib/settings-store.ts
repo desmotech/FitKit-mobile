@@ -148,3 +148,35 @@ export async function saveAnalyticsConsent(granted: boolean): Promise<void> {
     // Non-fatal — see saveThemePreference.
   }
 }
+
+const PROFILE_NOTICE_KEY = 'taikan:settings:profileNoticeDismissed';
+
+/**
+ * Whether this device has dismissed the "finish your profile" prompt.
+ *
+ * Deliberately device-local and NOT recorded server-side, exactly as on web:
+ * the profile is still incomplete afterwards, staff surfaces still say so, and
+ * this decides only whether the member is nagged on THIS device.
+ *
+ * It replaces a blocking redirect. `/onboarding/complete-profile` used to
+ * stand between a member and everything they had just paid for — including a
+ * member who had already given their national id at join, since `getMe`
+ * returns it masked (`***1234`) and the form therefore showed an empty
+ * required field they could not satisfy.
+ */
+export async function loadProfileNoticeDismissed(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(PROFILE_NOTICE_KEY)) === 'true';
+  } catch {
+    // Storage unavailable. Showing the prompt is the safe side.
+    return false;
+  }
+}
+
+export async function saveProfileNoticeDismissed(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(PROFILE_NOTICE_KEY, 'true');
+  } catch {
+    // Non-fatal — dismissing for this session is still the right outcome.
+  }
+}
