@@ -61,9 +61,16 @@ are exempt from in-app purchase under Guideline 3.1.3(e) / 3.1.5.
 
 **5. How do users obtain an account? Do users have to pay a fee to create an
 account?**
-Users create a free account inside the app (email or Sign in with Apple, via
-Clerk). There is no fee to download or use the app and no fee to create an
-account. Account creation is independent of any gym membership.
+Accounts are created by invitation only. The member's gym sends an invitation
+email; the member opens that link, which is handled by the app, and sets a
+password (via Clerk). There is no self-service sign-up inside the app and no
+Sign in with Apple. A member who opens the app without an invitation is shown a
+screen explaining they need one from their gym.
+
+There is no fee to download or use the app and no fee to create an account. The
+account exists only in the context of the member's own gym, which is what makes
+this a companion app to that real-world business rather than a standalone
+service. Demo credentials are supplied in App Review Information.
 
 **6. Is there any paid content in the app and if so who pays for it? For
 example, do users pay for opening an account or using certain features in the
