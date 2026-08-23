@@ -31,6 +31,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { PostHogMaskView } from 'posthog-react-native';
 import { showActionSheet } from '@/lib/action-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTabBarTop } from '@/hooks/use-tab-bar-padding';
@@ -284,7 +285,9 @@ export function WorkoutChat({
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 44 : 0}
       style={{ flex: 1 }}
     >
-      <View style={{ flex: 1 }}>
+      {/* Private member ↔ coach thread — kept out of session replay.
+          The composer's own TextInput is covered by maskAllTextInputs. */}
+      <PostHogMaskView style={{ flex: 1 }}>
         {comments.query.isLoading ? (
           <View style={{ padding: 18, gap: 10 }}>
             <Skeleton style={{ height: 30, width: '60%', borderRadius: 14, alignSelf: 'flex-start' }} />
@@ -349,7 +352,7 @@ export function WorkoutChat({
             }
           />
         )}
-      </View>
+      </PostHogMaskView>
 
       {/* Composer. */}
       {uploads.uploads.length > 0 ? (

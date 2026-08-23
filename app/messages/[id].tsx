@@ -24,6 +24,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { PostHogMaskView } from 'posthog-react-native';
 import { showActionSheet } from '@/lib/action-sheet';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -316,7 +317,9 @@ export default function ChatScreen() {
   const subtitle = participantTyping ? labels.typing : roleLabel(participantRole, t);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    // Masked whole: session replay screenshots plain <Text>, and this is a
+    // private thread — participant name included.
+    <PostHogMaskView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* iOS NavigationBar — back button + participant (avatar + name + role) */}
       <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
         <View
@@ -624,7 +627,7 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
 
       <ImageLightbox uri={lightbox} onClose={() => setLightbox(null)} />
-    </View>
+    </PostHogMaskView>
   );
 }
 

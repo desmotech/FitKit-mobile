@@ -152,9 +152,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
         // Session replay screenshots. Apple has no screen-recording type, and
         // these are more than interaction events, so they are declared as
-        // "other". Text inputs and images are masked, and the health /
-        // identity / payment screens mask themselves whole (see
-        // FKSubScreen's `maskFromReplay`).
+        // "other". Text inputs and images are masked; the health, identity
+        // and payment screens mask themselves whole, as does every
+        // conversation surface.
         {
           NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeOtherDataTypes',
           NSPrivacyCollectedDataTypeLinked: true,
