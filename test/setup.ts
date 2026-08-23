@@ -107,6 +107,27 @@ jest.mock('react-native-keyboard-controller', () =>
   require('react-native-keyboard-controller/jest'),
 );
 
+// expo-clipboard is a native module (and UIPasteControl can't render under
+// Jest). Backed by test/mocks/clipboard.tsx so a test can stage clipboard
+// contents and pick the paste-button branch.
+jest.mock('expo-clipboard', () => {
+  const mocks = require('./mocks/clipboard') as typeof import('./mocks/clipboard');
+  return {
+    get isPasteButtonAvailable() {
+      return mocks.mockClipboard.pasteButtonAvailable;
+    },
+    hasStringAsync: async () => mocks.mockClipboard.text != null,
+    getStringAsync: async () => mocks.mockClipboard.text ?? '',
+    ClipboardPasteButton: mocks.MockClipboardPasteButton,
+  };
+});
+
+afterEach(() => {
+  const { resetClipboardMock } =
+    require('./mocks/clipboard') as typeof import('./mocks/clipboard');
+  resetClipboardMock();
+});
+
 // AsyncStorage backs the query persister and settings-store; use the
 // official in-memory mock.
 jest.mock('@react-native-async-storage/async-storage', () =>

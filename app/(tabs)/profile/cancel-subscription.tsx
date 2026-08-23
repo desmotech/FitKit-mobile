@@ -44,6 +44,7 @@ import {
 import { useCancelAtPeriodEnd } from '@/hooks/use-feed-data';
 import { useFormStrings } from '@/i18n/use-form-strings';
 import { useHaptics } from '@/hooks/use-haptics';
+import { autofill } from '@/lib/autofill';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
 
@@ -271,6 +272,7 @@ export default function CancelSubscriptionScreen() {
                 onChangeText={setReason}
                 placeholder={L.reasonPlaceholder}
                 placeholderTextColor={colors.mutedFg}
+                {...autofill('off')}
                 multiline
                 maxLength={MAX_LENGTH}
                 style={{

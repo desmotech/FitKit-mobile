@@ -35,6 +35,7 @@ export interface AuthStrings {
   mfaEmailDesc: string;
   mfaBackupDesc: string;
   resendCode: string;
+  pasteCode: string;
 
   // ── Password reset ────────────────────────────────────────────────
   resetTitle: string;
@@ -81,6 +82,7 @@ const HE: AuthStrings = {
   mfaEmailDesc: 'הזן את הקוד ששלחנו אליך זה עתה באימייל.',
   mfaBackupDesc: 'הזן אחד מקודי הגיבוי שלך.',
   resendCode: 'שליחת קוד חדש',
+  pasteCode: 'הדבקת הקוד',
 
   resetTitle: 'איפוס סיסמה',
   resetRequestDesc: 'הזן את האימייל שלך ונשלח לך קוד איפוס.',
@@ -125,6 +127,7 @@ const EN: AuthStrings = {
   mfaEmailDesc: 'Enter the code we just emailed you.',
   mfaBackupDesc: 'Enter one of your backup codes.',
   resendCode: 'Resend code',
+  pasteCode: 'Paste code',
 
   resetTitle: 'Reset your password',
   resetRequestDesc: "Enter your email and we'll send you a reset code.",
@@ -171,6 +174,7 @@ const RU: AuthStrings = {
   mfaEmailDesc: 'Введите код, который мы только что отправили на почту.',
   mfaBackupDesc: 'Введите один из ваших резервных кодов.',
   resendCode: 'Отправить код повторно',
+  pasteCode: 'Вставить код',
 
   resetTitle: 'Сброс пароля',
   resetRequestDesc: 'Введите вашу почту, и мы отправим код для сброса.',

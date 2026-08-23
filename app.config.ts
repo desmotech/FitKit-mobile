@@ -67,7 +67,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     bundleIdentifier: 'fit.taikan.app',
     supportsTablet: false,
-    associatedDomains: ['applinks:app.taikan.fit'],
+    // `webcredentials` is what lets iOS Passwords offer the credential the
+    // member saved on app.taikan.fit (and file the one they set here under
+    // the same site). Needs a matching `webcredentials.apps` entry in the
+    // site's /.well-known/apple-app-site-association.
+    associatedDomains: [
+      'applinks:app.taikan.fit',
+      'webcredentials:app.taikan.fit',
+    ],
     infoPlist: {
       NSCameraUsageDescription:
         'Taikan uses the camera to scan check-in QR codes and to take progress photos and form-check videos.',
@@ -384,12 +391,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // release adds or changes native code: it is the mechanism that stops a JS
   // bundle reaching a binary that cannot run it.
   //
-  // 1.0.5 is exactly that case. It adds @react-native-community/netinfo, and
-  // `src/lib/network.ts` calls into it from `QueryProvider` — above every
-  // screen — so a 1.0.4 binary pulling this bundle would hit a missing native
-  // module on the first render and fail to boot. Shipping it as an OTA under
-  // an unchanged version would brick every installed copy. It needs a new
-  // store build, which is what the bump forces.
+  // 1.0.5 is the first Taikan build: new bundle id, new EAS project, so
+  // nothing is installed under this runtimeVersion yet and everything native
+  // it carries — @react-native-community/netinfo, expo-clipboard (imported by
+  // <OtpPasteButton> on the sign-in screen), the `webcredentials`
+  // entitlement — is compiled in from the start. The next release that adds
+  // or changes native code has to bump this, or an OTA will reach a 1.0.5
+  // binary that cannot run it.
   runtimeVersion: { policy: 'appVersion' },
   updates: {
     url:

@@ -24,6 +24,7 @@ import {
   useExerciseSearch,
 } from '@/hooks/use-feed-data';
 import { useLogStrings } from '@/i18n/use-log-strings';
+import { autofill } from '@/lib/autofill';
 import { useI18n } from '@/providers/i18n-provider';
 
 export interface ExerciseSearchInputProps {
@@ -137,6 +138,7 @@ export function ExerciseSearchInput({
       onChangeText={setQuery}
       placeholder={effectivePlaceholder}
       placeholderTextColor={placeholderColor}
+      {...autofill('off')}
       autoCapitalize="none"
       autoCorrect={false}
       returnKeyType="search"

@@ -37,6 +37,7 @@ import { Text } from '@/components/ui/text';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { autofill } from '@/lib/autofill';
 import { roleLabel } from '@/lib/role-label';
 import { bodyFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
@@ -185,6 +186,7 @@ export default function NewConversationScreen() {
               onChangeText={handleSearch}
               placeholder={labels.search}
               placeholderTextColor={colors.mutedFg}
+              {...autofill('off')}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="search"

@@ -23,6 +23,7 @@ import { Text } from '@/components/ui/text';
 import { useApi } from '@/hooks/use-api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useHaptics } from '@/hooks/use-haptics';
+import { autofill } from '@/lib/autofill';
 import { continuousCorners } from '@/lib/utils';
 import {
   extractFieldErrors,
@@ -198,8 +199,7 @@ export default function PersonalDetailsScreen() {
                     testID="personal-email"
                     value={user?.email ?? ''}
                     editable={false}
-                    autoComplete="email"
-                    textContentType="emailAddress"
+                    {...autofill('email')}
                     style={{ textAlign: 'left' }}
                   />
                 </Field>
@@ -213,9 +213,7 @@ export default function PersonalDetailsScreen() {
                     <Input
                       value={form.firstName}
                       onChangeText={(v) => update('firstName', v)}
-                      autoCapitalize="words"
-                      autoComplete="given-name"
-                      textContentType="givenName"
+                      {...autofill('givenName')}
                       style={{ textAlign: isRTL ? 'right' : 'left' }}
                     />
                   </Field>
@@ -227,9 +225,7 @@ export default function PersonalDetailsScreen() {
                     <Input
                       value={form.lastName}
                       onChangeText={(v) => update('lastName', v)}
-                      autoCapitalize="words"
-                      autoComplete="family-name"
-                      textContentType="familyName"
+                      {...autofill('familyName')}
                       style={{ textAlign: isRTL ? 'right' : 'left' }}
                     />
                   </Field>
@@ -244,9 +240,7 @@ export default function PersonalDetailsScreen() {
                     value={form.phone}
                     onChangeText={(v) => update('phone', v)}
                     onBlur={() => handleBlur('phone')}
-                    keyboardType="phone-pad"
-                    autoComplete="tel"
-                    textContentType="telephoneNumber"
+                    {...autofill('tel')}
                     placeholder={labels.phonePlaceholder}
                     style={{ textAlign: isRTL ? 'right' : 'left' }}
                   />
@@ -263,7 +257,7 @@ export default function PersonalDetailsScreen() {
                       update('nationalId', v.replace(/\D/g, '').slice(0, 9))
                     }
                     onBlur={() => handleBlur('nationalId')}
-                    keyboardType="number-pad"
+                    {...autofill('nationalId')}
                     placeholder={
                       user?.nationalIdMasked ?? labels.nationalIdPlaceholder
                     }
@@ -281,8 +275,7 @@ export default function PersonalDetailsScreen() {
                       value={form.birthDate}
                       onChangeText={(v) => update('birthDate', v)}
                       placeholder={labels.birthDatePlaceholder}
-                      keyboardType="numbers-and-punctuation"
-                      autoCorrect={false}
+                      {...autofill('birthdate')}
                       style={{
                         textAlign: isRTL ? 'right' : 'left',
                         fontFamily: 'Assistant-Medium',
