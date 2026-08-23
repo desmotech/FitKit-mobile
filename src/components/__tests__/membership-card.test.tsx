@@ -10,14 +10,6 @@
 import { screen, userEvent } from '@testing-library/react-native';
 import { MembershipCard } from '../profile/membership-card';
 import { renderWithProviders } from '../../../test/render';
-// The intro-payment copy comes from the app's own dictionary, not from the
-// `labels` prop — and `renderWithProviders` signs the member in as Hebrew.
-// Asserting through the dictionary keeps a copy edit from turning these red.
-import { quotaStringsFor } from '@/i18n/quota-strings';
-
-const introRemainingText = (count: number) =>
-  quotaStringsFor('he').introPaymentsRemaining.replace('{count}', String(count));
-
 const LABELS = {
   title: 'Membership',
   active: 'Active',
@@ -129,15 +121,13 @@ describe('MembershipCard', () => {
 });
 
 /**
- * Intro-priced plans (FIT-282) put "{n} intro payments remaining" on the card,
- * read straight off `introCyclesRemaining`. That counter says how many
- * discounted cycles the PLAN still has to give — not how many charges are
- * still coming. A member who has given notice keeps a non-zero counter, keeps
- * `status: 'active'`, and is excluded from the charge cron from that moment
- * on, so the card was promising payments that will never be taken, directly
- * underneath the date the membership ends.
+ * The card never counts the discounted cycles a plan still has to give: that
+ * counter is a countdown to a price rise on the one subscription screen every
+ * member sees, so it is not rendered for any billing state. What IS still said
+ * is the note that runs the other way — once notice has been given, nothing
+ * more will be charged.
  */
-describe('MembershipCard — intro payments vs a cancelled membership', () => {
+describe('MembershipCard — payment counters', () => {
   const ENDING = {
     introCyclesRemaining: 2,
     cancelAtPeriodEnd: true,
@@ -145,7 +135,7 @@ describe('MembershipCard — intro payments vs a cancelled membership', () => {
     billingState: 'ending' as const,
   };
 
-  it('counts the intro payments while the membership is really billing', async () => {
+  it('does not count intro payments on a healthy, billing membership', async () => {
     await renderWithProviders(
       <MembershipCard
         {...BASE}
@@ -154,12 +144,10 @@ describe('MembershipCard — intro payments vs a cancelled membership', () => {
       />,
     );
 
-    expect(screen.getByTestId('intro-remaining')).toHaveTextContent(
-      introRemainingText(2),
-    );
+    expect(screen.queryByTestId('intro-remaining')).toBeNull();
   });
 
-  it('does NOT count payments on a membership that is ending', async () => {
+  it('does not count payments on a membership that is ending', async () => {
     await renderWithProviders(
       <MembershipCard {...BASE} sub={sub(ENDING)} onRenew={jest.fn()} />,
     );
@@ -167,7 +155,7 @@ describe('MembershipCard — intro payments vs a cancelled membership', () => {
     expect(screen.queryByTestId('intro-remaining')).toBeNull();
   });
 
-  it('says instead that nothing more will be charged', async () => {
+  it('still says that nothing more will be charged once notice is given', async () => {
     await renderWithProviders(
       <MembershipCard {...BASE} sub={sub(ENDING)} onRenew={jest.fn()} />,
     );
@@ -209,24 +197,7 @@ describe('MembershipCard — intro payments vs a cancelled membership', () => {
     expect(screen.queryByTestId('no-further-charges')).toBeNull();
   });
 
-  /**
-   * The app ships ahead of the API it talks to. Without `billingState` the
-   * card falls back to the flag the charge cron itself excludes on, so an
-   * older build still stops making the false promise.
-   */
-  it('falls back to cancelAtPeriodEnd when the API sends no billingState', async () => {
-    await renderWithProviders(
-      <MembershipCard
-        {...BASE}
-        sub={sub({ introCyclesRemaining: 2, cancelAtPeriodEnd: true })}
-        onRenew={jest.fn()}
-      />,
-    );
-
-    expect(screen.queryByTestId('intro-remaining')).toBeNull();
-  });
-
-  it('still counts them on a healthy membership with no billingState at all', async () => {
+  it('does not count them when the API sends no billingState at all', async () => {
     await renderWithProviders(
       <MembershipCard
         {...BASE}
@@ -235,8 +206,6 @@ describe('MembershipCard — intro payments vs a cancelled membership', () => {
       />,
     );
 
-    expect(screen.getByTestId('intro-remaining')).toHaveTextContent(
-      introRemainingText(3),
-    );
+    expect(screen.queryByTestId('intro-remaining')).toBeNull();
   });
 });
