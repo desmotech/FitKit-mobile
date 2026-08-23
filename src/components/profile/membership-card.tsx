@@ -8,7 +8,6 @@ import { useHaptics } from '@/hooks/use-haptics';
 import { formatPrice } from '@/lib/format-price';
 import { displayFamily, eyebrow } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
-import { useQuotaStrings } from '@/i18n/use-quota-strings';
 import { useEarlyRenewStrings } from '@/i18n/use-early-renew-strings';
 import { useCancelPendingStrings } from '@/i18n/use-cancel-pending-strings';
 import { memberActionsOf, type MemberSubscriptionAction } from '@/lib/member-actions';
@@ -48,7 +47,8 @@ export function MembershipCard({
     currentPeriodEnd?: string | null;
     /** Anchored booking-allowance windows (absent on unlimited plans). */
     quotas?: QuotaUsage[] | null;
-    /** Discounted charges left on a presale plan; 0/null = standard price. */
+    /** Discounted charges left on a presale plan. Accepted, never rendered:
+     *  a countdown to the price rise belongs nowhere on this card. */
     introCyclesRemaining?: number | null;
     /** When the next charge is actually taken — for a `scheduled` presale
      *  purchase, that is the FIRST charge, deferred to the gym's opening day.
@@ -96,9 +96,7 @@ export function MembershipCard({
     /** Whether any more money is ever coming off the member's card, resolved
      *  server-side from the charge cron's own predicate. Nothing else on the
      *  row can answer it: a member who has given notice still reads `active`,
-     *  still has a future `currentPeriodEnd`, and still carries a non-zero
-     *  `introCyclesRemaining` — which is exactly how this card came to tell
-     *  cancelled members that N more payments were on the way. Optional:
+     *  still has a future `currentPeriodEnd`. Optional:
      *  absent on an API build that predates it, and the read below falls back
      *  to `cancelAtPeriodEnd`, which is the flag the cron actually excludes on. */
     billingState?:
@@ -126,7 +124,7 @@ export function MembershipCard({
     endedByGym: string;
     checkoutNotCompleted: string;
     checkoutNotCompletedNote: string;
-    /** Said once notice is given, in place of the intro-payments count. */
+    /** Said once notice is given. */
     noFurtherCharges?: string;
     /** Presale purchase: bought before opening day, nothing charged yet.
      *  Template with `{date}`. */
@@ -161,7 +159,6 @@ export function MembershipCard({
   const haptics = useHaptics();
   const { isDark } = useFKColors();
   const { lang } = useI18n();
-  const quotaT = useQuotaStrings();
   const earlyRenewT = useEarlyRenewStrings();
   const cancelPendingT = useCancelPendingStrings();
   const goldOnHero = isDark ? '#EAC35E' : '#FFE27A';
@@ -245,20 +242,6 @@ export function MembershipCard({
         : sub.status === 'paused'
           ? 'paused'
           : 'recurring');
-  const billingContinues = billingState === 'recurring';
-  // `introCyclesRemaining` counts the discounted cycles the PLAN still has to
-  // give, not charges that are still coming. On a membership that is ending
-  // the two are different numbers, and this line was rendering the wrong one:
-  // "2 intro payments remaining" under an "Ends 5 Oct" date, on a
-  // subscription the cron will never charge again.
-  const introLeft = sub.introCyclesRemaining ?? 0;
-  const introRemaining =
-    introLeft > 0 && billingContinues
-      ? (introLeft === 1
-          ? quotaT.introPaymentsRemainingOne
-          : quotaT.introPaymentsRemaining
-        ).replace('{count}', String(introLeft))
-      : null;
   // Notice given: say the reassuring true thing instead of the alarming
   // false one. Only for `ending` — `stopped` is already covered by the
   // ended/abandoned note above, and `external` means we genuinely can't say.
@@ -642,19 +625,6 @@ export function MembershipCard({
         </Text>
       ) : null}
 
-      {introRemaining ? (
-        <Text
-          testID="intro-remaining"
-          style={{
-            fontSize: 11.5,
-            color: goldOnHero,
-            fontFamily: 'Assistant-Medium',
-            textAlign: isRTL ? 'right' : 'left',
-          }}
-        >
-          {introRemaining}
-        </Text>
-      ) : null}
     </View>
   );
 }

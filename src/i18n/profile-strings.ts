@@ -59,8 +59,7 @@ export interface ProfileStrings {
    *  gym" would blame the gym for a payment the member never finished. */
   checkoutNotCompletedNote: string;
   /** Shown once notice has been given: the membership runs to `endsOn` and
-   *  no further charge is ever taken. Says out loud what the card used to
-   *  contradict by counting intro payments that will never happen. */
+   *  no further charge is ever taken. */
   noFurtherCharges: string;
   /** Presale purchase (FIT-287): bought before the gym opened, card on file,
    *  nothing charged yet. Template with `{date}` — the first charge, which is

@@ -30,9 +30,6 @@ export interface QuotaStrings {
   spotsLeft: string;
   spotsLeftOne: string;
   soldOut: string;
-  /** "{count} intro payments remaining" */
-  introPaymentsRemaining: string;
-  introPaymentsRemainingOne: string;
 }
 
 const EN: QuotaStrings = {
@@ -49,8 +46,6 @@ const EN: QuotaStrings = {
   spotsLeft: '{count} spots left',
   spotsLeftOne: '1 spot left',
   soldOut: 'Sold out',
-  introPaymentsRemaining: '{count} intro payments remaining',
-  introPaymentsRemainingOne: '1 intro payment remaining',
 };
 
 const HE: QuotaStrings = {
@@ -67,8 +62,6 @@ const HE: QuotaStrings = {
   spotsLeft: 'נותרו {count} מקומות',
   spotsLeftOne: 'נותר מקום אחד',
   soldOut: 'המקומות אזלו',
-  introPaymentsRemaining: 'נותרו {count} תשלומי היכרות',
-  introPaymentsRemainingOne: 'נותר תשלום היכרות אחד',
 };
 
 const RU: QuotaStrings = {
@@ -85,8 +78,6 @@ const RU: QuotaStrings = {
   spotsLeft: 'Осталось {count} мест',
   spotsLeftOne: 'Осталось 1 место',
   soldOut: 'Мест нет',
-  introPaymentsRemaining: 'Осталось {count} вводных платежей',
-  introPaymentsRemainingOne: 'Остался 1 вводный платёж',
 };
 
 export function quotaStringsFor(lang: Locale): QuotaStrings {
