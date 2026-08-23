@@ -205,6 +205,11 @@ jest.mock('posthog-react-native', () => {
     group: jest.fn(),
     register: jest.fn(),
     getSessionId: jest.fn(),
+    // Session replay lives in a native module; under Jest these are just
+    // the calls src/lib/analytics.ts makes when consent flips.
+    startSessionRecording: jest.fn(),
+    stopSessionRecording: jest.fn(),
+    isSessionReplayActive: jest.fn(),
     // Feature flags (use-feature-flag.ts): default = flag undecided/off.
     // Specs override getFeatureFlag's return to stage a flag ON.
     getFeatureFlag: jest.fn(),
@@ -219,6 +224,9 @@ jest.mock('posthog-react-native', () => {
     default: PostHogCtor,
     PostHog: PostHogCtor,
     PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
+    // Masking is a native concern — render children so the screens that wrap
+    // themselves in it stay queryable.
+    PostHogMaskView: ({ children }: { children: React.ReactNode }) => children,
     usePostHog: () => client,
   };
 });

@@ -25,6 +25,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { PostHogMaskView } from 'posthog-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   FKAmbientBackdrop,
@@ -136,7 +137,7 @@ export default function NewConversationScreen() {
     : 'rgba(118,118,128,0.12)';
 
   return (
-    <View className="flex-1">
+    <PostHogMaskView style={{ flex: 1 }}>
       <FKAmbientBackdrop />
       <SafeAreaView edges={['top']}>
         <View
@@ -278,6 +279,6 @@ export default function NewConversationScreen() {
           )}
         />
       )}
-    </View>
+    </PostHogMaskView>
   );
 }

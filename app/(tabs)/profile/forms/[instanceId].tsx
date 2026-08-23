@@ -142,6 +142,7 @@ export default function SignFormInstanceScreen() {
     <FKSubScreen
       title={entry?.form.name ?? s.loadingTitle}
       keyboardAvoiding
+      maskFromReplay
       contentStyle={{
         paddingHorizontal: 16,
         paddingTop: 16,

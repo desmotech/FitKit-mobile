@@ -157,6 +157,19 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             'NSPrivacyCollectedDataTypePurposeAnalytics',
           ],
         },
+        // Session replay screenshots. Apple has no screen-recording type, and
+        // these are more than interaction events, so they are declared as
+        // "other". Text inputs and images are masked; the health, identity
+        // and payment screens mask themselves whole, as does every
+        // conversation surface.
+        {
+          NSPrivacyCollectedDataType: 'NSPrivacyCollectedDataTypeOtherDataTypes',
+          NSPrivacyCollectedDataTypeLinked: true,
+          NSPrivacyCollectedDataTypeTracking: false,
+          NSPrivacyCollectedDataTypePurposes: [
+            'NSPrivacyCollectedDataTypePurposeAnalytics',
+          ],
+        },
         // Diagnostics — Sentry. Linked to identity: useAnalyticsIdentify calls
         // Sentry.setUser({ id, email }) + tags the PostHog session id, so
         // crash/perf reports carry the user (full web parity). sendDefaultPii

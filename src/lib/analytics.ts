@@ -46,6 +46,19 @@ function ensure(): PostHog | null {
   client = new PostHog(posthogKey, {
     host: posthogHost,
     captureAppLifecycleEvents: true,
+    // Screenshot-mode replay, via the native `posthog-react-native-session-
+    // replay` module. Constructing here means recording starts only after
+    // consent, same as every event.
+    enableSessionReplay: true,
+    // Spelled out rather than left to defaults: these three are the whole
+    // privacy story for a screenshot recorder. Plain `<Text>` is NOT covered
+    // by `maskAllTextInputs` — screens showing health or payment data wrap
+    // themselves in `PostHogMaskView`.
+    sessionReplayConfig: {
+      maskAllTextInputs: true,
+      maskAllImages: true,
+      maskAllSandboxedViews: true,
+    },
     // Seed flags from env for local/preview testing (web mirrors this via
     // NEXT_PUBLIC_FEATURE_FLAGS). Empty in prod, where PostHog is the
     // source of truth and reloads flags after identify/group.
@@ -84,14 +97,24 @@ export function setAnalyticsConsent(granted: boolean): void {
   consentGranted = granted;
   void saveAnalyticsConsent(granted);
   if (granted) {
+    // A client that already exists was opted out earlier in this run, and
+    // `ensure()` will not restart its recorder — the native side is only
+    // started once, at construction.
+    const wasConstructed = client !== null;
     const c = ensure();
     try {
       void c?.optIn();
+      if (wasConstructed) void c?.startSessionRecording(false);
     } catch {
       /* swallow */
     }
   } else if (client) {
     try {
+      // Must come first and must be explicit: the recorder runs in native
+      // code with its own copy of the API key and uploads snapshots itself,
+      // so `optOut()` — which only gates the JS capture queue — leaves it
+      // recording.
+      void client.stopSessionRecording();
       void client.optOut();
       client.reset();
     } catch {

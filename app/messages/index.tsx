@@ -33,6 +33,7 @@ import {
   RefreshControl,
   View,
 } from 'react-native';
+import { PostHogMaskView } from 'posthog-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AnnouncementResponse, ConversationResponse } from '@taikan/shared';
 import {
@@ -162,7 +163,8 @@ export default function InboxScreen() {
   };
 
   return (
-    <View className="flex-1">
+    // Masked whole: the rows carry names and message previews.
+    <PostHogMaskView style={{ flex: 1 }}>
       <FKAmbientBackdrop />
       <SafeAreaView edges={['top']}>
         <View
@@ -288,7 +290,7 @@ export default function InboxScreen() {
           }}
         />
       )}
-    </View>
+    </PostHogMaskView>
   );
 }
 
