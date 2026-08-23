@@ -47,6 +47,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   version: '1.0.5',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
+  // Android `colorPrimary`: the recents (task-switcher) header and native
+  // dialog accents. Unset, prebuild writes Expo's default navy #023c69.
+  primaryColor: '#0E8C8C',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   // Splash config lives solely in the expo-splash-screen plugin below —
@@ -54,6 +57,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // block was one more place for the colors to drift out of sync.
   assetBundlePatterns: ['**/*'],
   ios: {
+    // iOS 18 appearance variants. `light` is the full tile; `dark` is the
+    // mark on transparent (the OS supplies the dark plate); `tinted` is a
+    // grayscale alpha mask the OS colours. All generated — see assets README.
+    icon: {
+      light: './assets/images/icon.png',
+      dark: './assets/images/icon-dark.png',
+      tinted: './assets/images/icon-tinted.png',
+    },
     bundleIdentifier: 'fit.taikan.app',
     supportsTablet: false,
     associatedDomains: ['applinks:app.taikan.fit'],
@@ -205,6 +216,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adaptiveIcon: {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#0E8C8C',
+      // Android 13 themed icons: an alpha silhouette the launcher tints.
+      monochromeImage: './assets/images/adaptive-icon-mono.png',
     },
     permissions: [
       'CAMERA',
@@ -300,6 +313,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-notifications',
       {
+        // Android renders this alpha-only, so it must be the FLAT mark in
+        // white — a gradient is discarded by the OS. See brand kit §07.
+        icon: './assets/images/notification-icon.png',
         color: '#0E8C8C',
         defaultChannel: 'default',
       },

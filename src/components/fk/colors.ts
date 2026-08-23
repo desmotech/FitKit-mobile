@@ -21,18 +21,29 @@ export const FK_LIGHT = {
   secondaryFg: '#0E8C8C',
   border: '#DCE3EA',
   borderStrong: '#C3CFDA',
-  primary: '#0E8C8C', // brand teal — fills/graphics
+  // #0B7575, not the raw brand #0E8C8C: white on #0E8C8C is 4.08:1, which
+  // fails AA for the labels and icons that sit on primary-filled surfaces
+  // (buttons, own-message bubbles). #0B7575 is 5.50:1 filled.
+  primary: '#0B7575', // brand teal, AA-safe as a fill
+  brandTeal: '#0E8C8C', // the raw identity teal — graphics only, never behind text
   primaryText: '#0A6E6E', // darker teal for small text (5.7:1 on ground)
   primaryPress: '#094F4F', // solid-CTA pressed fill
-  onPrimary: '#FFFFFF', // ink on a primary-filled surface
+  onPrimary: '#FFFFFF', // ink on a primary-filled surface (5.50:1)
   // The tinted-primary tile: icon plates, empty-state tiles, badge fills.
   primarySoft: 'rgba(14,140,140,0.10)',
   primaryEdge: 'rgba(14,140,140,0.28)',
+  // Violet — the secondary action (brand kit v3.1's fourth colour). A step
+  // below primary, not an alternative: teal stays the primary path.
+  violet: '#7A4BE0', // brand violet — fill / CTA (5.37:1 with white)
+  violetText: '#6C43D8', // violet as small text on the ground (5.75:1)
+  violetPress: '#5E37C4', // pressed fill (7.45:1 with white)
+  onViolet: '#FFFFFF', // ink on a violet-filled surface
+  violetSoft: 'rgba(122,75,224,0.10)',
+  violetEdge: 'rgba(122,75,224,0.28)',
   destructive: '#B84A40', // the ONE destructive red
   success: '#2E7A4D', // mint — positive / highlight (4.9:1 on ground)
   warning: '#A8792F', // amber — attention, AA-large only
   info: '#3D5A70', // slate — neutral status (6.8:1)
-  mauve: '#8B5A7C', // automation / event chip
   energy: '#2E7A4D', // highlight accent == mint (no volt in the Ocean system)
   energyFg: '#FFFFFF',
 } as const;
@@ -49,16 +60,24 @@ export const FK_DARK = {
   border: '#2B424B', // rgba(234,242,244,0.16) flattened on band
   borderStrong: '#3A5560',
   primary: '#2AB8B8', // teal fill on band (web-app dark primary)
+  brandTeal: '#2AB8B8', // identity teal on a dark ground
   primaryText: '#94E3DE', // teal text/links on band — 4.6:1
   primaryPress: '#1F9A9A',
   onPrimary: '#04201E', // deep teal-black ink on the bright teal
   primarySoft: 'rgba(42,184,184,0.14)',
   primaryEdge: 'rgba(42,184,184,0.32)',
+  // Same rule as the teal above: the fill is bright on a dark ground, so the
+  // label is dark ink. #9B6BFF + #07202B is 4.75:1; white would be 3.53:1.
+  violet: '#9B6BFF', // violet fill on band
+  violetText: '#A987FF', // violet text on band — 6.07:1 (raw #9B6BFF is 4.19 on cards)
+  violetPress: '#8A5CF0',
+  onViolet: '#07202B', // deep band ink on the bright violet
+  violetSoft: 'rgba(155,107,255,0.16)',
+  violetEdge: 'rgba(155,107,255,0.34)',
   destructive: '#EC7C70', // brightened for AA on dark surfaces
   success: '#B0E5C4', // mint on band — 4.78:1
   warning: '#E0B25C', // amber on band
   info: '#7AA3C2', // slate on band
-  mauve: '#C9A2BC',
   energy: '#B0E5C4', // mint on band
   energyFg: '#07202B',
 } as const;
