@@ -57,14 +57,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // block was one more place for the colors to drift out of sync.
   assetBundlePatterns: ['**/*'],
   ios: {
-    // iOS 18 appearance variants. `light` is the full tile; `dark` is the
-    // mark on transparent (the OS supplies the dark plate); `tinted` is a
-    // grayscale alpha mask the OS colours. All generated — see assets README.
-    icon: {
-      light: './assets/images/icon.png',
-      dark: './assets/images/icon-dark.png',
-      tinted: './assets/images/icon-tinted.png',
-    },
+    // NOT ios.icon.{light,dark,tinted}: tried that, and on-device the
+    // `dark` slot rendered as a flat black square — its PNG is transparent
+    // (the mark on nothing, meant for iOS to supply a dark plate behind it),
+    // and iOS silently filled the alpha with solid black instead. That's a
+    // known gap for a plain per-appearance PNG that isn't a real layered
+    // Icon Composer asset. The single top-level `icon` above covers every
+    // appearance mode — the same one icon everywhere every app used before
+    // iOS 18, and the one place this can't regress.
     bundleIdentifier: 'fit.taikan.app',
     supportsTablet: false,
     // `webcredentials` is what lets iOS Passwords offer the credential the
