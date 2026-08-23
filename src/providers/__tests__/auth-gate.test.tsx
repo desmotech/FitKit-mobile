@@ -217,14 +217,34 @@ describe('AuthGate', () => {
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
   });
 
-  it('routes a member with an incomplete profile to complete-profile', async () => {
+  // Was "routes a member with an incomplete profile to complete-profile".
+  //
+  // That gate put a form between a member and everything they had just paid
+  // for — and it could not even show the national id it demanded, because
+  // `getMe` returns it masked (`***1234`), so someone who HAD given it at join
+  // faced an empty required field they could not satisfy. Home carries a
+  // dismissible prompt instead, matching what web already does.
+  it('lets a member with an incomplete profile straight into the app', async () => {
     stageSignedInMember(userMe({ profileComplete: false }));
     stageConsentStatus(ALL_CONSENTED);
 
     await renderWithProviders(gate());
 
+    await waitFor(() => expect(screen.getByText('INSIDE')).toBeOnTheScreen());
+    expect(mockRedirects).not.toContain('/onboarding/complete-profile');
+  });
+
+  // Consent is the one gate that stays, and it must not have been loosened by
+  // removing the profile one: we may not lawfully serve someone who has not
+  // accepted the current terms, which is not true of a missing birth date.
+  it('still holds an unconsented member even when the profile is complete', async () => {
+    stageSignedInMember(userMe({ profileComplete: true }));
+    stageConsentStatus([]);
+
+    await renderWithProviders(gate());
+
     await waitFor(() =>
-      expect(mockRedirects).toContain('/onboarding/complete-profile'),
+      expect(mockRedirects).toContain('/onboarding/accept-terms'),
     );
     expect(screen.queryByText('INSIDE')).not.toBeOnTheScreen();
   });

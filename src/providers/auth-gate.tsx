@@ -15,8 +15,12 @@
  *      complete, and previously fell through to the tab shell where the
  *      home screen's no-org placeholder spun forever.
  *   6. needsLegalConsent → /onboarding/accept-terms
- *   7. isProfileIncomplete → /onboarding/complete-profile
- *   8. otherwise → render children
+ *   7. otherwise → render children
+ *
+ * An incomplete profile is deliberately NOT a gate — see the `void
+ * isProfileIncomplete` below. Legal consent still is: we may not lawfully
+ * serve someone who has not accepted the current terms, which is not true of
+ * a missing birth date.
  *
  * Legal-consent gating uses `useNeedsLegalConsent`, which checks the
  * /legal/consents/status endpoint in addition to the user.pendingLegalConsents
@@ -175,8 +179,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
   }
 
   if (needsLegalConsent) return <Redirect href="/onboarding/accept-terms" />;
-  if (isProfileIncomplete)
-    return <Redirect href="/onboarding/complete-profile" />;
+
+  // NO profile gate. `isProfileIncomplete` used to redirect to
+  // /onboarding/complete-profile from here, which put a form between a member
+  // and everything they had just paid for — and the form could not even show
+  // the national id it demanded, since `getMe` returns it masked. Home now
+  // carries a dismissible prompt instead (ProfileCompletionNotice), matching
+  // web. The flag is still derived and still consumed; it just no longer
+  // blocks. The screen itself remains reachable from Profile.
+  void isProfileIncomplete;
 
   return <>{children}</>;
 }

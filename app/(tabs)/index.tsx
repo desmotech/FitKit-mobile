@@ -67,6 +67,7 @@ import {
 } from '@/components/workout/workout-summary-card';
 import { WeekGlance } from '@/components/workout/week-glance';
 import { PresaleWelcomeCard } from '@/components/home/presale-welcome-card';
+import { ProfileCompletionNotice } from '@/components/home/profile-completion-notice';
 import { TodayClassCard } from '@/components/schedule/today-class-card';
 import {
   TodayClassesRail,
@@ -104,7 +105,8 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const haptics = useHaptics();
   const { user } = useUser();
-  const { activeOrganization, user: currentUser } = useCurrentUser();
+  const { activeOrganization, user: currentUser, isProfileIncomplete } =
+    useCurrentUser();
   const { dir, t, lang } = useI18n();
   const colors = useFKColors();
   const L = useLogStrings();
@@ -348,6 +350,25 @@ export default function HomeScreen() {
             )}
           </Text>
         </Animated.View>
+
+        {/* ── Finish your profile ──────────────────────────────────── */}
+        {/* A prompt, not a gate. This used to be a full-screen redirect that
+            stood between a member and everything they had just bought. */}
+        {isProfileIncomplete ? (
+          <Animated.View
+            entering={FadeInDown.delay(60).duration(380).springify()}
+            style={{ paddingHorizontal: 20, paddingTop: 12 }}
+          >
+            <ProfileCompletionNotice
+              isRTL={isRTL}
+              labels={{
+                body: s.profileNoticeBody,
+                cta: s.profileNoticeCta,
+                dismiss: s.profileNoticeDismiss,
+              }}
+            />
+          </Animated.View>
+        ) : null}
 
         {/* ── Presale welcome ──────────────────────────────────────── */}
         {showPresaleWelcome && opensOnDate ? (
