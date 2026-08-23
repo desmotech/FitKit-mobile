@@ -124,6 +124,10 @@ export function MembershipCard({
     endedByGym: string;
     checkoutNotCompleted: string;
     checkoutNotCompletedNote: string;
+    /** Why there's no action on a presale purchase released before opening
+     *  day (`displayStatus: 'withdrawn'`) — nothing ran and nothing was
+     *  charged. Optional so an older label bundle just renders no note. */
+    withdrawnBeforeStartNote?: string;
     /** Said once notice is given. */
     noFurtherCharges?: string;
     /** Presale purchase: bought before opening day, nothing charged yet.
@@ -222,11 +226,20 @@ export function MembershipCard({
   // so it matches the gym-cancelled shape exactly — but nobody ended anything
   // and no membership ever started. Blaming the gym for a payment the member
   // walked away from is worse than saying nothing, so it gets its own note.
+  //
+  // A presale purchase released before opening day (`withdrawn`) is the same
+  // kind of non-event: no membership ever ran and nothing was charged, so
+  // blaming the gym contradicts the chip right above it ("Cancelled before it
+  // started"). `expired` means the membership simply ran its course — nobody
+  // ended it either. Only `cancelled`, the server's word for an ending
+  // somebody decided on, keeps the gym note.
   const endedNote = isAbandonedCheckout
     ? labels.checkoutNotCompletedNote
-    : isTerminal && actions.length === 0
-      ? labels.endedByGym
-      : null;
+    : displayStatus === 'withdrawn'
+      ? labels.withdrawnBeforeStartNote ?? null
+      : displayStatus === 'cancelled' && isTerminal && actions.length === 0
+        ? labels.endedByGym
+        : null;
 
   // Is anything ever going to be charged on this subscription again? The
   // server's verdict when it sends one. The fallback is the same rule minus

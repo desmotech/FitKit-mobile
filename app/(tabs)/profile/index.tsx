@@ -908,6 +908,7 @@ export default function ProfileScreen() {
                 endedByGym: labels.endedByGym,
                 checkoutNotCompleted: labels.checkoutNotCompleted,
                 checkoutNotCompletedNote: labels.checkoutNotCompletedNote,
+                withdrawnBeforeStartNote: labels.withdrawnBeforeStartNote,
                 noFurtherCharges: labels.noFurtherCharges,
                 presalePurchased: labels.presalePurchased,
                 presalePurchasedWithAmount: labels.presalePurchasedWithAmount,

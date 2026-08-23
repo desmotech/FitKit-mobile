@@ -43,6 +43,7 @@ export function FKDateField({
   minimumDate,
   maximumDate,
   placeholder,
+  testID,
 }: {
   /** ISO `YYYY-MM-DD` string, or empty/null for "unset". */
   value: string;
@@ -51,6 +52,7 @@ export function FKDateField({
   maximumDate?: Date;
   /** Shown when value is empty (Android-only; iOS hides the chip text). */
   placeholder?: string;
+  testID?: string;
 }) {
   const { dir, lang } = useI18n();
   const colors = useFKColors();
@@ -77,6 +79,7 @@ export function FKDateField({
       }}
     >
       <DateTimePicker
+        testID={testID}
         // `locale` flips weekday order + month names. `he-IL` gives
         // Sunday-start week + Hebrew labels; `en-US` and `ru-RU` use
         // their respective calendars.

@@ -58,6 +58,10 @@ export interface ProfileStrings {
   /** Why there's no action on one: nothing was ever bought, so "ended by the
    *  gym" would blame the gym for a payment the member never finished. */
   checkoutNotCompletedNote: string;
+  /** Why there's no action on a presale purchase released before opening day
+   *  (`displayStatus: 'withdrawn'`): the membership never started and no money
+   *  moved, so `endedByGym` would blame the gym for a free walk-away. */
+  withdrawnBeforeStartNote: string;
   /** Shown once notice has been given: the membership runs to `endsOn` and
    *  no further charge is ever taken. */
   noFurtherCharges: string;
@@ -162,6 +166,7 @@ const HE: ProfileStrings = {
   endedByGym: 'המנוי הופסק על ידי המועדון',
   checkoutNotCompleted: 'התשלום לא הושלם',
   checkoutNotCompletedNote: 'התשלום לא הושלם, ולכן לא נפתח מנוי.',
+  withdrawnBeforeStartNote: 'מסלול החברות בוטל לפני שהתחיל, ולכן לא בוצע חיוב.',
   noFurtherCharges: 'לא ייגבו תשלומים נוספים.',
   presalePurchased: 'הרכישה הושלמה. החיוב הראשון יתבצע ב-{date}, ביום הפתיחה.',
   presalePurchasedWithAmount:
@@ -254,6 +259,8 @@ const EN: ProfileStrings = {
   checkoutNotCompleted: 'Checkout not completed',
   checkoutNotCompletedNote:
     'This checkout was never completed, so no membership started.',
+  withdrawnBeforeStartNote:
+    'This membership was cancelled before it started, so nothing was charged.',
   noFurtherCharges: 'No further payments will be charged.',
   presalePurchased:
     'Purchase confirmed. Your first charge is on {date}, the day we open.',
@@ -347,6 +354,8 @@ const RU: ProfileStrings = {
   checkoutNotCompleted: 'Оплата не завершена',
   checkoutNotCompletedNote:
     'Эта оплата не была завершена, поэтому абонемент не начался.',
+  withdrawnBeforeStartNote:
+    'Абонемент был отменён до начала, поэтому списаний не было.',
   noFurtherCharges: 'Дальнейшие списания не производятся.',
   presalePurchased:
     'Покупка подтверждена. Первое списание — {date}, в день открытия.',
