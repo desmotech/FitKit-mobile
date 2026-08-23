@@ -23,6 +23,8 @@ const LABELS = {
   checkoutNotCompleted: 'Checkout not completed',
   checkoutNotCompletedNote:
     'This checkout was never completed, so no membership started.',
+  withdrawnBeforeStartNote:
+    'This membership was cancelled before it started, so nothing was charged.',
   presalePurchased:
     'Purchase confirmed. Your first charge is on {date}, the day we open.',
   presalePurchasedWithAmount:
@@ -372,5 +374,56 @@ describe('MembershipCard — unfinished checkout', () => {
     expect(screen.getByText('Complete payment')).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId('membership-cta'));
     expect(onCompleteCheckout).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * A presale purchase released before opening day comes back as
+ * `status: 'cancelled'` with no member action — the same raw shape as a gym
+ * cancellation and an abandoned checkout. Only `displayStatus: 'withdrawn'`
+ * separates them, and getting it wrong told a member who walked away from a
+ * membership that never started (and never charged them) that the gym had
+ * ended it.
+ */
+describe('MembershipCard — withdrawn before opening day', () => {
+  const withdrawn = {
+    status: 'cancelled',
+    displayStatus: 'withdrawn',
+    memberAction: 'none',
+  };
+
+  it('does NOT blame the gym for a membership cancelled before it started', async () => {
+    await renderCard(withdrawn);
+
+    expect(
+      screen.getByText(
+        'This membership was cancelled before it started, so nothing was charged.',
+      ),
+    ).toBeOnTheScreen();
+    expect(
+      screen.queryByText('This membership was ended by the gym'),
+    ).toBeNull();
+  });
+
+  it('keeps the gym note for a membership somebody actually ended', async () => {
+    await renderCard({
+      status: 'cancelled',
+      displayStatus: 'cancelled',
+      memberAction: 'none',
+    });
+    expect(
+      screen.getByText('This membership was ended by the gym'),
+    ).toBeOnTheScreen();
+  });
+
+  it('does not blame the gym for a membership that simply ran its course', async () => {
+    await renderCard({
+      status: 'cancelled',
+      displayStatus: 'expired',
+      memberAction: 'none',
+    });
+    expect(
+      screen.queryByText('This membership was ended by the gym'),
+    ).toBeNull();
   });
 });

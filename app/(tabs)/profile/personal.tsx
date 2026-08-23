@@ -13,6 +13,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { type Gender, updateUserProfileSchema } from '@taikan/shared';
 import {
   FKBtn,
+  FKDateField,
   FKGlassPanel,
   FKSelectSheet,
   FKSubScreen,
@@ -272,15 +273,17 @@ export default function PersonalDetailsScreen() {
                     error={errors.birthDate}
                     isRTL={isRTL}
                   >
-                    <Input
+                    {/* Same native date wheel the onboarding twin uses
+                        (app/onboarding/complete-profile.tsx). A free-text
+                        field here meant editing a birth date opened a
+                        keyboard and pushed YYYY-MM-DD formatting onto the
+                        member. */}
+                    <FKDateField
+                      testID="personal-birth-date"
                       value={form.birthDate}
-                      onChangeText={(v) => update('birthDate', v)}
+                      onChange={(v) => update('birthDate', v)}
+                      maximumDate={new Date()}
                       placeholder={labels.birthDatePlaceholder}
-                      {...autofill('birthdate')}
-                      style={{
-                        textAlign: isRTL ? 'right' : 'left',
-                        fontFamily: 'Assistant-Medium',
-                      }}
                     />
                   </Field>
                   <Field
