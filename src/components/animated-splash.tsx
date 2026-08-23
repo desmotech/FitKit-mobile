@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
@@ -30,12 +30,19 @@ const FADE_MS = 380;
 
 const ENTER = Easing.bezier(0.22, 1, 0.36, 1);
 
+// Brand kit §06 (splash). On dark the halo is violet — the kit lights the
+// mark from a violet glow on every dark ground; on light there is no glow in
+// the kit, so the halo stays a faint teal. Tagline words take the three ramp
+// colours in order: teal → blue → violet.
 const THEME = {
   dark: {
     bg: '#07202B',
-    text: '#F2F4F5',
+    text: '#FFFFFF',
     muted: 'rgba(232,238,242,0.64)',
-    primary: '#36D6C6',
+    primary: '#2AB8B8',
+    halo: '#7A4BE0',
+    haloOpacity: 0.34,
+    tagline: ['#2AB8B8', '#4F9BE0', '#9B6BFF'],
     track: 'rgba(255,255,255,0.10)',
   },
   light: {
@@ -43,15 +50,20 @@ const THEME = {
     text: '#0D1B2A',
     muted: 'rgba(13,27,42,0.62)',
     primary: '#0E8C8C',
+    halo: '#0E8C8C',
+    haloOpacity: 0.18,
+    tagline: ['#0E8C8C', '#2E6BB8', '#6A3BC8'],
     track: 'rgba(13,27,42,0.10)',
   },
 } as const;
 
-// "Taikan" is a brand name — it stays. Only the tagline is localized.
-const TAGLINE: Record<Locale, string> = {
-  en: 'Train · Track · Progress',
-  he: 'אימון · מעקב · התקדמות',
-  ru: 'Тренируйся · Отслеживай · Прогресс',
+// "Taikan" is a brand name — it stays. The tagline is the kit's (§06), one
+// word per ramp colour; the same three words sit on the OG cards and the Play
+// feature graphic, so the app and the website agree.
+const TAGLINE: Record<Locale, readonly [string, string, string]> = {
+  en: ['Train.', 'Track.', 'Thrive.'],
+  he: ['אימון.', 'מעקב.', 'שגשוג.'],
+  ru: ['Тренируйся.', 'Отслеживай.', 'Процветай.'],
 };
 // Assistant has no Cyrillic — route ru to Manrope (the app's ru body face).
 const TAG_FONT: Record<Locale, string> = {
@@ -134,8 +146,8 @@ export function AnimatedSplash({
           <Svg width={HALO} height={HALO}>
             <Defs>
               <RadialGradient id="fkHalo" cx="50%" cy="50%" r="50%">
-                <Stop offset="0%" stopColor={t.primary} stopOpacity={0.33} />
-                <Stop offset="68%" stopColor={t.primary} stopOpacity={0} />
+                <Stop offset="0%" stopColor={t.halo} stopOpacity={t.haloOpacity} />
+                <Stop offset="68%" stopColor={t.halo} stopOpacity={0} />
               </RadialGradient>
             </Defs>
             <Circle cx={HALO / 2} cy={HALO / 2} r={HALO / 2} fill="url(#fkHalo)" />
@@ -153,20 +165,22 @@ export function AnimatedSplash({
         <Animated.Text
           style={[
             styles.word,
-            { color: t.text, fontFamily: font.displayBold },
+            // Kit §03: the wordmark is Rubik SemiBold, tracking -18/1000.
+            { color: t.text, fontFamily: font.displaySemibold },
             wordStyle,
           ]}
         >
           Taikan
         </Animated.Text>
         <Animated.Text
-          style={[
-            styles.tag,
-            { color: t.muted, fontFamily: TAG_FONT[locale] },
-            tagStyle,
-          ]}
+          style={[styles.tag, { fontFamily: TAG_FONT[locale] }, tagStyle]}
         >
-          {TAGLINE[locale]}
+          {TAGLINE[locale].map((word, i) => (
+            <Text key={word} style={{ color: t.tagline[i] }}>
+              {i > 0 ? '  ' : ''}
+              {word}
+            </Text>
+          ))}
         </Animated.Text>
       </View>
 
@@ -209,7 +223,7 @@ const styles = StyleSheet.create({
   },
   word: {
     fontSize: 46,
-    letterSpacing: -2.1,
+    letterSpacing: -0.018 * 46, // kit: -18/1000 em
     lineHeight: 50,
   },
   tag: {
