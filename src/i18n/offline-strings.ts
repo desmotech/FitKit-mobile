@@ -101,9 +101,9 @@ const EN: OfflineStrings = {
 
   syncFailedTitle: "Some changes didn't go through",
   syncFailedBookBody:
-    "We couldn't book a class you picked while offline — it may have filled up or your plan may not cover it. Check the schedule.",
+    "We couldn't book a class you picked while offline. It may have filled up or your plan may not cover it. Check the schedule.",
   syncFailedCancelBody:
-    "We couldn't cancel a booking you dropped while offline. Check the schedule — you may still be booked.",
+    "We couldn't cancel a booking you dropped while offline. Check the schedule. You may still be booked.",
   dismiss: 'OK',
 
   scheduleOfflineTitle: "You're offline",
@@ -147,9 +147,9 @@ const HE: OfflineStrings = {
 
   syncFailedTitle: 'חלק מהפעולות לא בוצעו',
   syncFailedBookBody:
-    'לא הצלחנו לרשום אתכם לשיעור שבחרתם במצב לא מקוון — ייתכן שהוא התמלא או שהמנוי אינו מכסה אותו. בדקו בלוח השיעורים.',
+    'לא הצלחנו לרשום אתכם לשיעור שבחרתם במצב לא מקוון. ייתכן שהוא התמלא או שהמנוי אינו מכסה אותו. בדקו בלוח השיעורים.',
   syncFailedCancelBody:
-    'לא הצלחנו לבטל הרשמה שביטלתם במצב לא מקוון. בדקו בלוח השיעורים — ייתכן שאתם עדיין רשומים.',
+    'לא הצלחנו לבטל הרשמה שביטלתם במצב לא מקוון. בדקו בלוח השיעורים. ייתכן שאתם עדיין רשומים.',
   dismiss: 'הבנתי',
 
   scheduleOfflineTitle: 'אין חיבור לאינטרנט',
@@ -180,7 +180,7 @@ const RU: OfflineStrings = {
 
   bookQueuedTitle: 'Сохранили до появления сети',
   bookQueuedBody:
-    'Запишем вас на занятие, как только появится соединение. До этого место не забронировано — занятие может заполниться.',
+    'Запишем вас на занятие, как только появится соединение. До этого место не забронировано. Занятие может заполниться.',
   cancelQueuedTitle: 'Сохранили до появления сети',
   cancelQueuedBody:
     'Отменим запись, как только появится соединение. До этого запись остаётся в силе.',
@@ -193,9 +193,9 @@ const RU: OfflineStrings = {
 
   syncFailedTitle: 'Часть действий не выполнена',
   syncFailedBookBody:
-    'Не удалось записать вас на занятие, выбранное без сети, — возможно, оно заполнилось или абонемент его не покрывает. Проверьте расписание.',
+    'Не удалось записать вас на занятие, выбранное без сети. Возможно, оно заполнилось или абонемент его не покрывает. Проверьте расписание.',
   syncFailedCancelBody:
-    'Не удалось отменить запись, снятую без сети. Проверьте расписание — возможно, вы всё ещё записаны.',
+    'Не удалось отменить запись, снятую без сети. Проверьте расписание. Возможно, вы всё ещё записаны.',
   dismiss: 'Понятно',
 
   scheduleOfflineTitle: 'Нет соединения',

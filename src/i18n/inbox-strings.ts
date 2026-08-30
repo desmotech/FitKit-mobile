@@ -57,7 +57,7 @@ const EN: InboxStrings = {
 
   noWorkoutThreads: 'No workout chats yet',
   noWorkoutThreadsHint:
-    'Chat with your coach from any workout — recent workouts appear here.',
+    'Chat with your coach from any workout. Recent workouts appear here.',
   workoutFallbackTitle: 'Workout',
 
   noAnnouncements: 'No announcements yet',
@@ -82,7 +82,7 @@ const HE: InboxStrings = {
 
   noWorkoutThreads: 'אין צ׳אטים על אימונים עדיין',
   noWorkoutThreadsHint:
-    'אפשר להתכתב עם המאמן מכל אימון — אימונים אחרונים יופיעו כאן.',
+    'אפשר להתכתב עם המאמן מכל אימון. אימונים אחרונים יופיעו כאן.',
   workoutFallbackTitle: 'אימון',
 
   noAnnouncements: 'אין עדכונים עדיין',
@@ -107,7 +107,7 @@ const RU: InboxStrings = {
 
   noWorkoutThreads: 'Пока нет чатов о тренировках',
   noWorkoutThreadsHint:
-    'Пишите тренеру из любой тренировки — недавние тренировки появятся здесь.',
+    'Пишите тренеру из любой тренировки. Недавние тренировки появятся здесь.',
   workoutFallbackTitle: 'Тренировка',
 
   noAnnouncements: 'Пока нет новостей',
