@@ -154,9 +154,12 @@ export default function ChangePlanScreen() {
           subscription_id: subId,
           due_now: result.dueNowInCents,
         });
+        // Ephemeral: skips the iOS consent alert; a hosted payment page
+        // has no use for shared Safari cookies. Matches the shop.
         const browser = await WebBrowser.openAuthSessionAsync(
           result.paymentPageUrl,
           RETURN_URL,
+          { preferEphemeralSession: true },
         );
         // Same three-way mapping as the shop: a declined card comes back on
         // its own `status=failed` leg and must not read as "you cancelled".

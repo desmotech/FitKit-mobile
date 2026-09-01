@@ -2,18 +2,22 @@
  * Compliance-gated purchase, across the two screens it spans.
  *
  * A member taps Subscribe, the API answers 409 `form_signature_required`,
- * and the shop hands them to the sign screen carrying the plan. Leaving
- * that screen hands the plan straight back as a `?plan=` landing, so they
- * arrive on the shop's spotlight + confirm instead of a bare list.
+ * and the shop hands them to the sign screen — in the SHOP stack, so no
+ * tab flip — carrying the plan. Signing (or leaving an already-satisfied
+ * gate) arms the in-memory purchase-resume latch and hands the plan back
+ * as a `?plan=` landing, which the shop consumes and continues straight
+ * into checkout: the Purchase tap that opened the gate was the confirm.
  *
- * The invariant these specs exist to protect: NO auto-checkout. Returning
- * from a signature must never create a payment session (or silently enroll
- * a free plan) without the member tapping confirm.
+ * The invariant these specs exist to protect: a BARE `?plan=` landing —
+ * QR, marketing link, anything external — must never create a payment
+ * session (or silently enroll a free plan) without the member tapping
+ * confirm. Only the sign screen's own code can arm the latch; it rides
+ * module memory, not URL-space, precisely so a link can't forge it.
  *
- * The landing latch is the part that used to break this. It was scoped to
- * the mount, and this tab stays mounted while the member is off signing —
- * so a member who ARRIVED on a quick-register `?plan=` link had already
- * burned it, and the hand-back was swallowed.
+ * The landing latch is the part that used to break the hand-back. It was
+ * scoped to the mount, and this tab stays mounted while the member is off
+ * signing — so a member who ARRIVED on a quick-register `?plan=` link had
+ * already burned it, and the hand-back was swallowed.
  */
 import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
@@ -22,6 +26,10 @@ import { dictionaries } from '@taikan/shared';
 import { formStringsFor } from '@/i18n/form-strings';
 import ShopScreen from '../(tabs)/shop/index';
 import SignFormInstanceScreen from '../(tabs)/profile/forms/[instanceId]';
+import {
+  armPurchaseResume,
+  consumePurchaseResume,
+} from '@/lib/purchase-resume';
 import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
@@ -156,6 +164,8 @@ let alertSpy: jest.SpyInstance;
 
 beforeEach(() => {
   mockParams = {};
+  // Any consume clears the module-level latch, whatever it holds.
+  consumePurchaseResume('__reset__');
   mockRouterPush.mockClear();
   mockRouterReplace.mockClear();
   mockRouterNavigate.mockClear();
@@ -182,8 +192,10 @@ describe('Shop → compliance gate', () => {
     await user.press(screen.getByText(PURCHASE_CTA));
 
     await waitFor(() => {
+      // The shop-stack copy of the sign screen — routing to the profile
+      // tab's copy flipped the member two tabs away mid-purchase.
       expect(mockRouterPush).toHaveBeenCalledWith({
-        pathname: '/(tabs)/profile/forms/[instanceId]',
+        pathname: '/(tabs)/shop/sign/[instanceId]',
         params: {
           instanceId: INSTANCE_ID,
           reason: 'purchase',
@@ -197,14 +209,14 @@ describe('Shop → compliance gate', () => {
 });
 
 describe('Shop landing latch', () => {
-  it('confirms before checkout on the hand-back — never resumes a payment session on its own', async () => {
+  it('confirms before checkout on a bare ?plan= landing — a link alone never creates a payment session', async () => {
     const purchaseCalls: unknown[] = [];
     stageShop({ gate: false, purchaseCalls });
     mockParams = { plan: PLAN.id };
     await renderWithProviders(<ShopScreen />);
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
-    // The whole point: landing back from a signature authorises nothing.
+    // The whole point: an external link authorises nothing.
     expect(purchaseCalls).toHaveLength(0);
     expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
 
@@ -212,6 +224,35 @@ describe('Shop landing latch', () => {
       confirmButton().onPress?.();
     });
     await waitFor(() => expect(purchaseCalls).toHaveLength(1));
+  });
+
+  it('continues straight into checkout on an armed hand-back — no second confirm', async () => {
+    const purchaseCalls: unknown[] = [];
+    stageShop({ gate: false, purchaseCalls });
+    // What the sign screen does on its way out.
+    armPurchaseResume(PLAN.id);
+    mockParams = { plan: PLAN.id };
+    await renderWithProviders(<ShopScreen />);
+
+    await waitFor(() => expect(purchaseCalls).toHaveLength(1));
+    await waitFor(() =>
+      expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalled(),
+    );
+    // The Purchase tap that opened the gate was the confirm.
+    expect(alertSpy).not.toHaveBeenCalled();
+  });
+
+  it('an armed latch for a DIFFERENT plan still confirms — and dies on consumption', async () => {
+    const purchaseCalls: unknown[] = [];
+    stageShop({ gate: false, purchaseCalls });
+    armPurchaseResume('plan_other');
+    mockParams = { plan: PLAN.id };
+    await renderWithProviders(<ShopScreen />);
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledTimes(1));
+    expect(purchaseCalls).toHaveLength(0);
+    // The mismatched landing consumed it — nothing left to fire later.
+    expect(consumePurchaseResume('plan_other')).toBe(false);
   });
 
   it('re-arms for a second landing once the param clears — the sign hand-back is not swallowed', async () => {
@@ -282,7 +323,7 @@ function stageInstance(status: string) {
 }
 
 describe('Sign screen → back to the purchase', () => {
-  it('hands the plan back as a ?plan= landing when the gate is already satisfied', async () => {
+  it('hands the plan back armed for auto-resume when the gate is already satisfied', async () => {
     mockParams = {
       instanceId: INSTANCE_ID,
       reason: 'purchase',
@@ -304,6 +345,18 @@ describe('Sign screen → back to the purchase', () => {
     });
     expect(mockRouterReplace).not.toHaveBeenCalled();
     expect(mockRouterBack).not.toHaveBeenCalled();
+    // Armed for exactly this plan, so the shop skips the second confirm.
+    expect(consumePurchaseResume(PLAN.id)).toBe(true);
+  });
+
+  it('backing out without resuming leaves nothing armed', async () => {
+    mockParams = { instanceId: INSTANCE_ID };
+    stageInstance('signed');
+    await renderWithProviders(<SignFormInstanceScreen />);
+    const user = userEvent.setup();
+
+    await user.press(await screen.findByText(DONE_CTA));
+    expect(consumePurchaseResume(PLAN.id)).toBe(false);
   });
 
   it('pops back to My Forms when no purchase sent them here', async () => {

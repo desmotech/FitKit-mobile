@@ -206,6 +206,8 @@ describe('Shop resume of a pending checkout', () => {
       expect(openAuth).toHaveBeenCalledWith(
         'https://pay.example/redo',
         expect.any(String),
+        // Ephemeral session — suppresses the iOS sign-in consent alert.
+        { preferEphemeralSession: true },
       ),
     );
     await waitFor(() =>

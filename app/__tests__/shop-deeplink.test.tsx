@@ -139,9 +139,12 @@ describe('Shop deep-link landing', () => {
     await waitFor(() => {
       expect(purchaseCalls).toHaveLength(1);
     });
+    // Ephemeral session: what suppresses the iOS "Wants to Use … to Sign
+    // In" consent alert that fronted every checkout.
     expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith(
       'https://pay.test.local/checkout/evt',
       'taikan://shop/payment-return',
+      { preferEphemeralSession: true },
     );
     // One-shot: no second dialog after re-renders settle.
     await waitFor(() => {
