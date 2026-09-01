@@ -27,6 +27,7 @@ import {
 } from '@/hooks/use-forms';
 import { useFormUpload } from '@/hooks/use-form-upload';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import { armPurchaseResume } from '@/lib/purchase-resume';
 import { useI18n } from '@/providers/i18n-provider';
 import type { FormAnswers } from '@/types/forms';
 
@@ -76,10 +77,48 @@ export default function SignFormInstanceScreen() {
   const isCheckIn = query.data?.instance.kind === 'check_in';
   const submitMutation = isCheckIn ? checkInSubmit : submit;
 
+  // ── Resuming a gated purchase ───────────────────────────────────────
+  // The member tapped Subscribe, the API answered 409
+  // `form_signature_required`, and the shop sent them here carrying the
+  // plan. Handing it straight back on the way out lands them on the shop,
+  // which continues the checkout — the Purchase tap that routed them here
+  // is the authorisation, so no second "Sign up for {plan}?" confirm.
+  //
+  // What authorises skipping the confirm is the arm/consume latch, never
+  // the `?plan=` param: params ride URL-space and an external deep link
+  // can forge them, so a cold link still confirms. A member who backs out
+  // unsigned leaves no purchase armed anywhere. Also covers the instance
+  // that was already terminal on arrival — signed on web, or a second tap
+  // on a gate they had already satisfied — which used to dead-end on
+  // "Back to My Forms".
+  const resumesPurchase = reason === 'purchase' && !!resumePlanId;
+  const resumePurchase = () => {
+    if (!resumePlanId) return;
+    armPurchaseResume(resumePlanId);
+    // `navigate`, not `replace` — switching a native tab is a NAVIGATE
+    // action, and neither TabRouter nor NativeBottomTabsRouter implements
+    // REPLACE, so `replace` here was silently doing nothing and stranding
+    // the member on this screen's parent instead of the shop. Same defect
+    // the pending-intent resume hit; `member_shop_deeplink` has never once
+    // fired from mobile, which is the corroborating evidence.
+    router.navigate({
+      pathname: '/(tabs)/shop',
+      params: { plan: resumePlanId },
+    });
+  };
+
   const handleSubmit = async (answers: FormAnswers) => {
     setSubmitError(null);
     try {
       await submitMutation.mutateAsync({ answers });
+      // Gated purchase: skip the success interstitial and continue the
+      // checkout the member already started. The countersigned PDF stays
+      // available under Profile → My Forms; a "download or continue"
+      // decision screen here was one of the interrupts losing purchases.
+      if (resumesPurchase) {
+        resumePurchase();
+        return;
+      }
       setSignedAt(new Date().toISOString());
     } catch {
       // Localized copy only — a submit rejection comes back unlocalized,
@@ -105,33 +144,9 @@ export default function SignFormInstanceScreen() {
     status === 'reviewed' ||
     status === 'archived';
 
-  // ── Resuming a gated purchase ───────────────────────────────────────
-  // The member tapped Subscribe, the API answered 409
-  // `form_signature_required`, and the shop sent them here carrying the
-  // plan. Handing it straight back on the way out lands them on the shop's
-  // spotlight + confirm rather than a bare list. Also covers the instance
-  // that was already terminal on arrival — signed on web, or a second tap
-  // on a gate they had already satisfied — which used to dead-end on
-  // "Back to My Forms".
-  //
-  // The plan rides the params it arrived on and nothing outlives this
-  // screen: a member who backs out unsigned leaves no purchase armed
-  // anywhere, and resuming still costs the deliberate tap the shop asks
-  // for. Not a resumed checkout — they stopped to sign, they did not
-  // authorise a charge.
-  const resumesPurchase = reason === 'purchase' && !!resumePlanId;
   const leaveScreen = () => {
     if (resumesPurchase) {
-      // `navigate`, not `replace` — switching a native tab is a NAVIGATE
-      // action, and neither TabRouter nor NativeBottomTabsRouter implements
-      // REPLACE, so `replace` here was silently doing nothing and stranding
-      // the member on this screen's parent instead of the shop. Same defect
-      // the pending-intent resume hit; `member_shop_deeplink` has never once
-      // fired from mobile, which is the corroborating evidence.
-      router.navigate({
-        pathname: '/(tabs)/shop',
-        params: { plan: resumePlanId },
-      });
+      resumePurchase();
       return;
     }
     router.back();

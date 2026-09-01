@@ -358,9 +358,12 @@ export default function ProfileScreen() {
         });
         return;
       }
+      // Ephemeral: skips the iOS consent alert; a hosted payment page
+      // has no use for shared Safari cookies. Matches the shop.
       const result = await WebBrowser.openAuthSessionAsync(
         url,
         CHECKOUT_RETURN_URL,
+        { preferEphemeralSession: true },
       );
       invalidate();
       router.push({

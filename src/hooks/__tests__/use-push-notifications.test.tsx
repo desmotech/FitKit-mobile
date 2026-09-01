@@ -20,7 +20,10 @@
 import { Text } from 'react-native';
 import { waitFor } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
-import { usePushNotifications } from '@/hooks/use-push-notifications';
+import {
+  resolvePushRoute,
+  usePushNotifications,
+} from '@/hooks/use-push-notifications';
 import { api, http, HttpResponse, server } from '../../../test/msw';
 import { renderWithProviders } from '../../../test/render';
 
@@ -95,4 +98,42 @@ describe('push registration', () => {
     await new Promise((r) => setTimeout(r, 2_000));
     expect(seen).toEqual([200]);
   }, 10_000);
+});
+
+describe('resolvePushRoute', () => {
+  it('passes a concrete route through untouched', () => {
+    expect(
+      resolvePushRoute({ route: '/(tabs)/profile/forms/fi_123' }),
+    ).toBe('/(tabs)/profile/forms/fi_123');
+  });
+
+  it('rewrites the legacy messages prefix', () => {
+    expect(resolvePushRoute({ route: '/(tabs)/messages/thread_1' })).toBe(
+      '/messages/thread_1',
+    );
+  });
+
+  it('fills a template segment from the payload data', () => {
+    // The API shipped exactly this shape for form nudges; pushing it
+    // verbatim sent the literal "[instanceId]" to the API as a uuid
+    // (TAIKAN-BACKEND-4A).
+    expect(
+      resolvePushRoute({
+        route: '/(tabs)/profile/forms/[instanceId]',
+        instanceId: 'fi_123',
+      }),
+    ).toBe('/(tabs)/profile/forms/fi_123');
+  });
+
+  it('drops the navigation when a placeholder has no value', () => {
+    expect(
+      resolvePushRoute({ route: '/(tabs)/profile/forms/[instanceId]' }),
+    ).toBeNull();
+  });
+
+  it('handles a missing or non-string route', () => {
+    expect(resolvePushRoute(undefined)).toBeNull();
+    expect(resolvePushRoute({})).toBeNull();
+    expect(resolvePushRoute({ route: 42 })).toBeNull();
+  });
 });

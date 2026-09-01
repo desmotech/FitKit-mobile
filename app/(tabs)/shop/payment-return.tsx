@@ -256,9 +256,12 @@ export default function PaymentReturnScreen() {
         });
         return;
       }
+      // Ephemeral: skips the iOS consent alert; a hosted payment page
+      // has no use for shared Safari cookies. Matches the shop.
       const result = await WebBrowser.openAuthSessionAsync(
         paymentPageUrl,
         RETURN_URL,
+        { preferEphemeralSession: true },
       );
       // The API names the subscription on every leg now, including cancel and
       // failed. Prefer it over the id we came in with — a resume can settle

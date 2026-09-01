@@ -35,6 +35,7 @@ import {
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
 import { readFormGate } from '@/lib/form-gate';
+import { consumePurchaseResume } from '@/lib/purchase-resume';
 import { paymentReturnUrl } from '@/lib/api';
 import { checkoutReturnOf, returnParamFor } from '@/lib/checkout-return';
 import { queryKeys } from '@/lib/query-keys';
@@ -286,9 +287,14 @@ export default function ShopScreen() {
           return;
         }
 
+        // `preferEphemeralSession` drops the non-suppressible iOS consent
+        // alert ("'Taikan' Wants to Use 'taikan.fit' to Sign In…") that
+        // fronted every checkout. The prompt exists to cover Safari cookie
+        // sharing, which a hosted payment page doesn't need.
         const result = await WebBrowser.openAuthSessionAsync(
           paymentPageUrl,
           RETURN_URL,
+          { preferEphemeralSession: true },
         );
         // Three outcomes, not two: a declined card comes back on its own
         // `status=failed` leg now, and telling that member they "cancelled"
@@ -326,16 +332,19 @@ export default function ShopScreen() {
         });
       } catch (e) {
         // Compliance gate (plan regulations / consent): open the pending
-        // instance the API just minted instead of a dead-end alert.
+        // instance the API just minted instead of a dead-end alert. The
+        // sign screen lives in THIS stack — routing to the profile tab's
+        // copy flipped the member two tabs away from the plan mid-purchase.
         const gate = readFormGate(e);
         if (gate) {
           router.push({
-            pathname: '/(tabs)/profile/forms/[instanceId]',
+            pathname: '/(tabs)/shop/sign/[instanceId]',
             params: {
               instanceId: gate.instanceId,
               reason: 'purchase',
-              // Signing returns to the shop naming this plan, which lands on
-              // the existing spotlight + confirm — never an auto-checkout.
+              // Signing hands this plan back and the armed latch resumes
+              // the checkout without re-asking — the tap that got us here
+              // was the authorisation.
               resumePlanId: plan.id,
             },
           });
@@ -376,9 +385,14 @@ export default function ShopScreen() {
   // plan: the switch flow when the member holds a recurring sub and the
   // flag allows it, or a native confirm before purchase. Deliberately NOT
   // auto-checkout: opening a link must never create a payment session (or
-  // silently enroll a free plan) without a tap. One shot per mount, only
-  // after every input has loaded; anything non-actionable (unknown plan,
-  // already current, no payment provider) degrades to the plain shop list.
+  // silently enroll a free plan) without a tap. The one exception is a
+  // hand-back from the compliance sign screen, authorised by the in-memory
+  // latch (`purchase-resume.ts`) that no external link can arm — there the
+  // member's original Purchase tap already was the tap.
+  //
+  // One shot per mount, only after every input has loaded; anything
+  // non-actionable (unknown plan, already current, no payment provider)
+  // degrades to the plain shop list.
   // The ?plan= param is cleared once handled so a tab revisit can't
   // re-trigger the landing. Mirrors the web shop's deep-link behavior.
   const deepLink = useLocalSearchParams<{ plan?: string }>();
@@ -417,12 +431,24 @@ export default function ShopScreen() {
       !isScheduled &&
       !pendingByPlanId[plan.id] &&
       activeSubscriptionSubs.length > 0;
-    if (canSwitch) {
+    // A hand-back from the sign screen armed the latch; consume it whether
+    // or not the landing is still actionable so a stale arm can never fire
+    // against a later, unrelated landing.
+    const resumed = consumePurchaseResume(plan.id);
+    if (canSwitch && !resumed) {
       handleSwitchClick(plan.id);
       return;
     }
     if (isCurrent || isScheduled) return;
     if (plan.priceInCents > 0 && !hasPaymentProvider) return;
+    // Armed hand-back: the member already tapped Purchase and then signed
+    // what the API asked for — continue the checkout, no second confirm.
+    // Only the sign screen can arm this; a bare `?plan=` deep link (QR,
+    // marketing, anything external) still gets the confirm below.
+    if (resumed) {
+      void handleSelect(plan);
+      return;
+    }
     // Fallback strings until the mobile @taikan/shared pin picks up the
     // shop.deepLink keys (added alongside the web landing).
     const dlT = ((dict.shop?.deepLink as Record<string, string>) ?? {}) as Record<

@@ -421,9 +421,12 @@ export default function PaymentsScreen() {
         });
         return;
       }
+      // Ephemeral: skips the iOS consent alert; a hosted payment page
+      // has no use for shared Safari cookies. Matches the shop.
       const result = await WebBrowser.openAuthSessionAsync(
         url,
         CHECKOUT_RETURN_URL,
+        { preferEphemeralSession: true },
       );
       const outcome = checkoutOutcomeOf(result);
       invalidateSubscriptions();
@@ -507,7 +510,9 @@ export default function PaymentsScreen() {
       });
       const url = res.data?.paymentPageUrl;
       if (url) {
-        await WebBrowser.openAuthSessionAsync(url, CARD_RETURN_URL);
+        await WebBrowser.openAuthSessionAsync(url, CARD_RETURN_URL, {
+          preferEphemeralSession: true,
+        });
       }
       queryClient.invalidateQueries({
         queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),

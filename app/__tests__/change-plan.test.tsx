@@ -286,6 +286,8 @@ describe('ChangePlanScreen', () => {
       expect(WebBrowser.openAuthSessionAsync).toHaveBeenCalledWith(
         'https://pay.test.local/checkout/123',
         'taikan://shop/payment-return',
+        // Ephemeral session — suppresses the iOS sign-in consent alert.
+        { preferEphemeralSession: true },
       );
     });
     await waitFor(() => {

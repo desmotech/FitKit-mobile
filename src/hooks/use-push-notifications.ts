@@ -60,6 +60,35 @@ Notifications.setNotificationHandler({
  */
 let currentToken: string | null = null;
 
+/**
+ * Turn a push payload into a navigable expo-router path, or null.
+ *
+ * Two repairs on top of `data.route`:
+ * - Legacy prefix: messages moved out of the (tabs) group but the API still
+ *   deep-links to /(tabs)/messages/... — rewrite just that prefix.
+ * - Placeholder segments: the API has shipped routes with the dynamic
+ *   segment left as a template (`/(tabs)/profile/forms/[instanceId]`) and
+ *   the real id alongside in `data`. Pushing that verbatim sent the literal
+ *   "[instanceId]" to the API as a uuid (TAIKAN-BACKEND-4A), so fill each
+ *   `[param]` from `data` — and if any placeholder still has no value, drop
+ *   the navigation entirely rather than open a broken screen.
+ */
+export function resolvePushRoute(
+  data: Record<string, unknown> | undefined,
+): string | null {
+  const rawRoute = data?.route;
+  if (typeof rawRoute !== 'string' || !rawRoute) return null;
+  const route = rawRoute
+    .replace(/^\/\(tabs\)\/messages/, '/messages')
+    .replace(/\[(\w+)\]/g, (whole, key: string) => {
+      const value = data?.[key];
+      return typeof value === 'string' || typeof value === 'number'
+        ? String(value)
+        : whole;
+    });
+  return /\[\w+\]/.test(route) ? null : route;
+}
+
 export function usePushNotifications() {
   const { isLoaded, isSignedIn, getToken, userId } = useAuth();
   // The app's active language (in-app override → device locale). Sent at
@@ -214,16 +243,10 @@ export function usePushNotifications() {
 
     const routeFromResponse = (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as
-        | { route?: string }
+        | Record<string, unknown>
         | undefined;
-      if (data?.route && typeof data.route === 'string') {
-        // Messages moved out of the (tabs) group to a root-level route, but
-        // the API still deep-links to the legacy /(tabs)/messages/... path.
-        // Rewrite just that prefix so message taps land on the real screen.
-        const route = data.route.replace(
-          /^\/\(tabs\)\/messages/,
-          '/messages',
-        );
+      const route = resolvePushRoute(data);
+      if (route) {
         try {
           router.push(route as never);
         } catch {
