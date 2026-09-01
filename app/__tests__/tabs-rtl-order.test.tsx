@@ -1,17 +1,21 @@
 /**
- * The dock reads right-to-left in Hebrew.
+ * The dock reads in the member's direction — on a phone in ANY language.
  *
- * `I18nManager.allowRTL(false)` (see i18n-provider) opts this whole app out
- * of the OS's automatic RTL mirroring, so nothing flips the tab bar for us:
- * the trigger order is plain JSX order unless the shell reverses it itself.
- * That reversal is a single line in `app/(tabs)/_layout.tsx` with nothing
- * pinning it — exactly the kind of line a refactor of the return block drops
- * without a single failure. It has been fixed once already; this is the test
- * that was missing.
+ * NativeTabs renders the real platform tab bar, and the OS lays that view
+ * out itself: it mirrors the bar whenever it renders the app in an RTL
+ * language. `I18nManager.allowRTL(false)` (see i18n-provider) governs React
+ * Native's own layout and does not stop that. So the shell owes the bar a
+ * flip only when the app's direction and the OS's DISAGREE — which is why
+ * all four combinations are pinned here and not just the Hebrew ones.
  *
- * Both inputs to `dir` are covered, because a member can arrive at Hebrew
- * two ways: an explicit in-app choice, or a Hebrew device with no choice
- * made (`lang = override ?? resolveDeviceLocale(locales)`).
+ * Reversing on `dir` alone was the original fix, and it was right only for a
+ * Hebrew app on an English phone. On a Hebrew PHONE it double-flipped, and
+ * the dock came out left-to-right for exactly the members who need it most
+ * (reported from two phones side by side, 2026-09-01).
+ *
+ * The mock tab bar below does NOT mirror — no Node-side view does — so these
+ * assertions read the order the shell HANDS to the platform. That is the
+ * only half we control, and inverting it is precisely how the bug worked.
  */
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
@@ -186,7 +190,8 @@ function labelsFor(lang: 'he' | 'en') {
 }
 
 describe('Tab dock direction', () => {
-  it('runs left-to-right in English — Home first', async () => {
+  it('hands the platform an unreversed row when nobody needs a flip', async () => {
+    // English phone, English app. Neither side mirrors; Home leads.
     stageFullShell();
     const L = labelsFor('en');
 
@@ -201,14 +206,15 @@ describe('Tab dock direction', () => {
     ]);
   });
 
-  it('runs right-to-left when Hebrew is the chosen locale — Home last', async () => {
+  it('reverses for a Hebrew app on an English phone — the OS will not', async () => {
+    // The OS lays the bar out left-to-right because it is rendering an
+    // English app, so the reversal has to come from us: Home goes last in
+    // the row we hand over, and lands on the RIGHT edge where Hebrew starts.
     stageFullShell();
     const L = labelsFor('he');
 
     await renderWithProviders(<TabsLayout />, { lang: 'he' });
 
-    // Home is the primary tab, so it sits where the reading eye starts —
-    // the RIGHT edge in Hebrew, which is the END of the rendered row.
     expect(await tabOrder()).toEqual([
       L.profile,
       L.shop,
@@ -218,15 +224,59 @@ describe('Tab dock direction', () => {
     ]);
   });
 
-  it('runs right-to-left on a Hebrew device with no in-app choice made', async () => {
-    // `lang = override ?? resolveDeviceLocale(locales)` — passing no override
-    // is what a fresh install does, so this is the OS-locale path, and the
-    // half a member is most likely to hit.
+  it('keeps hands off for a Hebrew app on a Hebrew phone — the OS already mirrored', async () => {
+    // THE REGRESSION. The OS renders the app in Hebrew and mirrors the bar
+    // itself, so handing it a reversed row flips it twice and the dock reads
+    // left-to-right. Home must go FIRST here; the platform moves it right.
+    //
+    // No in-app override either — `lang = override ?? resolveDeviceLocale()`
+    // — which is what a fresh install on a Hebrew phone does, and how this
+    // reached members.
     stageFullShell();
     mockDeviceLocales = [{ languageCode: 'he' }];
     const L = labelsFor('he');
 
     await renderWithProviders(<TabsLayout />, { lang: null });
+
+    expect(await tabOrder()).toEqual([
+      L.home,
+      L.schedule,
+      L.program,
+      L.shop,
+      L.profile,
+    ]);
+  });
+
+  it('reverses an English app on a Hebrew phone — undoing the OS mirror', async () => {
+    // The mirror image of the row above, and broken the same way before this
+    // fix: the OS mirrors the bar for a Hebrew phone whatever language the
+    // member picked in-app, so an English app needs us to undo it.
+    stageFullShell();
+    mockDeviceLocales = [{ languageCode: 'he' }];
+    const L = labelsFor('en');
+
+    await renderWithProviders(<TabsLayout />, { lang: 'en' });
+
+    expect(await tabOrder()).toEqual([
+      L.profile,
+      L.shop,
+      L.program,
+      L.schedule,
+      L.home,
+    ]);
+  });
+
+  it('treats a language the app does not ship as left-to-right', async () => {
+    // A French phone gets no French bundle, so the OS falls back to the
+    // development region and does NOT mirror. Reading the device direction
+    // through `resolveDeviceLocale` would have answered `he` here — its
+    // no-match fallback is the app default — and sent the bar out backwards
+    // for every member on an unsupported LTR language.
+    stageFullShell();
+    mockDeviceLocales = [{ languageCode: 'fr' }];
+    const L = labelsFor('he');
+
+    await renderWithProviders(<TabsLayout />, { lang: 'he' });
 
     expect(await tabOrder()).toEqual([
       L.profile,

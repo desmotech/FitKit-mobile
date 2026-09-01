@@ -49,8 +49,7 @@ function useDeadline(ms: number, settled: boolean): boolean {
 // runs a class-scheduled program, the Program tab only for members enrolled
 // in a coaching program, and the Shop tab only when the org sells plans.
 export default function TabsLayout() {
-  const { t, dir } = useI18n();
-  const isRTL = dir === 'rtl';
+  const { t, dir, deviceDir } = useI18n();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { activeOrganization } = useCurrentUser();
@@ -130,12 +129,25 @@ export default function TabsLayout() {
     );
   }
 
-  // expo-router's NativeTabs renders the real platform tab bar, but
-  // `I18nManager.allowRTL(false)` (see i18n-provider) opts this app out of
-  // the OS's automatic RTL mirroring everywhere — including here — so the
-  // trigger order below is plain left-to-right JSX order regardless of
-  // locale unless we reverse it ourselves, same as every other `isRTL`
-  // flexDirection flip in this codebase.
+  // expo-router's NativeTabs renders the REAL platform tab bar — a UITabBar
+  // on iOS, a Material bottom bar on Android — and that view is laid out by
+  // the OS, not by us.
+  //
+  // `I18nManager.allowRTL(false)` (see i18n-provider) governs React Native's
+  // own layout; it does not stop UIKit mirroring its own view. The OS mirrors
+  // the bar whenever it renders the app in an RTL language, which it can do
+  // for any language we ship (`supportedLocales` in app.config.ts). So the
+  // flip we owe the bar is not "is the app Hebrew" — it is whether the app's
+  // direction and the OS's disagree:
+  //
+  //   English phone, app set to Hebrew → OS lays out LTR, we reverse    ✓
+  //   Hebrew phone,  app in Hebrew     → OS already mirrored, hands off ✓
+  //   Hebrew phone,  app set to English→ OS mirrored an LTR app, we undo ✓
+  //   English phone, app in English    → nobody flips anything          ✓
+  //
+  // Reversing on `dir` alone (the original fix) got the first row right and
+  // the middle two backwards: it double-flipped every member whose PHONE is
+  // Hebrew, which is most of them, and the bar read left-to-right.
   const tabs = [
     <NativeTabs.Trigger key="index" name="index">
       <Label>{labels.home ?? 'Home'}</Label>
@@ -180,7 +192,8 @@ export default function TabsLayout() {
       {incompleteForms > 0 ? <Badge>{String(incompleteForms)}</Badge> : null}
     </NativeTabs.Trigger>,
   ].filter(Boolean);
-  const orderedTabs = isRTL ? [...tabs].reverse() : tabs;
+  const orderedTabs =
+    (dir === 'rtl') !== (deviceDir === 'rtl') ? [...tabs].reverse() : tabs;
 
   return (
     <AuthGate>
