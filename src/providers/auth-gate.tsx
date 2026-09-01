@@ -102,6 +102,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const params = useGlobalSearchParams();
 
+  // Clerk rejects with "You are signed out" when the session has already
+  // ended, which is precisely the state the two screens below render in: a
+  // hard 401 that never recovered, or a membership the gym has removed. The
+  // user ends up signed out either way, so the rejection carries no
+  // information — but fired bare it surfaces as an unhandled rejection.
+  const signOutQuietly = () => {
+    void signOut().catch(() => undefined);
+  };
+
   if (!isLoaded) return <LoadingScreen />;
   // Carry the attempted destination through sign-in. A signed-out tap on a
   // universal link like /shop?plan=<id> used to land on the home tab with the
@@ -129,9 +138,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             queryKey: ['/legal/consents/status'],
           });
         }}
-        onSignOut={() => {
-          void signOut();
-        }}
+        onSignOut={signOutQuietly}
       />
     );
   }
@@ -171,9 +178,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         onRetry={() => {
           void queryClient.invalidateQueries({ queryKey: ['/users/me'] });
         }}
-        onSignOut={() => {
-          void signOut();
-        }}
+        onSignOut={signOutQuietly}
       />
     );
   }
