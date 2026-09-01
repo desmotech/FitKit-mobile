@@ -274,6 +274,46 @@ describe('Profile hub', () => {
     alertSpy.mockRestore();
   });
 
+  /**
+   * Clerk rejects with "You are signed out" when the session has already
+   * ended — another device, a server-side revoke, or a double-tap whose first
+   * press won. The teardown used to `await signOut()` bare, so that rejection
+   * skipped the cache reset AND the redirect and stranded the member on a
+   * dead profile screen. The session is gone either way; finish the job.
+   */
+  it('still clears local state and lands on sign-in when Clerk reports an already-ended session', async () => {
+    stageProfile();
+    const alertSpy = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation(() => undefined);
+    mockAuthState.signOut.mockRejectedValueOnce(
+      new Error('You are signed out'),
+    );
+
+    const { queryClient } = await renderProfile();
+    await screen.findByText('Test Member');
+
+    await userEvent.press(screen.getByText(S.settingSignOut));
+    const buttons = alertSpy.mock.calls[0][2] as AlertButton[];
+    const confirm = buttons.find((b) => b.style === 'destructive');
+
+    await act(async () => {
+      await confirm!.onPress?.();
+    });
+
+    expect(mockAuthState.signOut).toHaveBeenCalled();
+    const removed = (AsyncStorage.removeItem as jest.Mock).mock.calls.map(
+      (c) => c[0],
+    );
+    expect(removed).toContain('taikan-rq-cache');
+    expect(removed).toContain('taikan:settings:activeOrg');
+    expect(mockRouterReplace).toHaveBeenCalledWith('/(auth)/sign-in');
+
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    alertSpy.mockRestore();
+  });
+
   // ── Cancel a pending checkout (member self-serve) ─────────────
   // `memberAction` is resolved server-side (`resolveMemberAction`) from the
   // org's cancel-pending flag — the CTA only renders when the API says so,

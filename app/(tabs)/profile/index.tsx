@@ -457,7 +457,17 @@ export default function ProfileScreen() {
           // the next sign-in restores it. Signing out first disables the
           // queries (`useApiQuery` gates on `isSignedIn`), so nothing
           // repopulates what we erase.
-          await signOut();
+          // Clerk rejects with "You are signed out" when the session has
+          // already ended — signed out on another device, revoked server-side,
+          // or a double-tap whose first press won. The local session is gone
+          // either way, so swallow it and finish the teardown. Uncaught, it
+          // skipped BOTH the reset below and the redirect, leaving the member
+          // stranded on a dead profile screen (TAIKAN-FRONTEND-H on web).
+          try {
+            await signOut();
+          } catch {
+            // Session already gone — continue tearing down local state.
+          }
           try {
             clearActiveOrg();
             await resetClientSession(queryClient);
