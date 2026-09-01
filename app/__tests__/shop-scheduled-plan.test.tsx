@@ -15,6 +15,7 @@
 import { screen, waitFor } from '@testing-library/react-native';
 import { dictionaries } from '@taikan/shared';
 import ShopScreen from '../(tabs)/shop/index';
+import { scheduledPlanStringsFor } from '@/i18n/scheduled-plan-strings';
 import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
@@ -45,8 +46,9 @@ jest.mock('expo-linking', () => ({
 const LANG = 'he';
 const FIRST_CHARGE_AT = '2026-10-01T06:00:00.000Z';
 
-// The switch CTA has no key in the pinned dictionary on every release, so
-// read it the way the screen does rather than hardcoding a translation.
+// Labels the way the screens resolve them, never a hardcoded translation:
+// the static table for the presale copy the pinned dictionary predates, the
+// dictionary itself for everything it already ships.
 function pick(path: string): string | undefined {
   let node: unknown = dictionaries[LANG];
   for (const seg of path.split('.')) {
@@ -55,15 +57,15 @@ function pick(path: string): string | undefined {
   }
   return typeof node === 'string' ? node : undefined;
 }
+const SP = scheduledPlanStringsFor(LANG);
 const S = {
   currentPlan: pick('shop.planCard.currentPlan') ?? 'Current Plan',
-  whenOpen: pick('profile.membership.status.scheduled') ?? 'Starts when we open',
-  // Same fallback chain as plan-card.tsx: the dictionary key ships later
-  // than this code, so the English template is what renders today.
-  startsOn: (pick('shop.planCard.startsOn') ?? 'Starts {date}').replace(
+  whenOpen: SP.startsWhenOpen,
+  startsOn: SP.startsOn.replace(
     '{date}',
     new Date(FIRST_CHARGE_AT).toLocaleDateString(LANG),
   ),
+  hint: SP.hint,
 };
 
 const BASE_PLAN = {
@@ -142,7 +144,7 @@ describe('Shop — a bought plan that has not started yet', () => {
     });
     // The chip names the date, and says nothing has been charged.
     expect(screen.getByText(S.startsOn)).toBeTruthy();
-    expect(screen.getByTestId('plan-scheduled-hint')).toBeTruthy();
+    expect(screen.getByTestId('plan-scheduled-hint')).toHaveTextContent(S.hint);
     // Not "Current Plan" — it is not running.
     expect(screen.queryByText(S.currentPlan)).toBeNull();
     // Nothing to buy: a second checkout on a plan already paid for is the

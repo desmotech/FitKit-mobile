@@ -21,6 +21,7 @@ import { formatPrice } from '@/lib/format-price';
 import { displayFamily, font } from '@/lib/type';
 import { useI18n } from '@/providers/i18n-provider';
 import { useQuotaStrings } from '@/i18n/use-quota-strings';
+import { useScheduledPlanStrings } from '@/i18n/use-scheduled-plan-strings';
 
 const INTERVAL_KEY: Record<PlanInterval, string> = {
   weekly: 'perWeek',
@@ -95,9 +96,10 @@ export function PlanCard({
   const colors = useFKColors();
   const isRTL = dir === 'rtl';
 
-  const dict = t as unknown as Record<string, Record<string, unknown>>;
-  const pc = (dict.shop?.planCard ?? {}) as Record<string, string>;
+  const pc = ((t as unknown as Record<string, Record<string, unknown>>).shop
+    ?.planCard ?? {}) as Record<string, string>;
   const qt = useQuotaStrings();
+  const st = useScheduledPlanStrings();
 
   // A plan the member already holds — running (`isCurrent`) or bought and
   // waiting to start (`isScheduled`). Both end the card at its content: there
@@ -111,20 +113,13 @@ export function PlanCard({
 
   // The start date, in the member's locale. Falls back to the wording the
   // membership card already uses for a `scheduled` row ("Starts when we
-  // open"), which ships localized in every dictionary — so an API build
-  // without `nextChargeAt`, or a garbage date, still says something true.
-  const whenOpenLabel =
-    ((dict.profile?.membership as Record<string, unknown> | undefined)
-      ?.status as Record<string, string> | undefined)?.scheduled ??
-    'Starts when we open';
+  // open") — so an API build without `nextChargeAt`, or a garbage date,
+  // still says something true.
   const startsOnLabel = (() => {
-    if (!scheduledStartsAt) return whenOpenLabel;
+    if (!scheduledStartsAt) return st.startsWhenOpen;
     const at = new Date(scheduledStartsAt);
-    if (Number.isNaN(at.getTime())) return whenOpenLabel;
-    return (pc.startsOn ?? 'Starts {date}').replace(
-      '{date}',
-      at.toLocaleDateString(lang),
-    );
+    if (Number.isNaN(at.getTime())) return st.startsWhenOpen;
+    return st.startsOn.replace('{date}', at.toLocaleDateString(lang));
   })();
 
   // FIT-282 presale terms. Read off the plan structurally: mobile's pinned
@@ -497,8 +492,7 @@ export function PlanCard({
             writingDirection: isRTL ? 'rtl' : 'ltr',
           }}
         >
-          {pc.scheduledHint ??
-            "You've already purchased this plan. Nothing is charged until it starts."}
+          {st.hint}
         </Text>
       ) : null}
 
