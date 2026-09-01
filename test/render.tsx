@@ -37,7 +37,9 @@ export async function renderWithProviders(
     orgId = TEST_ORG,
     queryClient = makeTestQueryClient(),
   }: {
-    lang?: Locale;
+    /** `null` mounts with NO in-app override, so the provider falls back to
+     *  the device locale — the path a fresh install takes. */
+    lang?: Locale | null;
     orgId?: string | null;
     queryClient?: QueryClient;
   } = {},

@@ -11,13 +11,23 @@ import { Alert, I18nManager, Platform } from 'react-native';
 import { useLocales } from 'expo-localization';
 import * as Updates from 'expo-updates';
 import { dictionaries, type Dictionary } from '@taikan/shared';
-import { localeConfig, resolveDeviceLocale, type Locale } from '@/i18n/config';
+import {
+  localeConfig,
+  resolveDeviceDir,
+  resolveDeviceLocale,
+  type Locale,
+} from '@/i18n/config';
 import { reportHandledError } from '@/lib/error-reporting';
 import { clearLocaleOverride, saveLocaleOverride } from '@/lib/settings-store';
 
 type I18nValue = {
   lang: Locale;
   dir: 'ltr' | 'rtl';
+  /** The direction the OS renders the app in, which is NOT always `dir` —
+   *  a member can read a Hebrew app on an English phone, or the reverse.
+   *  Only matters to surfaces the platform lays out for us (the native tab
+   *  bar); see `resolveDeviceDir`. */
+  deviceDir: 'ltr' | 'rtl';
   t: Dictionary;
   /** Whether the active locale is an explicit in-app choice (vs. the OS). */
   isOverridden: boolean;
@@ -81,6 +91,7 @@ export function I18nProvider({
   const [override, setOverride] = useState<Locale | null>(initialOverride);
 
   const lang = override ?? resolveDeviceLocale(locales);
+  const deviceDir = resolveDeviceDir(locales);
 
   // Disable RN's automatic RTL flip so toggling locale doesn't require a
   // reload. Layout direction is handled per-component via `useI18n().dir`.
@@ -102,12 +113,13 @@ export function I18nProvider({
     () => ({
       lang,
       dir: localeConfig[lang].dir,
+      deviceDir,
       t: dictionaries[lang],
       isOverridden: override !== null,
       setLang,
       useDeviceLocale,
     }),
-    [lang, override, setLang, useDeviceLocale],
+    [lang, deviceDir, override, setLang, useDeviceLocale],
   );
 
   return (
