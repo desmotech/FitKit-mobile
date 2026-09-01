@@ -21,6 +21,7 @@ import { SwitchPlanPicker } from '@/components/shop/switch-plan-picker';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { isScheduledPurchase } from '@/hooks/use-opening-day';
 import { useMySubscription } from '@/hooks/use-feed-data';
 import {
   isOfferedInShop,
@@ -117,6 +118,31 @@ export default function ShopScreen() {
     const m: Record<string, true> = {};
     for (const s of subs) {
       if (s.status === 'active' || s.status === 'paused') m[s.planId] = true;
+    }
+    return m;
+  }, [subs]);
+  // FIT-287 presale / future first billing: a COMPLETED purchase whose first
+  // charge is deferred to the start date lands `scheduled`, not `active`, so
+  // it never reached `currentByPlanId` — and the shop went on offering a plan
+  // the member had already paid for, with a live Purchase CTA and a second
+  // checkout one tap away (prod, KineticsCF, 2026-09-01). Profile → Payments
+  // and Home both already read the row; this tab was the one that didn't.
+  //
+  // Its own map rather than another status in `currentByPlanId`: the two
+  // states need different words on the card (nothing is charged and nothing
+  // is bookable yet), and this one carries the start date to say them with.
+  // Value is the first-charge instant when the API sends one — older builds
+  // omit `nextChargeAt` and the card falls back to "starts when we open".
+  //
+  // Subscription-type only, matching `currentByPlanId`: a presale class pack
+  // stacks like any other consumable, so it stays purchasable.
+  const scheduledByPlanId = useMemo(() => {
+    const m: Record<string, { startsAt: string | null }> = {};
+    for (const s of subs) {
+      if (s.plan?.type !== 'subscription') continue;
+      if (isScheduledPurchase(s)) {
+        m[s.planId] = { startsAt: s.nextChargeAt ?? null };
+      }
     }
     return m;
   }, [subs]);
@@ -383,16 +409,19 @@ export default function ShopScreen() {
     if (!plan) return;
     const isCurrent =
       plan.type === 'subscription' && !!currentByPlanId[plan.id];
+    // Already bought, just not started. A link to it is not an offer.
+    const isScheduled = !!scheduledByPlanId[plan.id];
     const canSwitch =
       plan.type === 'subscription' &&
       !isCurrent &&
+      !isScheduled &&
       !pendingByPlanId[plan.id] &&
       activeSubscriptionSubs.length > 0;
     if (canSwitch) {
       handleSwitchClick(plan.id);
       return;
     }
-    if (isCurrent) return;
+    if (isCurrent || isScheduled) return;
     if (plan.priceInCents > 0 && !hasPaymentProvider) return;
     // Fallback strings until the mobile @taikan/shared pin picks up the
     // shop.deepLink keys (added alongside the web landing).
@@ -431,6 +460,7 @@ export default function ShopScreen() {
     subsQ.isLoading,
     plans,
     currentByPlanId,
+    scheduledByPlanId,
     pendingByPlanId,
     activeSubscriptionSubs,
     hasPaymentProvider,
@@ -549,13 +579,23 @@ export default function ShopScreen() {
             {plans.map((plan) => {
               const isConsumable =
                 plan.type === 'class_pack' || plan.type === 'drop_in';
+              const scheduled = scheduledByPlanId[plan.id];
               // "Switch to this plan" (FIT-271): a different subscription-type
               // plan, while the member holds ≥1 active recurring sub and has
               // nothing pending on this plan. Consumables never switch —
               // they're bought alongside, not moved onto.
+              //
+              // A plan the member holds as a not-yet-started purchase is not
+              // a switch target either — switching ONTO a plan you already
+              // bought is a no-op the API would have to refuse. The way out
+              // of a scheduled membership is withdraw (Profile → Payments),
+              // which costs nothing; a plan change from one would need plan
+              // groups and purchase caps to reason about, and no client has
+              // asked for it.
               const canSwitch =
                 plan.type === 'subscription' &&
                 !currentByPlanId[plan.id] &&
+                !scheduled &&
                 !pendingByPlanId[plan.id] &&
                 activeSubscriptionSubs.length > 0;
               return (
@@ -568,6 +608,8 @@ export default function ShopScreen() {
                   isCurrent={
                     plan.type === 'subscription' && !!currentByPlanId[plan.id]
                   }
+                  isScheduled={!!scheduled}
+                  scheduledStartsAt={scheduled?.startsAt ?? null}
                   creditsLeft={
                     isConsumable ? (creditsByPlanId[plan.id] ?? null) : null
                   }
