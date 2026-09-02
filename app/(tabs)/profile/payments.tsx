@@ -149,6 +149,17 @@ export default function PaymentsScreen() {
       subscriptionsT.scheduledCancelBanner ?? 'Scheduled to cancel on {date}',
     scheduledCancelDesc:
       subscriptionsT.scheduledCancelDesc ?? "You'll keep full access until then.",
+    // ADR-0017: a plan billed through the org's own payment provider has no
+    // card on file here — Taikan can cancel it (it just stops asking the
+    // provider to charge), but it cannot restart the provider's own standing
+    // order, so the reassurance below reads differently once notice is
+    // given: buying again, not resuming, is what brings the member back.
+    scheduledCancelDescExternal:
+      subscriptionsT.scheduledCancelDescExternal ??
+      "You have full access until then. Changed your mind? Buy the plan again from the shop to stay a member.",
+    externallyBilled:
+      subscriptionsT.externallyBilled ??
+      "Your subscription is billed by the gym's payment provider. You can still cancel here, and the gym stops the payments with the provider. To change your plan, contact the gym.",
     debtTitle:
       (phT.debtTitle as string) ?? 'Your account has an outstanding balance',
     debtDesc:
@@ -202,6 +213,7 @@ export default function PaymentsScreen() {
     subs.data?.data?.filter(
       (s) =>
         s.status === 'active' ||
+        s.status === 'paused' ||
         s.status === 'past_due' ||
         (s as unknown as { status: string }).status === 'debt',
     ) ?? [];
@@ -235,13 +247,21 @@ export default function PaymentsScreen() {
     activeSub?.status === 'active' &&
     activeSub.plan.type === 'subscription';
   const hasScheduledChange = !!(activeSub && getPlanChangeSchedule(activeSub));
+  // Presale swap: a `scheduled` row moving to another plan in its own group,
+  // on the SAME row (seat, buyer order, token, opening day all preserved).
+  // The server only lists `change_plan` when the plan actually belongs to a
+  // group — a group-less presale plan has nowhere to swap to.
+  const showScheduledChangePlan =
+    !!scheduledSub && memberActionsOf(scheduledSub).includes('change_plan');
 
-  const handleChangePlan = () => {
-    if (!activeSub) return;
+  const handleChangePlan = (
+    sub: SubscriptionLite | SubscriptionWithPlan | undefined,
+  ) => {
+    if (!sub) return;
     haptics.tap();
     router.push({
       pathname: '/change-plan',
-      params: { sub: activeSub.id },
+      params: { sub: sub.id },
     });
   };
 
@@ -319,6 +339,10 @@ export default function PaymentsScreen() {
       {
         onSuccess: () => {
           haptics.success();
+          analytics.track('member_cancel_withdrawn', {
+            org_id: orgId,
+            subscription_id: activeSub.id,
+          });
           queryClient.invalidateQueries({
             queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
           });
@@ -626,7 +650,9 @@ export default function PaymentsScreen() {
               intervalLabel={intervalLabel}
               formatAmount={formatAmount}
               lang={lang}
-              onChangePlan={showChangePlan ? handleChangePlan : null}
+              onChangePlan={
+                showChangePlan ? () => handleChangePlan(activeSub) : null
+              }
               changePlanLabel={changePlanStrings.changePlanButton}
             />
             {/* Pending scheduled plan change — the scheduled-cancel banner
@@ -658,7 +684,12 @@ export default function PaymentsScreen() {
             intervalLabel={intervalLabel}
             formatAmount={formatAmount}
             lang={lang}
-            onChangePlan={null}
+            onChangePlan={
+              cardSub === scheduledSub && showScheduledChangePlan
+                ? () => handleChangePlan(scheduledSub)
+                : null
+            }
+            changePlanLabel={changePlanStrings.changePlanButton}
             onCancelPending={handleCancelPending}
             isCancellingPending={cancelPending.isPending}
             cancelPendingLabel={cancelPendingT.cta}
@@ -933,6 +964,13 @@ function SubscriptionCard({
     resumeAction: string;
     checkoutNotCompleted: string;
     completePayment: string;
+    /** Said instead of `scheduledCancelDesc` when notice is given AND the
+     *  plan is billed through the org's own payment provider — resuming
+     *  isn't something Taikan can do here. */
+    scheduledCancelDescExternal: string;
+    /** Shown outside the notice-given banner: the plan is billed through the
+     *  org's own payment provider, so Taikan only mirrors its status. */
+    externallyBilled: string;
   };
   statusLabels: Record<string, string>;
   onRenew: () => void;
@@ -1040,6 +1078,15 @@ function SubscriptionCard({
     (sub as unknown as { cancellationEffectiveAt?: string | null })
       .cancellationEffectiveAt,
   );
+
+  // ADR-0017: billed through the org's own payment provider — Taikan holds
+  // no card for this row and cannot restart a standing order it never
+  // controlled. Optional: absent on an API build that predates it, and the
+  // read then falls back to never being external, matching behaviour before
+  // the field existed.
+  const isExternallyBilled =
+    (sub as unknown as { billingState?: string | null }).billingState ===
+    'external';
 
   const isActive = status === 'active' || status === 'paused';
   const statusTone = isActive
@@ -1192,24 +1239,47 @@ function SubscriptionCard({
                   textAlign: isRTL ? 'right' : 'left',
                 }}
               >
-                {labels.scheduledCancelDesc}
+                {isExternallyBilled
+                  ? labels.scheduledCancelDescExternal
+                  : labels.scheduledCancelDesc}
               </Text>
             </View>
           </View>
-          <FKButton
-            label={labels.resumeAction}
-            variant="outline"
-            size="sm"
-            fullWidth
-            onPress={onResume}
-            disabled={isResuming}
-            trailing={
-              isResuming ? (
-                <ActivityIndicator size="small" color="#8B6A35" />
-              ) : undefined
-            }
-          />
+          {/* Externally-billed: the standard "Keep my subscription" offers
+              to resume, which is the one thing Taikan can't do here — the
+              gym stops the standing order at its own provider, and Taikan
+              can't restart it. Buying again (the copy above) is what
+              actually restores billing and access. */}
+          {!isExternallyBilled && (
+            <FKButton
+              label={labels.resumeAction}
+              variant="outline"
+              size="sm"
+              fullWidth
+              onPress={onResume}
+              disabled={isResuming}
+              trailing={
+                isResuming ? (
+                  <ActivityIndicator size="small" color="#8B6A35" />
+                ) : undefined
+              }
+            />
+          )}
         </View>
+      )}
+
+      {status === 'active' && isExternallyBilled && (
+        <Text
+          testID="externally-billed-note"
+          style={{
+            fontSize: 11.5,
+            color: colors.mutedFg,
+            lineHeight: 16,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {labels.externallyBilled}
+        </Text>
       )}
 
       {showCompleteCheckout && (

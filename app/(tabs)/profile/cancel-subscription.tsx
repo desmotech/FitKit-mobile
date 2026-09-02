@@ -25,11 +25,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { CalendarClock } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   TextInput,
   View,
@@ -43,7 +44,13 @@ import {
 } from '@/i18n/use-payment-error-strings';
 import { useCancelAtPeriodEnd } from '@/hooks/use-feed-data';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import {
+  cancelReasonChips,
+  type CancelReasonCode,
+} from '@/i18n/cancel-reason-strings';
+import { useCancelReasonStrings } from '@/i18n/use-cancel-reason-strings';
 import { useHaptics } from '@/hooks/use-haptics';
+import * as analytics from '@/lib/analytics';
 import { autofill } from '@/lib/autofill';
 import { queryKeys } from '@/lib/query-keys';
 import { useI18n } from '@/providers/i18n-provider';
@@ -73,8 +80,42 @@ export default function CancelSubscriptionScreen() {
   const cancelMut = useCancelAtPeriodEnd(orgId);
   const errorStrings = usePaymentErrorStrings();
   const formStrings = useFormStrings();
+  const reasonStrings = useCancelReasonStrings();
+  const reasonChips = useMemo(
+    () => cancelReasonChips(reasonStrings),
+    [reasonStrings],
+  );
 
   const [reason, setReason] = useState('');
+  const [reasonCode, setReasonCode] = useState<CancelReasonCode | null>(null);
+
+  // Funnel events (member_cancel_dialog_*): opened once the sheet has an
+  // org/subscription to act on, abandoned on any dismissal that never
+  // reached a submit, confirmed on a successful notice. `submittedRef` is
+  // set the moment the member taps confirm — an error still counts as a
+  // submit attempt, not an abandonment, so a retry-then-leave doesn't
+  // double-report.
+  const openedRef = useRef(false);
+  const submittedRef = useRef(false);
+  useEffect(() => {
+    if (!openedRef.current && orgId && subId) {
+      openedRef.current = true;
+      analytics.track('member_cancel_dialog_opened', {
+        org_id: orgId,
+        subscription_id: subId,
+      });
+    }
+    return () => {
+      if (openedRef.current && !submittedRef.current) {
+        analytics.track('member_cancel_dialog_abandoned', {
+          org_id: orgId,
+          subscription_id: subId,
+        });
+      }
+    };
+    // Fires once on mount / once on unmount — org and subscription id are
+    // fixed for the life of this sheet.
+  }, [orgId, subId]);
 
   const L = useMemo(() => {
     const cd = 'subscriptions.cancelDialog.';
@@ -112,13 +153,20 @@ export default function CancelSubscriptionScreen() {
   const handleSubmit = async () => {
     if (!canSubmit || !subId) return;
     haptics.tap();
+    // Tapping confirm is what makes this a submit, whatever the outcome —
+    // an error retry-then-leave must not also read as an abandoned dialog.
+    submittedRef.current = true;
     const trimmed = reason.trim();
     try {
-      // Optional: send a reason only when there is one, rather than pushing an
-      // empty string the API would have to interpret.
-      const result = await cancelMut.mutateAsync(
-        trimmed ? { id: subId, reason: trimmed } : { id: subId },
-      );
+      // Optional: send a reason / reasonCode only when there is one, rather
+      // than pushing an empty string or null the API would have to
+      // interpret. The two are independent — a member may pick a chip,
+      // write free text, both, or neither.
+      const result = await cancelMut.mutateAsync({
+        id: subId,
+        ...(trimmed ? { reason: trimmed } : {}),
+        ...(reasonCode ? { reasonCode } : {}),
+      });
 
       // The end date is the server's answer, computed from the notice — never
       // derived here from a billing period, which is a different date.
@@ -143,6 +191,12 @@ export default function CancelSubscriptionScreen() {
         : L.title;
 
       haptics.success();
+      analytics.track('member_cancel_confirmed', {
+        org_id: orgId,
+        subscription_id: subId,
+        reason_code: reasonCode ?? undefined,
+        has_form: !!formInstanceId,
+      });
       if (orgId) {
         queryClient.invalidateQueries({
           queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
@@ -266,6 +320,58 @@ export default function CancelSubscriptionScreen() {
             >
               {L.reasonLabel}
             </Text>
+
+            {/* Optional — a chip never blocks the confirm button, same as
+                the free-text field below. Tapping a selected chip again
+                clears it: at most one reason code, or none. */}
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                flexWrap: 'wrap',
+                gap: 8,
+              }}
+            >
+              {reasonChips.map(({ code, label }) => {
+                const selected = reasonCode === code;
+                return (
+                  <Pressable
+                    key={code}
+                    testID={`cancel-reason-chip-${code}`}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => {
+                      haptics.select();
+                      setReasonCode((prev) => (prev === code ? null : code));
+                    }}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: selected
+                        ? BRAND_TEAL
+                        : isDark
+                          ? 'rgba(255,255,255,0.14)'
+                          : 'rgba(15,23,42,0.12)',
+                      backgroundColor: selected
+                        ? BRAND_TEAL + '1F'
+                        : 'transparent',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: selected ? BRAND_TEAL : colors.mutedFg,
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
             <View style={{ position: 'relative' }}>
               <TextInput
                 value={reason}

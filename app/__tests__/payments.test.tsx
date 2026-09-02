@@ -58,6 +58,12 @@ const CPS = {
 // package carries the key, the static table is the fallback.
 const EXPIRED_BADGE = pick('members.paymentMethods.expiredBadge') ?? S.cardExpired;
 
+// The subscriptions dictionary carries the notice-given / external-billing
+// copy verbatim in the pinned package already — read straight off it rather
+// than re-typing English-only fallbacks that would only ever be visible in
+// a locale gap.
+const SUB_T = dictionaries.he.subscriptions;
+
 const W = withdrawScheduledStringsFor('he');
 const WS = {
   cta: pick('subscriptions.withdrawScheduledAction') ?? W.cta,
@@ -81,7 +87,8 @@ const CARD = {
 function stagePayments({
   subs = [subscriptionWithPlan()],
   methods = [CARD],
-}: { subs?: unknown[]; methods?: unknown[] } = {}) {
+  plans = [],
+}: { subs?: unknown[]; methods?: unknown[]; plans?: unknown[] } = {}) {
   stageSignedInMember();
   server.use(
     http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
@@ -94,7 +101,7 @@ function stagePayments({
       HttpResponse.json({ data: [], total: 0, page: 1, limit: 20 }),
     ),
     http.get(api(`/organizations/${TEST_ORG}/plans`), () =>
-      HttpResponse.json({ data: [] }),
+      HttpResponse.json({ data: plans }),
     ),
   );
 }
@@ -481,5 +488,161 @@ describe('PaymentsScreen — finish an unfinished checkout', () => {
       source: 'profile',
     });
     alertSpy.mockRestore();
+  });
+});
+
+/**
+ * The notice-given banner and its way back. Untested before this: the
+ * `cancelAtPeriodEnd` branch of `SubscriptionCard` renders only through the
+ * full screen (the component is private to this file), and nothing exercised
+ * it end to end.
+ */
+describe('PaymentsScreen — scheduled-to-cancel banner', () => {
+  const EFFECTIVE_AT = '2026-09-30T00:00:00.000Z';
+
+  function renderedDate() {
+    return new Date(EFFECTIVE_AT).toLocaleDateString('he', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  it('shows the banner and resumes on confirm', async () => {
+    const sub = subscriptionWithPlan({
+      status: 'active',
+      cancelAtPeriodEnd: true,
+      cancellationEffectiveAt: EFFECTIVE_AT,
+    } as never);
+    stagePayments({ subs: [sub] });
+    const resumeCalls: unknown[] = [];
+    server.use(
+      http.post(
+        api(`/organizations/${TEST_ORG}/subscriptions/my/${sub.id}/resume`),
+        () => {
+          resumeCalls.push(true);
+          return HttpResponse.json({
+            data: { ...sub, cancelAtPeriodEnd: false },
+          });
+        },
+      ),
+    );
+
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          SUB_T.scheduledCancelBanner.replace('{date}', renderedDate()),
+        ),
+      ).toBeTruthy();
+    });
+    expect(screen.getByText(SUB_T.scheduledCancelDesc)).toBeTruthy();
+    // The notice-with-reason CTA never coexists with the banner it produced.
+    expect(screen.queryByText(SUB_T.cancelAction)).toBeNull();
+
+    await userEvent.press(screen.getByText(SUB_T.resumeAction));
+    await waitFor(() => expect(resumeCalls).toHaveLength(1));
+  });
+
+  it('says buying again, and hides resume, when the plan is billed externally', async () => {
+    const sub = subscriptionWithPlan({
+      status: 'active',
+      cancelAtPeriodEnd: true,
+      cancellationEffectiveAt: EFFECTIVE_AT,
+      billingState: 'external',
+    } as never);
+    stagePayments({ subs: [sub] });
+
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText(SUB_T.scheduledCancelDescExternal)).toBeTruthy();
+    });
+    expect(screen.queryByText(SUB_T.scheduledCancelDesc)).toBeNull();
+    expect(screen.queryByText(SUB_T.resumeAction)).toBeNull();
+  });
+
+  it('names the org as the biller when notice has not been given', async () => {
+    const sub = subscriptionWithPlan({
+      status: 'active',
+      billingState: 'external',
+    } as never);
+    stagePayments({ subs: [sub] });
+
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('externally-billed-note')).toBeTruthy();
+    });
+    expect(screen.getByText(SUB_T.externallyBilled)).toBeTruthy();
+  });
+});
+
+/**
+ * A member may give notice from any live state — paused, past_due and debt
+ * included, not only active. `liveSubs` used to select only
+ * active/past_due/debt, which meant a lone paused subscription showed NO
+ * card at all on this screen (a dead end): fixed alongside this test.
+ */
+describe('PaymentsScreen — give notice from every live state', () => {
+  it.each(['active', 'paused', 'past_due', 'debt'] as const)(
+    'offers to give notice on a %s subscription',
+    async (status) => {
+      const sub = subscriptionWithPlan({ status } as never);
+      stagePayments({ subs: [sub] });
+
+      await renderWithProviders(<PaymentsScreen />);
+
+      await waitFor(() => {
+        expect(screen.getByText(SUB_T.cancelAction)).toBeTruthy();
+      });
+    },
+  );
+});
+
+/**
+ * Presale swap (a `scheduled` subscription moving within its own plan
+ * group). The server only lists `change_plan` among `memberActions` for a
+ * plan that belongs to a group — no group, no CTA.
+ */
+describe('PaymentsScreen — change plan on a scheduled subscription', () => {
+  it('offers Change plan when the server lists it', async () => {
+    const sub = subscriptionWithPlan({
+      id: 'sub_presale_group',
+      status: 'scheduled',
+      memberAction: 'none',
+      memberActions: ['withdraw_scheduled', 'change_plan'],
+    } as never);
+    stagePayments({ subs: [sub] });
+
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('change-plan-btn')).toBeTruthy();
+    });
+
+    await userEvent.press(screen.getByTestId('change-plan-btn'));
+    expect(mockRouterPush).toHaveBeenCalledWith({
+      pathname: '/change-plan',
+      params: { sub: sub.id },
+    });
+  });
+
+  it('never offers it for a group-less presale plan', async () => {
+    const sub = subscriptionWithPlan({
+      id: 'sub_presale_no_group',
+      status: 'scheduled',
+      memberAction: 'none',
+      memberActions: ['withdraw_scheduled'],
+    } as never);
+    stagePayments({ subs: [sub] });
+
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('withdraw-scheduled-btn')).toBeTruthy();
+    });
+    expect(screen.queryByTestId('change-plan-btn')).toBeNull();
   });
 });

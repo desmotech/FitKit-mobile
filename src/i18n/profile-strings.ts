@@ -71,6 +71,15 @@ export interface ProfileStrings {
   presalePurchased: string;
   /** Same, with `{amount}` when the server sent an effective price. */
   presalePurchasedWithAmount: string;
+  /** Shown instead of `noFurtherCharges` when notice is given AND the plan
+   *  is billed through the org's own payment provider (`billingState:
+   *  'external'`) — Taikan can't restart a standing order it never
+   *  controlled, so buying again, not resuming, is what brings the member
+   *  back. */
+  scheduledCancelDescExternal: string;
+  /** Shown outside the notice-given banner: the plan is billed through the
+   *  org's own payment provider, so Taikan only mirrors its status. */
+  externallyBilled: string;
 
   // ── Build / OTA diagnostics (tap the footer version line) ─────────
   buildTitle: string;
@@ -171,6 +180,10 @@ const HE: ProfileStrings = {
   presalePurchased: 'הרכישה הושלמה. החיוב הראשון יתבצע ב-{date}, ביום הפתיחה.',
   presalePurchasedWithAmount:
     'הרכישה הושלמה. החיוב הראשון, {amount}, יתבצע ב-{date}, ביום הפתיחה.',
+  scheduledCancelDescExternal:
+    'יש לך גישה מלאה עד אז. שינית את דעתך? כדי להישאר חברים, רכשו את התוכנית שוב בחנות.',
+  externallyBilled:
+    'מסלול החברות מחויב דרך ספק הסליקה של המועדון. אפשר לבטל כאן, והמועדון יעצור את החיובים מול הספק. לשינוי התוכנית, פנו למועדון.',
 
   buildTitle: 'גרסת האפליקציה',
   buildVersion: 'גרסה',
@@ -266,6 +279,10 @@ const EN: ProfileStrings = {
     'Purchase confirmed. Your first charge is on {date}, the day we open.',
   presalePurchasedWithAmount:
     'Purchase confirmed. Your first charge of {amount} is on {date}, the day we open.',
+  scheduledCancelDescExternal:
+    'You have full access until then. Changed your mind? Buy the plan again from the shop to stay a member.',
+  externallyBilled:
+    "Your subscription is billed by the gym's payment provider. You can still cancel here, and the gym stops the payments with the provider. To change your plan, contact the gym.",
 
   buildTitle: 'App build',
   buildVersion: 'Version',
@@ -361,6 +378,10 @@ const RU: ProfileStrings = {
     'Покупка подтверждена. Первое списание состоится {date}, в день открытия.',
   presalePurchasedWithAmount:
     'Покупка подтверждена. Первое списание {amount} состоится {date}, в день открытия.',
+  scheduledCancelDescExternal:
+    'До этой даты доступ полный. Передумали? Чтобы остаться участником, купите план заново в магазине.',
+  externallyBilled:
+    'Абонемент оплачивается через платёжного провайдера зала. Отменить можно здесь, и зал остановит списания у провайдера. Чтобы сменить план, обратитесь в зал.',
 
   buildTitle: 'Сборка приложения',
   buildVersion: 'Версия',

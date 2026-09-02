@@ -284,8 +284,10 @@ export function useEarlyRenewSubscription(orgId: string | undefined | null) {
  * Member: give notice of cancellation. The membership ends one month later —
  * the API computes that date and returns it as `cancellationEffectiveAt`, which
  * callers should display rather than deriving an end date from a billing
- * period. `reason` is optional. Reversible via {@link useResumeCancellation}
- * until it takes effect.
+ * period. `reason` (free text) and `reasonCode` (the fixed taxonomy) are both
+ * optional and independent — a member can pick a chip, write something, both,
+ * or neither. Reversible via {@link useResumeCancellation} until it takes
+ * effect.
  *
  * Answers with `MemberCancellationResponse`, NOT `SubscriptionLite`: this
  * endpoint serializes the subscription without its plan, and it carries the
@@ -299,7 +301,18 @@ export function useEarlyRenewSubscription(orgId: string | undefined | null) {
 export function useCancelAtPeriodEnd(orgId: string | undefined | null) {
   return useApiSend<
     ApiEnvelope<MemberCancellationResponse>,
-    { id: string; reason?: string }
+    {
+      id: string;
+      reason?: string;
+      reasonCode?:
+        | 'relocation'
+        | 'financial'
+        | 'dissatisfaction'
+        | 'health'
+        | 'schedule'
+        | 'no_longer_needed'
+        | 'other';
+    }
   >({
     path: (b) =>
       `/organizations/${orgId}/subscriptions/my/${b.id}/cancel-at-period-end`,

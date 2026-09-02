@@ -73,6 +73,15 @@ export default function ChangePlanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Presale swap: a `scheduled` (sold, not yet started) subscription moving
+  // to another plan on the SAME row — never a checkout, never a proration.
+  // Only reachable when the server already listed `change_plan` among the
+  // subscription's memberActions, which it does only for a plan that
+  // belongs to a group; this screen still narrows the target LIST itself so
+  // an out-of-group plan never renders as tappable in the first place.
+  const isPresaleSwap = subscription?.status === 'scheduled';
+  const currentPlanGroupId = subscription?.plan.planGroupId;
+
   // Eligible targets: active subscription-type plans other than the current
   // one. Consumables (class packs / drop-ins) are never change targets —
   // they're bought alongside, not switched to (server enforces the same).
@@ -89,9 +98,17 @@ export default function ChangePlanScreen() {
           p.id !== subscription?.planId &&
           // A capped plan with no seats left is refused server-side
           // (PLAN_SOLD_OUT); don't offer it as a target at all.
-          (p as unknown as { soldOut?: boolean }).soldOut !== true,
+          (p as unknown as { soldOut?: boolean }).soldOut !== true &&
+          // Presale swap only: a different offer has no guaranteed seat, so
+          // only a same-group plan is a legal target (server refuses any
+          // other with PRESALE_SWAP_REQUIRES_SAME_GROUP). Skip the extra
+          // filter when the payload carries no planGroupId at all — the
+          // API's own refusal is the backstop then.
+          (!isPresaleSwap ||
+            !currentPlanGroupId ||
+            p.planGroupId === currentPlanGroupId),
       ),
-    [plans, subscription?.planId],
+    [plans, subscription?.planId, isPresaleSwap, currentPlanGroupId],
   );
 
   const previewQ = useChangePlanPreview(orgId, subId, newPlanId || undefined);
@@ -198,6 +215,23 @@ export default function ChangePlanScreen() {
             ...(returnedSubId ? { sub: returnedSubId } : {}),
           },
         });
+        return;
+      }
+
+      if (result.mode === 'presale_swap') {
+        // Applied immediately on the SAME row — no checkout, no proration,
+        // nothing charged now. Distinct from `mode: 'scheduled'` below,
+        // which waits for a period boundary; this member has no period yet.
+        // No client-side track here: `plan_change.presale_swap` is the
+        // SERVER event the API already emits for this same write — a
+        // client-side capture of the identical name would double-count the
+        // funnel in PostHog.
+        haptics.success();
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
+        });
+        Alert.alert('', strings.presaleSwapSuccess);
+        router.back();
         return;
       }
 
@@ -369,23 +403,42 @@ export default function ChangePlanScreen() {
                         textAlign: isRTL ? 'right' : 'left',
                       }}
                     >
-                      {preview.direction === 'upgrade'
-                        ? strings.upgradeSummary.replace(
-                            '{amount}',
-                            formatPrice(preview.dueNowInCents, currency, lang),
-                          )
-                        : strings.downgradeSummary
-                            .replace('{date}', fmtDate(preview.effectiveAt))
+                      {preview.openingDayChargeInCents != null
+                        ? // Presale swap: gate on the field's presence, not
+                          // on a `mode` string — the preview response
+                          // carries none. Nothing is charged now; the plan
+                          // only changes what opening day will charge.
+                          strings.presaleSwapSummary
+                            .replace(
+                              '{date}',
+                              fmtDate(preview.openingDayAt),
+                            )
                             .replace(
                               '{amount}',
                               formatPrice(
-                                preview.nextChargeInCents,
+                                preview.openingDayChargeInCents,
                                 currency,
                                 lang,
                               ),
-                            )}
+                            )
+                        : preview.direction === 'upgrade'
+                          ? strings.upgradeSummary.replace(
+                              '{amount}',
+                              formatPrice(preview.dueNowInCents, currency, lang),
+                            )
+                          : strings.downgradeSummary
+                              .replace('{date}', fmtDate(preview.effectiveAt))
+                              .replace(
+                                '{amount}',
+                                formatPrice(
+                                  preview.nextChargeInCents,
+                                  currency,
+                                  lang,
+                                ),
+                              )}
                     </Text>
-                    {preview.direction === 'upgrade' &&
+                    {preview.openingDayChargeInCents == null &&
+                    preview.direction === 'upgrade' &&
                     preview.nextChargeDate ? (
                       <Text
                         testID="change-plan-next-charge"

@@ -41,6 +41,8 @@ const DICT_PATHS: Partial<Record<keyof ProfileStrings, string>> = {
   // label is translated either way.
   checkoutNotCompleted: 'profile.membership.status.checkout_abandoned',
   managePlan: 'profile.values.managePlan',
+  scheduledCancelDescExternal: 'subscriptions.scheduledCancelDescExternal',
+  externallyBilled: 'subscriptions.externallyBilled',
 
   settingPersonal: 'profile.settings.personal',
   settingPayment: 'profile.settings.payment',

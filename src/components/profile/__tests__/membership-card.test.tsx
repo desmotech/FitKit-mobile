@@ -29,6 +29,11 @@ const LABELS = {
     'Purchase confirmed. Your first charge is on {date}, the day we open.',
   presalePurchasedWithAmount:
     'Purchase confirmed. Your first charge of {amount} is on {date}, the day we open.',
+  noFurtherCharges: 'No further payments will be charged.',
+  scheduledCancelDescExternal:
+    'You have full access until then. Changed your mind? Buy the plan again from the shop to stay a member.',
+  externallyBilled:
+    "Your subscription is billed by the gym's payment provider. You can still cancel here, and the gym stops the payments with the provider. To change your plan, contact the gym.",
 };
 
 const STATUS = {
@@ -425,5 +430,51 @@ describe('MembershipCard — withdrawn before opening day', () => {
     expect(
       screen.queryByText('This membership was ended by the gym'),
     ).toBeNull();
+  });
+});
+
+/**
+ * ADR-0017: a plan billed through the org's own payment provider. Taikan
+ * only mirrors its status — it can cancel (stop asking the provider to
+ * charge) but never restart a standing order it never controlled.
+ * `resolveBillingState` reports `external` even after notice is given
+ * (winning over `ending`), so the two notes are mutually exclusive with
+ * whichever one `noFurtherCharges` would otherwise show.
+ */
+describe('MembershipCard — externally billed', () => {
+  it('names the org as the biller before notice is given', async () => {
+    await renderCard({
+      status: 'active',
+      memberAction: 'none',
+      billingState: 'external',
+    });
+    expect(screen.getByTestId('external-billing-note')).toBeOnTheScreen();
+    expect(screen.getByText(LABELS.externallyBilled)).toBeOnTheScreen();
+  });
+
+  it('says buying again, not resuming, once notice is given', async () => {
+    await renderCard({
+      status: 'active',
+      memberAction: 'none',
+      billingState: 'external',
+      cancelAtPeriodEnd: true,
+      cancellationEffectiveAt: '2026-09-30T00:00:00.000Z',
+    });
+    expect(
+      screen.getByText(LABELS.scheduledCancelDescExternal),
+    ).toBeOnTheScreen();
+    expect(screen.queryByTestId('external-billing-note')).toBeNull();
+    expect(screen.queryByText(LABELS.noFurtherCharges)).toBeNull();
+  });
+
+  it('keeps the plain no-further-charges note off-provider', async () => {
+    await renderCard({
+      status: 'active',
+      memberAction: 'none',
+      cancelAtPeriodEnd: true,
+      cancellationEffectiveAt: '2026-09-30T00:00:00.000Z',
+    });
+    expect(screen.getByText(LABELS.noFurtherCharges)).toBeOnTheScreen();
+    expect(screen.queryByTestId('external-billing-note')).toBeNull();
   });
 });
