@@ -58,6 +58,13 @@ const CPS = {
 // package carries the key, the static table is the fallback.
 const EXPIRED_BADGE = pick('members.paymentMethods.expiredBadge') ?? S.cardExpired;
 
+// `payments.errorCodes.no_active_payment_method` is one of the keys the
+// pinned package DOES carry (unlike renewFailed, which the DICT_PATHS
+// comment in use-payment-error-strings.ts points at a dead path on
+// purpose), so the dictionary's copy is what the screen actually shows.
+const NO_ACTIVE_PAYMENT_METHOD =
+  pick('payments.errorCodes.no_active_payment_method') ?? S.noActivePaymentMethod;
+
 const W = withdrawScheduledStringsFor('he');
 const WS = {
   cta: pick('subscriptions.withdrawScheduledAction') ?? W.cta,
@@ -178,7 +185,7 @@ describe('PaymentsScreen', () => {
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith(
         '',
-        S.noActivePaymentMethod,
+        NO_ACTIVE_PAYMENT_METHOD,
         expect.arrayContaining([
           expect.objectContaining({ text: S.addCard }),
         ]),
