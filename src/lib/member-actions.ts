@@ -20,7 +20,11 @@ export type MemberSubscriptionAction =
   | 'complete_checkout'
   | 'cancel_pending'
   | 'update_card'
-  | 'withdraw_scheduled';
+  | 'withdraw_scheduled'
+  // A `scheduled` (presale) row swapping to another plan in the SAME plan
+  // group, on the same row — never offered when the plan has no group,
+  // since there is nowhere for it to swap to.
+  | 'change_plan';
 
 /** The subset of a subscription row this module reads. */
 export interface WithMemberActions {

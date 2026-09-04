@@ -23,6 +23,8 @@ const DICT_PATHS: Record<keyof PlanChangeStrings, string> = {
   previewLoading: 'profile.changePlan.previewLoading',
   upgradeSummary: 'profile.changePlan.upgradeSummary',
   downgradeSummary: 'profile.changePlan.downgradeSummary',
+  presaleSwapSummary: 'profile.changePlan.presaleSwapSummary',
+  presaleSwapSuccess: 'profile.changePlan.presaleSwapSuccess',
   nextCharge: 'profile.changePlan.nextCharge',
   creditsAfter: 'profile.changePlan.creditsAfter',
   creditsUnlimited: 'profile.changePlan.creditsUnlimited',
@@ -52,6 +54,9 @@ const DICT_PATHS: Record<keyof PlanChangeStrings, string> = {
   errResumeFirst: 'payments.errorCodes.resume_first',
   errPendingActionConflict: 'payments.errorCodes.pending_action_conflict',
   errChargeFailed: 'payments.errorCodes.plan_change_charge_failed',
+  errPresaleSwapRequiresSameGroup:
+    'payments.errorCodes.presale_swap_requires_same_group',
+  errChargeInFlight: 'payments.errorCodes.plan_change_charge_in_flight',
   errGeneric: 'payments.errorCodes.generic',
   cancel: 'common.cancel',
 };
@@ -102,6 +107,10 @@ export function planChangeErrorMessage(
       return strings.errPendingActionConflict;
     case 'plan_change_charge_failed':
       return strings.errChargeFailed;
+    case 'presale_swap_requires_same_group':
+      return strings.errPresaleSwapRequiresSameGroup;
+    case 'plan_change_charge_in_flight':
+      return strings.errChargeInFlight;
     default:
       if (report) {
         reportUnmappedApiCode(report.error, { feature: report.feature });

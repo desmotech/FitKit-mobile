@@ -925,6 +925,8 @@ export default function ProfileScreen() {
                 noFurtherCharges: labels.noFurtherCharges,
                 presalePurchased: labels.presalePurchased,
                 presalePurchasedWithAmount: labels.presalePurchasedWithAmount,
+                scheduledCancelDescExternal: labels.scheduledCancelDescExternal,
+                externallyBilled: labels.externallyBilled,
               }}
               isRenewing={renew.isPending && renew.variables === subList[0].id}
               onRenew={() => {

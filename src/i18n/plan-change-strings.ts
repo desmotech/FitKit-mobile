@@ -31,6 +31,14 @@ export interface PlanChangeStrings {
   upgradeSummary: string;
   /** Template with `{date}` and `{amount}`. */
   downgradeSummary: string;
+  /** Presale swap only (a `scheduled` subscription moving within its plan
+   *  group): nothing is charged now, the first charge waits for opening
+   *  day. Template with `{date}` and `{amount}`. */
+  presaleSwapSummary: string;
+  /** Confirm-alert success text for a presale swap — distinct from
+   *  `scheduledSuccess`: the swap applies immediately on the same row, it
+   *  is not a change waiting for a period boundary. */
+  presaleSwapSuccess: string;
   /** Template with `{amount}` and `{date}`. */
   nextCharge: string;
   /** Template with `{count}`. */
@@ -74,6 +82,10 @@ export interface PlanChangeStrings {
   errResumeFirst: string;
   errPendingActionConflict: string;
   errChargeFailed: string;
+  /** Presale swap only: the target plan isn't in the row's own plan group. */
+  errPresaleSwapRequiresSameGroup: string;
+  /** Presale swap only: a charge for this subscription is already in flight. */
+  errChargeInFlight: string;
   errGeneric: string;
 
   // ── Shared chrome (common.*) ──────────────────────────────────────
@@ -89,6 +101,9 @@ const en: PlanChangeStrings = {
   previewLoading: 'Calculating…',
   upgradeSummary: "Starts now: you'll be charged {amount}",
   downgradeSummary: 'Starts on {date}: next charge {amount}',
+  presaleSwapSummary:
+    'Nothing is charged now: your first charge on {date} will be {amount}',
+  presaleSwapSuccess: 'Your plan has been switched.',
   nextCharge: 'Next charge: {amount} on {date}',
   creditsAfter: '{count} credits after the switch',
   creditsUnlimited: 'Unlimited credits after the switch',
@@ -122,6 +137,10 @@ const en: PlanChangeStrings = {
   errPendingActionConflict:
     'This subscription already has a pending change. Resolve it first.',
   errChargeFailed: 'The card was declined. Nothing was changed.',
+  errPresaleSwapRequiresSameGroup:
+    'A different offer has no guaranteed seat. Withdraw this membership and buy the new plan instead.',
+  errChargeInFlight:
+    'A charge for this membership is still in flight. Check back shortly.',
   errGeneric: 'Something went wrong. Please try again.',
   cancel: 'Cancel',
 };
@@ -135,6 +154,8 @@ const he: PlanChangeStrings = {
   previewLoading: 'מחשב…',
   upgradeSummary: 'מתחיל מיידית: תחויב/י ב-{amount}',
   downgradeSummary: 'מתחיל בתאריך {date}: החיוב הבא {amount}',
+  presaleSwapSummary: 'לא מתבצע חיוב כעת: החיוב הראשון בתאריך {date} יהיה {amount}',
+  presaleSwapSuccess: 'המנוי הוחלף.',
   nextCharge: 'החיוב הבא: {amount} בתאריך {date}',
   creditsAfter: '{count} כניסות לאחר ההחלפה',
   creditsUnlimited: 'כניסות ללא הגבלה לאחר ההחלפה',
@@ -166,6 +187,9 @@ const he: PlanChangeStrings = {
   errResumeFirst: 'יש להפעיל מחדש את המנוי לפני שינויו.',
   errPendingActionConflict: 'למנוי זה כבר יש שינוי ממתין. יש לטפל בו קודם.',
   errChargeFailed: 'הכרטיס נדחה. לא בוצע שינוי.',
+  errPresaleSwapRequiresSameGroup:
+    'להצעה אחרת אין מקום מובטח. יש לבטל את מסלול החברות הזה ולרכוש את המנוי החדש בנפרד.',
+  errChargeInFlight: 'חיוב עבור מסלול החברות הזה עדיין מתבצע. נסו שוב בעוד רגע.',
   errGeneric: 'משהו השתבש. נסו שוב.',
   cancel: 'ביטול',
 };
@@ -179,6 +203,8 @@ const ru: PlanChangeStrings = {
   previewLoading: 'Расчёт…',
   upgradeSummary: 'Начинается сразу: с вас спишут {amount}',
   downgradeSummary: 'Начинается {date}: следующее списание {amount}',
+  presaleSwapSummary: 'Сейчас списаний нет: первое списание {amount} будет {date}',
+  presaleSwapSuccess: 'Тариф изменён.',
   nextCharge: 'Следующее списание: {amount} {date}',
   creditsAfter: '{count} занятий после смены',
   creditsUnlimited: 'Безлимит занятий после смены',
@@ -212,6 +238,10 @@ const ru: PlanChangeStrings = {
   errPendingActionConflict:
     'У этой подписки уже есть ожидающее изменение. Сначала разрешите его.',
   errChargeFailed: 'Карта отклонена. Изменений не произошло.',
+  errPresaleSwapRequiresSameGroup:
+    'У другого предложения нет гарантированного места. Отмените это членство и купите новый тариф отдельно.',
+  errChargeInFlight:
+    'Списание по этому членству ещё выполняется. Попробуйте немного позже.',
   errGeneric: 'Что-то пошло не так. Попробуйте ещё раз.',
   cancel: 'Отмена',
 };

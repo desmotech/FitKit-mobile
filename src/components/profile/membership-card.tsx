@@ -135,6 +135,12 @@ export function MembershipCard({
     presalePurchased?: string;
     /** Same with `{amount}`, used when the server sent an effective price. */
     presalePurchasedWithAmount?: string;
+    /** Said instead of `noFurtherCharges` when notice is given AND the plan
+     *  is billed through the org's own payment provider. */
+    scheduledCancelDescExternal?: string;
+    /** Billed through the org's own payment provider — shown outside the
+     *  notice-given case. */
+    externallyBilled?: string;
   };
   isRenewing: boolean;
   onRenew: () => void;
@@ -255,11 +261,27 @@ export function MembershipCard({
         : sub.status === 'paused'
           ? 'paused'
           : 'recurring');
+  // ADR-0017: the org's own payment provider debits the member directly —
+  // `resolveBillingState` reports `external` for one of these even after
+  // notice is given, WINNING over `ending`, since Taikan genuinely cannot
+  // promise a charge is or isn't coming from a provider it doesn't control.
+  const isExternallyBilled = billingState === 'external';
   // Notice given: say the reassuring true thing instead of the alarming
-  // false one. Only for `ending` — `stopped` is already covered by the
-  // ended/abandoned note above, and `external` means we genuinely can't say.
+  // false one. `stopped` is already covered by the ended/abandoned note
+  // above. Externally billed gets its own version — resuming isn't
+  // something Taikan can do here, buying again is.
   const noChargesNote =
-    billingState === 'ending' ? labels.noFurtherCharges ?? null : null;
+    billingState === 'ending'
+      ? labels.noFurtherCharges ?? null
+      : isExternallyBilled && sub.cancelAtPeriodEnd
+        ? labels.scheduledCancelDescExternal ?? null
+        : null;
+  // Billed through the org's own payment provider, shown outside the
+  // notice-given case (which already explains what happens next above).
+  const externalBillingNote =
+    isExternallyBilled && !sub.cancelAtPeriodEnd
+      ? labels.externallyBilled ?? null
+      : null;
   // FIT-287 presale: sold before the gym opened. The card is on file, no
   // money has moved, and the first charge waits for opening day — a state
   // that otherwise renders as a membership that did nothing. The chip
@@ -635,6 +657,20 @@ export function MembershipCard({
           }}
         >
           {noChargesNote}
+        </Text>
+      ) : null}
+
+      {externalBillingNote ? (
+        <Text
+          testID="external-billing-note"
+          style={{
+            fontSize: 11.5,
+            color: 'rgba(255,255,255,0.78)',
+            fontFamily: 'Assistant-Medium',
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {externalBillingNote}
         </Text>
       ) : null}
 

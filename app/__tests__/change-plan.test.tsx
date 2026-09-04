@@ -338,3 +338,263 @@ describe('ChangePlanScreen', () => {
     expect(screen.getByText(S.errOutstandingBalance)).toBeTruthy();
   });
 });
+
+/**
+ * Presale swap: a `scheduled` (sold, not yet started) subscription moving to
+ * another plan in its OWN plan group, on the SAME row — no checkout, no
+ * proration, nothing charged now. Target selection is narrowed to the
+ * current plan's group client-side (defense in depth); the API's
+ * PRESALE_SWAP_REQUIRES_SAME_GROUP refusal is the backstop for a payload
+ * that carries no group info at all.
+ */
+describe('ChangePlanScreen — presale swap on a scheduled subscription', () => {
+  const GROUP_A = 'group_founders';
+  const GROUP_B = 'group_other';
+  const OPENING_DAY = '2026-10-01T00:00:00.000Z';
+
+  const SCHEDULED_PLAN = {
+    ...CURRENT_PLAN,
+    id: 'plan_scheduled_current',
+    name: 'Founders Presale',
+    planGroupId: GROUP_A,
+  };
+  const SAME_GROUP_TARGET = {
+    ...CURRENT_PLAN,
+    id: 'plan_same_group_target',
+    name: 'Founders Elite',
+    priceInCents: 30000,
+    planGroupId: GROUP_A,
+  };
+  const OTHER_GROUP_PLAN = {
+    ...CURRENT_PLAN,
+    id: 'plan_other_group',
+    name: 'Unrelated Offer',
+    planGroupId: GROUP_B,
+  };
+
+  const SCHEDULED_SUB = subscriptionWithPlan({
+    id: 'sub_scheduled',
+    status: 'scheduled',
+    planId: SCHEDULED_PLAN.id,
+    plan: SCHEDULED_PLAN,
+    nextChargeDate: OPENING_DAY,
+  } as never);
+
+  const PRESALE_SWAP_PREVIEW = {
+    direction: 'upgrade',
+    timing: 'immediate',
+    dueNowInCents: 0,
+    nextChargeInCents: 30000,
+    nextChargeDate: OPENING_DAY,
+    effectiveAt: '2026-09-02T00:00:00.000Z',
+    creditsAfter: null,
+    bookings: { kept: [], revoked: [] },
+    openingDayChargeInCents: 30000,
+    openingDayAt: OPENING_DAY,
+  };
+
+  function stagePresaleSwap({
+    subs = [SCHEDULED_SUB],
+    plans = [SCHEDULED_PLAN, SAME_GROUP_TARGET, OTHER_GROUP_PLAN],
+    preview = PRESALE_SWAP_PREVIEW,
+  }: {
+    subs?: unknown[];
+    plans?: unknown[];
+    preview?: Record<string, unknown>;
+  } = {}) {
+    stageSignedInMember();
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
+        HttpResponse.json({ data: subs }),
+      ),
+      http.get(api(`/organizations/${TEST_ORG}/plans`), () =>
+        HttpResponse.json({ data: plans }),
+      ),
+      http.get(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/${SCHEDULED_SUB.id}/change-plan/preview`,
+        ),
+        () => HttpResponse.json({ data: preview }),
+      ),
+    );
+  }
+
+  beforeEach(() => {
+    mockParams = { sub: SCHEDULED_SUB.id };
+    // Cleared, not reset: the mock has no default implementation to lose,
+    // and an earlier describe block's upgrade-checkout test leaves a call
+    // recorded on this same module-level jest.fn().
+    (WebBrowser.openAuthSessionAsync as jest.Mock).mockClear();
+  });
+
+  it('only lists same-group plans as targets', async () => {
+    stagePresaleSwap();
+    await renderWithProviders(<ChangePlanScreen />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`change-plan-option-${SAME_GROUP_TARGET.id}`),
+      ).toBeTruthy();
+    });
+    expect(
+      screen.queryByTestId(`change-plan-option-${OTHER_GROUP_PLAN.id}`),
+    ).toBeNull();
+  });
+
+  it('previews due-now-zero with the opening-day charge, and confirms on the same row', async () => {
+    stagePresaleSwap();
+    const changeCalls: unknown[] = [];
+    server.use(
+      http.post(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/my/${SCHEDULED_SUB.id}/change-plan`,
+        ),
+        async ({ request }) => {
+          changeCalls.push(await request.json());
+          return HttpResponse.json({
+            data: {
+              mode: 'presale_swap',
+              dueNowInCents: 0,
+              openingDayChargeInCents: 30000,
+              openingDayAt: OPENING_DAY,
+              effectiveAt: '2026-09-02T00:00:00.000Z',
+              subscription: { ...SCHEDULED_SUB, planId: SAME_GROUP_TARGET.id },
+            },
+          });
+        },
+      ),
+    );
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const user = userEvent.setup();
+
+    await renderWithProviders(<ChangePlanScreen />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`change-plan-option-${SAME_GROUP_TARGET.id}`),
+      ).toBeTruthy();
+    });
+    await user.press(
+      screen.getByTestId(`change-plan-option-${SAME_GROUP_TARGET.id}`),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('change-plan-summary')).toBeTruthy();
+    });
+    // Nothing is charged now — the summary names the opening-day amount, not
+    // a due-now one.
+    expect(
+      screen.getByTestId('change-plan-summary').props.children,
+    ).toContain(formatPrice(30000, 'ILS', 'he'));
+
+    await user.press(screen.getByText(S.confirmAction));
+    await waitFor(() => expect(changeCalls).toHaveLength(1));
+    expect(changeCalls[0]).toMatchObject({ newPlanId: SAME_GROUP_TARGET.id });
+    expect(alertSpy).toHaveBeenCalledWith('', P.presaleSwapSuccess);
+    expect(mockRouterBack).toHaveBeenCalled();
+    // Same row, never a checkout: no hosted payment page is ever opened.
+    expect(WebBrowser.openAuthSessionAsync).not.toHaveBeenCalled();
+  });
+
+  it('maps a charge-in-flight refusal to localized copy', async () => {
+    stagePresaleSwap();
+    server.use(
+      http.post(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/my/${SCHEDULED_SUB.id}/change-plan`,
+        ),
+        () =>
+          HttpResponse.json(
+            {
+              message: 'Charge in flight',
+              code: 'plan_change_charge_in_flight',
+              statusCode: 409,
+            },
+            { status: 409 },
+          ),
+      ),
+    );
+    const user = userEvent.setup();
+
+    await renderWithProviders(<ChangePlanScreen />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`change-plan-option-${SAME_GROUP_TARGET.id}`),
+      ).toBeTruthy();
+    });
+    await user.press(
+      screen.getByTestId(`change-plan-option-${SAME_GROUP_TARGET.id}`),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('change-plan-summary')).toBeTruthy();
+    });
+
+    await user.press(screen.getByText(S.confirmAction));
+    await waitFor(() => {
+      expect(screen.getByTestId('change-plan-error')).toBeTruthy();
+    });
+    expect(screen.getByText(P.errChargeInFlight)).toBeTruthy();
+  });
+
+  it('relies on the API refusal when the payload carries no plan-group info at all', async () => {
+    // Older API build: the subscription's plan echoes no `planGroupId`, so
+    // the client-side same-group filter is skipped entirely and a
+    // different-group plan renders as a tappable target — the API's own
+    // 409 is what actually stops the swap.
+    const planWithoutGroupInfo: Record<string, unknown> = { ...SCHEDULED_PLAN };
+    delete planWithoutGroupInfo.planGroupId;
+    const subWithoutGroupInfo = subscriptionWithPlan({
+      id: 'sub_scheduled_no_group_info',
+      status: 'scheduled',
+      planId: planWithoutGroupInfo.id as string,
+      plan: planWithoutGroupInfo,
+      nextChargeDate: OPENING_DAY,
+    } as never);
+    mockParams = { sub: subWithoutGroupInfo.id };
+    stagePresaleSwap({
+      subs: [subWithoutGroupInfo],
+      plans: [planWithoutGroupInfo, OTHER_GROUP_PLAN],
+    });
+    server.use(
+      http.get(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/${subWithoutGroupInfo.id}/change-plan/preview`,
+        ),
+        () => HttpResponse.json({ data: PRESALE_SWAP_PREVIEW }),
+      ),
+      http.post(
+        api(
+          `/organizations/${TEST_ORG}/subscriptions/my/${subWithoutGroupInfo.id}/change-plan`,
+        ),
+        () =>
+          HttpResponse.json(
+            {
+              message: 'Different group',
+              code: 'presale_swap_requires_same_group',
+              statusCode: 409,
+            },
+            { status: 409 },
+          ),
+      ),
+    );
+    const user = userEvent.setup();
+
+    await renderWithProviders(<ChangePlanScreen />);
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(`change-plan-option-${OTHER_GROUP_PLAN.id}`),
+      ).toBeTruthy();
+    });
+
+    await user.press(
+      screen.getByTestId(`change-plan-option-${OTHER_GROUP_PLAN.id}`),
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('change-plan-summary')).toBeTruthy();
+    });
+    await user.press(screen.getByText(S.confirmAction));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('change-plan-error')).toBeTruthy();
+    });
+    expect(screen.getByText(P.errPresaleSwapRequiresSameGroup)).toBeTruthy();
+  });
+});
