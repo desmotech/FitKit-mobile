@@ -76,7 +76,7 @@ const HE: WhiteboardStrings = {
   emptyComingUp: 'בהמשך השבוע',
   emptyNoneThisWeek: 'לא הוקצו אימונים השבוע',
   restDayTitle: 'יום מנוחה',
-  restDaySubtitle: 'יום התאוששות — מים, מתיחות ושינה טובה.',
+  restDaySubtitle: 'יום התאוששות: מים, מתיחות ושינה טובה.',
 
   errorTitle: 'לא הצלחנו לטעון את התוכנית שלך',
   errorSubtitle: 'בדוק חיבור ונסה שוב.',
@@ -131,7 +131,7 @@ const RU: WhiteboardStrings = {
   roundsOne: '{count} раунд',
   coachNote: 'Заметка тренера',
 
-  emptyTitle: 'День отдыха — {day}',
+  emptyTitle: 'День отдыха: {day}',
   emptySubtitle:
     'Тренировка не назначена. Отдохните или посмотрите, что запланировано дальше на этой неделе.',
   emptyJumpTo: 'Перейти: {day}',

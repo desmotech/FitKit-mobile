@@ -39,7 +39,7 @@ const en: CancelPendingStrings = {
   cancelling: 'Cancelling…',
   confirmTitle: 'Cancel checkout',
   confirmDescription:
-    "Cancel your unfinished {plan} checkout. Nothing was charged, and this can't be undone — you'd need to start a new checkout to sign up again.",
+    "Cancel your unfinished {plan} checkout. Nothing was charged, and this can't be undone. You'd need to start a new checkout to sign up again.",
   keepAction: 'Keep checkout',
   confirmAction: 'Cancel checkout',
   success: 'Checkout cancelled',
@@ -51,7 +51,7 @@ const he: CancelPendingStrings = {
   cancelling: 'מבטל…',
   confirmTitle: 'ביטול תהליך ההרשמה',
   confirmDescription:
-    'ביטול תהליך ההרשמה שלא הושלם עבור {plan}. לא בוצע חיוב, ולא ניתן לבטל את הפעולה הזו — כדי להצטרף מחדש יהיה צורך להתחיל תהליך הרשמה חדש.',
+    'ביטול תהליך ההרשמה שלא הושלם עבור {plan}. לא בוצע חיוב, ולא ניתן לבטל את הפעולה הזו. כדי להצטרף מחדש יהיה צורך להתחיל תהליך הרשמה חדש.',
   keepAction: 'השארת התהליך',
   confirmAction: 'ביטול תהליך ההרשמה',
   success: 'תהליך ההרשמה בוטל',
@@ -63,7 +63,7 @@ const ru: CancelPendingStrings = {
   cancelling: 'Отмена…',
   confirmTitle: 'Отменить оформление',
   confirmDescription:
-    'Отмена незавершённого оформления плана {plan}. Списаний не было, и это действие нельзя отменить — чтобы оформить план снова, потребуется начать оформление заново.',
+    'Отмена незавершённого оформления плана {plan}. Списаний не было, и это действие нельзя отменить. Чтобы оформить план снова, потребуется начать оформление заново.',
   keepAction: 'Оставить',
   confirmAction: 'Отменить оформление',
   success: 'Оформление отменено',

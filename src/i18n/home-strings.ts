@@ -88,14 +88,14 @@ const HE: HomeStrings = {
   restDaySubtitle: 'הגוף בונה את עצמו בימים כאלה.',
   // No "היום" — the section kicker right above already says it.
   openDayTitle: 'אין אימון מתוכנן',
-  openDaySubtitle: 'זמן טוב לתנועה קלה — הליכה, מתיחות או מוביליטי.',
+  openDaySubtitle: 'זמן טוב לתנועה קלה: הליכה, מתיחות או מוביליטי.',
   browseWeek: 'מה יש השבוע',
 
   // Verb-free and plural, like the rest of the Hebrew here — no masculine
   // imperative, and nothing that assumes the gym is already running.
   presaleTitle: 'שמחים שהצטרפתם!',
   presaleBody:
-    'המועדון נפתח ב-{date}, ומסלול החברות שלכם מתחיל בדיוק אז. עד אז אין מה לעשות — הכול מוכן.',
+    'המועדון נפתח ב-{date}, ומסלול החברות שלכם מתחיל בדיוק אז. עד אז אין מה לעשות. הכול מוכן.',
   presaleCountdown: 'עוד {days} ימים לפתיחה',
   presaleCountdownTomorrow: 'נפתחים מחר',
 
@@ -147,12 +147,12 @@ const EN: HomeStrings = {
   restDayTitle: 'Rest day',
   restDaySubtitle: 'This is where the body rebuilds itself.',
   openDayTitle: 'Nothing on the board',
-  openDaySubtitle: 'A good day for easy movement — a walk, a stretch, mobility.',
+  openDaySubtitle: 'A good day for easy movement: a walk, a stretch, mobility.',
   browseWeek: "See what's on this week",
 
   presaleTitle: 'Welcome aboard!',
   presaleBody:
-    "We open on {date}, and your membership starts that day. Nothing to do until then — you're all set.",
+    "We open on {date}, and your membership starts that day. Nothing to do until then. You're all set.",
   presaleCountdown: '{days} days to opening',
   presaleCountdownTomorrow: 'Opening tomorrow',
 
@@ -203,12 +203,12 @@ const RU: HomeStrings = {
   restDaySubtitle: 'Именно в такие дни тело восстанавливается.',
   openDayTitle: 'На доске пусто',
   openDaySubtitle:
-    'Хороший день для лёгкого движения — прогулка, растяжка, мобильность.',
+    'Хороший день для лёгкого движения: прогулка, растяжка, мобильность.',
   browseWeek: 'Что на этой неделе',
 
   presaleTitle: 'Рады, что вы с нами!',
   presaleBody:
-    'Мы открываемся {date}, тогда же начнётся ваш абонемент. До этого ничего делать не нужно — всё готово.',
+    'Мы открываемся {date}, тогда же начнётся ваш абонемент. До этого ничего делать не нужно. Всё готово.',
   presaleCountdown: 'До открытия {days} дн.',
   presaleCountdownTomorrow: 'Открываемся завтра',
 

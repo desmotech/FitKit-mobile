@@ -71,22 +71,22 @@ export interface PaymentErrorStrings {
 }
 
 const en: PaymentErrorStrings = {
-  noActivePaymentMethod: 'No active card on file — register one first.',
-  renewalChargeFailed: 'The card was declined — nothing was changed.',
+  noActivePaymentMethod: 'No active card on file. Register one first.',
+  renewalChargeFailed: 'The card was declined. Nothing was changed.',
   bookingBeyondSubscriptionEnd:
-    'Your subscription ends on {endsAt} — this session starts after that.',
+    'Your subscription ends on {endsAt}. This session starts after that.',
   pendingActionConflict:
-    'This subscription already has a pending change — resolve it first.',
+    'This subscription already has a pending change. Resolve it first.',
   membershipNotActive:
-    'This membership is not active — reactivate it before being charged.',
+    'This membership is not active. Reactivate it before being charged.',
   outstandingBalance:
     'There is an outstanding balance to settle before changing plans.',
   resumeFirst: 'Resume the subscription before changing it.',
-  planChangeChargeFailed: 'The card was declined — nothing was changed.',
+  planChangeChargeFailed: 'The card was declined. Nothing was changed.',
   planChangeInProgress:
     'Another plan change is already running on this subscription.',
   planChangeConflict:
-    "The plan change didn't complete — refresh, and contact support if you were charged.",
+    "The plan change didn't complete. Refresh, and contact support if you were charged.",
   planChangeCurrencyMismatch:
     'Plans in different currencies cannot be switched between.',
   providerChargeUnverified:
@@ -106,18 +106,18 @@ const en: PaymentErrorStrings = {
 };
 
 const he: PaymentErrorStrings = {
-  noActivePaymentMethod: 'אין כרטיס פעיל בתיק — יש לרשום כרטיס תחילה.',
-  renewalChargeFailed: 'הכרטיס נדחה — לא בוצע שינוי.',
+  noActivePaymentMethod: 'אין כרטיס פעיל בתיק. יש לרשום כרטיס תחילה.',
+  renewalChargeFailed: 'הכרטיס נדחה. לא בוצע שינוי.',
   bookingBeyondSubscriptionEnd:
-    'המנוי שלך מסתיים בתאריך {endsAt} — השיעור הזה מתחיל אחרי כן.',
-  pendingActionConflict: 'למנוי זה כבר יש שינוי ממתין — יש לטפל בו קודם.',
-  membershipNotActive: 'המנוי אינו פעיל — יש להפעילו מחדש לפני חיוב.',
+    'המנוי שלך מסתיים בתאריך {endsAt}. השיעור הזה מתחיל אחרי כן.',
+  pendingActionConflict: 'למנוי זה כבר יש שינוי ממתין. יש לטפל בו קודם.',
+  membershipNotActive: 'המנוי אינו פעיל. יש להפעילו מחדש לפני חיוב.',
   outstandingBalance: 'יש לגבות את היתרה הפתוחה לפני החלפת המנוי.',
   resumeFirst: 'יש להפעיל מחדש את המנוי לפני שינויו.',
-  planChangeChargeFailed: 'הכרטיס נדחה — לא בוצע שינוי.',
+  planChangeChargeFailed: 'הכרטיס נדחה. לא בוצע שינוי.',
   planChangeInProgress: 'שינוי תוכנית נוסף כבר מתבצע עבור המנוי הזה כרגע.',
   planChangeConflict:
-    'שינוי התוכנית לא הושלם — יש לרענן וליצור קשר עם התמיכה אם החיוב בוצע.',
+    'שינוי התוכנית לא הושלם. יש לרענן וליצור קשר עם התמיכה אם החיוב בוצע.',
   planChangeCurrencyMismatch: 'לא ניתן להחליף בין תוכניות במטבעות שונים.',
   providerChargeUnverified:
     'חיובי דלפק אינם זמינים עדיין עבור ספק תשלום זה.',
@@ -125,7 +125,7 @@ const he: PaymentErrorStrings = {
     'לא הצלחנו לשמור את הכרטיס. כדאי לבדוק את הפרטים מול הבנק, או לנסות כרטיס אחר.',
   purchaseRefusedTitle: 'לא הצלחנו להשלים את הרכישה',
   purchaseRefusedBody:
-    'המנוי לא נרכש ולא בוצע חיוב. כדאי לנסות שוב, ואם זה חוזר — דברו איתנו במועדון.',
+    'המנוי לא נרכש ולא בוצע חיוב. כדאי לנסות שוב, ואם זה חוזר, דברו איתנו במועדון.',
   renewFailed: 'החידוש לא בוצע ולא בוצע חיוב. כדאי לנסות שוב בעוד רגע.',
   generic: 'משהו השתבש. נסו שוב.',
   cardExpired: 'פג תוקף',
@@ -135,20 +135,20 @@ const he: PaymentErrorStrings = {
 };
 
 const ru: PaymentErrorStrings = {
-  noActivePaymentMethod: 'Нет активной карты — сначала привяжите карту.',
-  renewalChargeFailed: 'Карта отклонена — изменений не произошло.',
+  noActivePaymentMethod: 'Нет активной карты. Сначала привяжите карту.',
+  renewalChargeFailed: 'Карта отклонена. Изменений не произошло.',
   bookingBeyondSubscriptionEnd:
-    'Ваша подписка заканчивается {endsAt} — это занятие начинается позже этой даты.',
+    'Ваша подписка заканчивается {endsAt}. Это занятие начинается позже этой даты.',
   pendingActionConflict:
-    'У этой подписки уже есть ожидающее изменение — сначала разрешите его.',
+    'У этой подписки уже есть ожидающее изменение. Сначала разрешите его.',
   membershipNotActive:
-    'Подписка неактивна — активируйте её перед списанием.',
+    'Подписка неактивна. Активируйте её перед списанием.',
   outstandingBalance: 'Перед сменой плана нужно погасить задолженность.',
   resumeFirst: 'Возобновите подписку перед её изменением.',
-  planChangeChargeFailed: 'Карта отклонена — изменений не произошло.',
+  planChangeChargeFailed: 'Карта отклонена. Изменений не произошло.',
   planChangeInProgress: 'Для этой подписки уже выполняется смена плана.',
   planChangeConflict:
-    'Смена плана не завершилась — обновите страницу и свяжитесь с поддержкой, если списание прошло.',
+    'Смена плана не завершилась. Обновите страницу и свяжитесь с поддержкой, если списание прошло.',
   planChangeCurrencyMismatch:
     'Нельзя переключаться между планами в разных валютах.',
   providerChargeUnverified:
@@ -157,7 +157,7 @@ const ru: PaymentErrorStrings = {
     'Не удалось сохранить карту. Проверьте данные в банке или попробуйте другую карту.',
   purchaseRefusedTitle: 'Не удалось завершить покупку',
   purchaseRefusedBody:
-    'Абонемент не приобретён, списания не было. Попробуйте ещё раз, а если повторится — свяжитесь с клубом.',
+    'Абонемент не приобретён, списания не было. Попробуйте ещё раз, а если повторится, свяжитесь с клубом.',
   renewFailed:
     'Продление не прошло, списания не было. Попробуйте через минуту.',
   generic: 'Что-то пошло не так. Попробуйте ещё раз.',
