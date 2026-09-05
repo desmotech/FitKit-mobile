@@ -126,6 +126,16 @@ export interface FormStrings {
   fixErrors: (n: number) => string;
   uploadFailed: string;
 
+  // ── Date field ─────────────────────────────────────────────────────
+  /**
+   * Empty-state prompt on FKDateField's tap target (FIT-cancellation form
+   * bug: an untouched date used to render today's date in the native
+   * picker's chip, indistinguishable from a real answer). Phrased as an
+   * instruction to pick a date, never a `YYYY-MM-DD` format mask — the
+   * member is choosing from a calendar, not typing.
+   */
+  datePlaceholder: string;
+
   // ── Signature field ───────────────────────────────────────────────
   sigHint: string;
   sigPlaceholder: string;
@@ -227,6 +237,7 @@ const HE: FormStrings = {
   fixErrors: (n) =>
     n === 1 ? 'יש לתקן שגיאה אחת בטופס' : `יש לתקן ${n} שגיאות בטופס`,
   uploadFailed: 'ההעלאה נכשלה. נסה שוב.',
+  datePlaceholder: 'בחרו תאריך',
 
   sigHint: 'חתום באצבע בתוך הריבוע.',
   sigPlaceholder: 'חתום כאן',
@@ -333,6 +344,7 @@ const EN: FormStrings = {
   fixErrors: (n) =>
     n === 1 ? 'Please fix 1 error in the form' : `Please fix ${n} errors in the form`,
   uploadFailed: 'Upload failed. Please try again.',
+  datePlaceholder: 'Choose a date',
 
   sigHint: 'Sign using your finger inside the box.',
   sigPlaceholder: 'Sign here',
@@ -445,6 +457,7 @@ const RU: FormStrings = {
       ? 'Исправьте 1 ошибку в форме'
       : `Исправьте ${n} ошибок в форме`,
   uploadFailed: 'Загрузка не удалась. Попробуйте снова.',
+  datePlaceholder: 'Выберите дату',
 
   sigHint: 'Подпишите пальцем внутри рамки.',
   sigPlaceholder: 'Подпишите здесь',

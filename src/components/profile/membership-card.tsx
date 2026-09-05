@@ -355,6 +355,7 @@ export function MembershipCard({
           flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 10,
         }}
       >
         <View
@@ -362,33 +363,43 @@ export function MembershipCard({
             flexDirection: isRTL ? 'row-reverse' : 'row',
             alignItems: 'center',
             gap: 7,
+            flexShrink: 1,
           }}
         >
           <Star size={14} color={goldOnHero} fill={goldOnHero} strokeWidth={1.7} />
           <Text
+            numberOfLines={1}
             style={{
               fontSize: 11,
               color: 'rgba(255,255,255,0.80)',
+              flexShrink: 1,
               ...eyebrow(lang),
             }}
           >
             {labels.title}
           </Text>
         </View>
+        {/* The chip carries server copy of any length ("Starts when we open",
+            "Cancelled before it started"), so it shrinks rather than pushing
+            the kicker off the card, and never eats more than half the row. */}
         <View
           style={{
             paddingHorizontal: 9,
-            paddingVertical: 3,
+            paddingVertical: 4,
             borderRadius: 7,
             backgroundColor: 'rgba(255,255,255,0.18)',
             borderWidth: 1,
             borderColor: 'rgba(255,255,255,0.30)',
+            flexShrink: 0,
+            maxWidth: '52%',
           }}
         >
           <Text
+            numberOfLines={1}
             style={{
               fontSize: 10,
               fontWeight: '800',
+              letterSpacing: 0.3,
               color: '#fff',
             }}
           >
@@ -404,97 +415,37 @@ export function MembershipCard({
         </View>
       </View>
 
-      {/* bottom row — plan + renews | Manage pill */}
-      <View
-        style={{
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-          alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          gap: 12,
-        }}
-      >
-        <View
+      {/* Plan identity — its own line, full width. Two lines before it
+          ellipsises: plan names are gym-authored ("Founders · Presale
+          monthly") and a single truncated line is the one thing on this card
+          the member cannot look up anywhere else. */}
+      <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+        <Text
+          testID="membership-plan-name"
+          numberOfLines={2}
           style={{
-            flex: 1,
-            minWidth: 0,
-            alignItems: isRTL ? 'flex-end' : 'flex-start',
+            fontSize: 23,
+            lineHeight: 29,
+            color: '#fff',
+            letterSpacing: -0.4,
+            textAlign: isRTL ? 'right' : 'left',
+            fontFamily: displayFamily(lang, 'semibold'),
           }}
         >
+          {sub.plan.name}
+        </Text>
+        {expiresStr ? (
           <Text
-            numberOfLines={1}
             style={{
-              fontSize: 24,
-              lineHeight: 30,
-              color: '#fff',
-              letterSpacing: -0.4,
+              fontSize: 11.5,
+              color: 'rgba(255,255,255,0.76)',
+              marginTop: 4,
+              fontFamily: 'Assistant-Medium',
               textAlign: isRTL ? 'right' : 'left',
-              fontFamily: displayFamily(lang, 'semibold'),
             }}
           >
-            {sub.plan.name}
+            {expiresStr}
           </Text>
-          {expiresStr ? (
-            <Text
-              style={{
-                fontSize: 11.5,
-                color: 'rgba(255,255,255,0.76)',
-                marginTop: 4,
-                fontFamily: 'Assistant-Medium',
-                textAlign: isRTL ? 'right' : 'left',
-              }}
-            >
-              {expiresStr}
-            </Text>
-          ) : null}
-        </View>
-        {/* Children-as-function + static View: a `Pressable style={() => …}`
-            function gets dropped in this RN build, so the white pill never
-            rendered (teal text on teal card = invisible). */}
-        {ctaLabel ? (
-          <Pressable
-            testID="membership-cta"
-            onPressIn={haptics.tap}
-            onPress={onCtaPress}
-            disabled={
-              isRenewing ||
-              (isManageCta && !onManage) ||
-              (isCompleteCheckoutCta &&
-                (!onCompleteCheckout || !!isCompletingCheckout)) ||
-              (isCancelPendingCta && (!onCancelPending || isCancellingPending))
-            }
-          >
-            {({ pressed }) => (
-              <View
-                style={{
-                  paddingVertical: 10,
-                  paddingHorizontal: 18,
-                  borderRadius: 11,
-                  borderCurve: 'continuous',
-                  backgroundColor: '#fff',
-                  shadowColor: '#000',
-                  shadowOpacity: 0.16,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 3 },
-                  elevation: 3,
-                  opacity:
-                    pressed ||
-                    isRenewing ||
-                    isCancellingPending ||
-                    isCompletingCheckout
-                      ? 0.85
-                      : 1,
-                }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '800', color: '#0E8C8C' }}>
-                  {isCancelPendingCta && isCancellingPending
-                    ? cancelPendingT.cancelling
-                    : isRenewing && !isManageCta
-                      ? labels.renewing
-                      : ctaLabel}
-                </Text>
-              </View>
-            )}
-          </Pressable>
         ) : null}
       </View>
 
@@ -535,34 +486,6 @@ export function MembershipCard({
             {presaleNote}
           </Text>
         </View>
-      ) : null}
-
-      {/* The other half of the decision. A member who walked away from a
-          checkout needs a way to say so — without it the ghost membership
-          sits on the card forever, asking for a payment they already
-          declined to make. */}
-      {showCancelPendingLink ? (
-        <Pressable
-          testID="membership-cancel-pending"
-          onPressIn={haptics.tap}
-          onPress={onCancelPending}
-          disabled={isCancellingPending}
-          hitSlop={8}
-          style={{ alignSelf: isRTL ? 'flex-end' : 'flex-start' }}
-        >
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: 'rgba(255,255,255,0.86)',
-              textDecorationLine: 'underline',
-            }}
-          >
-            {isCancellingPending
-              ? cancelPendingT.cancelling
-              : cancelPendingT.cta}
-          </Text>
-        </Pressable>
       ) : null}
 
       {/* What's left to book and when it resets — the two questions a member
@@ -672,6 +595,97 @@ export function MembershipCard({
         >
           {externalBillingNote}
         </Text>
+      ) : null}
+
+      {/* Primary action, last and full width. It used to share a row with the
+          plan name, which is a fight the button always won: a two-word CTA
+          took a third of the card and the plan title got ellipsised mid-word
+          ("QA Notice · Pre…"). Reading order now matches the decision —
+          which membership, what state, why, then what you can do about it —
+          and the pill finally clears the 44pt touch target. */}
+      {ctaLabel ? (
+        <View style={{ gap: 10 }}>
+          <Pressable
+            testID="membership-cta"
+            onPressIn={haptics.tap}
+            onPress={onCtaPress}
+            disabled={
+              isRenewing ||
+              (isManageCta && !onManage) ||
+              (isCompleteCheckoutCta &&
+                (!onCompleteCheckout || !!isCompletingCheckout)) ||
+              (isCancelPendingCta && (!onCancelPending || isCancellingPending))
+            }
+          >
+            {/* Children-as-function + static View: a `Pressable style={() => …}`
+                function gets dropped in this RN build, so the white pill never
+                rendered (teal text on teal card = invisible). */}
+            {({ pressed }) => (
+              <View
+                style={{
+                  minHeight: 46,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 18,
+                  borderRadius: 13,
+                  borderCurve: 'continuous',
+                  backgroundColor: '#fff',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.16,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 3 },
+                  elevation: 3,
+                  opacity:
+                    pressed ||
+                    isRenewing ||
+                    isCancellingPending ||
+                    isCompletingCheckout
+                      ? 0.85
+                      : 1,
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={{ fontSize: 14, fontWeight: '800', color: '#0E8C8C' }}
+                >
+                  {isCancelPendingCta && isCancellingPending
+                    ? cancelPendingT.cancelling
+                    : isRenewing && !isManageCta
+                      ? labels.renewing
+                      : ctaLabel}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+
+          {/* The other half of the decision. A member who walked away from a
+              checkout needs a way to say so — without it the ghost membership
+              sits on the card forever, asking for a payment they already
+              declined to make. Centered under the pill it belongs to. */}
+          {showCancelPendingLink ? (
+            <Pressable
+              testID="membership-cancel-pending"
+              onPressIn={haptics.tap}
+              onPress={onCancelPending}
+              disabled={isCancellingPending}
+              hitSlop={8}
+              style={{ alignSelf: 'center' }}
+            >
+              <Text
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: '700',
+                  color: 'rgba(255,255,255,0.86)',
+                  textDecorationLine: 'underline',
+                }}
+              >
+                {isCancellingPending
+                  ? cancelPendingT.cancelling
+                  : cancelPendingT.cta}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
 
     </View>

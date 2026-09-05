@@ -96,7 +96,6 @@ export default function CompleteProfileScreen() {
     nationalId: (cpT.nationalId as string) ?? 'ID Number',
     nationalIdPlaceholder: (cpT.nationalIdPlaceholder as string) ?? '9 digits',
     birthDate: (cpT.birthDate as string) ?? 'Date of Birth',
-    birthDatePlaceholder: 'YYYY-MM-DD',
     gender: (cpT.gender as string) ?? 'Gender',
     selectGender: (cpT.selectGender as string) ?? 'Select gender',
     save: commonT.save ?? 'Save',
@@ -343,7 +342,6 @@ export default function CompleteProfileScreen() {
                   // defaults to its own minDate which is well in the
                   // past).
                   maximumDate={new Date()}
-                  placeholder={labels.birthDatePlaceholder}
                 />
               </Field>
               <Field

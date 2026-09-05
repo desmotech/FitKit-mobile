@@ -87,7 +87,6 @@ export default function GoalCreateScreen() {
     targetValue: goalsT.targetValue ?? 'Target',
     unit: 'Unit',
     deadline: goalsT.deadline ?? 'Deadline',
-    deadlinePlaceholder: 'YYYY-MM-DD',
     save: commonT.save ?? 'Save',
     saving: commonT.loading ?? 'Saving…',
     cancel: commonT.cancel ?? 'Cancel',
@@ -416,7 +415,6 @@ export default function GoalCreateScreen() {
             value={deadline}
             onChange={setDeadline}
             minimumDate={new Date()}
-            placeholder={labels.deadlinePlaceholder}
           />
         </View>
       </View>

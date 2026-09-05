@@ -62,7 +62,6 @@ export default function PersonalDetailsScreen() {
     nationalId: (cpT.nationalId as string) ?? 'ID Number',
     nationalIdPlaceholder: (cpT.nationalIdPlaceholder as string) ?? '9 digits',
     birthDate: (cpT.birthDate as string) ?? 'Date of Birth',
-    birthDatePlaceholder: 'YYYY-MM-DD',
     gender: (cpT.gender as string) ?? 'Gender',
     selectGender: (cpT.selectGender as string) ?? 'Select gender',
     save: commonT.save ?? 'Save',
@@ -283,7 +282,6 @@ export default function PersonalDetailsScreen() {
                       value={form.birthDate}
                       onChange={(v) => update('birthDate', v)}
                       maximumDate={new Date()}
-                      placeholder={labels.birthDatePlaceholder}
                     />
                   </Field>
                   <Field

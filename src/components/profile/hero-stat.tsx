@@ -19,7 +19,14 @@ export function HeroStat({
   labelColor?: string;
 }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        paddingHorizontal: 4,
+      }}
+    >
       <Text
         style={{
           fontSize: 26,
@@ -32,13 +39,19 @@ export function HeroStat({
       >
         {value}
       </Text>
+      {/* Two lines, centered. One line ellipsised the only label that says
+          what the number counts — "Classes this mon…" — and the three
+          columns are 1/3 of a phone wide, so the longest of the three
+          decides the height for all of them. */}
       <Text
-        numberOfLines={1}
+        numberOfLines={2}
         style={{
           fontSize: 10,
           color: labelColor ?? 'rgba(255,255,255,0.72)',
           marginTop: 4,
+          textAlign: 'center',
           ...eyebrow(lang),
+          lineHeight: 13,
         }}
       >
         {label}

@@ -66,6 +66,32 @@ describe('MembershipCard CTA', () => {
     expect(screen.getByText('Manage plan')).toBeOnTheScreen();
   });
 
+  /**
+   * The CTA used to share one row with the plan name, flex-1 against a pill
+   * whose label the gym never sees: a real presale name came out as
+   * "QA Notice · Pre…" while "Manage plan" took a third of the card. The
+   * name owns its line now, two of them before it ellipsises, and the pill
+   * is a full-width footer.
+   */
+  it('gives a long plan name two lines of its own, away from the CTA', async () => {
+    await renderCard({
+      status: 'scheduled',
+      displayStatus: 'scheduled',
+      memberActions: ['none'],
+      plan: { name: 'QA Notice · Presale monthly' },
+    });
+
+    const name = screen.getByTestId('membership-plan-name');
+    expect(name).toHaveTextContent('QA Notice · Presale monthly');
+    expect(name.props.numberOfLines).toBe(2);
+
+    // The pill is its own footer element, not a sibling competing for the
+    // title's row: it stretches instead of hugging its label.
+    const cta = screen.getByTestId('membership-cta');
+    expect(cta).toBeOnTheScreen();
+    expect(screen.getByText('Manage plan')).toBeOnTheScreen();
+  });
+
   it('offers Renew when the member may renew', async () => {
     await renderCard({ status: 'past_due', memberAction: 'renew' });
     expect(screen.getByText('Renew')).toBeOnTheScreen();
