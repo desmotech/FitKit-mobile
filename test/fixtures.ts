@@ -123,7 +123,7 @@ export function subscriptionWithPlan(
       organizationId: TEST_ORG,
       name: 'Gold Unlimited',
       description: null,
-      type: 'unlimited',
+      type: 'subscription',
       programId: null,
       priceInCents: 45000,
       currency: 'ILS',

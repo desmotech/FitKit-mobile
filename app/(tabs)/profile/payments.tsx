@@ -172,6 +172,9 @@ export default function PaymentsScreen() {
     // static value.
     checkoutNotCompleted: profileStrings.checkoutNotCompleted,
     completePayment: profileStrings.completePayment,
+    // FIT-353 wave 1: same merged-profile-strings precedent as the two
+    // above — brand-new copy with no pinned-dictionary counterpart yet.
+    consumablePlanNote: profileStrings.consumablePlanNote,
   };
 
   const txnPath = orgId ? `/organizations/${orgId}/payments/my` : '';
@@ -971,6 +974,10 @@ function SubscriptionCard({
     /** Shown outside the notice-given banner: the plan is billed through the
      *  org's own payment provider, so Taikan only mirrors its status. */
     externallyBilled: string;
+    /** FIT-353 wave 1: shown in place of the cancel row on a punch card or
+     *  drop-in (`plan.type` `class_pack` / `drop_in`) — those are one-time
+     *  purchases, not a subscription being given notice on. */
+    consumablePlanNote: string;
   };
   statusLabels: Record<string, string>;
   onRenew: () => void;
@@ -1030,16 +1037,31 @@ function SubscriptionCard({
   const showRenew = memberAction
     ? memberAction === 'renew'
     : status === 'past_due' || status === 'cancelled';
+  const scheduledToCancel = scheduledToCancelOf(sub);
+  // Punch cards and drop-ins (`plan.type` `class_pack` / `drop_in`) are
+  // one-time purchases, not recurring subscriptions — the Israeli notice
+  // rule for those (14 days from purchase, 2+ days before a booked
+  // session; docs/reference/israeli-cancellation-rules.md §3) isn't
+  // implemented yet (FIT-353 wave 1), so the affordance is withheld
+  // entirely rather than shipping the wrong rule. `course` plans never
+  // reach this screen at all — no subscription row is ever created for
+  // one — so no branch is needed for them.
+  const isNoticeEligiblePlan = sub.plan.type === 'subscription';
   // A member may give notice from any live state. Requiring `active` locked out
   // paused, past_due and debt members — the ones most likely to want out — and
   // the API no longer refuses them either.
+  const isLiveStatus =
+    status === 'active' ||
+    status === 'paused' ||
+    status === 'past_due' ||
+    status === 'debt';
   const showCancel =
-    !scheduledToCancelOf(sub) &&
-    (status === 'active' ||
-      status === 'paused' ||
-      status === 'past_due' ||
-      status === 'debt');
-  const scheduledToCancel = scheduledToCancelOf(sub);
+    isNoticeEligiblePlan && !scheduledToCancel && isLiveStatus;
+  // Same live states `showCancel` would apply to, on a plan type that never
+  // gets the affordance at all — say why in its place, rather than just
+  // dropping the row silently.
+  const showConsumableNotice =
+    !isNoticeEligiblePlan && !scheduledToCancel && isLiveStatus;
   // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @taikan/shared) predate
   // `memberAction` — same cast precedent as `scheduledToCancelOf` above.
   // The API's per-org gate on cancel-pending is gone, so a pending row now
@@ -1386,6 +1408,20 @@ function SubscriptionCard({
             </Pressable>
           ) : null}
         </View>
+      )}
+
+      {showConsumableNotice && (
+        <Text
+          testID="consumable-plan-note"
+          style={{
+            fontSize: 11.5,
+            color: colors.mutedFg,
+            lineHeight: 16,
+            textAlign: isRTL ? 'right' : 'left',
+          }}
+        >
+          {labels.consumablePlanNote}
+        </Text>
       )}
     </FKGlassPanel>
   );

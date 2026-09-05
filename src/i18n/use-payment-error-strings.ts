@@ -28,6 +28,8 @@ const DICT_PATHS: Record<keyof PaymentErrorStrings, string> = {
   // at paths that do not exist so the static copy always wins; if they are
   // ever added upstream the dictionary takes over automatically.
   cardRegistrationFailed: 'payments.errorCodes.card_registration_failed',
+  cancelUnsupportedPlanType:
+    'payments.errorCodes.cancel_unsupported_plan_type',
   purchaseRefusedTitle: 'payments.errorCodes.purchase_refused_title',
   purchaseRefusedBody: 'payments.errorCodes.purchase_refused_body',
   renewFailed: 'payments.errorCodes.renew_failed',
@@ -76,6 +78,7 @@ const BY_CODE: Record<string, keyof PaymentErrorStrings> = {
   plan_change_conflict: 'planChangeConflict',
   plan_change_currency_mismatch: 'planChangeCurrencyMismatch',
   provider_charge_unverified: 'providerChargeUnverified',
+  cancel_unsupported_plan_type: 'cancelUnsupportedPlanType',
 };
 
 /**

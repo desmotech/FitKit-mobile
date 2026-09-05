@@ -16,8 +16,9 @@ import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { Alert, type AlertButton } from 'react-native';
 import { dictionaries } from '@taikan/shared';
 import { formStringsFor } from '@/i18n/form-strings';
+import { profileStringsFor } from '@/i18n/profile-strings';
 import CancelSubscriptionScreen from '../(tabs)/profile/cancel-subscription';
-import { stageSignedInMember } from '../../test/fixtures';
+import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
 
@@ -78,6 +79,14 @@ function alertBody(): string {
 function stageCancel(formInstanceId: string | null) {
   stageSignedInMember();
   server.use(
+    // FIT-353 wave 1's defensive plan-type gate reuses this list — a real
+    // subscription plan, so every existing test here still reaches the
+    // form unchanged.
+    http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
+      HttpResponse.json({
+        data: [subscriptionWithPlan({ id: SUB_ID, status: 'active' } as never)],
+      }),
+    ),
     http.post(
       api(`/organizations/${TEST_ORG}/subscriptions/my/${SUB_ID}/cancel-at-period-end`),
       () =>
@@ -153,4 +162,43 @@ describe('Cancel subscription → cancellation form', () => {
     );
     expect(mockRouterDismissTo).not.toHaveBeenCalled();
   });
+});
+
+/**
+ * FIT-353 wave 1: the cancel affordance is gone from Payments for a punch
+ * card or drop-in, but this screen is also a deep link
+ * (`taikan://profile/cancel-subscription?id=...`) with no plan-type
+ * guarantee — it must not be a dead end if one is ever reached here.
+ */
+describe('Cancel subscription — non-subscription plan is not a dead end', () => {
+  function stageUnsupportedPlan(planType: 'class_pack' | 'drop_in') {
+    stageSignedInMember();
+    server.use(
+      http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
+        HttpResponse.json({
+          data: [
+            subscriptionWithPlan({
+              id: SUB_ID,
+              status: 'active',
+              plan: { ...subscriptionWithPlan().plan, type: planType },
+            } as never),
+          ],
+        }),
+      ),
+    );
+  }
+
+  it.each(['class_pack', 'drop_in'] as const)(
+    'explains instead of offering the form for a %s plan',
+    async (planType) => {
+      stageUnsupportedPlan(planType);
+      await renderWithProviders(<CancelSubscriptionScreen />);
+
+      expect(
+        await screen.findByTestId('cancel-unsupported-plan-notice'),
+      ).toHaveTextContent(profileStringsFor('he').consumablePlanNote);
+      expect(screen.queryByText(CONFIRM_CTA)).toBeNull();
+      expect(screen.queryByPlaceholderText(/./)).toBeNull();
+    },
+  );
 });

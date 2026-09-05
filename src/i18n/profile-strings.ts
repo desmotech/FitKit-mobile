@@ -80,6 +80,13 @@ export interface ProfileStrings {
   /** Shown outside the notice-given banner: the plan is billed through the
    *  org's own payment provider, so Taikan only mirrors its status. */
   externallyBilled: string;
+  /** FIT-353 wave 1: shown in place of the cancel action (and as the whole
+   *  body of the notice sheet, if that screen is ever reached directly for
+   *  one) on a punch card or drop-in (`plan.type` `class_pack` / `drop_in`).
+   *  Those are one-time purchases, not a recurring subscription being given
+   *  notice on — the Israeli notice-window rule for them isn't implemented
+   *  yet, so the affordance is withheld rather than shipping the wrong one. */
+  consumablePlanNote: string;
 
   // ── Build / OTA diagnostics (tap the footer version line) ─────────
   buildTitle: string;
@@ -184,6 +191,8 @@ const HE: ProfileStrings = {
     'יש לך גישה מלאה עד אז. שינית את דעתך? כדי להישאר חברים, רכשו את התוכנית שוב בחנות.',
   externallyBilled:
     'מסלול החברות מחויב דרך ספק הסליקה של המועדון. אפשר לבטל כאן, והמועדון יעצור את החיובים מול הספק. לשינוי התוכנית, פנו למועדון.',
+  consumablePlanNote:
+    'סוג המנוי הזה אינו מבוטל. כרטיסייה או כניסה בודדת הן רכישה חד-פעמית שפשוט נגמרת. רוצים החזר כספי? פנו למועדון.',
 
   buildTitle: 'גרסת האפליקציה',
   buildVersion: 'גרסה',
@@ -283,6 +292,8 @@ const EN: ProfileStrings = {
     'You have full access until then. Changed your mind? Buy the plan again from the shop to stay a member.',
   externallyBilled:
     "Your subscription is billed by the gym's payment provider. You can still cancel here, and the gym stops the payments with the provider. To change your plan, contact the gym.",
+  consumablePlanNote:
+    "This kind of plan isn't cancelled. A punch card or drop-in is a one-time purchase that simply runs out. Want your money back? Talk to the gym.",
 
   buildTitle: 'App build',
   buildVersion: 'Version',
@@ -382,6 +393,8 @@ const RU: ProfileStrings = {
     'До этой даты доступ полный. Передумали? Чтобы остаться участником, купите план заново в магазине.',
   externallyBilled:
     'Абонемент оплачивается через платёжного провайдера зала. Отменить можно здесь, и зал остановит списания у провайдера. Чтобы сменить план, обратитесь в зал.',
+  consumablePlanNote:
+    'Такой тип абонемента не отменяется. Разовое занятие и пакет посещений являются одноразовой покупкой, которая просто заканчивается. Хотите вернуть деньги? Обратитесь в зал.',
 
   buildTitle: 'Сборка приложения',
   buildVersion: 'Версия',

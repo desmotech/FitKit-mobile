@@ -17,7 +17,7 @@ import {
   cancelReasonStringsFor,
 } from '@/i18n/cancel-reason-strings';
 import { setAnalyticsConsent } from '@/lib/analytics';
-import { stageSignedInMember } from '../../test/fixtures';
+import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
 import { api, http, HttpResponse, server } from '../../test/msw';
 import { renderWithProviders, TEST_ORG } from '../../test/render';
 
@@ -57,6 +57,13 @@ function stageCancel() {
   stageSignedInMember();
   setAnalyticsConsent(true);
   server.use(
+    // FIT-353 wave 1's defensive plan-type gate reuses this list — a real
+    // subscription plan, so every existing test here still reaches the form.
+    http.get(api(`/organizations/${TEST_ORG}/subscriptions/my`), () =>
+      HttpResponse.json({
+        data: [subscriptionWithPlan({ id: SUB_ID, status: 'active' } as never)],
+      }),
+    ),
     http.post(
       api(
         `/organizations/${TEST_ORG}/subscriptions/my/${SUB_ID}/cancel-at-period-end`,

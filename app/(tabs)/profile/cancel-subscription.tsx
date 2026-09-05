@@ -42,8 +42,9 @@ import {
   paymentErrorMessage,
   usePaymentErrorStrings,
 } from '@/i18n/use-payment-error-strings';
-import { useCancelAtPeriodEnd } from '@/hooks/use-feed-data';
+import { useCancelAtPeriodEnd, useMySubscription } from '@/hooks/use-feed-data';
 import { useFormStrings } from '@/i18n/use-form-strings';
+import { useProfileStrings } from '@/i18n/use-profile-strings';
 import {
   cancelReasonChips,
   type CancelReasonCode,
@@ -76,6 +77,21 @@ export default function CancelSubscriptionScreen() {
   const params = useLocalSearchParams<{ id?: string; plan?: string }>();
   const subId = typeof params.id === 'string' ? params.id : undefined;
   const planName = typeof params.plan === 'string' ? params.plan : '';
+  // Defensive backstop (FIT-353 wave 1). `handleCancel` in payments.tsx
+  // already hides the button that pushes here for a punch card or drop-in
+  // (`plan.type` `class_pack` / `drop_in`) — the only in-app route to this
+  // screen. But this expo-router route is also a deep link
+  // (`taikan://profile/cancel-subscription?id=...`), which carries no
+  // plan-type guarantee at all, so this screen must not be a dead end if
+  // one ever lands here directly. Reuses the same cached list Payments
+  // just fetched — no extra request in the normal flow. `sub` undefined
+  // (cache still loading, or an id this list doesn't have) reads as
+  // "assume fine": the confirm still posts, and the API's own refusal is
+  // the real gate either way.
+  const subs = useMySubscription(orgId);
+  const sub = subs.data?.data?.find((s) => s.id === subId);
+  const isUnsupportedPlanType = !!sub && sub.plan.type !== 'subscription';
+  const profileStrings = useProfileStrings();
 
   const cancelMut = useCancelAtPeriodEnd(orgId);
   const errorStrings = usePaymentErrorStrings();
@@ -254,6 +270,54 @@ export default function CancelSubscriptionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
+      {isUnsupportedPlanType ? (
+        <>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              paddingHorizontal: 20,
+              paddingTop: 16,
+              paddingBottom: 24,
+              gap: 18,
+            }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'flex-start',
+                gap: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: BRAND_TEAL,
+                backgroundColor: BRAND_TEAL + '14',
+              }}
+            >
+              <CalendarClock
+                size={18}
+                color={BRAND_TEAL}
+                strokeWidth={2.2}
+                style={{ marginTop: 1 }}
+              />
+              <Text
+                testID="cancel-unsupported-plan-notice"
+                style={{
+                  flex: 1,
+                  fontSize: 13,
+                  color: colors.foreground,
+                  lineHeight: 19,
+                  textAlign: isRTL ? 'right' : 'left',
+                }}
+              >
+                {profileStrings.consumablePlanNote}
+              </Text>
+            </View>
+          </ScrollView>
+        </>
+      ) : (
+        <>
         <ScrollView
           style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
@@ -437,6 +501,8 @@ export default function CancelSubscriptionScreen() {
             />
           </View>
         </FKActionBar>
+        </>
+      )}
       </KeyboardAvoidingView>
     </View>
   );

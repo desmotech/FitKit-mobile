@@ -11,6 +11,7 @@ import { Alert, type AlertButton } from 'react-native';
 import { dictionaries } from '@taikan/shared';
 import PaymentsScreen from '../(tabs)/profile/payments';
 import { paymentErrorStringsFor } from '@/i18n/payment-error-strings';
+import { profileStringsFor } from '@/i18n/profile-strings';
 import { cancelPendingStringsFor } from '@/i18n/cancel-pending-strings';
 import { withdrawScheduledStringsFor } from '@/i18n/withdraw-scheduled-strings';
 import { stageSignedInMember, subscriptionWithPlan } from '../../test/fixtures';
@@ -599,6 +600,48 @@ describe('PaymentsScreen — give notice from every live state', () => {
       });
     },
   );
+});
+
+/**
+ * FIT-353 wave 1: cancellation is withheld entirely for a punch card or
+ * drop-in (`plan.type` `class_pack` / `drop_in`) — the Israeli notice rule
+ * for those isn't implemented, so the affordance goes away rather than
+ * shipping the wrong one. A real subscription plan is unaffected.
+ */
+describe('PaymentsScreen — cancellation withheld for consumable plans', () => {
+  it.each(['class_pack', 'drop_in'] as const)(
+    'explains instead of offering to cancel a %s plan',
+    async (planType) => {
+      const sub = subscriptionWithPlan({
+        status: 'active',
+        plan: { ...subscriptionWithPlan().plan, type: planType },
+      } as never);
+      stagePayments({ subs: [sub] });
+
+      await renderWithProviders(<PaymentsScreen />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('consumable-plan-note')).toBeTruthy();
+      });
+      expect(screen.getByTestId('consumable-plan-note')).toHaveTextContent(
+        profileStringsFor('he').consumablePlanNote,
+      );
+      expect(screen.queryByText(SUB_T.cancelAction)).toBeNull();
+    },
+  );
+
+  it('still offers to cancel a real subscription plan', async () => {
+    const sub = subscriptionWithPlan({ status: 'active' } as never);
+    stagePayments({ subs: [sub] });
+
+    await renderWithProviders(<PaymentsScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByText(SUB_T.cancelAction)).toBeTruthy();
+    });
+    expect(screen.queryByTestId('consumable-plan-note')).toBeNull();
+  });
+
 });
 
 /**

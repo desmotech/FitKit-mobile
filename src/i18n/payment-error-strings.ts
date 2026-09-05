@@ -42,6 +42,14 @@ export interface PaymentErrorStrings {
   planChangeCurrencyMismatch: string;
   /** payments.errorCodes.provider_charge_unverified */
   providerChargeUnverified: string;
+  /** FIT-353 wave 1: `payments.errorCodes.cancel_unsupported_plan_type` — no
+   *  shared dictionary key yet, same "not shipped upstream" precedent as
+   *  `cardRegistrationFailed` below. The API refuses `cancel-at-period-end`
+   *  for a punch card or drop-in (`class_pack`/`drop_in`); this is the
+   *  backstop for a stale client that still posts the notice and gets the
+   *  409 back, so the error reads as a real sentence instead of the generic
+   *  fallback. */
+  cancelUnsupportedPlanType: string;
   /**
    * Shop checkout refused. Title + body, because the shared dictionary's
    * `shop.planCard.purchaseFailed` ("רכישת המנוי נכשלה" — "the plan purchase
@@ -91,6 +99,8 @@ const en: PaymentErrorStrings = {
     'Plans in different currencies cannot be switched between.',
   providerChargeUnverified:
     'Front-desk charges are not available yet for this payment provider.',
+  cancelUnsupportedPlanType:
+    "This kind of plan isn't cancelled. A punch card or drop-in is a one-time purchase that simply runs out. Want your money back? Talk to the gym.",
   cardRegistrationFailed:
     "We couldn't save that card. Check the details with your bank, or try another card.",
   purchaseRefusedTitle: "We couldn't complete the purchase",
@@ -121,6 +131,8 @@ const he: PaymentErrorStrings = {
   planChangeCurrencyMismatch: 'לא ניתן להחליף בין תוכניות במטבעות שונים.',
   providerChargeUnverified:
     'חיובי דלפק אינם זמינים עדיין עבור ספק תשלום זה.',
+  cancelUnsupportedPlanType:
+    'סוג המנוי הזה אינו מבוטל. כרטיסייה או כניסה בודדת הן רכישה חד-פעמית שפשוט נגמרת. רוצים החזר כספי? פנו למועדון.',
   cardRegistrationFailed:
     'לא הצלחנו לשמור את הכרטיס. כדאי לבדוק את הפרטים מול הבנק, או לנסות כרטיס אחר.',
   purchaseRefusedTitle: 'לא הצלחנו להשלים את הרכישה',
@@ -153,6 +165,8 @@ const ru: PaymentErrorStrings = {
     'Нельзя переключаться между планами в разных валютах.',
   providerChargeUnverified:
     'Списания на стойке пока недоступны для этого платёжного провайдера.',
+  cancelUnsupportedPlanType:
+    'Такой тип абонемента не отменяется. Разовое занятие и пакет посещений являются одноразовой покупкой, которая просто заканчивается. Хотите вернуть деньги? Обратитесь в зал.',
   cardRegistrationFailed:
     'Не удалось сохранить карту. Проверьте данные в банке или попробуйте другую карту.',
   purchaseRefusedTitle: 'Не удалось завершить покупку',
