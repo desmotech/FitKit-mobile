@@ -8,9 +8,10 @@
  *
  * Card add/update opens the provider's hosted registration page (FIT-272)
  * — reachable from the payment-method panel, the no-card affordance, the
- * debt banner, and the renew no-card alert. Cancel-with-reason lives in
- * the cancel-subscription pageSheet. Renew is wired via
- * `useRenewSubscription` from use-feed-data.
+ * debt banner, and the renew no-card alert. Renew is wired via
+ * `useRenewSubscription` from use-feed-data. Ending a membership is a
+ * staff action: the member sees the end date here but cannot schedule or
+ * undo it from the app.
  */
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -42,7 +43,6 @@ import {
   useMySubscription,
   useRegisterPaymentMethod,
   useRenewSubscription,
-  useResumeCancellation,
   useWithdrawScheduled,
 } from '@/hooks/use-feed-data';
 import { useHaptics } from '@/hooks/use-haptics';
@@ -143,8 +143,6 @@ export default function PaymentsScreen() {
     transactionsEmpty: (phT.empty as string) ?? 'No payments yet',
     renew: (membershipT.renew as string) ?? 'Renew',
     renewing: (membershipT.renewing as string) ?? 'Renewing…',
-    cancelAction: subscriptionsT.cancelAction ?? 'Cancel subscription',
-    resumeAction: subscriptionsT.resumeAction ?? 'Keep my subscription',
     scheduledCancelBanner:
       subscriptionsT.scheduledCancelBanner ?? 'Scheduled to cancel on {date}',
     scheduledCancelDesc:
@@ -172,7 +170,6 @@ export default function PaymentsScreen() {
   const router = useRouter();
   const subs = useMySubscription(orgId);
   const renew = useRenewSubscription(orgId);
-  const resume = useResumeCancellation(orgId);
   const cancelPending = useCancelPendingSubscription(orgId);
   const cancelPendingT = useCancelPendingStrings();
   const withdraw = useWithdrawScheduled(orgId);
@@ -311,39 +308,11 @@ export default function PaymentsScreen() {
     });
   };
 
-  const handleResume = () => {
-    if (!activeSub || !orgId || resume.isPending) return;
-    haptics.tap();
-    resume.mutate(
-      { id: activeSub.id },
-      {
-        onSuccess: () => {
-          haptics.success();
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.subscriptions.all(orgId, { mine: true }),
-          });
-        },
-        onError: () => haptics.error(),
-      },
-    );
-  };
-
-  const handleCancel = () => {
-    if (!activeSub) return;
-    haptics.tap();
-    router.push({
-      pathname: '/(tabs)/profile/cancel-subscription',
-      // No date passed: the cancel screen shows the effective date the API
-      // returns, which is one month from the notice and not knowable here.
-      params: { id: activeSub.id, plan: activeSub.plan.name },
-    });
-  };
-
   // Cancel a `pending` subscription (abandoned/incomplete checkout) — mirrors
   // web's cancel-pending-checkout-dialog.tsx and profile/index.tsx's own
-  // handleCancelPending. A single Alert confirm, not the pageSheet
-  // `handleCancel` above uses: a pending checkout was never charged, so
-  // there's no billing period to schedule around and no reason field to ask.
+  // handleCancelPending. A single Alert confirm: a pending checkout was never
+  // charged, so there's no billing period to schedule around and no reason
+  // field to ask.
   const handleCancelPending = () => {
     if (!pendingSub || !orgId || cancelPending.isPending) return;
     haptics.tap();
@@ -458,11 +427,6 @@ export default function PaymentsScreen() {
    * Withdraw from a membership that has not started yet. No notice period,
    * no refund math, no cancellation form: nothing was charged. The seat is
    * released immediately and the plan becomes purchasable again.
-   *
-   * Deliberately NOT the cancel-with-notice pageSheet `handleCancel` opens —
-   * that endpoint refuses a `scheduled` row (409 `USE_WITHDRAW`), and before
-   * this existed it accepted one and stamped a notice date no sweep ever
-   * acted on, so the membership sat there holding its seat forever.
    */
   const handleWithdraw = () => {
     if (!scheduledSub || !orgId || withdraw.isPending) return;
@@ -620,9 +584,6 @@ export default function PaymentsScreen() {
               statusLabels={membershipStatus}
               onRenew={handleRenew}
               isRenewing={renew.isPending && renew.variables === activeSub.id}
-              onCancel={handleCancel}
-              onResume={handleResume}
-              isResuming={resume.isPending}
               intervalLabel={intervalLabel}
               formatAmount={formatAmount}
               lang={lang}
@@ -652,9 +613,6 @@ export default function PaymentsScreen() {
             statusLabels={membershipStatus}
             onRenew={() => {}}
             isRenewing={false}
-            onCancel={() => {}}
-            onResume={() => {}}
-            isResuming={false}
             intervalLabel={intervalLabel}
             formatAmount={formatAmount}
             lang={lang}
@@ -901,9 +859,6 @@ function SubscriptionCard({
   statusLabels,
   onRenew,
   isRenewing,
-  onCancel,
-  onResume,
-  isResuming,
   intervalLabel,
   formatAmount,
   lang,
@@ -929,17 +884,12 @@ function SubscriptionCard({
     scheduledCancelDesc: string;
     renew: string;
     renewing: string;
-    cancelAction: string;
-    resumeAction: string;
     checkoutNotCompleted: string;
     completePayment: string;
   };
   statusLabels: Record<string, string>;
   onRenew: () => void;
   isRenewing: boolean;
-  onCancel: () => void;
-  onResume: () => void;
-  isResuming: boolean;
   intervalLabel: string;
   formatAmount: (cents: number, currency: string) => string;
   lang: string;
@@ -992,15 +942,6 @@ function SubscriptionCard({
   const showRenew = memberAction
     ? memberAction === 'renew'
     : status === 'past_due' || status === 'cancelled';
-  // A member may give notice from any live state. Requiring `active` locked out
-  // paused, past_due and debt members — the ones most likely to want out — and
-  // the API no longer refuses them either.
-  const showCancel =
-    !scheduledToCancelOf(sub) &&
-    (status === 'active' ||
-      status === 'paused' ||
-      status === 'past_due' ||
-      status === 'debt');
   const scheduledToCancel = scheduledToCancelOf(sub);
   // `SubscriptionWithPlan`/`SubscriptionLite` (pinned @taikan/shared) predate
   // `memberAction` — same cast precedent as `scheduledToCancelOf` above.
@@ -1196,19 +1137,6 @@ function SubscriptionCard({
               </Text>
             </View>
           </View>
-          <FKButton
-            label={labels.resumeAction}
-            variant="outline"
-            size="sm"
-            fullWidth
-            onPress={onResume}
-            disabled={isResuming}
-            trailing={
-              isResuming ? (
-                <ActivityIndicator size="small" color="#8B6A35" />
-              ) : undefined
-            }
-          />
         </View>
       )}
 
@@ -1258,7 +1186,7 @@ function SubscriptionCard({
         />
       )}
 
-      {(onChangePlan || (showCancel && !scheduledToCancel) || showCancelPending) && (
+      {(onChangePlan || showCancelPending) && (
         <View
           style={{
             flexDirection: isRTL ? 'row-reverse' : 'row',
@@ -1286,19 +1214,7 @@ function SubscriptionCard({
           ) : (
             <View />
           )}
-          {showCancel && !scheduledToCancel ? (
-            <Pressable
-              onPress={onCancel}
-              hitSlop={8}
-              style={{ paddingVertical: 6, paddingHorizontal: 4 }}
-            >
-              <Text
-                style={{ fontSize: 13, fontWeight: '700', color: '#B84A40' }}
-              >
-                {labels.cancelAction}
-              </Text>
-            </Pressable>
-          ) : showCancelPending ? (
+          {showCancelPending ? (
             <Pressable
               onPress={onCancelPending}
               hitSlop={8}

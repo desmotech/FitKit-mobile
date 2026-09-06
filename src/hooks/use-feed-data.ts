@@ -1,7 +1,6 @@
 import { useApiQuery, useApiAction, useApiSend } from './use-api-query';
 import { queryKeys } from '@/lib/query-keys';
 import type {
-  MemberCancellationResponse,
   PersonalRecordResponse,
   BodyMetricSummaryResponse,
   SubscriptionWithPlan,
@@ -281,41 +280,6 @@ export function useEarlyRenewSubscription(orgId: string | undefined | null) {
 }
 
 /**
- * Member: give notice of cancellation. The membership ends one month later —
- * the API computes that date and returns it as `cancellationEffectiveAt`, which
- * callers should display rather than deriving an end date from a billing
- * period. `reason` is optional. Reversible via {@link useResumeCancellation}
- * until it takes effect.
- *
- * Answers with `MemberCancellationResponse`, NOT `SubscriptionLite`: this
- * endpoint serializes the subscription without its plan, and it carries the
- * extra `cancellationFormInstanceId` — the gym's written cancellation form,
- * which the caller routes the member into signing. Null means there is
- * nothing to sign (no template published by the org, issuance failed, or the
- * org's `cancellation-form-prompt` flag is off), and the caller just confirms
- * the end date. Never a reason to hold anything up: the notice is already
- * recorded by the time this resolves.
- */
-export function useCancelAtPeriodEnd(orgId: string | undefined | null) {
-  return useApiSend<
-    ApiEnvelope<MemberCancellationResponse>,
-    { id: string; reason?: string }
-  >({
-    path: (b) =>
-      `/organizations/${orgId}/subscriptions/my/${b.id}/cancel-at-period-end`,
-    method: 'POST',
-  });
-}
-
-/** Member: undo a scheduled cancellation before it takes effect. */
-export function useResumeCancellation(orgId: string | undefined | null) {
-  return useApiSend<ApiEnvelope<SubscriptionLite>, { id: string }>({
-    path: (b) => `/organizations/${orgId}/subscriptions/my/${b.id}/resume`,
-    method: 'POST',
-  });
-}
-
-/**
  * Member: cancel their OWN `pending` subscription — a checkout they started
  * and never finished. Mirrors web's cancel-pending-checkout-dialog.tsx.
  *
@@ -353,13 +317,9 @@ export interface CancelPendingBody {
  * Member: withdraw from a membership that has not started yet (presale /
  * future-start, `status: 'scheduled'`).
  *
- * NOT {@link useCancelAtPeriodEnd}, which the API refuses on a scheduled row
- * (409 `USE_WITHDRAW`) — and which used to leave one stuck forever: it
- * stamped a notice date that the due-cancellations sweep never looked at, so
- * the row held its seat with `cancelAtPeriodEnd` set and no way out. There is
- * no period to run out here, nothing was ever charged, so there is no notice
- * month, no refund math and no cancellation form. The seat is released
- * immediately and the member can buy the plan again.
+ * There is no period to run out here, nothing was ever charged, so there is
+ * no notice month, no refund math and no cancellation form. The seat is
+ * released immediately and the member can buy the plan again.
  */
 export function useWithdrawScheduled(orgId: string | undefined | null) {
   return useApiAction<ApiEnvelope<SubscriptionLite>, string>({
